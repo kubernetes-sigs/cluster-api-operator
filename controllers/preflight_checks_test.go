@@ -29,8 +29,7 @@ import (
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha1"
 	"sigs.k8s.io/cluster-api-operator/controllers/genericprovider"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha4"
-
-	"sigs.k8s.io/cluster-api/test/helpers"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 func TestPreflightChecks(t *testing.T) {
@@ -286,7 +285,7 @@ func TestPreflightChecks(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			gs := NewWithT(t)
 
-			fakeclient := helpers.NewFakeClientWithScheme(
+			fakeclient := fake.NewFakeClientWithScheme(
 				scheme.Scheme,
 			)
 

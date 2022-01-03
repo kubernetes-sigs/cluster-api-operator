@@ -19,7 +19,7 @@
 SHELL:=/usr/bin/env bash
 
 # Path to main repo
-ROOT = ../../
+ROOT:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 
 .DEFAULT_GOAL:=help
 
