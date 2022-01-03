@@ -37,7 +37,7 @@ export GO111MODULE=on
 export DOCKER_CLI_EXPERIMENTAL := enabled
 
 # Directories
-TOOLS_DIR := $(ROOT)hack/tools
+TOOLS_DIR := $(ROOT)/hack/tools
 TOOLS_BIN_DIR := $(TOOLS_DIR)/bin
 BIN_DIR := bin
 
