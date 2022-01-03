@@ -33,7 +33,7 @@ import (
 	"k8s.io/klog/v2/klogr"
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha1"
 	"sigs.k8s.io/cluster-api-operator/controllers"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha4"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/feature"
 	"sigs.k8s.io/cluster-api/version"
 	ctrl "sigs.k8s.io/controller-runtime"

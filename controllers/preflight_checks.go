@@ -24,7 +24,7 @@ import (
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha1"
 	"sigs.k8s.io/cluster-api-operator/controllers/genericprovider"
 	"sigs.k8s.io/cluster-api-operator/util"
-	"sigs.k8s.io/cluster-api/api/v1alpha4"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util/conditions"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -57,7 +57,7 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 		preflightFalseCondition := conditions.FalseCondition(
 			operatorv1.PreflightCheckCondition,
 			operatorv1.MoreThanOneProviderInstanceExistsReason,
-			v1alpha4.ConditionSeverityWarning,
+			clusterv1.ConditionSeverityWarning,
 			"",
 		)
 

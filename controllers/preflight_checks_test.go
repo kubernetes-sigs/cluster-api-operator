@@ -28,7 +28,7 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha1"
 	"sigs.k8s.io/cluster-api-operator/controllers/genericprovider"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha4"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
