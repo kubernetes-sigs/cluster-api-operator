@@ -18,19 +18,21 @@ package envtest
 
 import (
 	"context"
-	"flag"
 	"fmt"
+	"go/build"
+	"io/ioutil"
+	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	goruntime "runtime"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/onsi/ginkgo"
 	"github.com/pkg/errors"
-	admissionregistration "k8s.io/api/admissionregistration/v1"
 	admissionv1 "k8s.io/api/admissionregistration/v1"
-	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -45,7 +47,6 @@ import (
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	clusterctlv1 "sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3"
-	"sigs.k8s.io/cluster-api/cmd/clusterctl/log"
 	"sigs.k8s.io/cluster-api/util/kubeconfig"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -54,10 +55,8 @@ import (
 )
 
 func init() {
-	klog.InitFlags(flag.CommandLine)
+	klog.InitFlags(nil)
 	logger := klogr.New()
-	// Use klog as the internal logger for this envtest environment.
-	log.SetLogger(logger)
 	// Additionally force all of the controllers to use the Ginkgo logger.
 	ctrl.SetLogger(logger)
 	// Add logger for ginkgo.
@@ -69,8 +68,7 @@ func init() {
 	utilruntime.Must(admissionv1.AddToScheme(scheme.Scheme))
 	utilruntime.Must(operatorv1.AddToScheme(scheme.Scheme))
 	utilruntime.Must(clusterctlv1.AddToScheme(scheme.Scheme))
-	utilruntime.Must(admissionregistration.AddToScheme(scheme.Scheme))
-	utilruntime.Must(admissionregistrationv1beta1.AddToScheme(scheme.Scheme))
+	utilruntime.Must(admissionv1.AddToScheme(scheme.Scheme))
 }
 
 var (
@@ -81,8 +79,9 @@ var (
 		Jitter:   0.4,
 	}
 
-	errAlreadyStarted = errors.New("environment has already been started")
-	errAlreadyStopped = errors.New("environment has already been stopped")
+	errAlreadyStarted      = errors.New("environment has already been started")
+	errAlreadyStopped      = errors.New("environment has already been stopped")
+	clusterAPIVersionRegex = regexp.MustCompile(`^(\W)sigs.k8s.io/cluster-api v(.+)`)
 )
 
 // Environment encapsulates a Kubernetes local test environment.
@@ -105,16 +104,20 @@ func New(uncachedObjs ...client.Object) *Environment {
 	// Get the root of the current file to use in CRD paths.
 	_, filename, _, _ := goruntime.Caller(0) //nolint
 	root := path.Join(path.Dir(filename), "..", "..")
+	crdPaths := []string{
+		filepath.Join(root, "config", "crd", "bases"),
+	}
+
+	if capiPath := getFilePathToClusterctlCRDs(root); capiPath != "" {
+		crdPaths = append(crdPaths, capiPath)
+	}
 
 	// Create the test environment.
 	env := &envtest.Environment{
 		Scheme:                scheme.Scheme,
 		ErrorIfCRDPathMissing: true,
 		//CRDInstallOptions:     envtest.CRDInstallOptions{CleanUpAfterUse: true},
-		CRDDirectoryPaths: []string{
-			filepath.Join(root, "config", "crd", "bases"),
-			filepath.Join(root, "..", "..", "cmd", "clusterctl", "config", "crd", "bases"),
-		},
+		CRDDirectoryPaths: crdPaths,
 	}
 
 	if _, err := env.Start(); err != nil {
@@ -264,4 +267,37 @@ func (e *Environment) CreateNamespace(ctx context.Context, generateName string) 
 	}
 
 	return ns, nil
+}
+
+func getFilePathToClusterctlCRDs(root string) string {
+	if clusterctlCRDPath := os.Getenv("CLUSTERCTL_CRD_PATH"); clusterctlCRDPath != "" {
+		return clusterctlCRDPath
+	}
+
+	modBits, err := ioutil.ReadFile(filepath.Join(root, "go.mod"))
+	if err != nil {
+		return ""
+	}
+
+	var clusterAPIVersion string
+	for _, line := range strings.Split(string(modBits), "\n") {
+		matches := clusterAPIVersionRegex.FindStringSubmatch(line)
+		if len(matches) == 3 {
+			clusterAPIVersion = matches[2]
+		}
+	}
+
+	if clusterAPIVersion == "" {
+		return ""
+	}
+
+	gopath := envOr("GOPATH", build.Default.GOPATH)
+	return filepath.Join(gopath, "pkg", "mod", "sigs.k8s.io", fmt.Sprintf("cluster-api@v%s", clusterAPIVersion), "cmd", "clusterctl", "config", "crd", "bases")
+}
+
+func envOr(envKey, defaultValue string) string {
+	if value, ok := os.LookupEnv(envKey); ok {
+		return value
+	}
+	return defaultValue
 }

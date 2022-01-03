@@ -43,11 +43,17 @@ BIN_DIR := bin
 
 export PATH := $(abspath $(TOOLS_BIN_DIR)):$(PATH)
 
+# Kubebuilder
+export KUBEBUILDER_ENVTEST_KUBERNETES_VERSION ?= 1.22.0
+export KUBEBUILDER_CONTROLPLANE_START_TIMEOUT ?= 60s
+export KUBEBUILDER_CONTROLPLANE_STOP_TIMEOUT ?= 60s
+
 # Binaries.
 # Need to use abspath so we can invoke these from subdirectories
 CONTROLLER_GEN := $(abspath $(TOOLS_BIN_DIR)/controller-gen)
 GOLANGCI_LINT := $(TOOLS_BIN_DIR)/golangci-lint
 KUSTOMIZE := $(abspath $(TOOLS_BIN_DIR)/kustomize)
+SETUP_ENVTEST := $(abspath $(TOOLS_BIN_DIR)/setup-envtest)
 
 # Define Docker related variables. Releases should modify and double check these vars.
 REGISTRY ?= gcr.io/$(shell gcloud config get-value project)
@@ -77,9 +83,11 @@ help:  ## Display this help
 ## Testing
 ## --------------------------------------
 
+KUBEBUILDER_ASSETS ?= $(shell $(SETUP_ENVTEST) use --use-env -p path $(KUBEBUILDER_ENVTEST_KUBERNETES_VERSION))
+
 .PHONY: test
-test: ## Run tests.
-	source $(ROOT)/scripts/fetch_ext_bins.sh; fetch_tools; setup_envs; go test ./... $(TEST_ARGS)
+test: $(SETUP_ENVTEST) ## Run unit and integration tests
+	KUBEBUILDER_ASSETS="$(KUBEBUILDER_ASSETS)" go test ./... $(TEST_ARGS)
 
 .PHONY: test-verbose
 test-verbose: ## Run tests with verbose settings.
@@ -101,6 +109,9 @@ $(GOLANGCI_LINT): $(TOOLS_DIR)/go.mod # Build golangci-lint from tools folder.
 
 $(KUSTOMIZE): # Build kustomize from tools folder.
 	$(ROOT)/hack/ensure-kustomize.sh
+
+$(SETUP_ENVTEST): $(TOOLS_DIR)/go.mod # Build setup-envtest from tools folder.
+	cd $(TOOLS_DIR); go build -tags=tools -o $(BIN_DIR)/setup-envtest sigs.k8s.io/controller-runtime/tools/setup-envtest
 
 kustomize: $(KUSTOMIZE) ## Build a local copy of kustomize.
 
