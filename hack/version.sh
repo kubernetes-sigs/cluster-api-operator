@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 # Copyright 2022 The Kubernetes Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,7 +18,6 @@ set -o nounset
 set -o pipefail
 
 version::get_version_vars() {
-    # shellcheck disable=SC1083
     GIT_COMMIT="$(git rev-parse HEAD^{commit})"
 
     if git_status=$(git status --porcelain 2>/dev/null) && [[ -z ${git_status} ]]; then
@@ -28,23 +27,20 @@ version::get_version_vars() {
     fi
 
     # stolen from k8s.io/hack/lib/version.sh
-    # Use git describe to find the version based on annotated tags.
-    if [[ -n ${GIT_VERSION-} ]] || GIT_VERSION=$(git describe --abbrev=14 --match "v[0-9]*" 2>/dev/null); then
+    # Use git describe to find the version based on tags.
+    if GIT_VERSION=$(git describe --tags --abbrev=14 2>/dev/null); then
         # This translates the "git describe" to an actual semver.org
         # compatible semantic version that looks something like this:
         #   v1.1.0-alpha.0.6+84c76d1142ea4d
         #
         # TODO: We continue calling this "git version" because so many
         # downstream consumers are expecting it there.
-        # shellcheck disable=SC2001
         DASHES_IN_VERSION=$(echo "${GIT_VERSION}" | sed "s/[^-]//g")
         if [[ "${DASHES_IN_VERSION}" == "---" ]] ; then
             # We have distance to subversion (v1.1.0-subversion-1-gCommitHash)
-            # shellcheck disable=SC2001
             GIT_VERSION=$(echo "${GIT_VERSION}" | sed "s/-\([0-9]\{1,\}\)-g\([0-9a-f]\{14\}\)$/.\1\-\2/")
         elif [[ "${DASHES_IN_VERSION}" == "--" ]] ; then
             # We have distance to base tag (v1.1.0-1-gCommitHash)
-            # shellcheck disable=SC2001
             GIT_VERSION=$(echo "${GIT_VERSION}" | sed "s/-g\([0-9a-f]\{14\}\)$/-\1/")
         fi
         if [[ "${GIT_TREE_STATE}" == "dirty" ]]; then
@@ -72,7 +68,7 @@ version::get_version_vars() {
     fi
 
     GIT_RELEASE_TAG=$(git describe --abbrev=0 --tags)
-    GIT_RELEASE_COMMIT=$(git rev-list -n 1  "${GIT_RELEASE_TAG}")
+    GIT_RELEASE_COMMIT=$(git rev-list -n 1  ${GIT_RELEASE_TAG})
 }
 
 # stolen from k8s.io/hack/lib/version.sh and modified
@@ -97,8 +93,6 @@ version::ldflags() {
     add_ldflag "gitVersion" "${GIT_VERSION}"
     add_ldflag "gitReleaseCommit" "${GIT_RELEASE_COMMIT}"
 
-    # The -ldflags parameter takes a single string, so join the output.
-    echo "${ldflags[*]-}"
+  # The -ldflags parameter takes a single string, so join the output.
+  echo "${ldflags[*]-}"
 }
-
-version::ldflags
