@@ -285,9 +285,7 @@ func TestPreflightChecks(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			gs := NewWithT(t)
 
-			fakeclient := fake.NewFakeClientWithScheme(
-				scheme.Scheme,
-			)
+			fakeclient := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
 
 			for _, c := range tc.providers {
 				gs.Expect(fakeclient.Create(ctx, c.GetObject())).To(Succeed())
