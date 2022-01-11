@@ -23,6 +23,37 @@ const (
 	PreflightCheckCondition clusterv1.ConditionType = "PreflightCheckPassed"
 
 	// MoreThanOneProviderInstanceExistsReason (Severity=Info) documents that more than one instance of provider
-	// exists in the cluster
+	// exists in the cluster.
 	MoreThanOneProviderInstanceExistsReason = "MoreThanOneExists"
+
+	// IncorrectVersionFormatReason documents that the provider version is in the incorrect format.
+	IncorrectVersionFormatReason = "IncorrectVersionFormat"
+
+	// FetchConfigValidationError documents that the FetchConfig is configured incorrectly.
+	FetchConfigValidationErrorReason = "FetchConfigValidationError"
+
+	// UnknownProviderReason documents that the provider name is not the name of a known provider.
+	UnknownProviderReason = "UnknownProvider"
+
+	// CAPIVersionIncompatibility documents that the provider version is incompatible with operator.
+	CAPIVersionIncompatibilityReason = "CAPIVersionIncompatibility"
+
+	// ComponentsFetchErrorReason documents that an error occurred fetching the componets.
+	ComponentsFetchErrorReason = "ComponentsFetchError"
+
+	// OldComponentsDeletionErrorReason documents that an error occurred deleting the old components prior to upgrading.
+	OldComponentsDeletionErrorReason = "OldComponentsDeletionError"
+
+	// WaitingForCoreProviderReadyReason documents that the provider is waiting for the core provider to be ready.
+	WaitingForCoreProviderReadyReason = "WaitingForCoreProviderReady"
+)
+
+const (
+	// CertManagerReadyCondition documents a Provider that does not have dependent CertManager Ready.
+	CertManagerReadyCondition clusterv1.ConditionType = "CertManagerReady"
+)
+
+const (
+	// ProviderInstalledCondition documents a Provider that has been installed.
+	ProviderInstalledCondition clusterv1.ConditionType = "ProviderInstalled"
 )
