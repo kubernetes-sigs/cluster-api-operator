@@ -20,6 +20,9 @@ set -o pipefail
 
 REPO_ROOT=$(dirname "${BASH_SOURCE[0]}")/..
 
+APIDIFF="hack/tools/bin/go-apidiff"
+
+cd "${REPO_ROOT}" && make go-apidiff
 echo "*** Running go-apidiff ***"
 
-cd "${REPO_ROOT}" && make apidiff
+${APIDIFF} "${PULL_BASE_SHA}" --print-compatible
