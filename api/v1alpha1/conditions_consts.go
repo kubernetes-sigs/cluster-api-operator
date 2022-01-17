@@ -49,11 +49,6 @@ const (
 )
 
 const (
-	// CertManagerReadyCondition documents a Provider that does not have dependent CertManager Ready.
-	CertManagerReadyCondition clusterv1.ConditionType = "CertManagerReady"
-)
-
-const (
 	// ProviderInstalledCondition documents a Provider that has been installed.
 	ProviderInstalledCondition clusterv1.ConditionType = "ProviderInstalled"
 )
