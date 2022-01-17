@@ -26,14 +26,16 @@ import (
 
 	"github.com/spf13/pflag"
 	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
-	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"k8s.io/klog/v2"
 	"k8s.io/klog/v2/klogr"
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha1"
 	"sigs.k8s.io/cluster-api-operator/controllers"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	clusterctlv1 "sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3"
 	"sigs.k8s.io/cluster-api/feature"
 	"sigs.k8s.io/cluster-api/version"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -65,8 +67,10 @@ var (
 func init() {
 	klog.InitFlags(nil)
 
-	_ = clientgoscheme.AddToScheme(scheme)
-	_ = operatorv1.AddToScheme(scheme)
+	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
+	utilruntime.Must(operatorv1.AddToScheme(scheme))
+	utilruntime.Must(apiextensionsv1.AddToScheme(scheme))
+	utilruntime.Must(clusterctlv1.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 }
 
@@ -93,14 +97,13 @@ func InitFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&profilerAddress, "profiler-address", "",
 		"Bind address to expose the pprof profiler (e.g. localhost:6060)")
 
-	fs.IntVar(&concurrencyNumber, "concurrency", 10,
+	fs.IntVar(&concurrencyNumber, "concurrency", 1,
 		"Number of core resources to process simultaneously")
 
 	fs.DurationVar(&syncPeriod, "sync-period", 10*time.Minute,
 		"The minimum interval at which watched resources are reconciled (e.g. 15m)")
 
-	fs.IntVar(&webhookPort, "webhook-port", 9443,
-		"Webhook Server port")
+	fs.IntVar(&webhookPort, "webhook-port", 9443, "Webhook Server port")
 
 	fs.StringVar(&webhookCertDir, "webhook-cert-dir", "/tmp/k8s-webhook-server/serving-certs/",
 		"Webhook cert dir, only used when webhook-port is specified.")
@@ -180,6 +183,7 @@ func setupReconcilers(mgr ctrl.Manager) {
 		Provider:     &operatorv1.CoreProvider{},
 		ProviderList: &operatorv1.CoreProviderList{},
 		Client:       mgr.GetClient(),
+		Config:       mgr.GetConfig(),
 	}).SetupWithManager(mgr, concurrency(concurrencyNumber)); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "CoreProvider")
 		os.Exit(1)
@@ -189,6 +193,7 @@ func setupReconcilers(mgr ctrl.Manager) {
 		Provider:     &operatorv1.InfrastructureProvider{},
 		ProviderList: &operatorv1.InfrastructureProviderList{},
 		Client:       mgr.GetClient(),
+		Config:       mgr.GetConfig(),
 	}).SetupWithManager(mgr, concurrency(concurrencyNumber)); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "InfrastructureProvider")
 		os.Exit(1)
@@ -198,6 +203,7 @@ func setupReconcilers(mgr ctrl.Manager) {
 		Provider:     &operatorv1.BootstrapProvider{},
 		ProviderList: &operatorv1.BootstrapProviderList{},
 		Client:       mgr.GetClient(),
+		Config:       mgr.GetConfig(),
 	}).SetupWithManager(mgr, concurrency(concurrencyNumber)); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "BootstrapProvider")
 		os.Exit(1)
@@ -207,6 +213,7 @@ func setupReconcilers(mgr ctrl.Manager) {
 		Provider:     &operatorv1.ControlPlaneProvider{},
 		ProviderList: &operatorv1.ControlPlaneProviderList{},
 		Client:       mgr.GetClient(),
+		Config:       mgr.GetConfig(),
 	}).SetupWithManager(mgr, concurrency(concurrencyNumber)); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ControlPlaneProvider")
 		os.Exit(1)
