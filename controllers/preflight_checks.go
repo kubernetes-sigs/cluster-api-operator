@@ -64,7 +64,7 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 		}
 	}
 
-	if spec.FetchConfig != nil && spec.FetchConfig.Selector != nil && spec.FetchConfig.URL != nil {
+	if spec.FetchConfig != nil && spec.FetchConfig.ConfigMap != nil && spec.FetchConfig.URL != nil {
 		// If FetchConfiguration is not nil, exactly one of `URL` or `Selector` must be specified.
 		conditions.Set(provider, conditions.FalseCondition(
 			operatorv1.PreflightCheckCondition,

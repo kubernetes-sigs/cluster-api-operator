@@ -75,26 +75,19 @@ spec:
 `
 )
 
-func insertDummyConfig(provider genericprovider.GenericProvider) {
+func insertDummyConfig(provider genericprovider.GenericProvider, cmRef *corev1.ObjectReference) {
 	spec := provider.GetSpec()
 	spec.FetchConfig = &operatorv1.FetchConfiguration{
-		Selector: &metav1.LabelSelector{
-			MatchLabels: map[string]string{
-				"test": "dummy-config",
-			},
-		},
+		ConfigMap: cmRef,
 	}
 	provider.SetSpec(spec)
 }
 
-func dummyConfigMap(ns string) *corev1.ConfigMap {
+func dummyConfigMap(name, ns string) *corev1.ConfigMap {
 	return &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "v0.4.2",
+			Name:      name,
 			Namespace: ns,
-			Labels: map[string]string{
-				"test": "dummy-config",
-			},
 		},
 		Data: map[string]string{
 			"metadata":   testMetadata,
@@ -150,11 +143,12 @@ func TestReconcilerPreflightConditions(t *testing.T) {
 
 			t.Log("creating namespace", tc.namespace)
 			namespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: tc.namespace}}
+			cmName := "v0.4.2"
 			g.Expect(env.CreateAndWait(ctx, namespace)).To(Succeed())
-			g.Expect(env.CreateAndWait(ctx, dummyConfigMap(tc.namespace))).To(Succeed())
+			g.Expect(env.CreateAndWait(ctx, dummyConfigMap(cmName, tc.namespace))).To(Succeed())
 
 			for _, p := range tc.providers {
-				insertDummyConfig(p)
+				insertDummyConfig(p, &corev1.ObjectReference{Namespace: tc.namespace, Name: cmName})
 				p.SetNamespace(tc.namespace)
 				t.Log("creating test provider", p.GetName())
 				g.Expect(env.CreateAndWait(ctx, p.GetObject())).To(Succeed())
@@ -315,11 +309,7 @@ func TestConfigmapRepository(t *testing.T) {
 			},
 			Spec: operatorv1.InfrastructureProviderSpec{
 				ProviderSpec: operatorv1.ProviderSpec{
-					FetchConfig: &operatorv1.FetchConfiguration{
-						Selector: &metav1.LabelSelector{
-							MatchLabels: map[string]string{"provider-components": "aws"},
-						},
-					},
+					FetchConfig: &operatorv1.FetchConfiguration{},
 				},
 			},
 		},
@@ -353,188 +343,123 @@ metadata:
 ---`
 	tests := []struct {
 		name               string
-		configMaps         []corev1.ConfigMap
+		configMap          *corev1.ConfigMap
 		want               repository.Repository
 		wantErr            string
 		wantDefaultVersion string
 	}{
 		{
-			name:    "missing configmaps",
-			wantErr: "no ConfigMaps found with selector &LabelSelector{MatchLabels:map[string]string{provider-components: aws,},MatchExpressions:[]LabelSelectorRequirement{},}",
+			name:    "missing configmap",
+			wantErr: "configmap reference is nil",
 		},
 		{
 			name: "configmap with missing metadata",
-			configMaps: []corev1.ConfigMap{
-				{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "ConfigMap",
-						APIVersion: "v1",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "v1.2.3",
-						Namespace: "ns1",
-						Labels:    map[string]string{"provider-components": "aws"},
-					},
-					Data: map[string]string{"components": components},
+			configMap: &corev1.ConfigMap{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "ConfigMap",
+					APIVersion: "v1",
 				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "v1.2.3",
+					Namespace: "ns1",
+				},
+				Data: map[string]string{"components": components},
 			},
 			wantErr: "ConfigMap ns1/v1.2.3 has no metadata",
 		},
 		{
 			name: "configmap with missing components",
-			configMaps: []corev1.ConfigMap{
-				{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "ConfigMap",
-						APIVersion: "v1",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "v1.2.3",
-						Namespace: "ns1",
-						Labels:    map[string]string{"provider-components": "aws"},
-					},
-					Data: map[string]string{
-						"metadata": metadata,
-					},
+			configMap: &corev1.ConfigMap{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "ConfigMap",
+					APIVersion: "v1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "v1.2.3",
+					Namespace: "ns1",
+				},
+				Data: map[string]string{
+					"metadata": metadata,
 				},
 			},
 			wantErr: "ConfigMap ns1/v1.2.3 has no components",
 		},
 		{
 			name: "configmap with invalid version in the name",
-			configMaps: []corev1.ConfigMap{
-				{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "ConfigMap",
-						APIVersion: "v1",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "not-a-version",
-						Namespace: "ns1",
-						Labels:    map[string]string{"provider-components": "aws"},
-					},
-					Data: map[string]string{
-						"metadata": metadata,
-					},
+			configMap: &corev1.ConfigMap{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "ConfigMap",
+					APIVersion: "v1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "not-a-version",
+					Namespace: "ns1",
+					Labels:    map[string]string{"provider-components": "aws"},
+				},
+				Data: map[string]string{
+					"metadata": metadata,
 				},
 			},
 			wantErr: "ConfigMap ns1/not-a-version has invalid version:not-a-version (from the Name)",
 		},
 		{
 			name: "configmap with invalid version in the Label",
-			configMaps: []corev1.ConfigMap{
-				{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "ConfigMap",
-						APIVersion: "v1",
+			configMap: &corev1.ConfigMap{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "ConfigMap",
+					APIVersion: "v1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "not-a-version",
+					Namespace: "ns1",
+					Labels: map[string]string{
+						"provider-components":               "aws",
+						"provider.cluster.x-k8s.io/version": "also-not-a-label",
 					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "not-a-version",
-						Namespace: "ns1",
-						Labels: map[string]string{
-							"provider-components":               "aws",
-							"provider.cluster.x-k8s.io/version": "also-not-a-label",
-						},
-					},
-					Data: map[string]string{
-						"metadata": metadata,
-					},
+				},
+				Data: map[string]string{
+					"metadata": metadata,
 				},
 			},
 			wantErr: "ConfigMap ns1/not-a-version has invalid version:also-not-a-label (from the Label provider.cluster.x-k8s.io/version)",
 		},
 		{
 			name: "one correct configmap",
-			configMaps: []corev1.ConfigMap{
-				{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "ConfigMap",
-						APIVersion: "v1",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "v1.2.3",
-						Namespace: "ns1",
-						Labels:    map[string]string{"provider-components": "aws"},
-					},
-					Data: map[string]string{
-						"metadata":   metadata,
-						"components": components,
-					},
+			configMap: &corev1.ConfigMap{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "ConfigMap",
+					APIVersion: "v1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "v1.2.3",
+					Namespace: "ns1",
+					Labels:    map[string]string{"provider-components": "aws"},
+				},
+				Data: map[string]string{
+					"metadata":   metadata,
+					"components": components,
 				},
 			},
 			wantDefaultVersion: "v1.2.3",
 		},
 		{
 			name: "one correct configmap with label version",
-			configMaps: []corev1.ConfigMap{
-				{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "ConfigMap",
-						APIVersion: "v1",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-provider",
-						Namespace: "ns1",
-						Labels: map[string]string{
-							"provider-components":               "aws",
-							"provider.cluster.x-k8s.io/version": "v1.2.3",
-						},
-					},
-					Data: map[string]string{
-						"metadata":   metadata,
-						"components": components,
+			configMap: &corev1.ConfigMap{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "ConfigMap",
+					APIVersion: "v1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-provider",
+					Namespace: "ns1",
+					Labels: map[string]string{
+						"provider-components":               "aws",
+						"provider.cluster.x-k8s.io/version": "v1.2.3",
 					},
 				},
-			},
-			wantDefaultVersion: "v1.2.3",
-		},
-		{
-			name: "three correct configmaps",
-			configMaps: []corev1.ConfigMap{
-				{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "ConfigMap",
-						APIVersion: "v1",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "v1.2.3",
-						Namespace: "ns1",
-						Labels:    map[string]string{"provider-components": "aws"},
-					},
-					Data: map[string]string{
-						"metadata":   metadata,
-						"components": components,
-					},
-				},
-				{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "ConfigMap",
-						APIVersion: "v1",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "v1.2.7",
-						Namespace: "ns1",
-						Labels:    map[string]string{"provider-components": "aws"},
-					},
-					Data: map[string]string{
-						"metadata":   metadata,
-						"components": components,
-					},
-				},
-				{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "ConfigMap",
-						APIVersion: "v1",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "v1.2.4",
-						Namespace: "ns1",
-						Labels:    map[string]string{"provider-components": "aws"},
-					},
-					Data: map[string]string{
-						"metadata":   metadata,
-						"components": components,
-					},
+				Data: map[string]string{
+					"metadata":   metadata,
+					"components": components,
 				},
 			},
 			wantDefaultVersion: "v1.2.3",
@@ -549,11 +474,18 @@ metadata:
 				ctrlClient: fakeclient,
 			}
 
-			for i := range tt.configMaps {
-				g.Expect(fakeclient.Create(ctx, &tt.configMaps[i])).To(Succeed())
+			cmRef := &corev1.ObjectReference{}
+			if tt.configMap != nil {
+				g.Expect(fakeclient.Create(ctx, tt.configMap)).To(Succeed())
+				cmRef = &corev1.ObjectReference{
+					Name:      tt.configMap.Name,
+					Namespace: tt.configMap.Namespace,
+				}
+			} else {
+				cmRef = nil
 			}
 
-			got, err := inst.configmapRepository(context.TODO(), provider)
+			got, err := inst.configmapRepository(context.TODO(), cmRef)
 			if len(tt.wantErr) > 0 {
 				g.Expect(err).Should(MatchError(tt.wantErr))
 				return

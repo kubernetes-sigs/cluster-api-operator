@@ -405,8 +405,9 @@ func TestPreflightChecks(t *testing.T) {
 								Version: pointer.StringPtr("v1.0.0"),
 								FetchConfig: &operatorv1.FetchConfiguration{
 									URL: pointer.StringPtr("https://example.com"),
-									Selector: &metav1.LabelSelector{
-										MatchLabels: map[string]string{"provider-components": "aws"},
+									ConfigMap: &corev1.ObjectReference{
+										Name:      "config",
+										Namespace: namespaceName1,
 									},
 								},
 							},

@@ -23,7 +23,6 @@ import (
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/types"
@@ -138,9 +137,9 @@ func (p *phaseReconciler) load(ctx context.Context) (reconcile.Result, error) {
 
 	// If a configmap selector was specified, use it to find the configmap with provider configuraion. This is
 	// a case for "air-gapped" environments. If no selector was specified, use GitHub repository.
-	if spec.FetchConfig != nil && spec.FetchConfig.Selector != nil {
+	if spec.FetchConfig != nil && spec.FetchConfig.ConfigMap != nil {
 		log.V(2).Info("Custom ConfigMap was provided for fetching manifests", "provider", p.provider.GetName())
-		p.repo, err = p.configmapRepository(ctx, p.provider)
+		p.repo, err = p.configmapRepository(ctx, spec.FetchConfig.ConfigMap)
 	} else {
 		p.repo, err = repository.NewGitHubRepository(p.providerConfig, p.configClient.Variables())
 	}
@@ -201,48 +200,50 @@ func (s *phaseReconciler) secretReader(ctx context.Context, provider genericprov
 
 // configmapRepository use clusterctl NewMemoryRepository structure to store the manifests
 // and metadata from a given configmap.
-func (s *phaseReconciler) configmapRepository(ctx context.Context, provider genericprovider.GenericProvider) (repository.Repository, error) {
+func (s *phaseReconciler) configmapRepository(ctx context.Context, configMapRef *corev1.ObjectReference) (repository.Repository, error) {
+	if configMapRef == nil {
+		return nil, fmt.Errorf("configmap reference is nil")
+	}
+
 	mr := repository.NewMemoryRepository()
 	mr.WithPaths("", "components.yaml")
 
-	cml := &corev1.ConfigMapList{}
-	selector, err := metav1.LabelSelectorAsSelector(provider.GetSpec().FetchConfig.Selector)
-	if err != nil {
-		return nil, err
-	}
-	err = s.ctrlClient.List(ctx, cml, &client.ListOptions{LabelSelector: selector})
-	if err != nil {
-		return nil, err
-	}
-	if len(cml.Items) == 0 {
-		return nil, fmt.Errorf("no ConfigMaps found with selector %s", provider.GetSpec().FetchConfig.Selector.String())
+	cm := &corev1.ConfigMap{}
+	key := types.NamespacedName{
+		Namespace: configMapRef.Namespace,
+		Name:      configMapRef.Name,
 	}
 
-	for _, cm := range cml.Items {
-		version := cm.Name
-		errMsg := "from the Name"
-		if cm.Labels != nil {
-			ver, ok := cm.Labels[operatorv1.ConfigMapVersionLabelName]
-			if ok {
-				version = ver
-				errMsg = "from the Label " + operatorv1.ConfigMapVersionLabelName
-			}
-		}
-		_, err = versionutil.ParseSemantic(version)
-		if err != nil {
-			return nil, fmt.Errorf("ConfigMap %s/%s has invalid version:%s (%s)", cm.Namespace, cm.Name, version, errMsg)
-		}
-		metadata, ok := cm.Data["metadata"]
-		if !ok {
-			return nil, fmt.Errorf("ConfigMap %s/%s has no metadata", cm.Namespace, cm.Name)
-		}
-		mr.WithFile(version, metadataFile, []byte(metadata))
-		components, ok := cm.Data["components"]
-		if !ok {
-			return nil, fmt.Errorf("ConfigMap %s/%s has no components", cm.Namespace, cm.Name)
-		}
-		mr.WithFile(version, mr.ComponentsPath(), []byte(components))
+	if err := s.ctrlClient.Get(ctx, key, cm); err != nil {
+		return nil, err
 	}
+
+	version := cm.Name
+	errMsg := "from the Name"
+	// try to get version from the configmap label
+	if cm.Labels != nil {
+		ver, ok := cm.Labels[operatorv1.ConfigMapVersionLabelName]
+		if ok {
+			version = ver
+			errMsg = "from the Label " + operatorv1.ConfigMapVersionLabelName
+		}
+	}
+
+	if _, err := versionutil.ParseSemantic(version); err != nil {
+		return nil, fmt.Errorf("ConfigMap %s/%s has invalid version:%s (%s)", cm.Namespace, cm.Name, version, errMsg)
+	}
+
+	metadata, ok := cm.Data["metadata"]
+	if !ok {
+		return nil, fmt.Errorf("ConfigMap %s/%s has no metadata", cm.Namespace, cm.Name)
+	}
+	mr.WithFile(version, metadataFile, []byte(metadata))
+
+	components, ok := cm.Data["components"]
+	if !ok {
+		return nil, fmt.Errorf("ConfigMap %s/%s has no components", cm.Namespace, cm.Name)
+	}
+	mr.WithFile(version, mr.ComponentsPath(), []byte(components))
 
 	return mr, nil
 }
