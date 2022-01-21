@@ -79,7 +79,13 @@ func (r *GenericProviderReconciler) Reconcile(ctx context.Context, req reconcile
 
 	defer func() {
 		// Always attempt to patch the object and status after each reconciliation.
-		if err := patchProvider(ctx, patchHelper, typedProvider); err != nil {
+		// Patch ObservedGeneration only if the reconciliation completed successfully
+		patchOpts := []patch.Option{}
+		if reterr == nil {
+			patchOpts = append(patchOpts, patch.WithStatusObservedGeneration{})
+		}
+
+		if err := patchProvider(ctx, typedProvider, patchHelper, patchOpts...); err != nil {
 			reterr = kerrors.NewAggregate([]error{reterr, err})
 		}
 	}()
@@ -98,24 +104,25 @@ func (r *GenericProviderReconciler) Reconcile(ctx context.Context, req reconcile
 	return r.reconcile(ctx, typedProvider, typedProviderList)
 }
 
-func patchProvider(ctx context.Context, patchHelper *patch.Helper, provider genericprovider.GenericProvider) error {
+func patchProvider(ctx context.Context, provider genericprovider.GenericProvider, patchHelper *patch.Helper, options ...patch.Option) error {
 	conds := []clusterv1.ConditionType{
 		operatorv1.PreflightCheckCondition,
 		operatorv1.ProviderInstalledCondition,
 	}
+
 	conditions.SetSummary(provider, conditions.WithConditions(conds...))
-	return patchHelper.Patch(ctx, provider.GetObject(), patch.WithOwnedConditions{Conditions: append(conds, clusterv1.ReadyCondition)})
+
+	options = append(options,
+		patch.WithOwnedConditions{Conditions: append(conds, clusterv1.ReadyCondition)},
+	)
+
+	return patchHelper.Patch(ctx, provider.GetObject(), options...)
 }
 
 func (r *GenericProviderReconciler) reconcile(ctx context.Context, provider genericprovider.GenericProvider, genericProviderList genericprovider.GenericProviderList) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 
-	if provider.GetGeneration() == provider.GetStatus().ObservedGeneration {
-		log.V(2).Info("Generation unchanged, nothing to do")
-		return reconcile.Result{}, nil
-	}
-
-	log.V(1).Info("starting reconcile",
+	log.V(1).Info("starting reconciliation",
 		"Generation", provider.GetGeneration(),
 		"ObservedGeneration", provider.GetStatus().ObservedGeneration)
 
