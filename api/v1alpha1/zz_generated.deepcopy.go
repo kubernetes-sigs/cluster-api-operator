@@ -23,7 +23,6 @@ package v1alpha1
 
 import (
 	"k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/cluster-api/api/v1beta1"
 )
@@ -394,10 +393,10 @@ func (in *FetchConfiguration) DeepCopyInto(out *FetchConfiguration) {
 		*out = new(string)
 		**out = **in
 	}
-	if in.Selector != nil {
-		in, out := &in.Selector, &out.Selector
-		*out = new(metav1.LabelSelector)
-		(*in).DeepCopyInto(*out)
+	if in.ConfigMap != nil {
+		in, out := &in.ConfigMap, &out.ConfigMap
+		*out = new(v1.ObjectReference)
+		**out = **in
 	}
 }
 

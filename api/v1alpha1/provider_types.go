@@ -18,7 +18,6 @@ package v1alpha1
 
 import (
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrlconfigv1 "sigs.k8s.io/controller-runtime/pkg/config/v1alpha1"
 
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
@@ -178,13 +177,13 @@ type FetchConfiguration struct {
 	// +optional
 	URL *string `json:"url,omitempty"`
 
-	// Selector to be used for fetching provider’s components and metadata from
-	// ConfigMaps stored inside the cluster. Each ConfigMap is expected to contain
+	// ConfigMap to be used for fetching provider’s components and metadata
+	// stored inside the cluster. Each ConfigMap is expected to contain
 	// components and metadata for a specific version only.
 	// Note: the name of the ConfigMap should be set to the version or to override this
 	// add a label like the following: provider.cluster.x-k8s.io/version=v1.4.3
 	// +optional
-	Selector *metav1.LabelSelector `json:"selector,omitempty"`
+	ConfigMap *corev1.ObjectReference `json:"configMap,omitempty"`
 }
 
 // ProProviderStatus defines the observed state of the Provider.
