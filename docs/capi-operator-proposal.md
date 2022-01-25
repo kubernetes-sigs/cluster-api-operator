@@ -371,11 +371,11 @@ type FetchConfiguration struct {
    // +optional
    URL *string `json:"url,omitempty"`
 
-   // Selector to be used for fetching provider’s components and metadata from
-   // ConfigMaps stored inside the cluster. Each ConfigMap is expected to contain
+   // ConfigMap to be used for fetching provider’s components and metadata
+   // stored inside the cluster. Each ConfigMap is expected to contain
    // components and metadata for a specific version only.
    // +optional
-   Selector *metav1.LabelSelector `json:"selector,omitempty"`
+   ConfigMap *corev1.ObjectReference `json:"configMap,omitempty"`
 }
 
 // ProviderStatus defines the observed state of the Provider.
@@ -420,13 +420,12 @@ type ProviderStatus struct {
   https://github.com/kubernetes-sigs/cluster-api-provider-aws/releases.
 - If FetchConfiguration is not nil, exactly one of `URL` or `Selector` must be
   specified.
-- `FetchConfiguration.Selector` is used to fetch provider’s components and
+- `FetchConfiguration.ConfigMap` is used to fetch provider’s components and
   metadata from ConfigMaps stored inside the cluster. Each ConfigMap is
   expected to contain components and metadata for a specific version only. So
   if multiple versions of the providers need to be specified, they can be
-  added as separate ConfigMaps and labeled with the same selector. This
-  provides the same behavior as the “local” provider repositories but now from
-  within the management cluster.
+  added as separate ConfigMaps. This provides the same behavior as the “local” 
+  provider repositories but now from within the management cluster.
 - `FetchConfiguration` is used only during init and upgrade operations.
   Changes made to the contents of `FetchConfiguration` will not trigger a
   reconciliation. This is similar behavior to `ProviderSpec.SecretName`.
@@ -640,7 +639,7 @@ As a final consideration, please note that
 In the following figure, the controllers for the providers are installed in
 the namespaces that are defined by default.
 
-![Figure 1](./images/capi-provider-operator/fig3.png "Figure for
+![Figure 1](./images/fig3.png "Figure for
 installing providers in defined namespaces")
 <div align="center">Installing providers in defined namespaces</div>
 <br/>
@@ -648,7 +647,7 @@ installing providers in defined namespaces")
 In the following figure, the controllers for the providers are all installed in
 the same namespace as configured by the user.
 
-![Figure 2](./images/capi-provider-operator/fig4.png "Figure for
+![Figure 2](./images/fig4.png "Figure for
 installing all providers in the same namespace")
 <div align="center">Installing all providers in the same namespace</div>
 <br/>
@@ -680,7 +679,7 @@ Please note that:
   configuration file; this should be changed in order to use in cluster
   provider configurations.
 
-![Figure 3](./images/capi-provider-operator/fig1.png "Figure for
+![Figure 3](./images/fig1.png "Figure for
 upgrading provider without changing contract")
 <div align="center">Upgrading providers without changing contract</div>
 <br/>
@@ -691,7 +690,7 @@ If the new version of the provider does abide by a new version of the Cluster
 API contract, it is required to ensure all the other providers in the
 management cluster should get the new version too.
 
-![Figure 4](./images/capi-provider-operator/fig2.png "Figure for
+![Figure 4](./images/fig2.png "Figure for
 upgrading provider and changing contract")
 <div align="center">Upgrading providers and changing contract</div>
 <br/>
