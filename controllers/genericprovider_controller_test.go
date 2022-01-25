@@ -17,50 +17,127 @@ limitations under the License.
 package controllers
 
 import (
+	"context"
 	"reflect"
 	"testing"
 
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha1"
 	"sigs.k8s.io/cluster-api-operator/controllers/genericprovider"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	clusterctlv1 "sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3"
+	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/repository"
 )
 
+const (
+	testMetadata = `
+apiVersion: clusterctl.cluster.x-k8s.io/v1alpha3
+releaseSeries:
+  - major: 0
+    minor: 4
+    contract: v1alpha4
+`
+	testComponents = `
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    cluster.x-k8s.io/provider: infrastructure-docker
+    control-plane: controller-manager
+  name: capd-controller-manager
+  namespace: capd-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      cluster.x-k8s.io/provider: infrastructure-docker
+      control-plane: controller-manager
+  template:
+    metadata:
+      labels:
+        cluster.x-k8s.io/provider: infrastructure-docker
+        control-plane: controller-manager
+    spec:
+      containers:
+      - image: gcr.io/google-samples/hello-app:1.0
+        name: manager
+        ports:
+        - containerPort: 8080
+        resources:
+          requests:
+            cpu: 200m
+`
+)
+
+func insertDummyConfig(provider genericprovider.GenericProvider) {
+	spec := provider.GetSpec()
+	spec.FetchConfig = &operatorv1.FetchConfiguration{
+		Selector: &metav1.LabelSelector{
+			MatchLabels: map[string]string{
+				"test": "dummy-config",
+			},
+		},
+	}
+	provider.SetSpec(spec)
+}
+
+func dummyConfigMap(ns string) *corev1.ConfigMap {
+	return &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "v0.4.2",
+			Namespace: ns,
+			Labels: map[string]string{
+				"test": "dummy-config",
+			},
+		},
+		Data: map[string]string{
+			"metadata":   testMetadata,
+			"components": testComponents,
+		},
+	}
+}
+
 func TestReconcilerPreflightConditions(t *testing.T) {
-	g := NewWithT(t)
-
-	namespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "provider-test"}}
-
-	g.Expect(env.Create(ctx, namespace)).To(Succeed())
-
-	defer func() {
-		g.Expect(env.Delete(ctx, namespace)).To(Succeed())
-	}()
-
 	testCases := []struct {
-		name     string
-		provider genericprovider.GenericProvider
+		name      string
+		namespace string
+		providers []genericprovider.GenericProvider
 	}{
 		{
-			name: "preflight conditions for CoreProvider",
-			provider: &genericprovider.CoreProviderWrapper{
-				CoreProvider: &operatorv1.CoreProvider{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "core",
-						Namespace: namespace.Name,
+			name:      "preflight conditions for CoreProvider",
+			namespace: "test-core-provider",
+			providers: []genericprovider.GenericProvider{
+				&genericprovider.CoreProviderWrapper{
+					CoreProvider: &operatorv1.CoreProvider{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "cluster-api",
+						},
 					},
 				},
 			},
 		},
 		{
-			name: "preflight conditions for ControlPlaneProvider",
-			provider: &genericprovider.ControlPlaneProviderWrapper{
-				ControlPlaneProvider: &operatorv1.ControlPlaneProvider{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "controlplane",
-						Namespace: namespace.Name,
+			name:      "preflight conditions for ControlPlaneProvider",
+			namespace: "test-cp-provider",
+			providers: []genericprovider.GenericProvider{
+				&genericprovider.CoreProviderWrapper{
+					CoreProvider: &operatorv1.CoreProvider{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "cluster-api",
+						},
+					},
+				},
+				&genericprovider.ControlPlaneProviderWrapper{
+					ControlPlaneProvider: &operatorv1.ControlPlaneProvider{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "kubeadm",
+						},
 					},
 				},
 			},
@@ -69,33 +146,44 @@ func TestReconcilerPreflightConditions(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			gs := NewWithT(t)
+			g := NewWithT(t)
 
-			gs.Expect(env.Create(ctx, tc.provider.GetObject())).To(Succeed())
+			t.Log("creating namespace", tc.namespace)
+			namespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: tc.namespace}}
+			g.Expect(env.CreateAndWait(ctx, namespace)).To(Succeed())
+			g.Expect(env.CreateAndWait(ctx, dummyConfigMap(tc.namespace))).To(Succeed())
+
+			for _, p := range tc.providers {
+				insertDummyConfig(p)
+				p.SetNamespace(tc.namespace)
+				t.Log("creating test provider", p.GetName())
+				g.Expect(env.CreateAndWait(ctx, p.GetObject())).To(Succeed())
+			}
 
 			g.Eventually(func() bool {
-				if err := env.Get(ctx, client.ObjectKeyFromObject(tc.provider.GetObject()), tc.provider.GetObject()); err != nil {
-					return false
+				for _, p := range tc.providers {
+					if err := env.Get(ctx, client.ObjectKeyFromObject(p.GetObject()), p.GetObject()); err != nil {
+						return false
+					}
+
+					for _, cond := range p.GetStatus().Conditions {
+						if cond.Type == operatorv1.PreflightCheckCondition {
+							t.Log(t.Name(), p.GetName(), cond)
+							if cond.Status == corev1.ConditionTrue {
+								return true
+							}
+						}
+					}
 				}
 
-				conditions := tc.provider.GetStatus().Conditions
-
-				if len(conditions) == 0 {
-					return false
-				}
-
-				if conditions[0].Type != operatorv1.PreflightCheckCondition {
-					return false
-				}
-
-				if conditions[0].Status != corev1.ConditionTrue {
-					return false
-				}
-
-				return true
+				return false
 			}, timeout).Should(BeEquivalentTo(true))
 
-			gs.Expect(env.Delete(ctx, tc.provider.GetObject())).To(Succeed())
+			objs := []client.Object{}
+			for _, p := range tc.providers {
+				objs = append(objs, p.GetObject())
+			}
+			g.Expect(env.CleanupAndWait(ctx, objs...)).To(Succeed())
 		})
 	}
 }
@@ -136,13 +224,12 @@ func TestNewGenericProvider(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-
 			g := NewWithT(t)
 			r := GenericProviderReconciler{
 				Provider: tc.provider,
 			}
 
-			genericProvider, err := r.NewGenericProvider()
+			genericProvider, err := r.newGenericProvider()
 			if tc.expectError {
 				g.Expect(err).To(HaveOccurred())
 			} else {
@@ -190,13 +277,12 @@ func TestNewGenericProviderList(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-
 			g := NewWithT(t)
 			r := GenericProviderReconciler{
 				ProviderList: tc.providerList,
 			}
 
-			genericProviderList, err := r.NewGenericProviderList()
+			genericProviderList, err := r.newGenericProviderList()
 			if tc.expectError {
 				g.Expect(err).To(HaveOccurred())
 			} else {
@@ -204,6 +290,278 @@ func TestNewGenericProviderList(t *testing.T) {
 				g.Expect(reflect.TypeOf(genericProviderList)).To(Equal(reflect.TypeOf(tc.expectedType)))
 				g.Expect(genericProviderList.GetObject()).ToNot(BeIdenticalTo(tc.providerList))
 			}
+		})
+	}
+}
+
+func setupScheme() *runtime.Scheme {
+	scheme := runtime.NewScheme()
+	utilruntime.Must(corev1.AddToScheme(scheme))
+	utilruntime.Must(operatorv1.AddToScheme(scheme))
+	utilruntime.Must(clusterctlv1.AddToScheme(scheme))
+	return scheme
+}
+
+func TestConfigmapRepository(t *testing.T) {
+	provider := &genericprovider.InfrastructureProviderWrapper{
+		InfrastructureProvider: &operatorv1.InfrastructureProvider{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "aws",
+				Namespace: "ns1",
+			},
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "InfrastructureProvider",
+				APIVersion: "operator.cluster.x-k8s.io/v1alpha1",
+			},
+			Spec: operatorv1.InfrastructureProviderSpec{
+				ProviderSpec: operatorv1.ProviderSpec{
+					FetchConfig: &operatorv1.FetchConfiguration{
+						Selector: &metav1.LabelSelector{
+							MatchLabels: map[string]string{"provider-components": "aws"},
+						},
+					},
+				},
+			},
+		},
+	}
+	metadata := `
+apiVersion: clusterctl.cluster.x-k8s.io/v1alpha3
+releaseSeries:
+  - major: 0
+	minor: 4
+	contract: v1alpha4
+  - major: 0
+	minor: 3
+	contract: v1alpha3`
+
+	components := `
+	apiVersion: v1
+kind: Namespace
+metadata:
+  labels:
+    cluster.x-k8s.io/provider: cluster-api
+    control-plane: controller-manager
+  name: capi-system
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  labels:
+    cluster.x-k8s.io/provider: cluster-api
+    control-plane: controller-manager
+  name: capi-webhook-system
+---`
+	tests := []struct {
+		name               string
+		configMaps         []corev1.ConfigMap
+		want               repository.Repository
+		wantErr            string
+		wantDefaultVersion string
+	}{
+		{
+			name:    "missing configmaps",
+			wantErr: "no ConfigMaps found with selector &LabelSelector{MatchLabels:map[string]string{provider-components: aws,},MatchExpressions:[]LabelSelectorRequirement{},}",
+		},
+		{
+			name: "configmap with missing metadata",
+			configMaps: []corev1.ConfigMap{
+				{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "ConfigMap",
+						APIVersion: "v1",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "v1.2.3",
+						Namespace: "ns1",
+						Labels:    map[string]string{"provider-components": "aws"},
+					},
+					Data: map[string]string{"components": components},
+				},
+			},
+			wantErr: "ConfigMap ns1/v1.2.3 has no metadata",
+		},
+		{
+			name: "configmap with missing components",
+			configMaps: []corev1.ConfigMap{
+				{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "ConfigMap",
+						APIVersion: "v1",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "v1.2.3",
+						Namespace: "ns1",
+						Labels:    map[string]string{"provider-components": "aws"},
+					},
+					Data: map[string]string{
+						"metadata": metadata,
+					},
+				},
+			},
+			wantErr: "ConfigMap ns1/v1.2.3 has no components",
+		},
+		{
+			name: "configmap with invalid version in the name",
+			configMaps: []corev1.ConfigMap{
+				{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "ConfigMap",
+						APIVersion: "v1",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "not-a-version",
+						Namespace: "ns1",
+						Labels:    map[string]string{"provider-components": "aws"},
+					},
+					Data: map[string]string{
+						"metadata": metadata,
+					},
+				},
+			},
+			wantErr: "ConfigMap ns1/not-a-version has invalid version:not-a-version (from the Name)",
+		},
+		{
+			name: "configmap with invalid version in the Label",
+			configMaps: []corev1.ConfigMap{
+				{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "ConfigMap",
+						APIVersion: "v1",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "not-a-version",
+						Namespace: "ns1",
+						Labels: map[string]string{
+							"provider-components":               "aws",
+							"provider.cluster.x-k8s.io/version": "also-not-a-label",
+						},
+					},
+					Data: map[string]string{
+						"metadata": metadata,
+					},
+				},
+			},
+			wantErr: "ConfigMap ns1/not-a-version has invalid version:also-not-a-label (from the Label provider.cluster.x-k8s.io/version)",
+		},
+		{
+			name: "one correct configmap",
+			configMaps: []corev1.ConfigMap{
+				{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "ConfigMap",
+						APIVersion: "v1",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "v1.2.3",
+						Namespace: "ns1",
+						Labels:    map[string]string{"provider-components": "aws"},
+					},
+					Data: map[string]string{
+						"metadata":   metadata,
+						"components": components,
+					},
+				},
+			},
+			wantDefaultVersion: "v1.2.3",
+		},
+		{
+			name: "one correct configmap with label version",
+			configMaps: []corev1.ConfigMap{
+				{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "ConfigMap",
+						APIVersion: "v1",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-provider",
+						Namespace: "ns1",
+						Labels: map[string]string{
+							"provider-components":               "aws",
+							"provider.cluster.x-k8s.io/version": "v1.2.3",
+						},
+					},
+					Data: map[string]string{
+						"metadata":   metadata,
+						"components": components,
+					},
+				},
+			},
+			wantDefaultVersion: "v1.2.3",
+		},
+		{
+			name: "three correct configmaps",
+			configMaps: []corev1.ConfigMap{
+				{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "ConfigMap",
+						APIVersion: "v1",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "v1.2.3",
+						Namespace: "ns1",
+						Labels:    map[string]string{"provider-components": "aws"},
+					},
+					Data: map[string]string{
+						"metadata":   metadata,
+						"components": components,
+					},
+				},
+				{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "ConfigMap",
+						APIVersion: "v1",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "v1.2.7",
+						Namespace: "ns1",
+						Labels:    map[string]string{"provider-components": "aws"},
+					},
+					Data: map[string]string{
+						"metadata":   metadata,
+						"components": components,
+					},
+				},
+				{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "ConfigMap",
+						APIVersion: "v1",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "v1.2.4",
+						Namespace: "ns1",
+						Labels:    map[string]string{"provider-components": "aws"},
+					},
+					Data: map[string]string{
+						"metadata":   metadata,
+						"components": components,
+					},
+				},
+			},
+			wantDefaultVersion: "v1.2.3",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := NewWithT(t)
+
+			fakeclient := fake.NewClientBuilder().WithScheme(setupScheme()).WithObjects(provider.GetObject()).Build()
+			inst := &phaseReconciler{
+				ctrlClient: fakeclient,
+			}
+
+			for i := range tt.configMaps {
+				g.Expect(fakeclient.Create(ctx, &tt.configMaps[i])).To(Succeed())
+			}
+
+			got, err := inst.configmapRepository(context.TODO(), provider)
+			if len(tt.wantErr) > 0 {
+				g.Expect(err).Should(MatchError(tt.wantErr))
+				return
+			}
+			g.Expect(err).To(Succeed())
+			g.Expect(got.GetFile(got.DefaultVersion(), got.ComponentsPath())).To(Equal([]byte(components)))
+			g.Expect(got.GetFile(got.DefaultVersion(), "metadata.yaml")).To(Equal([]byte(metadata)))
+			g.Expect(got.DefaultVersion()).To(Equal(tt.wantDefaultVersion))
 		})
 	}
 }

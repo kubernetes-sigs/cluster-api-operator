@@ -23,14 +23,16 @@ import (
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	kerrors "k8s.io/apimachinery/pkg/util/errors"
-	"sigs.k8s.io/cluster-api-operator/controllers/genericprovider"
-
+	"k8s.io/client-go/rest"
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha1"
+	"sigs.k8s.io/cluster-api-operator/controllers/genericprovider"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/patch"
 	ctrl "sigs.k8s.io/controller-runtime"
-
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -38,6 +40,7 @@ type GenericProviderReconciler struct {
 	Provider     client.Object
 	ProviderList client.ObjectList
 	Client       client.Client
+	Config       *rest.Config
 }
 
 func (r *GenericProviderReconciler) SetupWithManager(mgr ctrl.Manager, options controller.Options) error {
@@ -48,12 +51,12 @@ func (r *GenericProviderReconciler) SetupWithManager(mgr ctrl.Manager, options c
 }
 
 func (r *GenericProviderReconciler) Reconcile(ctx context.Context, req reconcile.Request) (_ reconcile.Result, reterr error) {
-	typedProvider, err := r.NewGenericProvider()
+	typedProvider, err := r.newGenericProvider()
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
-	typedProviderList, err := r.NewGenericProviderList()
+	typedProviderList, err := r.newGenericProviderList()
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -76,33 +79,102 @@ func (r *GenericProviderReconciler) Reconcile(ctx context.Context, req reconcile
 
 	defer func() {
 		// Always attempt to patch the object and status after each reconciliation.
-		if err := patchHelper.Patch(ctx, typedProvider.GetObject()); err != nil {
+		if err := patchProvider(ctx, patchHelper, typedProvider); err != nil {
 			reterr = kerrors.NewAggregate([]error{reterr, err})
 		}
 	}()
 
-	// Ignore deleted provider, this can happen when foregroundDeletion
-	// is enabled
-	// Cleanup logic is not needed because owner references set on resource created by
-	// Provider will cause GC to do the cleanup for us.
-	if !typedProvider.GetDeletionTimestamp().IsZero() {
+	// Add finalizer first if not exist to avoid the race condition between init and delete
+	if !controllerutil.ContainsFinalizer(typedProvider.GetObject(), operatorv1.ProviderFinalizer) {
+		controllerutil.AddFinalizer(typedProvider.GetObject(), operatorv1.ProviderFinalizer)
 		return ctrl.Result{}, nil
+	}
+
+	// Handle deletion reconciliation loop.
+	if !typedProvider.GetDeletionTimestamp().IsZero() {
+		return r.reconcileDelete(ctx, typedProvider)
 	}
 
 	return r.reconcile(ctx, typedProvider, typedProviderList)
 }
 
-func (r *GenericProviderReconciler) reconcile(ctx context.Context, genericProvider genericprovider.GenericProvider, genericProviderList genericprovider.GenericProviderList) (_ ctrl.Result, reterr error) {
-	// Run preflight checks to ensure that core provider can be installed properly
-	result, err := preflightChecks(ctx, r.Client, genericProvider, genericProviderList)
-	if err != nil || !result.IsZero() {
-		return result, err
+func patchProvider(ctx context.Context, patchHelper *patch.Helper, provider genericprovider.GenericProvider) error {
+	conds := []clusterv1.ConditionType{
+		operatorv1.PreflightCheckCondition,
+		operatorv1.ProviderInstalledCondition,
 	}
-
-	return ctrl.Result{}, nil
+	conditions.SetSummary(provider, conditions.WithConditions(conds...))
+	return patchHelper.Patch(ctx, provider.GetObject(), patch.WithOwnedConditions{Conditions: append(conds, clusterv1.ReadyCondition)})
 }
 
-func (r *GenericProviderReconciler) NewGenericProvider() (genericprovider.GenericProvider, error) {
+func (r *GenericProviderReconciler) reconcile(ctx context.Context, provider genericprovider.GenericProvider, genericProviderList genericprovider.GenericProviderList) (ctrl.Result, error) {
+	log := ctrl.LoggerFrom(ctx)
+
+	if provider.GetGeneration() == provider.GetStatus().ObservedGeneration {
+		log.V(2).Info("Generation unchanged, nothing to do")
+		return reconcile.Result{}, nil
+	}
+
+	log.V(1).Info("starting reconcile",
+		"Generation", provider.GetGeneration(),
+		"ObservedGeneration", provider.GetStatus().ObservedGeneration)
+
+	reconciler := newReconcilePhases(*r, provider, genericProviderList)
+	phases := []reconcilePhaseFn{
+		reconciler.preflightChecks,
+		reconciler.load,
+		reconciler.fetch,
+		reconciler.preInstall,
+		reconciler.install,
+	}
+
+	res := reconcile.Result{}
+	var err error
+	for _, phase := range phases {
+		res, err = phase(ctx)
+		if err != nil {
+			se, ok := err.(*PhaseError)
+			if ok {
+				conditions.Set(provider, conditions.FalseCondition(se.Type, se.Reason, se.Severity, err.Error()))
+			}
+		}
+		if !res.IsZero() || err != nil {
+			// the steps are sequencial, so we must be complete before progressing.
+			return res, err
+		}
+	}
+	return res, nil
+}
+
+func (r *GenericProviderReconciler) reconcileDelete(ctx context.Context, provider genericprovider.GenericProvider) (ctrl.Result, error) {
+	log := ctrl.LoggerFrom(ctx)
+	log.V(2).Info("deleting provider resources")
+
+	reconciler := newReconcilePhases(*r, provider, nil)
+	phases := []reconcilePhaseFn{
+		reconciler.delete,
+	}
+
+	res := reconcile.Result{}
+	var err error
+	for _, phase := range phases {
+		res, err = phase(ctx)
+		if err != nil {
+			se, ok := err.(*PhaseError)
+			if ok {
+				conditions.Set(provider, conditions.FalseCondition(se.Type, se.Reason, se.Severity, err.Error()))
+			}
+		}
+		if !res.IsZero() || err != nil {
+			// the steps are sequencial, so we must be complete before progressing.
+			return res, err
+		}
+	}
+	controllerutil.RemoveFinalizer(provider.GetObject(), operatorv1.ProviderFinalizer)
+	return res, nil
+}
+
+func (r *GenericProviderReconciler) newGenericProvider() (genericprovider.GenericProvider, error) {
 	switch r.Provider.(type) {
 	case *operatorv1.CoreProvider:
 		return &genericprovider.CoreProviderWrapper{CoreProvider: &operatorv1.CoreProvider{}}, nil
@@ -119,7 +191,7 @@ func (r *GenericProviderReconciler) NewGenericProvider() (genericprovider.Generi
 	}
 }
 
-func (r *GenericProviderReconciler) NewGenericProviderList() (genericprovider.GenericProviderList, error) {
+func (r *GenericProviderReconciler) newGenericProviderList() (genericprovider.GenericProviderList, error) {
 	switch r.ProviderList.(type) {
 	case *operatorv1.CoreProviderList:
 		return &genericprovider.CoreProviderListWrapper{CoreProviderList: &operatorv1.CoreProviderList{}}, nil
