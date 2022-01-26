@@ -109,6 +109,10 @@ $(GOLANGCI_LINT): .github/workflows/golangci-lint.yml # Download golanci-lint us
 $(GO_APIDIFF): $(TOOLS_DIR)/go.mod # Build go-apidiff from tools folder.
 	cd $(TOOLS_DIR) && go build -tags=tools -o $(GO_APIDIFF_BIN) github.com/joelanford/go-apidiff
 
+.PHONY: cert-mananger
+cert-manager: # Install cert-manager on the cluster. This is used for development purposes only.
+	$(ROOT)/hack/cert-manager.sh
+
 ## --------------------------------------
 ## Testing
 ## --------------------------------------
