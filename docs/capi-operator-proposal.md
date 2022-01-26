@@ -402,11 +402,7 @@ type ProviderStatus struct {
   default configurations in case there is no specific FetchConfiguration
   defined.
 - `ProviderSpec.Version` should be a valid default version with the "v" prefix
-  as commonly used in the Kubernetes ecosystem; if this value is nil when a
-  new provider is created, the operator will determine the version to use
-  applying the same rules implemented in clusterctl (latest).
-  Once the latest version is calculated it will be set in
-  `ProviderSpec.Version`.
+  as commonly used in the Kubernetes ecosystem; this value is required.
 - Note: As per discussion in the CAEP PR, we will keep the `SecretName` field
   to allow the provider authors ample time to implement their own credential
   management to support multiple workload clusters. [See this thread for more
