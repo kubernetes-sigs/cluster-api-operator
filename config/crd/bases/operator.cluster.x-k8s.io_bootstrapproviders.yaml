@@ -16,8 +16,8 @@ spec:
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
-    - jsonPath: .spec.version
-      name: Version
+    - jsonPath: .status.installedVersion
+      name: InstalledVersion
       type: string
     - jsonPath: .status.conditions[?(@.type=='Ready')].status
       name: Ready
