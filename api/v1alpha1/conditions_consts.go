@@ -29,6 +29,9 @@ const (
 	// IncorrectVersionFormatReason documents that the provider version is in the incorrect format.
 	IncorrectVersionFormatReason = "IncorrectVersionFormat"
 
+	// EmptyVersionReason documents that the provider version is in the incorrect format.
+	EmptyVersionReason = "EmptyVersionReason"
+
 	// FetchConfigValidationError documents that the FetchConfig is configured incorrectly.
 	FetchConfigValidationErrorReason = "FetchConfigValidationError"
 

@@ -1456,6 +1456,10 @@ spec:
                 description: Contract will contain the core provider contract that
                   the provider is abiding by, like e.g. v1alpha4.
                 type: string
+              installedVersion:
+                description: InstalledVersion is the version of the provider that
+                  is installed.
+                type: string
               observedGeneration:
                 description: ObservedGeneration is the latest generation observed
                   by the controller.
