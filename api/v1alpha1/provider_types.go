@@ -182,7 +182,7 @@ type FetchConfiguration struct {
 	Selector *metav1.LabelSelector `json:"selector,omitempty"`
 }
 
-// ProProviderStatus defines the observed state of the Provider.
+// ProviderStatus defines the observed state of the Provider.
 type ProviderStatus struct {
 	// Contract will contain the core provider contract that the provider is
 	// abiding by, like e.g. v1alpha4.
