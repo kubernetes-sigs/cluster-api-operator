@@ -390,7 +390,6 @@ func (p *phaseReconciler) install(ctx context.Context) (reconcile.Result, error)
 	}
 	status := p.provider.GetStatus()
 	status.Contract = &p.contract
-	status.ObservedGeneration = p.provider.GetGeneration()
 	p.provider.SetStatus(status)
 
 	log.V(1).Info("Provider successfully installed", "name", p.provider.GetName())
