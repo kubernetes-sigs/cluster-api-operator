@@ -56,7 +56,7 @@ func TestPreflightChecks(t *testing.T) {
 						},
 						Spec: operatorv1.CoreProviderSpec{
 							ProviderSpec: operatorv1.ProviderSpec{
-								Version: pointer.StringPtr("v1.0.0"),
+								Version: "v1.0.0",
 								FetchConfig: &operatorv1.FetchConfiguration{
 									URL: pointer.StringPtr("https://example.com"),
 								},
@@ -86,6 +86,11 @@ func TestPreflightChecks(t *testing.T) {
 							Kind:       "CoreProvider",
 							APIVersion: "operator.cluster.x-k8s.io/v1alpha1",
 						},
+						Spec: operatorv1.CoreProviderSpec{
+							ProviderSpec: operatorv1.ProviderSpec{
+								Version: "v1.0.0",
+							},
+						},
 					},
 				},
 				&genericprovider.CoreProviderWrapper{
@@ -97,6 +102,11 @@ func TestPreflightChecks(t *testing.T) {
 						TypeMeta: metav1.TypeMeta{
 							Kind:       "CoreProvider",
 							APIVersion: "operator.cluster.x-k8s.io/v1alpha1",
+						},
+						Spec: operatorv1.CoreProviderSpec{
+							ProviderSpec: operatorv1.ProviderSpec{
+								Version: "v1.0.0",
+							},
 						},
 					},
 				},
@@ -125,6 +135,11 @@ func TestPreflightChecks(t *testing.T) {
 							Kind:       "CoreProvider",
 							APIVersion: "operator.cluster.x-k8s.io/v1alpha1",
 						},
+						Spec: operatorv1.CoreProviderSpec{
+							ProviderSpec: operatorv1.ProviderSpec{
+								Version: "v1.0.0",
+							},
+						},
 					},
 				},
 				&genericprovider.CoreProviderWrapper{
@@ -136,6 +151,11 @@ func TestPreflightChecks(t *testing.T) {
 						TypeMeta: metav1.TypeMeta{
 							Kind:       "CoreProvider",
 							APIVersion: "operator.cluster.x-k8s.io/v1alpha1",
+						},
+						Spec: operatorv1.CoreProviderSpec{
+							ProviderSpec: operatorv1.ProviderSpec{
+								Version: "v1.0.0",
+							},
 						},
 					},
 				},
@@ -164,6 +184,11 @@ func TestPreflightChecks(t *testing.T) {
 							Kind:       "InfrastructureProvider",
 							APIVersion: "operator.cluster.x-k8s.io/v1alpha1",
 						},
+						Spec: operatorv1.InfrastructureProviderSpec{
+							ProviderSpec: operatorv1.ProviderSpec{
+								Version: "v1.0.0",
+							},
+						},
 					},
 				},
 				&genericprovider.CoreProviderWrapper{
@@ -175,6 +200,11 @@ func TestPreflightChecks(t *testing.T) {
 						TypeMeta: metav1.TypeMeta{
 							Kind:       "CoreProvider",
 							APIVersion: "operator.cluster.x-k8s.io/v1alpha4",
+						},
+						Spec: operatorv1.CoreProviderSpec{
+							ProviderSpec: operatorv1.ProviderSpec{
+								Version: "v1.0.0",
+							},
 						},
 						Status: operatorv1.CoreProviderStatus{
 							ProviderStatus: operatorv1.ProviderStatus{
@@ -211,6 +241,11 @@ func TestPreflightChecks(t *testing.T) {
 							Kind:       "InfrastructureProvider",
 							APIVersion: "operator.cluster.x-k8s.io/v1alpha1",
 						},
+						Spec: operatorv1.InfrastructureProviderSpec{
+							ProviderSpec: operatorv1.ProviderSpec{
+								Version: "v1.0.0",
+							},
+						},
 					},
 				},
 				&genericprovider.InfrastructureProviderWrapper{
@@ -223,6 +258,11 @@ func TestPreflightChecks(t *testing.T) {
 							Kind:       "InfrastructureProvider",
 							APIVersion: "operator.cluster.x-k8s.io/v1alpha1",
 						},
+						Spec: operatorv1.InfrastructureProviderSpec{
+							ProviderSpec: operatorv1.ProviderSpec{
+								Version: "v1.0.0",
+							},
+						},
 					},
 				},
 				&genericprovider.CoreProviderWrapper{
@@ -234,6 +274,11 @@ func TestPreflightChecks(t *testing.T) {
 						TypeMeta: metav1.TypeMeta{
 							Kind:       "CoreProvider",
 							APIVersion: "operator.cluster.x-k8s.io/v1alpha4",
+						},
+						Spec: operatorv1.CoreProviderSpec{
+							ProviderSpec: operatorv1.ProviderSpec{
+								Version: "v1.0.0",
+							},
 						},
 						Status: operatorv1.CoreProviderStatus{
 							ProviderStatus: operatorv1.ProviderStatus{
@@ -270,6 +315,11 @@ func TestPreflightChecks(t *testing.T) {
 							Kind:       "InfrastructureProvider",
 							APIVersion: "operator.cluster.x-k8s.io/v1alpha1",
 						},
+						Spec: operatorv1.InfrastructureProviderSpec{
+							ProviderSpec: operatorv1.ProviderSpec{
+								Version: "v1.0.0",
+							},
+						},
 					},
 				},
 				&genericprovider.InfrastructureProviderWrapper{
@@ -282,6 +332,11 @@ func TestPreflightChecks(t *testing.T) {
 							Kind:       "InfrastructureProvider",
 							APIVersion: "operator.cluster.x-k8s.io/v1alpha1",
 						},
+						Spec: operatorv1.InfrastructureProviderSpec{
+							ProviderSpec: operatorv1.ProviderSpec{
+								Version: "v1.0.0",
+							},
+						},
 					},
 				},
 				&genericprovider.CoreProviderWrapper{
@@ -293,6 +348,11 @@ func TestPreflightChecks(t *testing.T) {
 						TypeMeta: metav1.TypeMeta{
 							Kind:       "CoreProvider",
 							APIVersion: "operator.cluster.x-k8s.io/v1alpha4",
+						},
+						Spec: operatorv1.CoreProviderSpec{
+							ProviderSpec: operatorv1.ProviderSpec{
+								Version: "v1.0.0",
+							},
 						},
 						Status: operatorv1.CoreProviderStatus{
 							ProviderStatus: operatorv1.ProviderStatus{
@@ -329,6 +389,11 @@ func TestPreflightChecks(t *testing.T) {
 							Kind:       "InfrastructureProvider",
 							APIVersion: "operator.cluster.x-k8s.io/v1alpha1",
 						},
+						Spec: operatorv1.InfrastructureProviderSpec{
+							ProviderSpec: operatorv1.ProviderSpec{
+								Version: "v1.0.0",
+							},
+						},
 					},
 				},
 				&genericprovider.InfrastructureProviderWrapper{
@@ -340,6 +405,11 @@ func TestPreflightChecks(t *testing.T) {
 						TypeMeta: metav1.TypeMeta{
 							Kind:       "InfrastructureProvider",
 							APIVersion: "operator.cluster.x-k8s.io/v1alpha1",
+						},
+						Spec: operatorv1.InfrastructureProviderSpec{
+							ProviderSpec: operatorv1.ProviderSpec{
+								Version: "v1.0.0",
+							},
 						},
 					},
 				},
@@ -370,7 +440,7 @@ func TestPreflightChecks(t *testing.T) {
 						},
 						Spec: operatorv1.InfrastructureProviderSpec{
 							ProviderSpec: operatorv1.ProviderSpec{
-								Version: pointer.StringPtr("one"),
+								Version: "one",
 							},
 						},
 					},
@@ -379,8 +449,38 @@ func TestPreflightChecks(t *testing.T) {
 			expectedCondition: clusterv1.Condition{
 				Type:     operatorv1.PreflightCheckCondition,
 				Reason:   operatorv1.IncorrectVersionFormatReason,
-				Severity: clusterv1.ConditionSeverityWarning,
+				Severity: clusterv1.ConditionSeverityError,
 				Message:  "could not parse \"one\" as version",
+				Status:   corev1.ConditionFalse,
+			},
+			providerList: &genericprovider.InfrastructureProviderListWrapper{
+				InfrastructureProviderList: &operatorv1.InfrastructureProviderList{},
+			},
+		},
+		{
+			name: "missing version, preflight check failed",
+			providers: []genericprovider.GenericProvider{
+				&genericprovider.InfrastructureProviderWrapper{
+					InfrastructureProvider: &operatorv1.InfrastructureProvider{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "aws",
+							Namespace: namespaceName1,
+						},
+						TypeMeta: metav1.TypeMeta{
+							Kind:       "InfrastructureProvider",
+							APIVersion: "operator.cluster.x-k8s.io/v1alpha1",
+						},
+						Spec: operatorv1.InfrastructureProviderSpec{
+							ProviderSpec: operatorv1.ProviderSpec{},
+						},
+					},
+				},
+			},
+			expectedCondition: clusterv1.Condition{
+				Type:     operatorv1.PreflightCheckCondition,
+				Reason:   operatorv1.IncorrectVersionFormatReason,
+				Severity: clusterv1.ConditionSeverityError,
+				Message:  "version cannot be empty",
 				Status:   corev1.ConditionFalse,
 			},
 			providerList: &genericprovider.InfrastructureProviderListWrapper{
@@ -402,7 +502,7 @@ func TestPreflightChecks(t *testing.T) {
 						},
 						Spec: operatorv1.InfrastructureProviderSpec{
 							ProviderSpec: operatorv1.ProviderSpec{
-								Version: pointer.StringPtr("v1.0.0"),
+								Version: "v1.0.0",
 								FetchConfig: &operatorv1.FetchConfiguration{
 									URL: pointer.StringPtr("https://example.com"),
 									Selector: &metav1.LabelSelector{

@@ -41,6 +41,7 @@ var (
 	moreThanOneProviderInstanceExistsMessage     = "There is already a %s with name %s in the cluster. Only one is allowed."
 	capiVersionIncompatibilityMessage            = "capi operator is only compatible with %s providers, detected %s for provider %s."
 	waitingForCoreProviderReadyMessage           = "waiting for the core provider to install."
+	emptyVersionMessage                          = "version cannot be empty"
 )
 
 // preflightChecks performs preflight checks before installing provider.
@@ -50,18 +51,29 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 	log.V(1).Info("Performing preflight checks.", "provider", provider.GetName())
 
 	spec := provider.GetSpec()
+
+	// Check that provider version is not empty.
+	if spec.Version == "" {
+		log.V(2).Info("Version can't be empty", "provider", provider.GetName())
+		conditions.Set(provider, conditions.FalseCondition(
+			operatorv1.PreflightCheckCondition,
+			operatorv1.EmptyVersionReason,
+			clusterv1.ConditionSeverityError,
+			emptyVersionMessage,
+		))
+		return ctrl.Result{RequeueAfter: preflightFailedRequeueAfter}, nil
+	}
+
 	// Check that provider version contains a valid value.
-	if spec.Version != nil {
-		_, err := version.ParseSemantic(*spec.Version)
-		if err != nil {
-			conditions.Set(provider, conditions.FalseCondition(
-				operatorv1.PreflightCheckCondition,
-				operatorv1.IncorrectVersionFormatReason,
-				clusterv1.ConditionSeverityWarning,
-				err.Error(),
-			))
-			return ctrl.Result{RequeueAfter: preflightFailedRequeueAfter}, nil
-		}
+	if _, err := version.ParseSemantic(spec.Version); err != nil {
+		log.V(2).Info("Version contains invalid value", "provider", provider.GetName())
+		conditions.Set(provider, conditions.FalseCondition(
+			operatorv1.PreflightCheckCondition,
+			operatorv1.IncorrectVersionFormatReason,
+			clusterv1.ConditionSeverityError,
+			err.Error(),
+		))
+		return ctrl.Result{RequeueAfter: preflightFailedRequeueAfter}, nil
 	}
 
 	if spec.FetchConfig != nil && spec.FetchConfig.Selector != nil && spec.FetchConfig.URL != nil {

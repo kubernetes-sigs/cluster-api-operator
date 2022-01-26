@@ -22,7 +22,6 @@ import (
 
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
@@ -31,7 +30,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
-	"k8s.io/utils/pointer"
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha1"
 	"sigs.k8s.io/cluster-api-operator/controllers/genericprovider"
 	"sigs.k8s.io/cluster-api-operator/util"
@@ -93,8 +91,8 @@ func wrapPhaseError(err error, reason string, ctype clusterv1.ConditionType) err
 	}
 }
 
-// newReconcilePhases returns phase reconciler for the given provider.
-func newReconcilePhases(r GenericProviderReconciler, provider genericprovider.GenericProvider, providerList genericprovider.GenericProviderList) *phaseReconciler {
+// newPhaseReconciler returns phase reconciler for the given provider.
+func newPhaseReconciler(r GenericProviderReconciler, provider genericprovider.GenericProvider, providerList genericprovider.GenericProviderList) *phaseReconciler {
 	return &phaseReconciler{
 		ctrlClient:         r.Client,
 		ctrlConfig:         r.Config,
@@ -152,10 +150,7 @@ func (p *phaseReconciler) load(ctx context.Context) (reconcile.Result, error) {
 	p.options = repository.ComponentsOptions{
 		TargetNamespace:     p.provider.GetNamespace(),
 		SkipTemplateProcess: false,
-		Version:             p.repo.DefaultVersion(),
-	}
-	if spec.Version != nil {
-		p.options.Version = *spec.Version
+		Version:             spec.Version,
 	}
 
 	if err := p.validateRepoCAPIVersion(p.provider); err != nil {
@@ -263,13 +258,13 @@ func (s *phaseReconciler) validateRepoCAPIVersion(provider genericprovider.Gener
 		return errors.Wrapf(err, "error decoding %q for provider %q", metadataFile, name)
 	}
 
-	// Gets the contract for the current release.
-	currentVersion, err := versionutil.ParseSemantic(s.options.Version)
+	// Gets the contract for the target release.
+	targetVersion, err := versionutil.ParseSemantic(s.options.Version)
 	if err != nil {
 		return errors.Wrapf(err, "failed to parse current version for the %s provider", name)
 	}
 
-	releaseSeries := latestMetadata.GetReleaseSeriesForVersion(currentVersion)
+	releaseSeries := latestMetadata.GetReleaseSeriesForVersion(targetVersion)
 	if releaseSeries == nil {
 		return errors.Errorf("invalid provider metadata: version %s for the provider %s does not match any release series", s.options.Version, name)
 	}
@@ -300,7 +295,8 @@ func (p *phaseReconciler) fetch(ctx context.Context) (reconcile.Result, error) {
 		ConfigClient: p.configClient,
 		Processor:    yamlprocessor.NewSimpleProcessor(),
 		RawYaml:      componentsFile,
-		Options:      p.options})
+		Options:      p.options,
+	})
 	if err != nil {
 		return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.PreflightCheckCondition)
 	}
@@ -333,20 +329,15 @@ func (p *phaseReconciler) preInstall(ctx context.Context) (reconcile.Result, err
 	if err != nil || !needPreDelete {
 		return reconcile.Result{}, wrapPhaseError(err, "failed getting clusterctl Provider", operatorv1.ProviderInstalledCondition)
 	}
+
+	log.V(1).Info("Upgrade detected, deleting existing components", "name", p.provider.GetName())
 	return p.delete(ctx)
 }
 
-// updateRequiresPreDeletion get the clusterctl Provider and compare it's version with the Spec.Version
-// if different, it's an upgrade.
+// updateRequiresPreDeletion try to get installed version from provider status and decide if it's an upgrade.
 func (s *phaseReconciler) updateRequiresPreDeletion(ctx context.Context, provider genericprovider.GenericProvider) (bool, error) {
-	// TODO: We should replace this with an Installed/Applied version in the providerStatus.
-	err := s.ctrlClient.Get(ctx, clusterctlProviderName(provider), s.clusterctlProvider)
-	if apierrors.IsNotFound(err) {
-		return false, nil
-	} else if err != nil {
-		return false, err
-	}
-	if s.clusterctlProvider.Version == "" {
+	installedVersion := s.provider.GetStatus().InstalledVersion
+	if installedVersion == nil {
 		return false, nil
 	}
 
@@ -354,10 +345,12 @@ func (s *phaseReconciler) updateRequiresPreDeletion(ctx context.Context, provide
 	if err != nil {
 		return false, err
 	}
-	currentVersion, err := versionutil.ParseSemantic(s.clusterctlProvider.Version)
+
+	currentVersion, err := versionutil.ParseSemantic(*installedVersion)
 	if err != nil {
 		return false, err
 	}
+
 	return currentVersion.LessThan(nextVersion), nil
 }
 
@@ -370,8 +363,8 @@ func (p *phaseReconciler) install(ctx context.Context) (reconcile.Result, error)
 	installer.Add(p.components)
 
 	log.V(1).Info("Installing provider", "name", p.provider.GetName())
-	_, err := installer.Install(cluster.InstallOptions{})
-	if err != nil {
+
+	if _, err := installer.Install(cluster.InstallOptions{}); err != nil {
 		reason := "Install failed"
 		if err == wait.ErrWaitTimeout {
 			reason = "Timedout waiting for deployment to become ready"
@@ -379,17 +372,10 @@ func (p *phaseReconciler) install(ctx context.Context) (reconcile.Result, error)
 		return reconcile.Result{}, wrapPhaseError(err, reason, operatorv1.ProviderInstalledCondition)
 	}
 
-	spec := p.provider.GetSpec()
-	if spec.Version == nil {
-		// TODO: the proposal says to do this.. but it causes the Generation to bump
-		// and thus a repeated Reconcile(). IMHO I think this should really be
-		// "status.targetVersion" and then we also have "status.installedVersion" so
-		// we can see what we are working towards without having to edit the spec.
-		spec.Version = pointer.StringPtr(p.components.Version())
-		p.provider.SetSpec(spec)
-	}
 	status := p.provider.GetStatus()
 	status.Contract = &p.contract
+	installedVersion := p.components.Version()
+	status.InstalledVersion = &installedVersion
 	p.provider.SetStatus(status)
 
 	log.V(1).Info("Provider successfully installed", "name", p.provider.GetName())
@@ -408,9 +394,9 @@ func (p *phaseReconciler) delete(ctx context.Context) (reconcile.Result, error) 
 	p.clusterctlProvider.Namespace = p.provider.GetNamespace()
 	p.clusterctlProvider.Type = string(util.ClusterctlProviderType(p.provider))
 	p.clusterctlProvider.ProviderName = p.provider.GetName()
-	if p.clusterctlProvider.Version == "" {
-		// fake these values to get the delete working in case there is not
-		// a real provider (perhaps a failed install).
+	if p.provider.GetStatus().InstalledVersion != nil {
+		p.clusterctlProvider.Version = *p.provider.GetStatus().InstalledVersion
+	} else {
 		p.clusterctlProvider.Version = p.options.Version
 	}
 

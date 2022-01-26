@@ -126,7 +126,7 @@ func (r *GenericProviderReconciler) reconcile(ctx context.Context, provider gene
 		"Generation", provider.GetGeneration(),
 		"ObservedGeneration", provider.GetStatus().ObservedGeneration)
 
-	reconciler := newReconcilePhases(*r, provider, genericProviderList)
+	reconciler := newPhaseReconciler(*r, provider, genericProviderList)
 	phases := []reconcilePhaseFn{
 		reconciler.preflightChecks,
 		reconciler.load,
@@ -157,7 +157,7 @@ func (r *GenericProviderReconciler) reconcileDelete(ctx context.Context, provide
 	log := ctrl.LoggerFrom(ctx)
 	log.V(2).Info("deleting provider resources")
 
-	reconciler := newReconcilePhases(*r, provider, nil)
+	reconciler := newPhaseReconciler(*r, provider, nil)
 	phases := []reconcilePhaseFn{
 		reconciler.delete,
 	}

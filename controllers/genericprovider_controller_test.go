@@ -31,6 +31,7 @@ import (
 
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha1"
 	"sigs.k8s.io/cluster-api-operator/controllers/genericprovider"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	clusterctlv1 "sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3"
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/repository"
 )
@@ -118,6 +119,11 @@ func TestReconcilerPreflightConditions(t *testing.T) {
 						ObjectMeta: metav1.ObjectMeta{
 							Name: "cluster-api",
 						},
+						Spec: operatorv1.CoreProviderSpec{
+							ProviderSpec: operatorv1.ProviderSpec{
+								Version: "v0.4.2",
+							},
+						},
 					},
 				},
 			},
@@ -131,12 +137,32 @@ func TestReconcilerPreflightConditions(t *testing.T) {
 						ObjectMeta: metav1.ObjectMeta{
 							Name: "cluster-api",
 						},
+						Spec: operatorv1.CoreProviderSpec{
+							ProviderSpec: operatorv1.ProviderSpec{
+								Version: "v0.4.2",
+							},
+						},
+						Status: operatorv1.CoreProviderStatus{
+							ProviderStatus: operatorv1.ProviderStatus{
+								Conditions: []clusterv1.Condition{
+									{
+										Type:   clusterv1.ReadyCondition,
+										Status: corev1.ConditionTrue,
+									},
+								},
+							},
+						},
 					},
 				},
 				&genericprovider.ControlPlaneProviderWrapper{
 					ControlPlaneProvider: &operatorv1.ControlPlaneProvider{
 						ObjectMeta: metav1.ObjectMeta{
 							Name: "kubeadm",
+						},
+						Spec: operatorv1.ControlPlaneProviderSpec{
+							ProviderSpec: operatorv1.ProviderSpec{
+								Version: "v0.4.2",
+							},
 						},
 					},
 				},
