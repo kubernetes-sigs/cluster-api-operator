@@ -1,6 +1,18 @@
-# cluster-api-operator
+<p align="center">
+<img src="https://github.com/kubernetes/kubernetes/raw/master/logo/logo.png"  width="100x"></a>
+</p>
+<p align="center">
+<a href="https://godoc.org/sigs.k8s.io/cluster-api-operator"><img src="https://godoc.org/sigs.k8s.io/cluster-api-operator?status.svg"></a>
+</p>
+
+# Cluster API Operator
 
 Home for Cluster API Operator, a subproject of sig-cluster-lifecycle
+
+## What is Cluster API Operator?
+
+Cluster API Operator leverages a declarative API and an
+operator to empower admins to handle the lifecycle of [Cluster API](https://github.com/kubernetes-sigs/cluster-api) providers within the management cluster. See this [document](./docs/capi-operator-proposal.md) for more details.
 
 ## Community, discussion, contribution, and support
 
