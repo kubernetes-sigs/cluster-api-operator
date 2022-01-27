@@ -114,7 +114,7 @@ func (p *phaseReconciler) load(ctx context.Context) (reconcile.Result, error) {
 	log.V(2).Info("Loading provider", "name", p.provider.GetName())
 
 	// Load provider's secret and config url.
-	reader, err := p.secretReader(ctx, p.provider)
+	reader, err := p.secretReader(ctx)
 	if err != nil {
 		return reconcile.Result{}, wrapPhaseError(err, "failed to load the secret reader", operatorv1.PreflightCheckCondition)
 	}
@@ -138,7 +138,7 @@ func (p *phaseReconciler) load(ctx context.Context) (reconcile.Result, error) {
 	// a case for "air-gapped" environments. If no selector was specified, use GitHub repository.
 	if spec.FetchConfig != nil && spec.FetchConfig.Selector != nil {
 		log.V(2).Info("Custom ConfigMap was provided for fetching manifests", "provider", p.provider.GetName())
-		p.repo, err = p.configmapRepository(ctx, p.provider)
+		p.repo, err = p.configmapRepository(ctx)
 	} else {
 		p.repo, err = repository.NewGitHubRepository(p.providerConfig, p.configClient.Variables())
 	}
@@ -153,7 +153,7 @@ func (p *phaseReconciler) load(ctx context.Context) (reconcile.Result, error) {
 		Version:             spec.Version,
 	}
 
-	if err := p.validateRepoCAPIVersion(p.provider); err != nil {
+	if err := p.validateRepoCAPIVersion(); err != nil {
 		return reconcile.Result{}, wrapPhaseError(err, operatorv1.CAPIVersionIncompatibilityReason, operatorv1.PreflightCheckCondition)
 	}
 
@@ -162,33 +162,33 @@ func (p *phaseReconciler) load(ctx context.Context) (reconcile.Result, error) {
 
 // secretReader use clusterctl MemoryReader structure to store the configuration variables
 // that are obtained from a secret and try to set fetch url config.
-func (s *phaseReconciler) secretReader(ctx context.Context, provider genericprovider.GenericProvider) (configclient.Reader, error) {
+func (p *phaseReconciler) secretReader(ctx context.Context) (configclient.Reader, error) {
 	log := ctrl.LoggerFrom(ctx)
 
 	mr := configclient.NewMemoryReader()
-	err := mr.Init("")
-	if err != nil {
+
+	if err := mr.Init(""); err != nil {
 		return nil, err
 	}
 
 	// Fetch configutation variables from the secret. See API field docs for more info.
-	if provider.GetSpec().SecretName != nil {
+	if p.provider.GetSpec().SecretName != nil {
 		secret := &corev1.Secret{}
-		key := types.NamespacedName{Namespace: provider.GetNamespace(), Name: *provider.GetSpec().SecretName}
-		if err := s.ctrlClient.Get(ctx, key, secret); err != nil {
+		key := types.NamespacedName{Namespace: p.provider.GetNamespace(), Name: *p.provider.GetSpec().SecretName}
+		if err := p.ctrlClient.Get(ctx, key, secret); err != nil {
 			return nil, err
 		}
 		for k, v := range secret.Data {
 			mr.Set(k, string(v))
 		}
 	} else {
-		log.V(2).Info("No configuration secret was specified", "provider", provider.GetName())
+		log.V(2).Info("No configuration secret was specified", "provider", p.provider.GetName())
 	}
 
 	// If provided store fetch config url in memory reader.
-	if provider.GetSpec().FetchConfig != nil && provider.GetSpec().FetchConfig.URL != nil {
-		log.V(2).Info("Custom fetch configuration url was provided", "provider", provider.GetName())
-		return mr.AddProvider(provider.GetName(), util.ClusterctlProviderType(provider), *provider.GetSpec().FetchConfig.URL)
+	if p.provider.GetSpec().FetchConfig != nil && p.provider.GetSpec().FetchConfig.URL != nil {
+		log.V(2).Info("Custom fetch configuration url was provided", "provider", p.provider.GetName())
+		return mr.AddProvider(p.provider.GetName(), util.ClusterctlProviderType(p.provider), *p.provider.GetSpec().FetchConfig.URL)
 	}
 
 	return mr, nil
@@ -196,21 +196,21 @@ func (s *phaseReconciler) secretReader(ctx context.Context, provider genericprov
 
 // configmapRepository use clusterctl NewMemoryRepository structure to store the manifests
 // and metadata from a given configmap.
-func (s *phaseReconciler) configmapRepository(ctx context.Context, provider genericprovider.GenericProvider) (repository.Repository, error) {
+func (p *phaseReconciler) configmapRepository(ctx context.Context) (repository.Repository, error) {
 	mr := repository.NewMemoryRepository()
 	mr.WithPaths("", "components.yaml")
 
 	cml := &corev1.ConfigMapList{}
-	selector, err := metav1.LabelSelectorAsSelector(provider.GetSpec().FetchConfig.Selector)
+	selector, err := metav1.LabelSelectorAsSelector(p.provider.GetSpec().FetchConfig.Selector)
 	if err != nil {
 		return nil, err
 	}
-	err = s.ctrlClient.List(ctx, cml, &client.ListOptions{LabelSelector: selector})
-	if err != nil {
+
+	if err = p.ctrlClient.List(ctx, cml, &client.ListOptions{LabelSelector: selector}); err != nil {
 		return nil, err
 	}
 	if len(cml.Items) == 0 {
-		return nil, fmt.Errorf("no ConfigMaps found with selector %s", provider.GetSpec().FetchConfig.Selector.String())
+		return nil, fmt.Errorf("no ConfigMaps found with selector %s", p.provider.GetSpec().FetchConfig.Selector.String())
 	}
 
 	for _, cm := range cml.Items {
@@ -223,15 +223,17 @@ func (s *phaseReconciler) configmapRepository(ctx context.Context, provider gene
 				errMsg = "from the Label " + operatorv1.ConfigMapVersionLabelName
 			}
 		}
-		_, err = versionutil.ParseSemantic(version)
-		if err != nil {
+
+		if _, err = versionutil.ParseSemantic(version); err != nil {
 			return nil, fmt.Errorf("ConfigMap %s/%s has invalid version:%s (%s)", cm.Namespace, cm.Name, version, errMsg)
 		}
+
 		metadata, ok := cm.Data["metadata"]
 		if !ok {
 			return nil, fmt.Errorf("ConfigMap %s/%s has no metadata", cm.Namespace, cm.Name)
 		}
 		mr.WithFile(version, metadataFile, []byte(metadata))
+
 		components, ok := cm.Data["components"]
 		if !ok {
 			return nil, fmt.Errorf("ConfigMap %s/%s has no components", cm.Namespace, cm.Name)
@@ -243,9 +245,9 @@ func (s *phaseReconciler) configmapRepository(ctx context.Context, provider gene
 }
 
 // validateRepoCAPIVersion checks that the repo is using the correct version.
-func (s *phaseReconciler) validateRepoCAPIVersion(provider genericprovider.GenericProvider) error {
-	name := provider.GetName()
-	file, err := s.repo.GetFile(s.options.Version, metadataFile)
+func (p *phaseReconciler) validateRepoCAPIVersion() error {
+	name := p.provider.GetName()
+	file, err := p.repo.GetFile(p.options.Version, metadataFile)
 	if err != nil {
 		return errors.Wrapf(err, "failed to read %q from the repository for provider %q", metadataFile, name)
 	}
@@ -259,19 +261,19 @@ func (s *phaseReconciler) validateRepoCAPIVersion(provider genericprovider.Gener
 	}
 
 	// Gets the contract for the target release.
-	targetVersion, err := versionutil.ParseSemantic(s.options.Version)
+	targetVersion, err := versionutil.ParseSemantic(p.options.Version)
 	if err != nil {
 		return errors.Wrapf(err, "failed to parse current version for the %s provider", name)
 	}
 
 	releaseSeries := latestMetadata.GetReleaseSeriesForVersion(targetVersion)
 	if releaseSeries == nil {
-		return errors.Errorf("invalid provider metadata: version %s for the provider %s does not match any release series", s.options.Version, name)
+		return errors.Errorf("invalid provider metadata: version %s for the provider %s does not match any release series", p.options.Version, name)
 	}
 	if releaseSeries.Contract != "v1alpha4" && releaseSeries.Contract != "v1beta1" {
 		return errors.Errorf(capiVersionIncompatibilityMessage, clusterv1.GroupVersion.Version, releaseSeries.Contract, name)
 	}
-	s.contract = releaseSeries.Contract
+	p.contract = releaseSeries.Contract
 	return nil
 }
 
