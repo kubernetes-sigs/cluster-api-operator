@@ -1207,9 +1207,8 @@ spec:
                   url:
                     description: URL to be used for fetching the provider’s components
                       and metadata from a remote Github repository. For example, https://github.com/{owner}/{repository}/releases
-                      The version of the release will be `ProviderSpec.Version` if
-                      defined otherwise the `latest` version will be computed and
-                      used.
+                      You must set `providerSpec.Version` field for operator to pick
+                      up desired version of the release from GitHub.
                     type: string
                 type: object
               manager:
