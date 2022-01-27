@@ -32,8 +32,7 @@ const (
 // ProviderSpec is the desired state of the Provider.
 type ProviderSpec struct {
 	// Version indicates the provider version.
-	// +optional
-	Version *string `json:"version,omitempty"`
+	Version string `json:"version,omitempty"`
 
 	// Manager defines the properties that can be enabled on the controller manager for the provider.
 	// +optional
@@ -201,4 +200,8 @@ type ProviderStatus struct {
 	// ObservedGeneration is the latest generation observed by the controller.
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+
+	// InstalledVersion is the version of the provider that is installed.
+	// +optional
+	InstalledVersion *string `json:"installedVersion,omitempty"`
 }
