@@ -636,7 +636,7 @@ As a final consideration, please note that
 In the following figure, the controllers for the providers are installed in
 the namespaces that are defined by default.
 
-![Figure 1](./images/capi-provider-operator/fig3.png "Figure for
+![Figure 1](./images/fig3.png "Figure for
 installing providers in defined namespaces")
 <div align="center">Installing providers in defined namespaces</div>
 <br/>
@@ -644,7 +644,7 @@ installing providers in defined namespaces")
 In the following figure, the controllers for the providers are all installed in
 the same namespace as configured by the user.
 
-![Figure 2](./images/capi-provider-operator/fig4.png "Figure for
+![Figure 2](./images/fig4.png "Figure for
 installing all providers in the same namespace")
 <div align="center">Installing all providers in the same namespace</div>
 <br/>
@@ -676,7 +676,7 @@ Please note that:
   configuration file; this should be changed in order to use in cluster
   provider configurations.
 
-![Figure 3](./images/capi-provider-operator/fig1.png "Figure for
+![Figure 3](./images/fig1.png "Figure for
 upgrading provider without changing contract")
 <div align="center">Upgrading providers without changing contract</div>
 <br/>
@@ -687,7 +687,7 @@ If the new version of the provider does abide by a new version of the Cluster
 API contract, it is required to ensure all the other providers in the
 management cluster should get the new version too.
 
-![Figure 4](./images/capi-provider-operator/fig2.png "Figure for
+![Figure 4](./images/fig2.png "Figure for
 upgrading provider and changing contract")
 <div align="center">Upgrading providers and changing contract</div>
 <br/>
