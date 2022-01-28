@@ -73,7 +73,7 @@ func init() {
 
 var (
 	cacheSyncBackoff = wait.Backoff{
-		Duration: 100 * time.Millisecond,
+		Duration: 500 * time.Millisecond,
 		Factor:   1.5,
 		Steps:    8,
 		Jitter:   0.4,

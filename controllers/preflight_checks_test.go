@@ -40,6 +40,7 @@ func TestPreflightChecks(t *testing.T) {
 		providers         []genericprovider.GenericProvider
 		providerList      genericprovider.GenericProviderList
 		expectedCondition clusterv1.Condition
+		expectedError     bool
 	}{
 		{
 			name: "only one core provider exists, preflight check passed",
@@ -74,7 +75,8 @@ func TestPreflightChecks(t *testing.T) {
 			},
 		},
 		{
-			name: "two core providers were created, preflight check failed",
+			name:          "two core providers were created, preflight check failed",
+			expectedError: true,
 			providers: []genericprovider.GenericProvider{
 				&genericprovider.CoreProviderWrapper{
 					CoreProvider: &operatorv1.CoreProvider{
@@ -114,7 +116,7 @@ func TestPreflightChecks(t *testing.T) {
 			expectedCondition: clusterv1.Condition{
 				Type:     operatorv1.PreflightCheckCondition,
 				Reason:   operatorv1.MoreThanOneProviderInstanceExistsReason,
-				Severity: clusterv1.ConditionSeverityWarning,
+				Severity: clusterv1.ConditionSeverityError,
 				Message:  moreThanOneCoreProviderInstanceExistsMessage,
 				Status:   corev1.ConditionFalse,
 			},
@@ -123,7 +125,8 @@ func TestPreflightChecks(t *testing.T) {
 			},
 		},
 		{
-			name: "two core providers in two different namespaces were created, preflight check failed",
+			name:          "two core providers in two different namespaces were created, preflight check failed",
+			expectedError: true,
 			providers: []genericprovider.GenericProvider{
 				&genericprovider.CoreProviderWrapper{
 					CoreProvider: &operatorv1.CoreProvider{
@@ -163,7 +166,7 @@ func TestPreflightChecks(t *testing.T) {
 			expectedCondition: clusterv1.Condition{
 				Type:     operatorv1.PreflightCheckCondition,
 				Reason:   operatorv1.MoreThanOneProviderInstanceExistsReason,
-				Severity: clusterv1.ConditionSeverityWarning,
+				Severity: clusterv1.ConditionSeverityError,
 				Message:  moreThanOneCoreProviderInstanceExistsMessage,
 				Status:   corev1.ConditionFalse,
 			},
@@ -377,7 +380,8 @@ func TestPreflightChecks(t *testing.T) {
 			},
 		},
 		{
-			name: "two similar infra provider exist in different namespaces, preflight check failed",
+			name:          "two similar infra provider exist in different namespaces, preflight check failed",
+			expectedError: true,
 			providers: []genericprovider.GenericProvider{
 				&genericprovider.InfrastructureProviderWrapper{
 					InfrastructureProvider: &operatorv1.InfrastructureProvider{
@@ -417,7 +421,7 @@ func TestPreflightChecks(t *testing.T) {
 			expectedCondition: clusterv1.Condition{
 				Type:     operatorv1.PreflightCheckCondition,
 				Reason:   operatorv1.MoreThanOneProviderInstanceExistsReason,
-				Severity: clusterv1.ConditionSeverityWarning,
+				Severity: clusterv1.ConditionSeverityError,
 				Message:  fmt.Sprintf(moreThanOneProviderInstanceExistsMessage, "aws", namespaceName2),
 				Status:   corev1.ConditionFalse,
 			},
@@ -426,7 +430,8 @@ func TestPreflightChecks(t *testing.T) {
 			},
 		},
 		{
-			name: "wrong version, preflight check failed",
+			name:          "wrong version, preflight check failed",
+			expectedError: true,
 			providers: []genericprovider.GenericProvider{
 				&genericprovider.InfrastructureProviderWrapper{
 					InfrastructureProvider: &operatorv1.InfrastructureProvider{
@@ -458,7 +463,8 @@ func TestPreflightChecks(t *testing.T) {
 			},
 		},
 		{
-			name: "missing version, preflight check failed",
+			name:          "missing version, preflight check failed",
+			expectedError: true,
 			providers: []genericprovider.GenericProvider{
 				&genericprovider.InfrastructureProviderWrapper{
 					InfrastructureProvider: &operatorv1.InfrastructureProvider{
@@ -488,7 +494,8 @@ func TestPreflightChecks(t *testing.T) {
 			},
 		},
 		{
-			name: "incorrect fetchConfig, preflight check failed",
+			name:          "incorrect fetchConfig, preflight check failed",
+			expectedError: true,
 			providers: []genericprovider.GenericProvider{
 				&genericprovider.InfrastructureProviderWrapper{
 					InfrastructureProvider: &operatorv1.InfrastructureProvider{
@@ -517,7 +524,7 @@ func TestPreflightChecks(t *testing.T) {
 			expectedCondition: clusterv1.Condition{
 				Type:     operatorv1.PreflightCheckCondition,
 				Reason:   operatorv1.FetchConfigValidationErrorReason,
-				Severity: clusterv1.ConditionSeverityWarning,
+				Severity: clusterv1.ConditionSeverityError,
 				Message:  "Only one of Selector and URL must be provided, not both",
 				Status:   corev1.ConditionFalse,
 			},
@@ -538,7 +545,11 @@ func TestPreflightChecks(t *testing.T) {
 			}
 
 			_, err := preflightChecks(context.Background(), fakeclient, tc.providers[0], tc.providerList)
-			gs.Expect(err).ToNot(HaveOccurred())
+			if tc.expectedError {
+				gs.Expect(err).To(HaveOccurred())
+			} else {
+				gs.Expect(err).ToNot(HaveOccurred())
+			}
 
 			// Check if proper condition is returned
 			gs.Expect(len(tc.providers[0].GetStatus().Conditions)).To(Equal(1))

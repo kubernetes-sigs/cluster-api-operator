@@ -61,7 +61,7 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 			clusterv1.ConditionSeverityError,
 			emptyVersionMessage,
 		))
-		return ctrl.Result{RequeueAfter: preflightFailedRequeueAfter}, nil
+		return ctrl.Result{RequeueAfter: preflightFailedRequeueAfter}, fmt.Errorf("version can't be empty for provider %s", provider.GetName())
 	}
 
 	// Check that provider version contains a valid value.
@@ -73,7 +73,7 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 			clusterv1.ConditionSeverityError,
 			err.Error(),
 		))
-		return ctrl.Result{RequeueAfter: preflightFailedRequeueAfter}, nil
+		return ctrl.Result{RequeueAfter: preflightFailedRequeueAfter}, fmt.Errorf("version contains invalid value for provider %s", provider.GetName())
 	}
 
 	if spec.FetchConfig != nil && spec.FetchConfig.Selector != nil && spec.FetchConfig.URL != nil {
@@ -81,10 +81,11 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 		conditions.Set(provider, conditions.FalseCondition(
 			operatorv1.PreflightCheckCondition,
 			operatorv1.FetchConfigValidationErrorReason,
-			clusterv1.ConditionSeverityWarning,
+			clusterv1.ConditionSeverityError,
 			"Only one of Selector and URL must be provided, not both",
 		))
-		return ctrl.Result{RequeueAfter: preflightFailedRequeueAfter}, nil
+		return ctrl.Result{RequeueAfter: preflightFailedRequeueAfter},
+			fmt.Errorf("only one of Selector and URL must be provided for provider %s", provider.GetName())
 	}
 
 	if err := c.List(ctx, providerList.GetObject()); err != nil {
@@ -101,7 +102,7 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 		preflightFalseCondition := conditions.FalseCondition(
 			operatorv1.PreflightCheckCondition,
 			operatorv1.MoreThanOneProviderInstanceExistsReason,
-			clusterv1.ConditionSeverityWarning,
+			clusterv1.ConditionSeverityError,
 			"",
 		)
 
@@ -110,7 +111,7 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 			log.V(4).Info(moreThanOneCoreProviderInstanceExistsMessage)
 			preflightFalseCondition.Message = moreThanOneCoreProviderInstanceExistsMessage
 			conditions.Set(provider, preflightFalseCondition)
-			return ctrl.Result{RequeueAfter: preflightFailedRequeueAfter}, nil
+			return ctrl.Result{RequeueAfter: preflightFailedRequeueAfter}, fmt.Errorf("only one instance of CoreProvider is allowed")
 		}
 
 		// For any other provider we should check that instances with similar name exist in any namespace
@@ -118,7 +119,7 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 			preflightFalseCondition.Message = fmt.Sprintf(moreThanOneProviderInstanceExistsMessage, p.GetName(), p.GetNamespace())
 			log.V(2).Info(preflightFalseCondition.Message)
 			conditions.Set(provider, preflightFalseCondition)
-			return ctrl.Result{RequeueAfter: preflightFailedRequeueAfter}, nil
+			return ctrl.Result{RequeueAfter: preflightFailedRequeueAfter}, fmt.Errorf("only one %s provider is allowed in the cluster", p.GetName())
 		}
 	}
 
