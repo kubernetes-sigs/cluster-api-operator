@@ -226,6 +226,9 @@ func customizeContainer(cSpec operatorv1.ContainerSpec, d *appsv1.Deployment) {
 			if cSpec.Image != nil && cSpec.Image.Name != nil && cSpec.Image.Repository != nil {
 				c.Image = imageMetaToURL(cSpec.Image)
 			}
+			if cSpec.Command != nil {
+				c.Command = cSpec.Command
+			}
 		}
 		d.Spec.Template.Spec.Containers[j] = c
 	}

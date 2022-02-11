@@ -151,6 +151,9 @@ type ContainerSpec struct {
 	// Compute resources required by this container.
 	// +optional
 	Resources *corev1.ResourceRequirements `json:"resources,omitempty"`
+
+	// Command allows override container's entrypoint array.
+	Command []string `json:"command,omitempty"`
 }
 
 // ImageMeta allows to customize the image used.

@@ -929,6 +929,12 @@ spec:
                             of the container arg `--sync-period` if both are defined.
                             The same holds for `ManagerSpec.FeatureGates` and `--feature-gates`.
                           type: object
+                        command:
+                          description: Command allows override container's entrypoint
+                            array.
+                          items:
+                            type: string
+                          type: array
                         env:
                           description: List of environment variables to set in the
                             container.

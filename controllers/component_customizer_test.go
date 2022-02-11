@@ -323,6 +323,7 @@ func TestCustomizeDeployment(t *testing.T) {
 						Resources: &corev1.ResourceRequirements{
 							Requests: corev1.ResourceList{corev1.ResourceMemory: memTestQuantity},
 						},
+						Command: []string{"/expected"},
 					},
 				},
 			},
@@ -370,6 +371,7 @@ func TestCustomizeDeployment(t *testing.T) {
 									Resources: corev1.ResourceRequirements{
 										Requests: corev1.ResourceList{corev1.ResourceMemory: memTestQuantity},
 									},
+									Command: []string{"/expected"},
 								},
 							},
 						},
@@ -401,6 +403,9 @@ func TestCustomizeDeployment(t *testing.T) {
 					return expectedDS, false
 				}
 				if !reflect.DeepEqual(inputDS.Template.Spec.Containers[0].Resources, expectedDS.Template.Spec.Containers[0].Resources) {
+					return expectedDS, false
+				}
+				if !reflect.DeepEqual(inputDS.Template.Spec.Containers[0].Command, expectedDS.Template.Spec.Containers[0].Command) {
 					return expectedDS, false
 				}
 				return expectedDS, true
