@@ -1255,11 +1255,6 @@ spec:
                           of version) would be `ReplicaSet.apps`."
                         type: object
                     type: object
-                  debug:
-                    default: false
-                    description: Debug, if set, will override a set of fields with
-                      opinionated values for a debugging session. (Verbosity=5, ProfilerAddress=localhost:6060)
-                    type: boolean
                   featureGates:
                     additionalProperties:
                       type: boolean
@@ -1342,9 +1337,8 @@ spec:
                     - retryPeriod
                     type: object
                   maxConcurrentReconciles:
-                    default: 10
                     description: MaxConcurrentReconciles is the maximum number of
-                      concurrent Reconciles which can be run. Defaults to 10.
+                      concurrent Reconciles which can be run.
                     minimum: 1
                     type: integer
                   metrics:
