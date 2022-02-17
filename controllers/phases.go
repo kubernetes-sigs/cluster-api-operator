@@ -172,9 +172,9 @@ func (p *phaseReconciler) secretReader(ctx context.Context) (configclient.Reader
 	}
 
 	// Fetch configutation variables from the secret. See API field docs for more info.
-	if p.provider.GetSpec().SecretName != nil {
+	if p.provider.GetSpec().SecretName != "" {
 		secret := &corev1.Secret{}
-		key := types.NamespacedName{Namespace: p.provider.GetNamespace(), Name: *p.provider.GetSpec().SecretName}
+		key := types.NamespacedName{Namespace: p.provider.GetNamespace(), Name: p.provider.GetSpec().SecretName}
 		if err := p.ctrlClient.Get(ctx, key, secret); err != nil {
 			return nil, err
 		}
@@ -186,9 +186,9 @@ func (p *phaseReconciler) secretReader(ctx context.Context) (configclient.Reader
 	}
 
 	// If provided store fetch config url in memory reader.
-	if p.provider.GetSpec().FetchConfig != nil && p.provider.GetSpec().FetchConfig.URL != nil {
+	if p.provider.GetSpec().FetchConfig != nil && p.provider.GetSpec().FetchConfig.URL != "" {
 		log.V(2).Info("Custom fetch configuration url was provided", "provider", p.provider.GetName())
-		return mr.AddProvider(p.provider.GetName(), util.ClusterctlProviderType(p.provider), *p.provider.GetSpec().FetchConfig.URL)
+		return mr.AddProvider(p.provider.GetName(), util.ClusterctlProviderType(p.provider), p.provider.GetSpec().FetchConfig.URL)
 	}
 
 	return mr, nil

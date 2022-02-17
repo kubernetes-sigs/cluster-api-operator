@@ -50,7 +50,7 @@ type ProviderSpec struct {
 	// The contents should be in the form of key:value. This secret must be in
 	// the same namespace as the provider.
 	// +optional
-	SecretName *string `json:"secretName,omitempty"`
+	SecretName string `json:"secretName,omitempty"`
 
 	// FetchConfig determines how the operator will fetch the components and metadata for the provider.
 	// If nil, the operator will try to fetch components according to default
@@ -70,14 +70,13 @@ type ManagerSpec struct {
 	// Default empty, meaning the profiler is disabled.
 	// Controller Manager flag is --profiler-address.
 	// +optional
-	ProfilerAddress *string `json:"profilerAddress,omitempty"`
+	ProfilerAddress string `json:"profilerAddress,omitempty"`
 
 	// MaxConcurrentReconciles is the maximum number of concurrent Reconciles
-	// which can be run. Defaults to 10.
+	// which can be run.
 	// +optional
-	// +kubebuilder:default=10
 	// +kubebuilder:validation:Minimum=1
-	MaxConcurrentReconciles *int `json:"maxConcurrentReconciles,omitempty"`
+	MaxConcurrentReconciles int `json:"maxConcurrentReconciles,omitempty"`
 
 	// Verbosity set the logs verbosity. Defaults to 1.
 	// Controller Manager flag is --verbosity.
@@ -85,12 +84,6 @@ type ManagerSpec struct {
 	// +kubebuilder:default=1
 	// +kubebuilder:validation:Minimum=0
 	Verbosity int `json:"verbosity,omitempty"`
-
-	// Debug, if set, will override a set of fields with opinionated values for
-	// a debugging session. (Verbosity=5, ProfilerAddress=localhost:6060)
-	// +optional
-	// +kubebuilder:default=false
-	Debug bool `json:"debug,omitempty"`
 
 	// FeatureGates define provider specific feature flags that will be passed
 	// in as container args to the provider's controller manager.
@@ -160,15 +153,15 @@ type ContainerSpec struct {
 type ImageMeta struct {
 	// Repository sets the container registry to pull images from.
 	// +optional
-	Repository *string `json:"repository,omitempty"`
+	Repository string `json:"repository,omitempty"`
 
 	// Name allows to specify a name for the image.
 	// +optional
-	Name *string `json:"name,omitempty"`
+	Name string `json:"name,omitempty"`
 
 	// Tag allows to specify a tag for the image.
 	// +optional
-	Tag *string `json:"tag,omitempty"`
+	Tag string `json:"tag,omitempty"`
 }
 
 // FetchConfiguration determines the way to fetch the components and metadata for the provider.
@@ -178,7 +171,7 @@ type FetchConfiguration struct {
 	// You must set `providerSpec.Version` field for operator to pick up
 	// desired version of the release from GitHub.
 	// +optional
-	URL *string `json:"url,omitempty"`
+	URL string `json:"url,omitempty"`
 
 	// Selector to be used for fetching provider’s components and metadata from
 	// ConfigMaps stored inside the cluster. Each ConfigMap is expected to contain

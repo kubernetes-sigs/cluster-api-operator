@@ -24,7 +24,6 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha1"
 	"sigs.k8s.io/cluster-api-operator/controllers/genericprovider"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
@@ -59,7 +58,7 @@ func TestPreflightChecks(t *testing.T) {
 							ProviderSpec: operatorv1.ProviderSpec{
 								Version: "v1.0.0",
 								FetchConfig: &operatorv1.FetchConfiguration{
-									URL: pointer.StringPtr("https://example.com"),
+									URL: "https://example.com",
 								},
 							},
 						},
@@ -511,7 +510,7 @@ func TestPreflightChecks(t *testing.T) {
 							ProviderSpec: operatorv1.ProviderSpec{
 								Version: "v1.0.0",
 								FetchConfig: &operatorv1.FetchConfiguration{
-									URL: pointer.StringPtr("https://example.com"),
+									URL: "https://example.com",
 									Selector: &metav1.LabelSelector{
 										MatchLabels: map[string]string{"provider-components": "aws"},
 									},
