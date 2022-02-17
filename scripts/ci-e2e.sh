@@ -1,0 +1,47 @@
+#!/bin/bash
+
+# Copyright 2022 The Kubernetes Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+set -o errexit
+set -o pipefail
+
+REPO_ROOT=$(git rev-parse --show-toplevel)
+cd "${REPO_ROOT}" || exit 1
+
+# shellcheck source=./hack/ensure-go.sh
+source "${REPO_ROOT}/hack/ensure-go.sh"
+
+# shellcheck source=./hack/ensure-kustomize.sh
+source "${REPO_ROOT}/hack/ensure-kustomize.sh"
+
+# shellcheck source=./hack/ensure-kind.sh
+source "${REPO_ROOT}/hack/ensure-kind.sh"
+
+  
+# Build operator images
+ARCH="$(go env GOARCH)"
+export REGISTRY=gcr.io/k8s-staging-cluster-api
+export IMAGE_NAME=cluster-api-operator
+export TAG=dev
+export ARCH
+export PULL_POLICY=IfNotPresent
+export OPERATOR_IMAGE=$REGISTRY/$IMAGE_NAME-$ARCH:$TAG
+
+export CERT_MANAGER_VERSION=v1.7.1
+echo "+ Building CAPI operator image"
+make docker-build
+
+echo "+ Running e2e tests"
+make test-e2e
