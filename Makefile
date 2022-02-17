@@ -241,7 +241,7 @@ modules: ## Runs go mod to ensure modules are up to date.
 .PHONY: docker-pull-prerequisites
 docker-pull-prerequisites:
 	docker pull docker.io/docker/dockerfile:1.1-experimental
-	docker pull docker.io/library/golang:1.16.0
+	docker pull docker.io/library/golang:1.17.0
 	docker pull gcr.io/distroless/static:latest
 
 .PHONY: docker-build
@@ -363,7 +363,7 @@ test-e2e:
 	$(MAKE) test-e2e-run
 
 .PHONY: test-e2e-run
-test-e2e-run: $(GINKGO) ## Run e2e tests
+test-e2e-run: $(GINKGO) $(ENVSUBST) ## Run e2e tests
 	$(ENVSUBST) < $(E2E_CONF_FILE) > $(E2E_CONF_FILE_ENVSUBST) && \
 	$(GINKGO) -v -trace -tags=e2e --noColor=$(GINKGO_NOCOLOR) $(GINKGO_ARGS) ./test/e2e -- \
 		-e2e.artifacts-folder="$(ARTIFACTS)" \

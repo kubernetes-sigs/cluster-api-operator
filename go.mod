@@ -2,6 +2,8 @@ module sigs.k8s.io/cluster-api-operator
 
 go 1.17
 
+replace sigs.k8s.io/cluster-api => sigs.k8s.io/cluster-api v1.1.1
+
 require (
 	github.com/google/go-cmp v0.5.6
 	github.com/onsi/ginkgo v1.16.5
@@ -16,7 +18,7 @@ require (
 	k8s.io/klog/v2 v2.30.0
 	k8s.io/utils v0.0.0-20210930125809-cb0fa318a74b
 	sigs.k8s.io/cluster-api v1.1.1
-	sigs.k8s.io/cluster-api/test v1.1.0
+	sigs.k8s.io/cluster-api/test v1.1.1
 	sigs.k8s.io/controller-runtime v0.11.0
 	sigs.k8s.io/yaml v1.3.0
 )
