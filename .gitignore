@@ -65,6 +65,9 @@ clusterctl-settings.json
 # test results
 _artifacts
 
+# e2e output
+test/e2e/config/operator-dev-envsubst.yaml
+
 # release artifacts
 out
 _releasenotes
