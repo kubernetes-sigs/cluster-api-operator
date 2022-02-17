@@ -18,7 +18,9 @@ limitations under the License.
 package tools
 
 import (
+	_ "github.com/drone/envsubst/v2/cmd/envsubst"
 	_ "github.com/joelanford/go-apidiff"
+	_ "github.com/onsi/ginkgo/ginkgo"
 	_ "gotest.tools/gotestsum"
 	_ "sigs.k8s.io/controller-runtime/tools/setup-envtest"
 	_ "sigs.k8s.io/controller-tools/cmd/controller-gen"
