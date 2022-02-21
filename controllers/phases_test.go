@@ -23,7 +23,6 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha1"
 	"sigs.k8s.io/cluster-api-operator/controllers/genericprovider"
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/repository"
@@ -52,9 +51,9 @@ func TestSecretReader(t *testing.T) {
 				},
 				Spec: operatorv1.CoreProviderSpec{
 					ProviderSpec: operatorv1.ProviderSpec{
-						SecretName: &secretName,
+						SecretName: secretName,
 						FetchConfig: &operatorv1.FetchConfiguration{
-							URL: pointer.StringPtr("https://example.com"),
+							URL: "https://example.com",
 						},
 					},
 				},

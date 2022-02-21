@@ -18,7 +18,6 @@ package controllers
 
 import (
 	"fmt"
-	"math"
 	"sort"
 	"strings"
 	"time"
@@ -127,8 +126,8 @@ func customizeManager(mSpec *operatorv1.ManagerSpec, c *corev1.Container) {
 			c.Args = setArgs(c.Args, "--"+strings.ToLower(k)+"-concurrency", fmt.Sprint(v))
 		}
 	}
-	if mSpec.MaxConcurrentReconciles != nil {
-		c.Args = setArgs(c.Args, "--max-concurrent-reconciles", fmt.Sprint(*mSpec.MaxConcurrentReconciles))
+	if mSpec.MaxConcurrentReconciles != 0 {
+		c.Args = setArgs(c.Args, "--max-concurrent-reconciles", fmt.Sprint(mSpec.MaxConcurrentReconciles))
 	}
 
 	if mSpec.CacheNamespace != "" {
@@ -179,19 +178,12 @@ func customizeManager(mSpec *operatorv1.ManagerSpec, c *corev1.Container) {
 		}
 	}
 
-	if mSpec.ProfilerAddress != nil {
-		c.Args = setArgs(c.Args, "--profiler-address", *mSpec.ProfilerAddress)
+	if mSpec.ProfilerAddress != "" {
+		c.Args = setArgs(c.Args, "--profiler-address", mSpec.ProfilerAddress)
 	}
 
 	if mSpec.Verbosity != defaultVerbosity {
 		c.Args = setArgs(c.Args, "--v", fmt.Sprint(mSpec.Verbosity))
-	}
-
-	if mSpec.Debug {
-		c.Args = setArgs(c.Args, "--v", fmt.Sprint(math.Max(5, float64(mSpec.Verbosity))))
-		if mSpec.ProfilerAddress == nil { // don't override ProfilerAddress if set.
-			c.Args = setArgs(c.Args, "--profiler-address", "localhost:6060")
-		}
 	}
 
 	if len(mSpec.FeatureGates) > 0 {
@@ -223,7 +215,7 @@ func customizeContainer(cSpec operatorv1.ContainerSpec, d *appsv1.Deployment) {
 			if cSpec.Resources != nil {
 				c.Resources = *cSpec.Resources
 			}
-			if cSpec.Image != nil && cSpec.Image.Name != nil && cSpec.Image.Repository != nil {
+			if cSpec.Image != nil && cSpec.Image.Name != "" && cSpec.Image.Repository != "" {
 				c.Image = imageMetaToURL(cSpec.Image)
 			}
 			if cSpec.Command != nil {
@@ -261,10 +253,10 @@ func removeEnv(envs []corev1.EnvVar, name string) []corev1.EnvVar {
 // imageMetaToURL translate container image meta to URL.
 func imageMetaToURL(im *operatorv1.ImageMeta) string {
 	tag := "latest"
-	if im.Tag != nil {
-		tag = *im.Tag
+	if im.Tag != "" {
+		tag = im.Tag
 	}
-	return strings.Join([]string{*im.Repository, *im.Name}, "/") + ":" + tag
+	return strings.Join([]string{im.Repository, im.Name}, "/") + ":" + tag
 }
 
 // leaderElectionArgs set leader election flags.

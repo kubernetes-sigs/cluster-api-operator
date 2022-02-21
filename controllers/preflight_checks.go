@@ -76,7 +76,7 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 		return ctrl.Result{RequeueAfter: preflightFailedRequeueAfter}, fmt.Errorf("version contains invalid value for provider %s", provider.GetName())
 	}
 
-	if spec.FetchConfig != nil && spec.FetchConfig.Selector != nil && spec.FetchConfig.URL != nil {
+	if spec.FetchConfig != nil && spec.FetchConfig.Selector != nil && spec.FetchConfig.URL != "" {
 		// If FetchConfiguration is not nil, exactly one of `URL` or `Selector` must be specified.
 		conditions.Set(provider, conditions.FalseCondition(
 			operatorv1.PreflightCheckCondition,

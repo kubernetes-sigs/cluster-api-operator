@@ -203,9 +203,9 @@ func TestCustomizeDeployment(t *testing.T) {
 					{
 						Name: "manager",
 						Image: &operatorv1.ImageMeta{
-							Name:       pointer.StringPtr("mydns"),
-							Repository: pointer.StringPtr("quay.io/dev"),
-							Tag:        pointer.StringPtr("v3.4.2"),
+							Name:       "mydns",
+							Repository: "quay.io/dev",
+							Tag:        "v3.4.2",
 						},
 						Env: []corev1.EnvVar{
 							{
@@ -302,9 +302,9 @@ func TestCustomizeDeployment(t *testing.T) {
 					{
 						Name: "manager",
 						Image: &operatorv1.ImageMeta{
-							Name:       pointer.StringPtr("mydns"),
-							Repository: pointer.StringPtr("quay.io/dev"),
-							Tag:        pointer.StringPtr("v3.4.2"),
+							Name:       "mydns",
+							Repository: "quay.io/dev",
+							Tag:        "v3.4.2",
 						},
 						Env: []corev1.EnvVar{
 							{
@@ -414,9 +414,9 @@ func TestCustomizeDeployment(t *testing.T) {
 		{
 			name: "all manager options",
 			inputManagerSpec: &operatorv1.ManagerSpec{
-				Debug:           true,
 				FeatureGates:    map[string]bool{"TEST": true, "ANOTHER": false},
-				ProfilerAddress: pointer.StringPtr("localhost:1234"),
+				ProfilerAddress: "localhost:1234",
+				Verbosity:       5,
 				ControllerManagerConfigurationSpec: configv1.ControllerManagerConfigurationSpec{
 					CacheNamespace: "testNS",
 					SyncPeriod:     &metav1.Duration{Duration: sevenHours},
