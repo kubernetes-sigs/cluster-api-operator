@@ -20,8 +20,6 @@ limitations under the License.
 package e2e
 
 import (
-	"context"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
@@ -47,13 +45,13 @@ var _ = Describe("Create providers with minimal specified configuration", func()
 			},
 		}
 
-		Expect(k8sclient.Create(context.TODO(), coreProvider)).To(Succeed())
+		Expect(k8sclient.Create(ctx, coreProvider)).To(Succeed())
 
 		By("Waiting for the core provider deployment to be ready")
 		Eventually(func() bool {
 			deployment := &appsv1.Deployment{}
 			key := client.ObjectKey{Namespace: operatorNamespace, Name: coreProviderDeploymentName}
-			if err := k8sclient.Get(context.TODO(), key, deployment); err != nil {
+			if err := k8sclient.Get(ctx, key, deployment); err != nil {
 				return false
 			}
 
@@ -70,7 +68,7 @@ var _ = Describe("Create providers with minimal specified configuration", func()
 		Eventually(func() bool {
 			coreProvider := &operatorv1.CoreProvider{}
 			key := client.ObjectKey{Namespace: operatorNamespace, Name: coreProviderName}
-			if err := k8sclient.Get(context.TODO(), key, coreProvider); err != nil {
+			if err := k8sclient.Get(ctx, key, coreProvider); err != nil {
 				return false
 			}
 
@@ -86,7 +84,7 @@ var _ = Describe("Create providers with minimal specified configuration", func()
 		Eventually(func() bool {
 			coreProvider := &operatorv1.CoreProvider{}
 			key := client.ObjectKey{Namespace: operatorNamespace, Name: coreProviderName}
-			if err := k8sclient.Get(context.TODO(), key, coreProvider); err != nil {
+			if err := k8sclient.Get(ctx, key, coreProvider); err != nil {
 				return false
 			}
 

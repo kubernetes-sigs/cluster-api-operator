@@ -20,7 +20,6 @@ limitations under the License.
 package e2e
 
 import (
-	"context"
 	"flag"
 	"fmt"
 	"io"
@@ -190,7 +189,7 @@ func createClusterctlLocalRepository(config *clusterctl.E2EConfig, repositoryFol
 		RepositoryFolder: repositoryFolder,
 	}
 
-	clusterctlConfig := clusterctl.CreateRepository(context.TODO(), createRepositoryInput)
+	clusterctlConfig := clusterctl.CreateRepository(ctx, createRepositoryInput)
 	Expect(clusterctlConfig).To(BeAnExistingFile(), "The clusterctl config file does not exists in the local repository %s", repositoryFolder)
 	return clusterctlConfig
 }
@@ -199,7 +198,7 @@ func setupBootstrapCluster(config *clusterctl.E2EConfig, scheme *runtime.Scheme,
 	var clusterProvider bootstrap.ClusterProvider
 	kubeconfigPath := ""
 	if !useExistingCluster {
-		clusterProvider = bootstrap.CreateKindBootstrapClusterAndLoadImages(context.TODO(), bootstrap.CreateKindBootstrapClusterAndLoadImagesInput{
+		clusterProvider = bootstrap.CreateKindBootstrapClusterAndLoadImages(ctx, bootstrap.CreateKindBootstrapClusterAndLoadImagesInput{
 			Name:               config.ManagementClusterName,
 			RequiresDockerSock: config.HasDockerProvider(),
 			Images:             config.Images,
@@ -226,7 +225,7 @@ func initBootstrapCluster(bootstrapClusterProxy framework.ClusterProxy, config *
 	Expect(err).ToNot(HaveOccurred(), "Failed to read the operator components file")
 
 	By("Applying operator components to the bootstrap cluster")
-	Expect(bootstrapClusterProxy.Apply(context.TODO(), operatorComponents)).To(Succeed(), "Failed to apply operator components to the bootstrap cluster")
+	Expect(bootstrapClusterProxy.Apply(ctx, operatorComponents)).To(Succeed(), "Failed to apply operator components to the bootstrap cluster")
 
 	By("Deploying cert-manager")
 	Expect(config.Variables).To(HaveKey(certManagerURL), "Missing %s variable in the config", certManagerURL)
@@ -238,16 +237,16 @@ func initBootstrapCluster(bootstrapClusterProxy framework.ClusterProxy, config *
 	rawCertManagerReponse, err := io.ReadAll(certManagerResponce.Body)
 	Expect(err).ToNot(HaveOccurred(), "Failed to read the cert-manager components file")
 
-	Expect(bootstrapClusterProxy.Apply(context.TODO(), rawCertManagerReponse)).To(Succeed(), "Failed to apply cert-manager components to the bootstrap cluster")
+	Expect(bootstrapClusterProxy.Apply(ctx, rawCertManagerReponse)).To(Succeed(), "Failed to apply cert-manager components to the bootstrap cluster")
 
 	By("Waiting for the controllers to be running")
 
-	controllersDeployments := framework.GetControllerDeployments(context.TODO(), framework.GetControllerDeploymentsInput{
+	controllersDeployments := framework.GetControllerDeployments(ctx, framework.GetControllerDeploymentsInput{
 		Lister: bootstrapClusterProxy.GetClient(),
 	})
 
 	for _, deployment := range controllersDeployments {
-		framework.WaitForDeploymentsAvailable(context.TODO(), framework.WaitForDeploymentsAvailableInput{
+		framework.WaitForDeploymentsAvailable(ctx, framework.WaitForDeploymentsAvailableInput{
 			Getter:     bootstrapClusterProxy.GetClient(),
 			Deployment: deployment,
 		}, config.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
@@ -269,9 +268,9 @@ var _ = SynchronizedAfterSuite(func() {
 
 func tearDown(bootstrapClusterProvider bootstrap.ClusterProvider, bootstrapClusterProxy framework.ClusterProxy) {
 	if bootstrapClusterProxy != nil {
-		bootstrapClusterProxy.Dispose(context.TODO())
+		bootstrapClusterProxy.Dispose(ctx)
 	}
 	if bootstrapClusterProvider != nil {
-		bootstrapClusterProvider.Dispose(context.TODO())
+		bootstrapClusterProvider.Dispose(ctx)
 	}
 }

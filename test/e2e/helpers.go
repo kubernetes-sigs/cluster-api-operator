@@ -19,7 +19,14 @@ limitations under the License.
 
 package e2e
 
-import "time"
+import (
+	"context"
+	"time"
+)
+
+var (
+	ctx = context.Background()
+)
 
 const (
 	timeout                    = 5 * time.Minute
