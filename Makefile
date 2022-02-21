@@ -57,6 +57,8 @@ GOLANGCI_LINT := $(TOOLS_BIN_DIR)/golangci-lint
 KUSTOMIZE := $(abspath $(TOOLS_BIN_DIR)/kustomize)
 SETUP_ENVTEST := $(abspath $(TOOLS_BIN_DIR)/setup-envtest)
 GOTESTSUM := $(abspath $(TOOLS_BIN_DIR)/gotestsum)
+GINKGO := $(abspath $(TOOLS_BIN_DIR)/ginkgo)
+ENVSUBST := $(abspath $(TOOLS_BIN_DIR)/envsubst)
 
 # Define Docker related variables. Releases should modify and double check these vars.
 REGISTRY ?= gcr.io/$(shell gcloud config get-value project)
@@ -77,6 +79,20 @@ ALL_ARCH = amd64 arm arm64 ppc64le s390x
 # Set build time variables including version details
 LDFLAGS := $(shell $(ROOT)/hack/version.sh)
 
+# E2E configuration
+GINKGO_NOCOLOR ?= false
+GINKGO_ARGS ?=
+ARTIFACTS ?= $(ROOT)/_artifacts
+E2E_CONF_FILE ?= $(ROOT)/test/e2e/config/operator-dev.yaml
+E2E_CONF_FILE_ENVSUBST ?= $(ROOT)/test/e2e/config/operator-dev-envsubst.yaml
+SKIP_CLEANUP ?= false
+SKIP_CREATE_MGMT_CLUSTER ?= false
+
+# Relase
+RELEASE_TAG := $(shell git describe --abbrev=0 2>/dev/null)
+RELEASE_ALIAS_TAG ?= $(PULL_BASE_REF)
+RELEASE_DIR := out
+
 all: generate test operator
 
 help:  ## Display this help
@@ -88,6 +104,8 @@ help:  ## Display this help
 
 kustomize: $(KUSTOMIZE) ## Build a local copy of kustomize.
 go-apidiff: $(GO_APIDIFF) ## Build a local copy of apidiff
+ginkgo: $(GINKGO) ## Build a local copy of ginkgo
+envsubst: $(ENVSUBST) ## Build a local copy of envsubst
 
 $(CONTROLLER_GEN): $(TOOLS_DIR)/go.mod # Build controller-gen from tools folder.
 	cd $(TOOLS_DIR); go build -tags=tools -o $(BIN_DIR)/controller-gen sigs.k8s.io/controller-tools/cmd/controller-gen
@@ -107,7 +125,13 @@ $(GOLANGCI_LINT): .github/workflows/golangci-lint.yml # Download golanci-lint us
 		$(shell cat .github/workflows/golangci-lint.yml | grep version | sed 's/.*version: //')
 
 $(GO_APIDIFF): $(TOOLS_DIR)/go.mod # Build go-apidiff from tools folder.
-	cd $(TOOLS_DIR) && go build -tags=tools -o $(GO_APIDIFF_BIN) github.com/joelanford/go-apidiff
+	cd $(TOOLS_DIR); go build -tags=tools -o $(GO_APIDIFF_BIN) github.com/joelanford/go-apidiff
+
+$(GINKGO): ## Build ginkgo.
+	cd $(TOOLS_DIR); go build -tags=tools -o $(BIN_DIR)/ginkgo github.com/onsi/ginkgo/ginkgo
+
+$(ENVSUBST): ## Build envsubst from tools folder.
+	cd $(TOOLS_DIR); go build -tags=tools -o $(BIN_DIR)/envsubst github.com/drone/envsubst/v2/cmd/envsubst
 
 .PHONY: cert-mananger
 cert-manager: # Install cert-manager on the cluster. This is used for development purposes only.
@@ -217,7 +241,7 @@ modules: ## Runs go mod to ensure modules are up to date.
 .PHONY: docker-pull-prerequisites
 docker-pull-prerequisites:
 	docker pull docker.io/docker/dockerfile:1.1-experimental
-	docker pull docker.io/library/golang:1.16.0
+	docker pull docker.io/library/golang:1.17.0
 	docker pull gcr.io/distroless/static:latest
 
 .PHONY: docker-build
@@ -270,10 +294,6 @@ set-manifest-image:
 ## Release
 ## --------------------------------------
 
-RELEASE_TAG := $(shell git describe --abbrev=0 2>/dev/null)
-RELEASE_ALIAS_TAG ?= $(PULL_BASE_REF)
-RELEASE_DIR := out
-
 $(RELEASE_DIR):
 	mkdir -p $(RELEASE_DIR)/
 
@@ -295,7 +315,7 @@ manifest-modification: # Set the manifest images to the staging/production bucke
 
 .PHONY: release-manifests
 release-manifests: $(RELEASE_DIR) ## Builds the manifests to publish with a release
-	$(KUSTOMIZE) ./config/default > $(RELEASE_DIR)/operator-components.yaml
+	$(KUSTOMIZE) build ./config/default > $(RELEASE_DIR)/operator-components.yaml
 
 .PHONY: release-staging
 release-staging: ## Builds and push container images to the staging bucket.
@@ -333,3 +353,19 @@ clean-bin: ## Remove all generated binaries
 clean-release: ## Remove the release folder
 	rm -rf $(RELEASE_DIR)
 
+## --------------------------------------
+## E2E
+## --------------------------------------
+
+.PHONY: e2e-test
+test-e2e:
+	$(MAKE) release-manifests
+	$(MAKE) test-e2e-run
+
+.PHONY: test-e2e-run
+test-e2e-run: $(GINKGO) $(ENVSUBST) ## Run e2e tests
+	$(ENVSUBST) < $(E2E_CONF_FILE) > $(E2E_CONF_FILE_ENVSUBST) && \
+	$(GINKGO) -v -trace -tags=e2e --noColor=$(GINKGO_NOCOLOR) $(GINKGO_ARGS) ./test/e2e -- \
+		-e2e.artifacts-folder="$(ARTIFACTS)" \
+		-e2e.config="$(E2E_CONF_FILE_ENVSUBST)"  -e2e.components=$(ROOT)/$(RELEASE_DIR)/operator-components.yaml \
+		-e2e.skip-resource-cleanup=$(SKIP_CLEANUP) -e2e.use-existing-cluster=$(SKIP_CREATE_MGMT_CLUSTER) $(E2E_ARGS)
