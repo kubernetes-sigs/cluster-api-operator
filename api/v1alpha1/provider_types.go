@@ -32,7 +32,7 @@ const (
 // ProviderSpec is the desired state of the Provider.
 type ProviderSpec struct {
 	// Version indicates the provider version.
-	Version string `json:"version,omitempty"`
+	Version string `json:"version"`
 
 	// Manager defines the properties that can be enabled on the controller manager for the provider.
 	// +optional
