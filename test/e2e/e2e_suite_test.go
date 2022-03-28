@@ -34,6 +34,8 @@ import (
 	"github.com/onsi/ginkgo/config"
 	"github.com/onsi/ginkgo/reporters"
 	. "github.com/onsi/gomega"
+	appsv1 "k8s.io/api/apps/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha1"
 	"sigs.k8s.io/cluster-api/test/framework"
@@ -43,7 +45,12 @@ import (
 )
 
 const (
-	certManagerURL = "CERTMANAGER_URL"
+	certManagerURL                  = "CERTMANAGER_URL"
+	certManagerNamespace            = "cert-manager"
+	certManagerDeployment           = "cert-manager"
+	certManagerCAInjectorDeployment = "cert-manager-cainjector"
+	certManagerWebhookDeployment    = "cert-manager-webhook"
+	capiOperatorManagerDeployment   = "capi-operator-controller-manager"
 )
 
 // Test suite flags
@@ -221,25 +228,50 @@ func initBootstrapCluster(bootstrapClusterProxy framework.ClusterProxy, config *
 	logFolder := filepath.Join(artifactFolder, "clusters", bootstrapClusterProxy.GetName())
 	Expect(os.MkdirAll(logFolder, 0750)).To(Succeed(), "Invalid argument. Log folder can't be created for initBootstrapCluster")
 
+	By("Deploying cert-manager")
+	Expect(config.Variables).To(HaveKey(certManagerURL), "Missing %s variable in the config", certManagerURL)
+	certManagerComponentsUrl := config.GetVariable(certManagerURL)
+	certManagerResponse, err := http.Get(certManagerComponentsUrl) //use package "net/http"
+	Expect(err).ToNot(HaveOccurred(), "Failed to download cert-manager components from %s", certManagerComponentsUrl)
+	defer certManagerResponse.Body.Close()
+
+	rawCertManagerResponse, err := io.ReadAll(certManagerResponse.Body)
+	Expect(err).ToNot(HaveOccurred(), "Failed to read the cert-manager components file")
+
+	Expect(bootstrapClusterProxy.Apply(ctx, rawCertManagerResponse)).To(Succeed(), "Failed to apply cert-manager components to the bootstrap cluster")
+
+	By("Waiting for cert manager to be available")
+	certManagerDeployments := []*appsv1.Deployment{
+		{
+			ObjectMeta: metav1.ObjectMeta{Name: certManagerDeployment, Namespace: certManagerNamespace},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{Name: certManagerCAInjectorDeployment, Namespace: certManagerNamespace},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{Name: certManagerWebhookDeployment, Namespace: certManagerNamespace},
+		},
+	}
+
+	for _, deployment := range certManagerDeployments {
+		framework.WaitForDeploymentsAvailable(ctx, framework.WaitForDeploymentsAvailableInput{
+			Getter:     bootstrapClusterProxy.GetClient(),
+			Deployment: deployment,
+		}, config.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
+	}
+
 	operatorComponents, err := ioutil.ReadFile(componentsPath)
 	Expect(err).ToNot(HaveOccurred(), "Failed to read the operator components file")
 
 	By("Applying operator components to the bootstrap cluster")
 	Expect(bootstrapClusterProxy.Apply(ctx, operatorComponents)).To(Succeed(), "Failed to apply operator components to the bootstrap cluster")
 
-	By("Deploying cert-manager")
-	Expect(config.Variables).To(HaveKey(certManagerURL), "Missing %s variable in the config", certManagerURL)
-	certManagerComponentsUrl := config.GetVariable(certManagerURL)
-	certManagerResponce, err := http.Get(certManagerComponentsUrl) //use package "net/http"
-	Expect(err).ToNot(HaveOccurred(), "Failed to download cert-manager components from %s", certManagerComponentsUrl)
-	defer certManagerResponce.Body.Close()
-
-	rawCertManagerReponse, err := io.ReadAll(certManagerResponce.Body)
-	Expect(err).ToNot(HaveOccurred(), "Failed to read the cert-manager components file")
-
-	Expect(bootstrapClusterProxy.Apply(ctx, rawCertManagerReponse)).To(Succeed(), "Failed to apply cert-manager components to the bootstrap cluster")
-
 	By("Waiting for the controllers to be running")
+
+	framework.WaitForDeploymentsAvailable(ctx, framework.WaitForDeploymentsAvailableInput{
+		Getter:     bootstrapClusterProxy.GetClient(),
+		Deployment: &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: capiOperatorManagerDeployment, Namespace: operatorNamespace}},
+	}, config.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
 	controllersDeployments := framework.GetControllerDeployments(ctx, framework.GetControllerDeploymentsInput{
 		Lister: bootstrapClusterProxy.GetClient(),

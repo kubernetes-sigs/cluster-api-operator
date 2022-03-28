@@ -1,0 +1,91 @@
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  creationTimestamp: null
+  name: validating-webhook-configuration
+webhooks:
+- admissionReviewVersions:
+  - v1
+  - v1alpha1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /validate-operator-cluster-x-k8s-io-v1alpha1-bootstrapprovider
+  failurePolicy: Fail
+  name: vbootstrapprovider.kb.io
+  rules:
+  - apiGroups:
+    - operator.cluster.x-k8s.io
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - bootstrapproviders
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  - v1alpha1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /validate-operator-cluster-x-k8s-io-v1alpha1-controlplaneprovider
+  failurePolicy: Fail
+  name: vcontrolplaneprovider.kb.io
+  rules:
+  - apiGroups:
+    - operator.cluster.x-k8s.io
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - controlplaneproviders
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  - v1alpha1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /validate-operator-cluster-x-k8s-io-v1alpha1-coreprovider
+  failurePolicy: Fail
+  name: vcoreprovider.kb.io
+  rules:
+  - apiGroups:
+    - operator.cluster.x-k8s.io
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - coreproviders
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  - v1alpha1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /validate-operator-cluster-x-k8s-io-v1alpha1-infrastructureprovider
+  failurePolicy: Fail
+  name: vinfrastructureprovider.kb.io
+  rules:
+  - apiGroups:
+    - operator.cluster.x-k8s.io
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - infrastructureproviders
+  sideEffects: None
