@@ -35,6 +35,7 @@ import (
 	"github.com/onsi/ginkgo/reporters"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha1"
@@ -46,6 +47,7 @@ import (
 
 const (
 	certManagerURL                  = "CERTMANAGER_URL"
+	githubTokenVar                  = "GITHUB_TOKEN"
 	certManagerNamespace            = "cert-manager"
 	certManagerDeployment           = "cert-manager"
 	certManagerCAInjectorDeployment = "cert-manager-cainjector"
@@ -283,6 +285,22 @@ func initBootstrapCluster(bootstrapClusterProxy framework.ClusterProxy, config *
 			Deployment: deployment,
 		}, config.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 	}
+
+	By("Creating the provider secret with github token")
+	Expect(config.Variables).To(HaveKey(githubTokenVar), "Missing %s variable in the config", githubTokenVar)
+	githubTokenValue := config.GetVariable(githubTokenVar)
+
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      providerSecretName,
+			Namespace: operatorNamespace,
+		},
+		Data: map[string][]byte{
+			"github-token":               []byte(githubTokenValue),
+			"AWS_B64ENCODED_CREDENTIALS": []byte("dGVzdA=="),
+		},
+	}
+	Expect(bootstrapClusterProxy.GetClient().Create(ctx, secret)).To(Succeed(), "Failed to create the provider secret")
 }
 
 // Using a SynchronizedAfterSuite for controlling how to delete resources shared across ParallelNodes (~ginkgo threads).

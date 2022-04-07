@@ -29,7 +29,11 @@ source "${REPO_ROOT}/hack/ensure-kustomize.sh"
 # shellcheck source=./hack/ensure-kind.sh
 source "${REPO_ROOT}/hack/ensure-kind.sh"
 
-  
+if [ -z $GITHUB_TOKEN ]
+then
+    echo "GITHUB_TOKEN variable is required"
+fi
+
 # Build operator images
 ARCH="$(go env GOARCH)"
 export REGISTRY=gcr.io/k8s-staging-cluster-api
