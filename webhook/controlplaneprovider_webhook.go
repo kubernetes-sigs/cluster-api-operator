@@ -18,12 +18,13 @@ package webhook
 
 import (
 	"context"
+	"fmt"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
-
-	"sigs.k8s.io/cluster-api-operator/api/v1alpha1"
 )
 
 type ControlPlaneProviderWebhook struct {
@@ -31,7 +32,7 @@ type ControlPlaneProviderWebhook struct {
 
 func (r *ControlPlaneProviderWebhook) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
-		For(&v1alpha1.ControlPlaneProvider{}).
+		For(&operatorv1.ControlPlaneProvider{}).
 		WithValidator(r).
 		Complete()
 }
@@ -42,11 +43,33 @@ var _ webhook.CustomValidator = &ControlPlaneProviderWebhook{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (r *ControlPlaneProviderWebhook) ValidateCreate(ctx context.Context, obj runtime.Object) error {
+	provider, ok := obj.(*operatorv1.ControlPlaneProvider)
+	if !ok {
+		return fmt.Errorf("expected a ControlPlaneProvider object, got %T", obj)
+	}
+
+	if errList := validateProviderSpec(provider.Spec.ProviderSpec); errList != nil {
+		return apierrors.NewInvalid(
+			controlPlaneProviderGK,
+			provider.Name, errList)
+	}
+
 	return nil
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (r *ControlPlaneProviderWebhook) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) error {
+	provider, ok := newObj.(*operatorv1.ControlPlaneProvider)
+	if !ok {
+		return fmt.Errorf("expected a ControlPlaneProvider object, got %T", newObj)
+	}
+
+	if errList := validateProviderSpec(provider.Spec.ProviderSpec); errList != nil {
+		return apierrors.NewInvalid(
+			controlPlaneProviderGK,
+			provider.Name, errList)
+	}
+
 	return nil
 }
 
