@@ -232,7 +232,7 @@ generate-manifests: $(CONTROLLER_GEN) ## Generate manifests for the operator e.g
 
 .PHONY: modules
 modules: ## Runs go mod to ensure modules are up to date.
-	go mod tidy
+	go mod tidy -compat=1.17
 	cd $(TOOLS_DIR); go mod tidy
 
 ## --------------------------------------
