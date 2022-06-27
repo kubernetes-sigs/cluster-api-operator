@@ -10,3 +10,4 @@ intervals:
 
 variables:
   CERTMANAGER_URL: https://github.com/cert-manager/cert-manager/releases/download/${CERT_MANAGER_VERSION}/cert-manager.yaml
+  GITHUB_TOKEN: ${GITHUB_TOKEN}

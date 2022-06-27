@@ -20,78 +20,117 @@ limitations under the License.
 package e2e
 
 import (
+	"fmt"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha1"
+	"sigs.k8s.io/cluster-api-operator/controllers/genericprovider"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var _ = Describe("Create providers with minimal specified configuration", func() {
-	version := "v1.1.1"
-	It("should succefully create a CoreProvider", func() {
-		k8sclient := bootstrapClusterProxy.GetClient()
-		coreProvider := &operatorv1.CoreProvider{
+	It("should succefully create all providers", func() {
+		k8sClient := bootstrapClusterProxy.GetClient()
+
+		coreProvider, err := newGenericProvider(&operatorv1.CoreProvider{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      coreProviderName,
 				Namespace: operatorNamespace,
 			},
 			Spec: operatorv1.CoreProviderSpec{
 				ProviderSpec: operatorv1.ProviderSpec{
-					Version: version,
+					Version:    coreProviderVersion,
+					SecretName: providerSecretName,
 				},
 			},
-		}
+		})
+		Expect(err).ToNot(HaveOccurred())
 
-		Expect(k8sclient.Create(ctx, coreProvider)).To(Succeed())
+		testProvider("CoreProvider", coreProviderDeploymentName, coreProvider, k8sClient)
 
-		By("Waiting for the core provider deployment to be ready")
-		Eventually(func() bool {
-			deployment := &appsv1.Deployment{}
-			key := client.ObjectKey{Namespace: operatorNamespace, Name: coreProviderDeploymentName}
-			if err := k8sclient.Get(ctx, key, deployment); err != nil {
-				return false
-			}
+		infraProvider, err := newGenericProvider(&operatorv1.InfrastructureProvider{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      infrastructureProviderName,
+				Namespace: operatorNamespace,
+			},
+			Spec: operatorv1.InfrastructureProviderSpec{
+				ProviderSpec: operatorv1.ProviderSpec{
+					Version:    infraProviderVersion,
+					SecretName: providerSecretName,
+				},
+			},
+		})
+		Expect(err).ToNot(HaveOccurred())
 
-			for _, c := range deployment.Status.Conditions {
-				if c.Type == appsv1.DeploymentAvailable && c.Status == corev1.ConditionTrue {
-					return true
-				}
-			}
+		testProvider("InfrastructureProvider", infrastructureProviderDeploymentName, infraProvider, k8sClient)
 
-			return false
-		}, timeout).Should(Equal(true))
+		bootstrapProvider, err := newGenericProvider(&operatorv1.BootstrapProvider{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      boostrapProviderName,
+				Namespace: operatorNamespace,
+			},
+			Spec: operatorv1.BootstrapProviderSpec{
+				ProviderSpec: operatorv1.ProviderSpec{
+					Version:    coreProviderVersion,
+					SecretName: providerSecretName,
+				},
+			},
+		})
+		Expect(err).ToNot(HaveOccurred())
 
-		By("Waiting for core provider to be ready")
-		Eventually(func() bool {
-			coreProvider := &operatorv1.CoreProvider{}
-			key := client.ObjectKey{Namespace: operatorNamespace, Name: coreProviderName}
-			if err := k8sclient.Get(ctx, key, coreProvider); err != nil {
-				return false
-			}
+		testProvider("BootstrapPlane", boostrapProviderDeploymentName, bootstrapProvider, k8sClient)
 
-			for _, c := range coreProvider.Status.Conditions {
-				if c.Type == operatorv1.ProviderInstalledCondition && c.Status == corev1.ConditionTrue {
-					return true
-				}
-			}
-			return false
-		}, timeout).Should(Equal(true))
+		controlPlaneProvider, err := newGenericProvider(&operatorv1.ControlPlaneProvider{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      boostrapProviderName,
+				Namespace: operatorNamespace,
+			},
+			Spec: operatorv1.ControlPlaneProviderSpec{
+				ProviderSpec: operatorv1.ProviderSpec{
+					Version:    coreProviderVersion,
+					SecretName: providerSecretName,
+				},
+			},
+		})
+		Expect(err).ToNot(HaveOccurred())
 
-		By("Waiting for status.IntalledVersion to be set")
-		Eventually(func() bool {
-			coreProvider := &operatorv1.CoreProvider{}
-			key := client.ObjectKey{Namespace: operatorNamespace, Name: coreProviderName}
-			if err := k8sclient.Get(ctx, key, coreProvider); err != nil {
-				return false
-			}
+		testProvider("ControlPlane", controlPlaneProviderDeploymentName, controlPlaneProvider, k8sClient)
 
-			if coreProvider.Status.InstalledVersion != nil && *coreProvider.Status.InstalledVersion == version {
-				return true
-			}
-			return false
-		}, timeout).Should(Equal(true))
+		By("Deleting all providers")
+		Expect(cleanupAndWait(ctx, bootstrapClusterProxy.GetClient(),
+			coreProvider.GetObject(),
+			infraProvider.GetObject(),
+			controlPlaneProvider.GetObject(),
+			bootstrapProvider.GetObject(),
+		)).To(Succeed())
+
+		By("Waiting for all deployments to be deleted")
+		waitForDeploymentDeleted(operatorNamespace, coreProviderDeploymentName, k8sClient)
+		waitForDeploymentDeleted(operatorNamespace, infrastructureProviderDeploymentName, k8sClient)
+		waitForDeploymentDeleted(operatorNamespace, boostrapProviderDeploymentName, k8sClient)
+		waitForDeploymentDeleted(operatorNamespace, controlPlaneProviderDeploymentName, k8sClient)
 	})
 })
+
+func testProvider(providerType, deploymentName string, provider genericprovider.GenericProvider, k8sClient client.Client) {
+	By(fmt.Sprintf("Creating %s provider", providerType))
+	Expect(k8sClient.Create(ctx, provider.GetObject())).To(Succeed())
+
+	By(fmt.Sprintf("Waiting for %s provider deployment to be ready", providerType))
+	waitForDeploymentReady(operatorNamespace, deploymentName, k8sClient)
+
+	By(fmt.Sprintf("Waiting for %s provider to be ready", providerType))
+	waitForProviderCondition(provider,
+		clusterv1.Condition{
+			Type:   operatorv1.ProviderInstalledCondition,
+			Status: corev1.ConditionTrue,
+		},
+		k8sClient)
+
+	By(fmt.Sprintf("Waiting for status.IntalledVersion to be set for %s provider", providerType))
+	waitForInstalledVersionSet(provider, provider.GetSpec().Version, k8sClient)
+}
