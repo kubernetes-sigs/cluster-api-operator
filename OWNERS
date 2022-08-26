@@ -4,3 +4,7 @@
 approvers:
   - sig-cluster-lifecycle-leads
   - cluster-api-operator-admins
+ 
+emeritus_approvers:
+  - alexander-demichev
+
