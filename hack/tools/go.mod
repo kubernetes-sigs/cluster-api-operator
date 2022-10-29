@@ -1,6 +1,6 @@
 module sigs.k8s.io/cluster-api-operator/hack/tools
 
-go 1.17
+go 1.19
 
 require (
 	github.com/drone/envsubst/v2 v2.0.0-20210730161058-179042472c46
