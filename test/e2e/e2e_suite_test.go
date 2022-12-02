@@ -30,9 +30,7 @@ import (
 	"strings"
 	"testing"
 
-	. "github.com/onsi/ginkgo"
-	"github.com/onsi/ginkgo/config"
-	"github.com/onsi/ginkgo/reporters"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -114,9 +112,7 @@ func init() {
 
 func TestE2E(t *testing.T) {
 	RegisterFailHandler(Fail)
-	junitPath := filepath.Join(artifactFolder, fmt.Sprintf("junit.e2e_suite.%d.xml", config.GinkgoConfig.ParallelNode))
-	junitReporter := reporters.NewJUnitReporter(junitPath)
-	RunSpecsWithDefaultAndCustomReporters(t, "capi-operator-e2e", []Reporter{junitReporter})
+	RunSpecs(t, "capi-operator-e2e")
 }
 
 // Using a SynchronizedBeforeSuite for controlling how to create resources shared across ParallelNodes (~ginkgo threads).
