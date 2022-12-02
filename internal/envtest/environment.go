@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 	"go/build"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -274,7 +273,7 @@ func getFilePathToClusterctlCRDs(root string) string {
 		return clusterctlCRDPath
 	}
 
-	modBits, err := ioutil.ReadFile(filepath.Join(root, "go.mod"))
+	modBits, err := os.ReadFile(filepath.Join(root, "go.mod"))
 	if err != nil {
 		return ""
 	}
