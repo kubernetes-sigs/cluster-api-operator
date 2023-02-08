@@ -22,8 +22,9 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
-	"sigs.k8s.io/cluster-api-operator/webhook"
 	"time"
+
+	"sigs.k8s.io/cluster-api-operator/webhook"
 
 	"github.com/spf13/pflag"
 
@@ -42,10 +43,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
+
 	// +kubebuilder:scaffold:imports
 
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha1"
-	"sigs.k8s.io/cluster-api-operator/controllers"
+	"sigs.k8s.io/cluster-api-operator/internal/controllers"
 )
 
 var (
