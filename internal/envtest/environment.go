@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 	"go/build"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -30,7 +29,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/onsi/ginkgo"
+	"github.com/onsi/ginkgo/v2"
 	"github.com/pkg/errors"
 	admissionv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -274,7 +273,7 @@ func getFilePathToClusterctlCRDs(root string) string {
 		return clusterctlCRDPath
 	}
 
-	modBits, err := ioutil.ReadFile(filepath.Join(root, "go.mod"))
+	modBits, err := os.ReadFile(filepath.Join(root, "go.mod"))
 	if err != nil {
 		return ""
 	}

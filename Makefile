@@ -39,6 +39,7 @@ export DOCKER_CLI_EXPERIMENTAL := enabled
 # Directories
 TOOLS_DIR := $(ROOT)/hack/tools
 TOOLS_BIN_DIR := $(TOOLS_DIR)/bin
+JUNIT_REPORT_DIR := $(TOOLS_DIR)/_out
 BIN_DIR := bin
 GO_APIDIFF_BIN := $(BIN_DIR)/go-apidiff
 GO_APIDIFF := $(TOOLS_DIR)/$(GO_APIDIFF_BIN)
@@ -122,13 +123,13 @@ $(GOTESTSUM): $(TOOLS_DIR)/go.mod # Build gotestsum from tools folder.
 $(GOLANGCI_LINT): .github/workflows/golangci-lint.yml # Download golanci-lint using hack script into tools folder.
 	hack/ensure-golangci-lint.sh \
 		-b $(TOOLS_DIR)/$(BIN_DIR) \
-		$(shell cat .github/workflows/golangci-lint.yml | grep version | sed 's/.*version: //')
+		$(shell cat .github/workflows/golangci-lint.yml | grep -e "^[ \t]*version" | sed 's/.*version: //')
 
 $(GO_APIDIFF): $(TOOLS_DIR)/go.mod # Build go-apidiff from tools folder.
 	cd $(TOOLS_DIR); go build -tags=tools -o $(GO_APIDIFF_BIN) github.com/joelanford/go-apidiff
 
 $(GINKGO): ## Build ginkgo.
-	cd $(TOOLS_DIR); go build -tags=tools -o $(BIN_DIR)/ginkgo github.com/onsi/ginkgo/ginkgo
+	cd $(TOOLS_DIR); go build -tags=tools -o $(BIN_DIR)/ginkgo github.com/onsi/ginkgo/v2/ginkgo
 
 $(ENVSUBST): ## Build envsubst from tools folder.
 	cd $(TOOLS_DIR); go build -tags=tools -o $(BIN_DIR)/envsubst github.com/drone/envsubst/v2/cmd/envsubst
@@ -366,7 +367,7 @@ test-e2e:
 .PHONY: test-e2e-run
 test-e2e-run: $(GINKGO) $(ENVSUBST) ## Run e2e tests
 	$(ENVSUBST) < $(E2E_CONF_FILE) > $(E2E_CONF_FILE_ENVSUBST) && \
-	$(GINKGO) -v -trace -tags=e2e --noColor=$(GINKGO_NOCOLOR) $(GINKGO_ARGS) ./test/e2e -- \
+	$(GINKGO) -v -trace -tags=e2e --junit-report=junit_cluster_api_operator_e2e.xml --output-dir="${JUNIT_REPORT_DIR}" --no-color=$(GINKGO_NOCOLOR) $(GINKGO_ARGS) ./test/e2e -- \
 		-e2e.artifacts-folder="$(ARTIFACTS)" \
 		-e2e.config="$(E2E_CONF_FILE_ENVSUBST)"  -e2e.components=$(ROOT)/$(RELEASE_DIR)/operator-components.yaml \
 		-e2e.skip-resource-cleanup=$(SKIP_CLEANUP) -e2e.use-existing-cluster=$(SKIP_CREATE_MGMT_CLUSTER) $(E2E_ARGS)
