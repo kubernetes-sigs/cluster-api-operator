@@ -19,6 +19,7 @@ updates:
     ignore:
       # Ignore Cluster-API as its upgraded manually.
       - dependency-name: "sigs.k8s.io/cluster-api"
+      - dependency-name: "sigs.k8s.io/cluster-api/test"
       # Ignore controller-runtime as its upgraded manually.
       - dependency-name: "sigs.k8s.io/controller-runtime"
       # Ignore k8s and its transitives modules as they are upgraded manually
