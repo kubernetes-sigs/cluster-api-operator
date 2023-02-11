@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 )
 
 // InfrastructureProviderSpec defines the desired state of InfrastructureProvider.
@@ -44,6 +45,30 @@ type InfrastructureProvider struct {
 	Status InfrastructureProviderStatus `json:"status,omitempty"`
 }
 
+func (b *InfrastructureProvider) GetConditions() clusterv1.Conditions {
+	return b.Status.Conditions
+}
+
+func (b *InfrastructureProvider) SetConditions(conditions clusterv1.Conditions) {
+	b.Status.Conditions = conditions
+}
+
+func (b *InfrastructureProvider) GetSpec() ProviderSpec {
+	return b.Spec.ProviderSpec
+}
+
+func (b *InfrastructureProvider) SetSpec(in ProviderSpec) {
+	b.Spec.ProviderSpec = in
+}
+
+func (b *InfrastructureProvider) GetStatus() ProviderStatus {
+	return b.Status.ProviderStatus
+}
+
+func (b *InfrastructureProvider) SetStatus(in ProviderStatus) {
+	b.Status.ProviderStatus = in
+}
+
 // +kubebuilder:object:root=true
 
 // InfrastructureProviderList contains a list of InfrastructureProvider.
@@ -51,6 +76,15 @@ type InfrastructureProviderList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []InfrastructureProvider `json:"items"`
+}
+
+func (i *InfrastructureProviderList) GetItems() []GenericProvider {
+	providers := []GenericProvider{}
+	for _, provider := range i.Items {
+		providers = append(providers, &provider)
+	}
+
+	return providers
 }
 
 func init() {

@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 )
 
 // ControlPlaneProviderSpec defines the desired state of ControlPlaneProvider.
@@ -44,6 +45,30 @@ type ControlPlaneProvider struct {
 	Status ControlPlaneProviderStatus `json:"status,omitempty"`
 }
 
+func (b *ControlPlaneProvider) GetConditions() clusterv1.Conditions {
+	return b.Status.Conditions
+}
+
+func (b *ControlPlaneProvider) SetConditions(conditions clusterv1.Conditions) {
+	b.Status.Conditions = conditions
+}
+
+func (b *ControlPlaneProvider) GetSpec() ProviderSpec {
+	return b.Spec.ProviderSpec
+}
+
+func (b *ControlPlaneProvider) SetSpec(in ProviderSpec) {
+	b.Spec.ProviderSpec = in
+}
+
+func (b *ControlPlaneProvider) GetStatus() ProviderStatus {
+	return b.Status.ProviderStatus
+}
+
+func (b *ControlPlaneProvider) SetStatus(in ProviderStatus) {
+	b.Status.ProviderStatus = in
+}
+
 // +kubebuilder:object:root=true
 
 // ControlPlaneProviderList contains a list of ControlPlaneProvider.
@@ -51,6 +76,15 @@ type ControlPlaneProviderList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []ControlPlaneProvider `json:"items"`
+}
+
+func (c *ControlPlaneProviderList) GetItems() []GenericProvider {
+	providers := []GenericProvider{}
+	for _, provider := range c.Items {
+		providers = append(providers, &provider)
+	}
+
+	return providers
 }
 
 func init() {

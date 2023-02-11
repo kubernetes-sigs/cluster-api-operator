@@ -31,8 +31,6 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha1"
-	"sigs.k8s.io/cluster-api-operator/internal/controllers/genericprovider"
-	"sigs.k8s.io/cluster-api-operator/util"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	clusterctlv1 "sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3"
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/cluster"
@@ -50,8 +48,8 @@ const metadataFile = "metadata.yaml"
 // phaseReconciler holds all required information for interacting with clusterctl code and
 // helps to iterate through provider reconciliation phases.
 type phaseReconciler struct {
-	provider     genericprovider.GenericProvider
-	providerList genericprovider.GenericProviderList
+	provider     operatorv1.GenericProvider
+	providerList operatorv1.GenericProviderList
 
 	ctrlClient         client.Client
 	ctrlConfig         *rest.Config
@@ -92,7 +90,7 @@ func wrapPhaseError(err error, reason string, ctype clusterv1.ConditionType) err
 }
 
 // newPhaseReconciler returns phase reconciler for the given provider.
-func newPhaseReconciler(r GenericProviderReconciler, provider genericprovider.GenericProvider, providerList genericprovider.GenericProviderList) *phaseReconciler {
+func newPhaseReconciler(r GenericProviderReconciler, provider operatorv1.GenericProvider, providerList operatorv1.GenericProviderList) *phaseReconciler {
 	return &phaseReconciler{
 		ctrlClient:         r.Client,
 		ctrlConfig:         r.Config,
@@ -127,7 +125,7 @@ func (p *phaseReconciler) load(ctx context.Context) (reconcile.Result, error) {
 
 	// Get returns the configuration for the provider with a given name/type.
 	// This is done using clusterctl internal API types.
-	p.providerConfig, err = p.configClient.Providers().Get(p.provider.GetName(), util.ClusterctlProviderType(p.provider))
+	p.providerConfig, err = p.configClient.Providers().Get(p.provider.GetName(), clusterctlProviderType(p.provider))
 	if err != nil {
 		return reconcile.Result{}, wrapPhaseError(err, operatorv1.UnknownProviderReason, operatorv1.PreflightCheckCondition)
 	}
@@ -188,7 +186,7 @@ func (p *phaseReconciler) secretReader(ctx context.Context) (configclient.Reader
 	// If provided store fetch config url in memory reader.
 	if p.provider.GetSpec().FetchConfig != nil && p.provider.GetSpec().FetchConfig.URL != "" {
 		log.Info("Custom fetch configuration url was provided")
-		return mr.AddProvider(p.provider.GetName(), util.ClusterctlProviderType(p.provider), p.provider.GetSpec().FetchConfig.URL)
+		return mr.AddProvider(p.provider.GetName(), clusterctlProviderType(p.provider), p.provider.GetSpec().FetchConfig.URL)
 	}
 
 	return mr, nil
@@ -329,7 +327,7 @@ func (p *phaseReconciler) preInstall(ctx context.Context) (reconcile.Result, err
 }
 
 // updateRequiresPreDeletion try to get installed version from provider status and decide if it's an upgrade.
-func (s *phaseReconciler) updateRequiresPreDeletion(ctx context.Context, provider genericprovider.GenericProvider) (bool, error) {
+func (s *phaseReconciler) updateRequiresPreDeletion(ctx context.Context, provider operatorv1.GenericProvider) (bool, error) {
 	installedVersion := s.provider.GetStatus().InstalledVersion
 	if installedVersion == nil {
 		return false, nil
@@ -384,7 +382,7 @@ func (p *phaseReconciler) delete(ctx context.Context) (reconcile.Result, error) 
 
 	p.clusterctlProvider.Name = clusterctlProviderName(p.provider).Name
 	p.clusterctlProvider.Namespace = p.provider.GetNamespace()
-	p.clusterctlProvider.Type = string(util.ClusterctlProviderType(p.provider))
+	p.clusterctlProvider.Type = string(clusterctlProviderType(p.provider))
 	p.clusterctlProvider.ProviderName = p.provider.GetName()
 	if p.provider.GetStatus().InstalledVersion != nil {
 		p.clusterctlProvider.Version = *p.provider.GetStatus().InstalledVersion
@@ -400,9 +398,9 @@ func (p *phaseReconciler) delete(ctx context.Context) (reconcile.Result, error) 
 	return reconcile.Result{}, wrapPhaseError(err, operatorv1.OldComponentsDeletionErrorReason, operatorv1.ProviderInstalledCondition)
 }
 
-func clusterctlProviderName(provider genericprovider.GenericProvider) client.ObjectKey {
+func clusterctlProviderName(provider operatorv1.GenericProvider) client.ObjectKey {
 	prefix := ""
-	switch provider.GetObject().(type) {
+	switch provider.(type) {
 	case *operatorv1.BootstrapProvider:
 		prefix = "bootstrap-"
 	case *operatorv1.ControlPlaneProvider:
@@ -420,4 +418,19 @@ func (s *phaseReconciler) newClusterClient() cluster.Client {
 		ctrlClient: s.ctrlClient,
 		ctrlConfig: s.ctrlConfig,
 	}))
+}
+
+// clusterctlProviderType returns the provider type from the genericProvider.
+func clusterctlProviderType(genericProvider operatorv1.GenericProvider) clusterctlv1.ProviderType {
+	switch genericProvider.(type) {
+	case *operatorv1.CoreProvider:
+		return clusterctlv1.CoreProviderType
+	case *operatorv1.ControlPlaneProvider:
+		return clusterctlv1.ControlPlaneProviderType
+	case *operatorv1.InfrastructureProvider:
+		return clusterctlv1.InfrastructureProviderType
+	case *operatorv1.BootstrapProvider:
+		return clusterctlv1.BootstrapProviderType
+	}
+	return clusterctlv1.ProviderTypeUnknown
 }

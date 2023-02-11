@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 )
 
 // CoreProviderSpec defines the desired state of CoreProvider.
@@ -44,6 +45,30 @@ type CoreProvider struct {
 	Status CoreProviderStatus `json:"status,omitempty"`
 }
 
+func (b *CoreProvider) GetConditions() clusterv1.Conditions {
+	return b.Status.Conditions
+}
+
+func (b *CoreProvider) SetConditions(conditions clusterv1.Conditions) {
+	b.Status.Conditions = conditions
+}
+
+func (b *CoreProvider) GetSpec() ProviderSpec {
+	return b.Spec.ProviderSpec
+}
+
+func (b *CoreProvider) SetSpec(in ProviderSpec) {
+	b.Spec.ProviderSpec = in
+}
+
+func (b *CoreProvider) GetStatus() ProviderStatus {
+	return b.Status.ProviderStatus
+}
+
+func (b *CoreProvider) SetStatus(in ProviderStatus) {
+	b.Status.ProviderStatus = in
+}
+
 // +kubebuilder:object:root=true
 
 // CoreProviderList contains a list of CoreProvider.
@@ -51,6 +76,15 @@ type CoreProviderList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []CoreProvider `json:"items"`
+}
+
+func (c *CoreProviderList) GetItems() []GenericProvider {
+	providers := []GenericProvider{}
+	for _, provider := range c.Items {
+		providers = append(providers, &provider)
+	}
+
+	return providers
 }
 
 func init() {

@@ -19,6 +19,8 @@ package v1alpha1
 import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/cluster-api/util/conditions"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrlconfigv1 "sigs.k8s.io/controller-runtime/pkg/config/v1alpha1"
 
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
@@ -28,6 +30,22 @@ const (
 	ProviderFinalizer         = "provider.cluster.x-k8s.io"
 	ConfigMapVersionLabelName = "provider.cluster.x-k8s.io/version"
 )
+
+// +kubebuilder:object:generate=false
+type GenericProvider interface {
+	client.Object
+	conditions.Setter
+	GetSpec() ProviderSpec
+	SetSpec(in ProviderSpec)
+	GetStatus() ProviderStatus
+	SetStatus(in ProviderStatus)
+}
+
+// +kubebuilder:object:generate=false
+type GenericProviderList interface {
+	client.ObjectList
+	GetItems() []GenericProvider
+}
 
 // ProviderSpec is the desired state of the Provider.
 type ProviderSpec struct {

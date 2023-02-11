@@ -15,6 +15,7 @@ package controllers
 
 import (
 	"k8s.io/client-go/rest"
+	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha1"
 	internalcontrollers "sigs.k8s.io/cluster-api-operator/internal/controllers"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -22,8 +23,8 @@ import (
 )
 
 type GenericProviderReconciler struct {
-	Provider     client.Object
-	ProviderList client.ObjectList
+	Provider     operatorv1.GenericProvider
+	ProviderList operatorv1.GenericProviderList
 	Client       client.Client
 	Config       *rest.Config
 }

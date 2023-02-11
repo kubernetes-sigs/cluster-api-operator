@@ -24,7 +24,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha1"
-	"sigs.k8s.io/cluster-api-operator/internal/controllers/genericprovider"
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/repository"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
@@ -39,22 +38,20 @@ func TestSecretReader(t *testing.T) {
 
 	p := &phaseReconciler{
 		ctrlClient: fakeclient,
-		provider: &genericprovider.CoreProviderWrapper{
-			CoreProvider: &operatorv1.CoreProvider{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "cluster-api",
-					Namespace: namespace,
-				},
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "CoreProvider",
-					APIVersion: "operator.cluster.x-k8s.io/v1alpha1",
-				},
-				Spec: operatorv1.CoreProviderSpec{
-					ProviderSpec: operatorv1.ProviderSpec{
-						SecretName: secretName,
-						FetchConfig: &operatorv1.FetchConfiguration{
-							URL: "https://example.com",
-						},
+		provider: &operatorv1.CoreProvider{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "cluster-api",
+				Namespace: namespace,
+			},
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "CoreProvider",
+				APIVersion: "operator.cluster.x-k8s.io/v1alpha1",
+			},
+			Spec: operatorv1.CoreProviderSpec{
+				ProviderSpec: operatorv1.ProviderSpec{
+					SecretName: secretName,
+					FetchConfig: &operatorv1.FetchConfiguration{
+						URL: "https://example.com",
 					},
 				},
 			},
@@ -94,22 +91,20 @@ func TestSecretReader(t *testing.T) {
 }
 
 func TestConfigmapRepository(t *testing.T) {
-	provider := &genericprovider.InfrastructureProviderWrapper{
-		InfrastructureProvider: &operatorv1.InfrastructureProvider{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "aws",
-				Namespace: "ns1",
-			},
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "InfrastructureProvider",
-				APIVersion: "operator.cluster.x-k8s.io/v1alpha1",
-			},
-			Spec: operatorv1.InfrastructureProviderSpec{
-				ProviderSpec: operatorv1.ProviderSpec{
-					FetchConfig: &operatorv1.FetchConfiguration{
-						Selector: &metav1.LabelSelector{
-							MatchLabels: map[string]string{"provider-components": "aws"},
-						},
+	provider := &operatorv1.InfrastructureProvider{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "aws",
+			Namespace: "ns1",
+		},
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "InfrastructureProvider",
+			APIVersion: "operator.cluster.x-k8s.io/v1alpha1",
+		},
+		Spec: operatorv1.InfrastructureProviderSpec{
+			ProviderSpec: operatorv1.ProviderSpec{
+				FetchConfig: &operatorv1.FetchConfiguration{
+					Selector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{"provider-components": "aws"},
 					},
 				},
 			},
@@ -335,7 +330,7 @@ metadata:
 		t.Run(tt.name, func(t *testing.T) {
 			g := NewWithT(t)
 
-			fakeclient := fake.NewClientBuilder().WithScheme(setupScheme()).WithObjects(provider.GetObject()).Build()
+			fakeclient := fake.NewClientBuilder().WithScheme(setupScheme()).WithObjects(provider).Build()
 			p := &phaseReconciler{
 				ctrlClient: fakeclient,
 				provider:   provider,

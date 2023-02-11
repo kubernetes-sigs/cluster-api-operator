@@ -24,8 +24,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/version"
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha1"
-	"sigs.k8s.io/cluster-api-operator/internal/controllers/genericprovider"
-	"sigs.k8s.io/cluster-api-operator/util"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util/conditions"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -45,7 +43,7 @@ var (
 )
 
 // preflightChecks performs preflight checks before installing provider.
-func preflightChecks(ctx context.Context, c client.Client, provider genericprovider.GenericProvider, providerList genericprovider.GenericProviderList) (ctrl.Result, error) {
+func preflightChecks(ctx context.Context, c client.Client, provider operatorv1.GenericProvider, providerList operatorv1.GenericProviderList) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 
 	log.Info("Performing preflight checks")
@@ -88,7 +86,7 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 			fmt.Errorf("only one of Selector and URL must be provided for provider %s", provider.GetName())
 	}
 
-	if err := c.List(ctx, providerList.GetObject()); err != nil {
+	if err := c.List(ctx, providerList); err != nil {
 		return ctrl.Result{}, errors.Wrap(err, "failed to list providers")
 	}
 
@@ -107,7 +105,7 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 		)
 
 		// CoreProvider is a singleton resource, more than one instances should not exist
-		if util.IsCoreProvider(p) {
+		if isCoreProvider(p) {
 			log.Info(moreThanOneCoreProviderInstanceExistsMessage)
 			preflightFalseCondition.Message = moreThanOneCoreProviderInstanceExistsMessage
 			conditions.Set(provider, preflightFalseCondition)
@@ -124,7 +122,7 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 	}
 
 	// Wait for core provider to be ready before we install other providers.
-	if !util.IsCoreProvider(provider) {
+	if !isCoreProvider(provider) {
 		ready, err := coreProviderIsReady(ctx, c)
 		if err != nil {
 			return ctrl.Result{}, errors.Wrap(err, "failed to get coreProvider ready condition")
@@ -162,4 +160,9 @@ func coreProviderIsReady(ctx context.Context, c client.Client) (bool, error) {
 		}
 	}
 	return false, nil
+}
+
+func isCoreProvider(p operatorv1.GenericProvider) bool {
+	_, ok := p.(*operatorv1.CoreProvider)
+	return ok
 }
