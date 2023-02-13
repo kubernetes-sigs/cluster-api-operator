@@ -49,7 +49,7 @@ func TestCustomizeDeployment(t *testing.T) {
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{{
 						Name:  "manager",
-						Image: "k8s.gcr.io/a-manager:1.6.2",
+						Image: "registry.k8s.io/a-manager:1.6.2",
 						Env: []corev1.EnvVar{
 							{
 								Name:  "test1",
@@ -451,7 +451,7 @@ func TestCustomizeDeployment(t *testing.T) {
 							Containers: []corev1.Container{
 								{
 									Name:  "manager",
-									Image: "k8s.gcr.io/a-manager:1.6.2",
+									Image: "registry.k8s.io/a-manager:1.6.2",
 									Env: []corev1.EnvVar{
 										{
 											Name:  "test1",
