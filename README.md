@@ -7,6 +7,8 @@
 
 # Cluster API Operator
 
+:warning: **The project is in development**: Be very careful using it!
+
 Home for Cluster API Operator, a subproject of sig-cluster-lifecycle
 
 ## What is Cluster API Operator?
