@@ -51,6 +51,10 @@ func (r *GenericProviderReconciler) SetupWithManager(mgr ctrl.Manager, options c
 }
 
 func (r *GenericProviderReconciler) Reconcile(ctx context.Context, req reconcile.Request) (_ reconcile.Result, reterr error) {
+	log := ctrl.LoggerFrom(ctx)
+
+	log.Info("Reconciling provider")
+
 	typedProvider, err := r.newGenericProvider()
 	if err != nil {
 		return ctrl.Result{}, err
@@ -120,12 +124,6 @@ func patchProvider(ctx context.Context, provider genericprovider.GenericProvider
 }
 
 func (r *GenericProviderReconciler) reconcile(ctx context.Context, provider genericprovider.GenericProvider, genericProviderList genericprovider.GenericProviderList) (ctrl.Result, error) {
-	log := ctrl.LoggerFrom(ctx)
-
-	log.V(1).Info("starting reconciliation",
-		"Generation", provider.GetGeneration(),
-		"ObservedGeneration", provider.GetStatus().ObservedGeneration)
-
 	reconciler := newPhaseReconciler(*r, provider, genericProviderList)
 	phases := []reconcilePhaseFn{
 		reconciler.preflightChecks,
@@ -155,7 +153,8 @@ func (r *GenericProviderReconciler) reconcile(ctx context.Context, provider gene
 
 func (r *GenericProviderReconciler) reconcileDelete(ctx context.Context, provider genericprovider.GenericProvider) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
-	log.V(2).Info("deleting provider resources")
+
+	log.Info("Deleting provider resources")
 
 	reconciler := newPhaseReconciler(*r, provider, nil)
 	phases := []reconcilePhaseFn{

@@ -48,13 +48,13 @@ var (
 func preflightChecks(ctx context.Context, c client.Client, provider genericprovider.GenericProvider, providerList genericprovider.GenericProviderList) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 
-	log.V(1).Info("Performing preflight checks.", "provider", provider.GetName())
+	log.Info("Performing preflight checks")
 
 	spec := provider.GetSpec()
 
 	// Check that provider version is not empty.
 	if spec.Version == "" {
-		log.V(2).Info("Version can't be empty", "provider", provider.GetName())
+		log.Info("Version can't be empty")
 		conditions.Set(provider, conditions.FalseCondition(
 			operatorv1.PreflightCheckCondition,
 			operatorv1.EmptyVersionReason,
@@ -66,7 +66,7 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 
 	// Check that provider version contains a valid value.
 	if _, err := version.ParseSemantic(spec.Version); err != nil {
-		log.V(2).Info("Version contains invalid value", "provider", provider.GetName())
+		log.Info("Version contains invalid value")
 		conditions.Set(provider, conditions.FalseCondition(
 			operatorv1.PreflightCheckCondition,
 			operatorv1.IncorrectVersionFormatReason,
@@ -108,7 +108,7 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 
 		// CoreProvider is a singleton resource, more than one instances should not exist
 		if util.IsCoreProvider(p) {
-			log.V(4).Info(moreThanOneCoreProviderInstanceExistsMessage)
+			log.Info(moreThanOneCoreProviderInstanceExistsMessage)
 			preflightFalseCondition.Message = moreThanOneCoreProviderInstanceExistsMessage
 			conditions.Set(provider, preflightFalseCondition)
 			return ctrl.Result{RequeueAfter: preflightFailedRequeueAfter}, fmt.Errorf("only one instance of CoreProvider is allowed")
@@ -117,7 +117,7 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 		// For any other provider we should check that instances with similar name exist in any namespace
 		if p.GetObjectKind().GroupVersionKind().Kind != coreProvider && p.GetName() == provider.GetName() {
 			preflightFalseCondition.Message = fmt.Sprintf(moreThanOneProviderInstanceExistsMessage, p.GetName(), p.GetNamespace())
-			log.V(2).Info(preflightFalseCondition.Message)
+			log.Info(preflightFalseCondition.Message)
 			conditions.Set(provider, preflightFalseCondition)
 			return ctrl.Result{RequeueAfter: preflightFailedRequeueAfter}, fmt.Errorf("only one %s provider is allowed in the cluster", p.GetName())
 		}
@@ -130,7 +130,7 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 			return ctrl.Result{}, errors.Wrap(err, "failed to get coreProvider ready condition")
 		}
 		if !ready {
-			log.V(2).Info(waitingForCoreProviderReadyMessage)
+			log.Info(waitingForCoreProviderReadyMessage)
 			conditions.Set(provider, conditions.FalseCondition(
 				operatorv1.PreflightCheckCondition,
 				operatorv1.WaitingForCoreProviderReadyReason,
@@ -142,6 +142,8 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 	}
 
 	conditions.Set(provider, conditions.TrueCondition(operatorv1.PreflightCheckCondition))
+
+	log.Info("Preflight checks passed")
 	return ctrl.Result{}, nil
 }
 
