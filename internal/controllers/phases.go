@@ -319,15 +319,6 @@ func (p *phaseReconciler) fetch(ctx context.Context) (reconcile.Result, error) {
 func (p *phaseReconciler) preInstall(ctx context.Context) (reconcile.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 
-	clusterClient := p.newClusterClient()
-
-	log.Info("Ensuring clustectl CRDs are installed")
-
-	err := clusterClient.ProviderInventory().EnsureCustomResourceDefinitions()
-	if err != nil {
-		return reconcile.Result{}, wrapPhaseError(err, "failed installing clusterctl CRDs", operatorv1.ProviderInstalledCondition)
-	}
-
 	needPreDelete, err := p.updateRequiresPreDeletion(ctx, p.provider)
 	if err != nil || !needPreDelete {
 		return reconcile.Result{}, wrapPhaseError(err, "failed getting clusterctl Provider", operatorv1.ProviderInstalledCondition)
@@ -362,12 +353,10 @@ func (p *phaseReconciler) install(ctx context.Context) (reconcile.Result, error)
 	log := ctrl.LoggerFrom(ctx)
 
 	clusterClient := p.newClusterClient()
-	installer := clusterClient.ProviderInstaller()
-	installer.Add(p.components)
 
 	log.Info("Installing provider")
 
-	if _, err := installer.Install(cluster.InstallOptions{}); err != nil {
+	if err := clusterClient.ProviderComponents().Create(p.components.Objs()); err != nil {
 		reason := "Install failed"
 		if err == wait.ErrWaitTimeout {
 			reason = "Timedout waiting for deployment to become ready"
