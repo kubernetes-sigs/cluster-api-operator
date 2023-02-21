@@ -62,15 +62,16 @@ GINKGO := $(abspath $(TOOLS_BIN_DIR)/ginkgo)
 ENVSUBST := $(abspath $(TOOLS_BIN_DIR)/envsubst)
 
 # Define Docker related variables. Releases should modify and double check these vars.
-REGISTRY ?= gcr.io/$(shell gcloud config get-value project)
-PROD_REGISTRY ?= registry.k8s.io/cluster-api
+STAGING_REGISTRY ?= gcr.io/k8s-staging-capi-operator
+STAGING_BUCKET ?= artifacts.k8s-staging-capi-operator.appspot.com
 
-STAGING_REGISTRY ?= gcr.io/k8s-staging-cluster-api
-STAGING_BUCKET ?= artifacts.k8s-staging-cluster-api.appspot.com
+REGISTRY ?= $(STAGING_REGISTRY)
+PROD_REGISTRY ?= registry.k8s.io/capi-operator
 
 # Image name
 IMAGE_NAME ?= cluster-api-operator
 CONTROLLER_IMG ?= $(REGISTRY)/$(IMAGE_NAME)
+CONTROLLER_IMG_TAG ?= $(CONTROLLER_IMG)-$(ARCH):$(TAG)
 
 # It is set by Prow GIT_TAG, a git-based tag of the form vYYYYMMDD-hash, e.g., v20210120-v0.3.10-308-gc61521971
 TAG ?= dev
@@ -243,18 +244,21 @@ modules: ## Runs go mod to ensure modules are up to date.
 .PHONY: docker-pull-prerequisites
 docker-pull-prerequisites:
 	docker pull docker.io/docker/dockerfile:1.1-experimental
-	docker pull docker.io/library/golang:1.17.0
+	docker pull docker.io/library/golang:1.19.0
 	docker pull gcr.io/distroless/static:latest
 
 .PHONY: docker-build
-docker-build: ## Build the docker image for management cluster operator
-	DOCKER_BUILDKIT=1 docker build --build-arg goproxy=$(GOPROXY) --build-arg ARCH=$(ARCH) --build-arg ldflags="$(LDFLAGS)" . -t $(CONTROLLER_IMG)-$(ARCH):$(TAG)
-	$(MAKE) set-manifest-image MANIFEST_IMG=$(CONTROLLER_IMG)-$(ARCH) MANIFEST_TAG=$(TAG) TARGET_RESOURCE="./config/default/manager_image_patch.yaml"
-	$(MAKE) set-manifest-pull-policy TARGET_RESOURCE="./config/default/manager_pull_policy.yaml"
+docker-build: docker-pull-prerequisites ## Build the docker image for controller-manager
+	docker build --build-arg goproxy=$(GOPROXY) --build-arg ARCH=$(ARCH) --build-arg LDFLAGS="$(LDFLAGS)" . -t $(CONTROLLER_IMG_TAG)
 
 .PHONY: docker-push
 docker-push: ## Push the docker image
-	docker push $(CONTROLLER_IMG)-$(ARCH):$(TAG)
+	docker push $(CONTROLLER_IMG_TAG)
+
+.PHONY: staging-manifests
+staging-manifests:
+	$(MAKE) manifest-modification PULL_POLICY=IfNotPresent RELEASE_TAG=$(RELEASE_ALIAS_TAG)
+	$(MAKE) release-manifests
 
 ## --------------------------------------
 ## Docker — All ARCH
@@ -273,14 +277,9 @@ docker-push-all: $(addprefix docker-push-,$(ALL_ARCH))
 docker-push-%:
 	$(MAKE) ARCH=$* docker-push
 
-.PHONY: docker-push
-docker-push-operator: ## Push the fat manifest docker image for the operator image.
-	## Minimum docker version 18.06.0 is required for creating and pushing manifest images.
-	docker manifest create --amend $(CONTROLLER_IMG):$(TAG) $(shell echo $(ALL_ARCH) | sed -e "s~[^ ]*~$(CONTROLLER_IMG)\-&:$(TAG)~g")
-	@for arch in $(ALL_ARCH); do docker manifest annotate --arch $${arch} ${CONTROLLER_IMG}:${TAG} ${CONTROLLER_IMG}-$${arch}:${TAG}; done
-	docker manifest push --purge $(CONTROLLER_IMG):$(TAG)
-	$(MAKE) set-manifest-image MANIFEST_IMG=$(CONTROLLER_IMG) MANIFEST_TAG=$(TAG) TARGET_RESOURCE="./config/default/manager_image_patch.yaml"
-	$(MAKE) set-manifest-pull-policy TARGET_RESOURCE="./config/default/manager_pull_policy.yaml"
+.PHONY: docker-build-e2e
+docker-build-e2e:
+	$(MAKE) CONTROLLER_IMG_TAG="gcr.io/k8s-staging-capi-operator/cluster-api-operator:dev" docker-build
 
 .PHONY: set-manifest-pull-policy
 set-manifest-pull-policy:
@@ -300,19 +299,19 @@ $(RELEASE_DIR):
 	mkdir -p $(RELEASE_DIR)/
 
 .PHONY: release
-release: clean-release ## Builds and push container images using the latest git tag for the commit.
+release: clean-release $(RELEASE_DIR)  ## Builds and push container images using the latest git tag for the commit.
 	@if [ -z "${RELEASE_TAG}" ]; then echo "RELEASE_TAG is not set"; exit 1; fi
 	@if ! [ -z "$$(git status --porcelain)" ]; then echo "Your local git repository contains uncommitted changes, use git clean before proceeding."; exit 1; fi
 	git checkout "${RELEASE_TAG}"
-	# Set the manifest image to the staging bucket.
-	REGISTRY=$(STAGING_REGISTRY) $(MAKE) manifest-modification
+	# Set the manifest image to the production bucket.
+	$(MAKE) manifest-modification REGISTRY=$(PROD_REGISTRY)
 	$(MAKE) release-manifests
 
 .PHONY: manifest-modification
 manifest-modification: # Set the manifest images to the staging/production bucket.
 	$(MAKE) set-manifest-image \
-		MANIFEST_IMG=$(PROD_REGISTRY)/$(OPERATOR_IMAGE_NAME) MANIFEST_TAG=$(RELEASE_TAG) \
-		TARGET_RESOURCE="./exp/operator/config/default/manager_image_patch.yaml"
+		MANIFEST_IMG=$(REGISTRY)/$(IMAGE_NAME) MANIFEST_TAG=$(RELEASE_TAG) \
+		TARGET_RESOURCE="./config/default/manager_image_patch.yaml"
 	$(MAKE) set-manifest-pull-policy PULL_POLICY=IfNotPresent TARGET_RESOURCE="./config/default/manager_pull_policy.yaml"
 
 .PHONY: release-manifests
@@ -320,23 +319,20 @@ release-manifests: $(RELEASE_DIR) ## Builds the manifests to publish with a rele
 	$(KUSTOMIZE) build ./config/default > $(RELEASE_DIR)/operator-components.yaml
 
 .PHONY: release-staging
-release-staging: ## Builds and push container images to the staging bucket.
-	REGISTRY=$(STAGING_REGISTRY) $(MAKE) docker-build-all docker-push-all release-alias-tag
-
-.PHONY: release-staging-nightly
-release-staging-nightly: ## Tags and push container images to the staging bucket. Example image tag: cluster-api-controller:nightly_master_20210121
-	$(eval NEW_RELEASE_ALIAS_TAG := nightly_$(RELEASE_ALIAS_TAG)_$(shell date +'%Y%m%d'))
-	$(MAKE) release-alias-tag TAG=$(RELEASE_ALIAS_TAG) RELEASE_ALIAS_TAG=$(NEW_RELEASE_ALIAS_TAG)
-	# Set the manifest image to the production bucket.
-	$(MAKE) manifest-modification REGISTRY=$(STAGING_REGISTRY) RELEASE_TAG=$(NEW_RELEASE_ALIAS_TAG)
-	## Build the manifests
-	$(MAKE) release-manifests
-	# Example manifest location: artifacts.k8s-staging-cluster-api.appspot.com/components/nightly_master_20210121/infrastructure-components.yaml
-	gsutil cp $(RELEASE_DIR)/* gs://$(STAGING_BUCKET)/components/$(NEW_RELEASE_ALIAS_TAG)
+release-staging: ## Builds and push container images and manifests to the staging bucket.
+	$(MAKE) docker-build-all
+	$(MAKE) docker-push-all
+	$(MAKE) release-alias-tag
+	$(MAKE) staging-manifests
+	$(MAKE) upload-staging-artifacts
 
 .PHONY: release-alias-tag
 release-alias-tag: # Adds the tag to the last build tag.
-	gcloud container images add-tag $(CONTROLLER_IMG):$(TAG) $(CONTROLLER_IMG):$(RELEASE_ALIAS_TAG)
+	gcloud container images add-tag -q $(CONTROLLER_IMG):$(TAG) $(CONTROLLER_IMG):$(RELEASE_ALIAS_TAG)
+
+.PHONY: upload-staging-artifacts
+upload-staging-artifacts: ## Upload release artifacts to the staging bucket
+	gsutil cp $(RELEASE_DIR)/* gs://$(STAGING_BUCKET)/components/$(RELEASE_ALIAS_TAG)/
 
 ## --------------------------------------
 ## Cleanup / Verification
