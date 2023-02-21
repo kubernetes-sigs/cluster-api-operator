@@ -4,7 +4,7 @@ load('ext://cert_manager', 'deploy_cert_manager')
 
 def build_image():
     docker_build(
-      "gcr.io/k8s-staging-cluster-api/cluster-api-operator-amd64",
+      "gcr.io/k8s-staging-capi-operator/cluster-api-operator",
       ".",
       ignore=[
         ".git",
