@@ -322,7 +322,7 @@ manifest-modification: # Set the manifest images to the staging/production bucke
 	$(MAKE) set-manifest-pull-policy PULL_POLICY=IfNotPresent TARGET_RESOURCE="./config/default/manager_pull_policy.yaml"
 
 .PHONY: release-manifests
-release-manifests: $(RELEASE_DIR) ## Builds the manifests to publish with a release
+release-manifests: $(KUSTOMIZE) $(RELEASE_DIR) ## Builds the manifests to publish with a release
 	$(KUSTOMIZE) build ./config/default > $(RELEASE_DIR)/operator-components.yaml
 
 .PHONY: release-staging
