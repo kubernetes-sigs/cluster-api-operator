@@ -61,6 +61,11 @@ GOTESTSUM := $(abspath $(TOOLS_BIN_DIR)/gotestsum)
 GINKGO := $(abspath $(TOOLS_BIN_DIR)/ginkgo)
 ENVSUBST := $(abspath $(TOOLS_BIN_DIR)/envsubst)
 
+# It is set by Prow GIT_TAG, a git-based tag of the form vYYYYMMDD-hash, e.g., v20210120-v0.3.10-308-gc61521971
+TAG ?= dev
+ARCH ?= amd64
+ALL_ARCH = amd64 arm arm64 ppc64le s390x
+
 # Define Docker related variables. Releases should modify and double check these vars.
 STAGING_REGISTRY ?= gcr.io/k8s-staging-capi-operator
 STAGING_BUCKET ?= artifacts.k8s-staging-capi-operator.appspot.com
@@ -72,11 +77,6 @@ PROD_REGISTRY ?= registry.k8s.io/capi-operator
 IMAGE_NAME ?= cluster-api-operator
 CONTROLLER_IMG ?= $(REGISTRY)/$(IMAGE_NAME)
 CONTROLLER_IMG_TAG ?= $(CONTROLLER_IMG)-$(ARCH):$(TAG)
-
-# It is set by Prow GIT_TAG, a git-based tag of the form vYYYYMMDD-hash, e.g., v20210120-v0.3.10-308-gc61521971
-TAG ?= dev
-ARCH ?= amd64
-ALL_ARCH = amd64 arm arm64 ppc64le s390x
 
 # Set build time variables including version details
 LDFLAGS := $(shell $(ROOT)/hack/version.sh)
@@ -273,6 +273,13 @@ docker-build-%:
 .PHONY: docker-push-all ## Push all the architecture docker images
 docker-push-all: $(addprefix docker-push-,$(ALL_ARCH))
 	$(MAKE) docker-push-manifest
+
+.PHONY: docker-push-manifest
+docker-push-manifest: ## Push the fat manifest docker image.
+	## Minimum docker version 18.06.0 is required for creating and pushing manifest images.
+	docker manifest create --amend $(CONTROLLER_IMG):$(TAG) $(shell echo $(ALL_ARCH) | sed -e "s~[^ ]*~$(CONTROLLER_IMG)\-&:$(TAG)~g")
+	@for arch in $(ALL_ARCH); do docker manifest annotate --arch $${arch} ${CONTROLLER_IMG}:${TAG} ${CONTROLLER_IMG}-$${arch}:${TAG}; done
+	docker manifest push --purge ${CONTROLLER_IMG}:${TAG}
 
 docker-push-%:
 	$(MAKE) ARCH=$* docker-push
