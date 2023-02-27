@@ -40,17 +40,17 @@ func (r *BootstrapProviderWebhook) SetupWebhookWithManager(mgr ctrl.Manager) err
 
 var _ webhook.CustomValidator = &BootstrapProviderWebhook{}
 
-// ValidateCreate implements webhook.Validator so a webhook will be registered for the type
+// ValidateCreate implements webhook.Validator so a webhook will be registered for the type.
 func (r *BootstrapProviderWebhook) ValidateCreate(ctx context.Context, obj runtime.Object) error {
 	return nil
 }
 
-// ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
+// ValidateUpdate implements webhook.Validator so a webhook will be registered for the type.
 func (r *BootstrapProviderWebhook) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) error {
 	return nil
 }
 
-// ValidateDelete implements webhook.Validator so a webhook will be registered for the type
+// ValidateDelete implements webhook.Validator so a webhook will be registered for the type.
 func (r *BootstrapProviderWebhook) ValidateDelete(_ context.Context, obj runtime.Object) error {
 	return nil
 }

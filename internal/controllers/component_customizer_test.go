@@ -103,6 +103,7 @@ func TestCustomizeDeployment(t *testing.T) {
 				if !reflect.DeepEqual(inputDS.Template.Spec.Containers, managerDepl.Spec.Template.Spec.Containers) {
 					return &managerDepl.Spec, false
 				}
+
 				return &managerDepl.Spec, true
 			},
 		},
@@ -115,6 +116,7 @@ func TestCustomizeDeployment(t *testing.T) {
 				expectedDS := &appsv1.DeploymentSpec{
 					Replicas: pointer.Int32Ptr(3),
 				}
+
 				return expectedDS, reflect.DeepEqual(inputDS.Replicas, expectedDS.Replicas)
 			},
 		},
@@ -131,6 +133,7 @@ func TestCustomizeDeployment(t *testing.T) {
 						},
 					},
 				}
+
 				return expectedDS, reflect.DeepEqual(inputDS.Template.Spec.NodeSelector, expectedDS.Template.Spec.NodeSelector)
 			},
 		},
@@ -157,6 +160,7 @@ func TestCustomizeDeployment(t *testing.T) {
 						},
 					},
 				}
+
 				return expectedDS, reflect.DeepEqual(inputDS.Template.Spec.Tolerations, expectedDS.Template.Spec.Tolerations)
 			},
 		},
@@ -193,6 +197,7 @@ func TestCustomizeDeployment(t *testing.T) {
 						},
 					},
 				}
+
 				return expectedDS, reflect.DeepEqual(inputDS.Template.Spec.Affinity, expectedDS.Template.Spec.Affinity)
 			},
 		},
@@ -408,6 +413,7 @@ func TestCustomizeDeployment(t *testing.T) {
 				if !reflect.DeepEqual(inputDS.Template.Spec.Containers[0].Command, expectedDS.Template.Spec.Containers[0].Command) {
 					return expectedDS, false
 				}
+
 				return expectedDS, true
 			},
 		},
@@ -495,10 +501,12 @@ func TestCustomizeDeployment(t *testing.T) {
 						},
 					},
 				}
+
 				return expectedDS, reflect.DeepEqual(inputDS.Template.Spec.Containers[0], expectedDS.Template.Spec.Containers[0])
 			},
 		},
 	}
+
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			deployment := managerDepl.DeepCopy()

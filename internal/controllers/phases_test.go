@@ -331,6 +331,7 @@ metadata:
 			wantDefaultVersion: "v1.2.3",
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			g := NewWithT(t)

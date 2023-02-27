@@ -54,6 +54,7 @@ func (k *controllerProxy) GetResourceNames(groupVersion, kind string, options []
 	}
 
 	var comps []string
+
 	for _, item := range objList.Items {
 		name := item.GetName()
 
@@ -93,6 +94,7 @@ func (k *controllerProxy) ListResources(labels map[string]string, namespaces ...
 	}
 
 	var ret []unstructured.Unstructured
+
 	for _, resourceGroup := range resourceList {
 		for _, resourceKind := range resourceGroup.APIResources {
 			if resourceKind.Namespaced {
@@ -101,7 +103,9 @@ func (k *controllerProxy) ListResources(labels map[string]string, namespaces ...
 					if err != nil {
 						return nil, err
 					}
+
 					klog.V(3).InfoS("listed", "kind", resourceKind.Kind, "count", len(objList.Items))
+
 					ret = append(ret, objList.Items...)
 				}
 			} else {
@@ -114,6 +118,7 @@ func (k *controllerProxy) ListResources(labels map[string]string, namespaces ...
 			}
 		}
 	}
+
 	return ret, nil
 }
 
@@ -128,5 +133,6 @@ func listObjByGVK(c client.Client, groupVersion, kind string, options []client.L
 			return nil, errors.Wrapf(err, "failed to list objects for the %q GroupVersionKind", objList.GroupVersionKind())
 		}
 	}
+
 	return objList, nil
 }

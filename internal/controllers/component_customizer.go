@@ -49,6 +49,7 @@ var (
 func customizeObjectsFn(provider genericprovider.GenericProvider) func(objs []unstructured.Unstructured) ([]unstructured.Unstructured, error) {
 	return func(objs []unstructured.Unstructured) ([]unstructured.Unstructured, error) {
 		results := []unstructured.Unstructured{}
+
 		for i := range objs {
 			o := objs[i]
 
@@ -73,15 +74,19 @@ func customizeObjectsFn(provider genericprovider.GenericProvider) func(objs []un
 				if err := scheme.Scheme.Convert(&o, d, nil); err != nil {
 					return nil, err
 				}
+
 				if provider.GetSpec().Deployment != nil {
 					customizeDeployment(provider.GetSpec(), d)
 				}
+
 				if err := scheme.Scheme.Convert(d, &o, nil); err != nil {
 					return nil, err
 				}
 			}
+
 			results = append(results, o)
 		}
+
 		return results, nil
 	}
 }
@@ -90,15 +95,19 @@ func customizeObjectsFn(provider genericprovider.GenericProvider) func(objs []un
 func customizeDeployment(pSpec operatorv1.ProviderSpec, d *appsv1.Deployment) {
 	if pSpec.Deployment != nil {
 		dSpec := pSpec.Deployment
+
 		if dSpec.Replicas != nil {
 			d.Spec.Replicas = pointer.Int32Ptr(int32(*dSpec.Replicas))
 		}
+
 		if dSpec.Affinity != nil {
 			d.Spec.Template.Spec.Affinity = dSpec.Affinity
 		}
+
 		if dSpec.NodeSelector != nil {
 			d.Spec.Template.Spec.NodeSelector = dSpec.NodeSelector
 		}
+
 		if dSpec.Tolerations != nil {
 			d.Spec.Template.Spec.Tolerations = dSpec.Tolerations
 		}
@@ -107,6 +116,7 @@ func customizeDeployment(pSpec operatorv1.ProviderSpec, d *appsv1.Deployment) {
 			customizeContainer(pc, d)
 		}
 	}
+
 	// run the customizeManager last so it overrides anything in the deploymentSpec.
 	if pSpec.Manager != nil {
 		for ic, c := range d.Spec.Template.Spec.Containers {
@@ -126,6 +136,7 @@ func customizeManager(mSpec *operatorv1.ManagerSpec, c *corev1.Container) {
 			c.Args = setArgs(c.Args, "--"+strings.ToLower(k)+"-concurrency", fmt.Sprint(v))
 		}
 	}
+
 	if mSpec.MaxConcurrentReconciles != 0 {
 		c.Args = setArgs(c.Args, "--max-concurrent-reconciles", fmt.Sprint(mSpec.MaxConcurrentReconciles))
 	}
@@ -138,14 +149,16 @@ func customizeManager(mSpec *operatorv1.ManagerSpec, c *corev1.Container) {
 		c.Args = setArgs(c.Args, "--namespace", mSpec.CacheNamespace)
 	}
 
-	//TODO can't find an arg for GracefulShutdownTimeout
+	// TODO can't find an arg for GracefulShutdownTimeout
 
 	if mSpec.Health.HealthProbeBindAddress != "" {
 		c.Args = setArgs(c.Args, "--health-addr", mSpec.Health.HealthProbeBindAddress)
 	}
+
 	if mSpec.Health.LivenessEndpointName != "" && c.LivenessProbe != nil && c.LivenessProbe.HTTPGet != nil {
 		c.LivenessProbe.HTTPGet.Path = "/" + mSpec.Health.LivenessEndpointName
 	}
+
 	if mSpec.Health.ReadinessEndpointName != "" && c.ReadinessProbe != nil && c.ReadinessProbe.HTTPGet != nil {
 		c.ReadinessProbe.HTTPGet.Path = "/" + mSpec.Health.ReadinessEndpointName
 	}
@@ -163,9 +176,11 @@ func customizeManager(mSpec *operatorv1.ManagerSpec, c *corev1.Container) {
 	if mSpec.Webhook.Host != "" {
 		c.Args = setArgs(c.Args, "--webhook-host", mSpec.Webhook.Host)
 	}
+
 	if mSpec.Webhook.Port != nil {
 		c.Args = setArgs(c.Args, "--webhook-port", fmt.Sprint(*mSpec.Webhook.Port))
 	}
+
 	if mSpec.Webhook.CertDir != "" {
 		c.Args = setArgs(c.Args, "--webhook-cert-dir", mSpec.Webhook.CertDir)
 	}
@@ -188,9 +203,11 @@ func customizeManager(mSpec *operatorv1.ManagerSpec, c *corev1.Container) {
 
 	if len(mSpec.FeatureGates) > 0 {
 		fgValue := []string{}
+
 		for fg, val := range mSpec.FeatureGates {
 			fgValue = append(fgValue, fg+"="+bool2Str[val])
 		}
+
 		sort.Strings(fgValue)
 		c.Args = setArgs(c.Args, "--feature-gates", strings.Join(fgValue, ","))
 	}
@@ -208,20 +225,25 @@ func customizeContainer(cSpec operatorv1.ContainerSpec, d *appsv1.Deployment) {
 					c.Args = setArgs(c.Args, an, av)
 				}
 			}
+
 			for _, se := range cSpec.Env {
 				c.Env = removeEnv(c.Env, se.Name)
 				c.Env = append(c.Env, se)
 			}
+
 			if cSpec.Resources != nil {
 				c.Resources = *cSpec.Resources
 			}
+
 			if cSpec.Image != nil && cSpec.Image.Name != "" && cSpec.Image.Repository != "" {
 				c.Image = imageMetaToURL(cSpec.Image)
 			}
+
 			if cSpec.Command != nil {
 				c.Command = cSpec.Command
 			}
 		}
+
 		d.Spec.Template.Spec.Containers[j] = c
 	}
 }
@@ -231,6 +253,7 @@ func setArgs(args []string, name, value string) []string {
 	for i, a := range args {
 		if strings.HasPrefix(a, name+"=") {
 			args[i] = name + "=" + value
+
 			return args
 		}
 	}
@@ -243,6 +266,7 @@ func removeEnv(envs []corev1.EnvVar, name string) []corev1.EnvVar {
 	for i, a := range envs {
 		if a.Name == name {
 			copy(envs[i:], envs[i+1:])
+
 			return envs[:len(envs)-1]
 		}
 	}
@@ -256,6 +280,7 @@ func imageMetaToURL(im *operatorv1.ImageMeta) string {
 	if im.Tag != "" {
 		tag = im.Tag
 	}
+
 	return strings.Join([]string{im.Repository, im.Name}, "/") + ":" + tag
 }
 
@@ -267,18 +292,25 @@ func leaderElectionArgs(lec *configv1alpha1.LeaderElectionConfiguration, args []
 		if lec.ResourceName != "" && lec.ResourceNamespace != "" {
 			args = setArgs(args, "--leader-election-id", lec.ResourceNamespace+"/"+lec.ResourceName)
 		}
+
 		leaseDuration := int(lec.LeaseDuration.Duration.Round(time.Second).Seconds())
+
 		if leaseDuration > 0 {
 			args = setArgs(args, "--leader-elect-lease-duration", fmt.Sprintf("%ds", leaseDuration))
 		}
+
 		renewDuration := int(lec.RenewDeadline.Duration.Round(time.Second).Seconds())
+
 		if renewDuration > 0 {
 			args = setArgs(args, "--leader-elect-renew-deadline", fmt.Sprintf("%ds", renewDuration))
 		}
+
 		retryDuration := int(lec.RetryPeriod.Duration.Round(time.Second).Seconds())
+
 		if retryDuration > 0 {
 			args = setArgs(args, "--leader-elect-retry-period", fmt.Sprintf("%ds", retryDuration))
 		}
 	}
+
 	return args
 }

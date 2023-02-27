@@ -134,7 +134,9 @@ func (r *GenericProviderReconciler) reconcile(ctx context.Context, provider gene
 	}
 
 	res := reconcile.Result{}
+
 	var err error
+
 	for _, phase := range phases {
 		res, err = phase(ctx)
 		if err != nil {
@@ -143,11 +145,13 @@ func (r *GenericProviderReconciler) reconcile(ctx context.Context, provider gene
 				conditions.Set(provider, conditions.FalseCondition(se.Type, se.Reason, se.Severity, err.Error()))
 			}
 		}
+
 		if !res.IsZero() || err != nil {
 			// the steps are sequencial, so we must be complete before progressing.
 			return res, err
 		}
 	}
+
 	return res, nil
 }
 
@@ -162,7 +166,9 @@ func (r *GenericProviderReconciler) reconcileDelete(ctx context.Context, provide
 	}
 
 	res := reconcile.Result{}
+
 	var err error
+
 	for _, phase := range phases {
 		res, err = phase(ctx)
 		if err != nil {
@@ -171,12 +177,15 @@ func (r *GenericProviderReconciler) reconcileDelete(ctx context.Context, provide
 				conditions.Set(provider, conditions.FalseCondition(se.Type, se.Reason, se.Severity, err.Error()))
 			}
 		}
+
 		if !res.IsZero() || err != nil {
 			// the steps are sequencial, so we must be complete before progressing.
 			return res, err
 		}
 	}
+
 	controllerutil.RemoveFinalizer(provider.GetObject(), operatorv1.ProviderFinalizer)
+
 	return res, nil
 }
 
@@ -193,6 +202,7 @@ func (r *GenericProviderReconciler) newGenericProvider() (genericprovider.Generi
 	default:
 		providerKind := reflect.Indirect(reflect.ValueOf(r.Provider)).Type().Name()
 		failedToCastInterfaceErr := fmt.Errorf("failed to cast interface for type: %s", providerKind)
+
 		return nil, failedToCastInterfaceErr
 	}
 }
@@ -210,6 +220,7 @@ func (r *GenericProviderReconciler) newGenericProviderList() (genericprovider.Ge
 	default:
 		providerKind := reflect.Indirect(reflect.ValueOf(r.ProviderList)).Type().Name()
 		failedToCastInterfaceErr := fmt.Errorf("failed to cast interface for type: %s", providerKind)
+
 		return nil, failedToCastInterfaceErr
 	}
 }

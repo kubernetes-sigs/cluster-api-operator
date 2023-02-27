@@ -322,5 +322,6 @@ func setupScheme() *runtime.Scheme {
 	utilruntime.Must(corev1.AddToScheme(scheme))
 	utilruntime.Must(operatorv1.AddToScheme(scheme))
 	utilruntime.Must(clusterctlv1.AddToScheme(scheme))
+
 	return scheme
 }
