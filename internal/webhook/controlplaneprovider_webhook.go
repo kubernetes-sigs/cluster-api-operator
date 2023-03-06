@@ -40,17 +40,17 @@ func (r *ControlPlaneProviderWebhook) SetupWebhookWithManager(mgr ctrl.Manager) 
 
 var _ webhook.CustomValidator = &ControlPlaneProviderWebhook{}
 
-// ValidateCreate implements webhook.Validator so a webhook will be registered for the type
+// ValidateCreate implements webhook.Validator so a webhook will be registered for the type.
 func (r *ControlPlaneProviderWebhook) ValidateCreate(ctx context.Context, obj runtime.Object) error {
 	return nil
 }
 
-// ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
+// ValidateUpdate implements webhook.Validator so a webhook will be registered for the type.
 func (r *ControlPlaneProviderWebhook) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) error {
 	return nil
 }
 
-// ValidateDelete implements webhook.Validator so a webhook will be registered for the type
+// ValidateDelete implements webhook.Validator so a webhook will be registered for the type.
 func (r *ControlPlaneProviderWebhook) ValidateDelete(_ context.Context, obj runtime.Object) error {
 	return nil
 }

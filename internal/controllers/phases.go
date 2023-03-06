@@ -83,6 +83,7 @@ func wrapPhaseError(err error, reason string, ctype clusterv1.ConditionType) err
 	if err == nil {
 		return nil
 	}
+
 	return &PhaseError{
 		Err:      err,
 		Type:     ctype,
@@ -138,10 +139,12 @@ func (p *phaseReconciler) load(ctx context.Context) (reconcile.Result, error) {
 	// a case for "air-gapped" environments. If no selector was specified, use GitHub repository.
 	if spec.FetchConfig != nil && spec.FetchConfig.Selector != nil {
 		log.V(5).Info("Custom ConfigMap was provided for fetching manifests")
+
 		p.repo, err = p.configmapRepository(ctx)
 	} else {
 		p.repo, err = repository.NewGitHubRepository(p.providerConfig, p.configClient.Variables())
 	}
+
 	if err != nil {
 		return reconcile.Result{}, wrapPhaseError(err, "failed to load the repository", operatorv1.PreflightCheckCondition)
 	}
@@ -175,9 +178,11 @@ func (p *phaseReconciler) secretReader(ctx context.Context) (configclient.Reader
 	if p.provider.GetSpec().SecretName != "" {
 		secret := &corev1.Secret{}
 		key := types.NamespacedName{Namespace: p.provider.GetNamespace(), Name: p.provider.GetSpec().SecretName}
+
 		if err := p.ctrlClient.Get(ctx, key, secret); err != nil {
 			return nil, err
 		}
+
 		for k, v := range secret.Data {
 			mr.Set(k, string(v))
 		}
@@ -201,6 +206,7 @@ func (p *phaseReconciler) configmapRepository(ctx context.Context) (repository.R
 	mr.WithPaths("", "components.yaml")
 
 	cml := &corev1.ConfigMapList{}
+
 	selector, err := metav1.LabelSelectorAsSelector(p.provider.GetSpec().FetchConfig.Selector)
 	if err != nil {
 		return nil, err
@@ -209,6 +215,7 @@ func (p *phaseReconciler) configmapRepository(ctx context.Context) (repository.R
 	if err = p.ctrlClient.List(ctx, cml, &client.ListOptions{LabelSelector: selector}); err != nil {
 		return nil, err
 	}
+
 	if len(cml.Items) == 0 {
 		return nil, fmt.Errorf("no ConfigMaps found with selector %s", p.provider.GetSpec().FetchConfig.Selector.String())
 	}
@@ -216,6 +223,7 @@ func (p *phaseReconciler) configmapRepository(ctx context.Context) (repository.R
 	for _, cm := range cml.Items {
 		version := cm.Name
 		errMsg := "from the Name"
+
 		if cm.Labels != nil {
 			ver, ok := cm.Labels[operatorv1.ConfigMapVersionLabelName]
 			if ok {
@@ -232,12 +240,14 @@ func (p *phaseReconciler) configmapRepository(ctx context.Context) (repository.R
 		if !ok {
 			return nil, fmt.Errorf("ConfigMap %s/%s has no metadata", cm.Namespace, cm.Name)
 		}
+
 		mr.WithFile(version, metadataFile, []byte(metadata))
 
 		components, ok := cm.Data["components"]
 		if !ok {
 			return nil, fmt.Errorf("ConfigMap %s/%s has no components", cm.Namespace, cm.Name)
 		}
+
 		mr.WithFile(version, mr.ComponentsPath(), []byte(components))
 	}
 
@@ -247,6 +257,7 @@ func (p *phaseReconciler) configmapRepository(ctx context.Context) (repository.R
 // validateRepoCAPIVersion checks that the repo is using the correct version.
 func (p *phaseReconciler) validateRepoCAPIVersion() error {
 	name := p.provider.GetName()
+
 	file, err := p.repo.GetFile(p.options.Version, metadataFile)
 	if err != nil {
 		return errors.Wrapf(err, "failed to read %q from the repository for provider %q", metadataFile, name)
@@ -270,10 +281,13 @@ func (p *phaseReconciler) validateRepoCAPIVersion() error {
 	if releaseSeries == nil {
 		return errors.Errorf("invalid provider metadata: version %s for the provider %s does not match any release series", p.options.Version, name)
 	}
+
 	if releaseSeries.Contract != "v1alpha4" && releaseSeries.Contract != "v1beta1" {
 		return errors.Errorf(capiVersionIncompatibilityMessage, clusterv1.GroupVersion.Version, releaseSeries.Contract, name)
 	}
+
 	p.contract = releaseSeries.Contract
+
 	return nil
 }
 
@@ -286,10 +300,11 @@ func (p *phaseReconciler) fetch(ctx context.Context) (reconcile.Result, error) {
 	componentsFile, err := p.repo.GetFile(p.options.Version, p.repo.ComponentsPath())
 	if err != nil {
 		err = fmt.Errorf("failed to read %q from provider's repository %q: %w", p.repo.ComponentsPath(), p.providerConfig.ManifestLabel(), err)
+
 		return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.PreflightCheckCondition)
 	}
 
-	// Generate a set of new objects using the clusterctl library. NewComponents() will do the yaml proccessing,
+	// Generate a set of new objects using the clusterctl library. NewComponents() will do the yaml processing,
 	// like ensure all the provider components are in proper namespace, replcae variables, etc. See the clusterctl
 	// documentation for more details.
 	p.components, err = repository.NewComponents(repository.ComponentsInput{
@@ -311,6 +326,7 @@ func (p *phaseReconciler) fetch(ctx context.Context) (reconcile.Result, error) {
 	}
 
 	conditions.Set(p.provider, conditions.TrueCondition(operatorv1.PreflightCheckCondition))
+
 	return reconcile.Result{}, nil
 }
 
@@ -319,17 +335,18 @@ func (p *phaseReconciler) fetch(ctx context.Context) (reconcile.Result, error) {
 func (p *phaseReconciler) preInstall(ctx context.Context) (reconcile.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 
-	needPreDelete, err := p.updateRequiresPreDeletion(ctx, p.provider)
+	needPreDelete, err := p.updateRequiresPreDeletion()
 	if err != nil || !needPreDelete {
 		return reconcile.Result{}, wrapPhaseError(err, "failed getting clusterctl Provider", operatorv1.ProviderInstalledCondition)
 	}
 
 	log.Info("Upgrade detected, deleting existing components")
+
 	return p.delete(ctx)
 }
 
 // updateRequiresPreDeletion try to get installed version from provider status and decide if it's an upgrade.
-func (s *phaseReconciler) updateRequiresPreDeletion(ctx context.Context, provider genericprovider.GenericProvider) (bool, error) {
+func (s *phaseReconciler) updateRequiresPreDeletion() (bool, error) {
 	installedVersion := s.provider.GetStatus().InstalledVersion
 	if installedVersion == nil {
 		return false, nil
@@ -361,6 +378,7 @@ func (p *phaseReconciler) install(ctx context.Context) (reconcile.Result, error)
 		if err == wait.ErrWaitTimeout {
 			reason = "Timedout waiting for deployment to become ready"
 		}
+
 		return reconcile.Result{}, wrapPhaseError(err, reason, operatorv1.ProviderInstalledCondition)
 	}
 
@@ -372,6 +390,7 @@ func (p *phaseReconciler) install(ctx context.Context) (reconcile.Result, error)
 
 	log.Info("Provider successfully installed")
 	conditions.Set(p.provider, conditions.TrueCondition(operatorv1.ProviderInstalledCondition))
+
 	return reconcile.Result{}, nil
 }
 
@@ -386,6 +405,7 @@ func (p *phaseReconciler) delete(ctx context.Context) (reconcile.Result, error) 
 	p.clusterctlProvider.Namespace = p.provider.GetNamespace()
 	p.clusterctlProvider.Type = string(util.ClusterctlProviderType(p.provider))
 	p.clusterctlProvider.ProviderName = p.provider.GetName()
+
 	if p.provider.GetStatus().InstalledVersion != nil {
 		p.clusterctlProvider.Version = *p.provider.GetStatus().InstalledVersion
 	} else {
@@ -397,6 +417,7 @@ func (p *phaseReconciler) delete(ctx context.Context) (reconcile.Result, error) 
 		IncludeNamespace: false,
 		IncludeCRDs:      false,
 	})
+
 	return reconcile.Result{}, wrapPhaseError(err, operatorv1.OldComponentsDeletionErrorReason, operatorv1.ProviderInstalledCondition)
 }
 

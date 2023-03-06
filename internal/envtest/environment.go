@@ -55,6 +55,7 @@ import (
 
 func init() {
 	klog.InitFlags(nil)
+
 	logger := klogr.New()
 	// Additionally force all of the controllers to use the Ginkgo logger.
 	ctrl.SetLogger(logger)
@@ -154,21 +155,25 @@ func New(uncachedObjs ...client.Object) *Environment {
 // Start starts the manager.
 func (e *Environment) Start(ctx context.Context) error {
 	err := errAlreadyStarted
+
 	e.startOnce.Do(func() {
 		ctx, cancel := context.WithCancel(ctx)
 		e.cancelManager = cancel
 		err = e.Manager.Start(ctx)
 	})
+
 	return err
 }
 
 // Stop stops the test environment.
 func (e *Environment) Stop() error {
 	err := errAlreadyStopped
+
 	e.stopOnce.Do(func() {
 		e.cancelManager()
 		err = e.env.Stop()
 	})
+
 	return err
 }
 
@@ -180,13 +185,16 @@ func (e *Environment) CreateKubeconfigSecret(ctx context.Context, cluster *clust
 // Cleanup deletes all the given objects.
 func (e *Environment) Cleanup(ctx context.Context, objs ...client.Object) error {
 	errs := []error{}
+
 	for _, o := range objs {
 		err := e.Client.Delete(ctx, o)
 		if apierrors.IsNotFound(err) {
 			continue
 		}
+
 		errs = append(errs, err)
 	}
+
 	return kerrors.NewAggregate(errs)
 }
 
@@ -200,13 +208,18 @@ func (e *Environment) CleanupAndWait(ctx context.Context, objs ...client.Object)
 
 	// Makes sure the cache is updated with the deleted object
 	errs := []error{}
+
 	for _, o := range objs {
 		// Ignoring namespaces because in testenv the namespace cleaner is not running.
 		if o.GetObjectKind().GroupVersionKind().GroupKind() == corev1.SchemeGroupVersion.WithKind("Namespace").GroupKind() {
 			continue
 		}
 
-		oCopy := o.DeepCopyObject().(client.Object)
+		oCopy, ok := o.DeepCopyObject().(client.Object)
+		if !ok {
+			return fmt.Errorf("object type is not client.Object")
+		}
+
 		key := client.ObjectKeyFromObject(o)
 		err := wait.ExponentialBackoff(
 			cacheSyncBackoff,
@@ -215,12 +228,15 @@ func (e *Environment) CleanupAndWait(ctx context.Context, objs ...client.Object)
 					if apierrors.IsNotFound(err) {
 						return true, nil
 					}
+
 					return false, err
 				}
+
 				return false, nil
 			})
 		errs = append(errs, errors.Wrapf(err, "key %s, %s is not being deleted from the testenv client cache", o.GetObjectKind().GroupVersionKind().String(), key))
 	}
+
 	return kerrors.NewAggregate(errs)
 }
 
@@ -233,7 +249,11 @@ func (e *Environment) CreateAndWait(ctx context.Context, obj client.Object, opts
 	}
 
 	// Makes sure the cache is updated with the new object
-	objCopy := obj.DeepCopyObject().(client.Object)
+	objCopy, ok := obj.DeepCopyObject().(client.Object)
+	if !ok {
+		return fmt.Errorf("object type is not client.Object")
+	}
+
 	key := client.ObjectKeyFromObject(obj)
 	if err := wait.ExponentialBackoff(
 		cacheSyncBackoff,
@@ -242,12 +262,15 @@ func (e *Environment) CreateAndWait(ctx context.Context, obj client.Object, opts
 				if apierrors.IsNotFound(err) {
 					return false, nil
 				}
+
 				return false, err
 			}
+
 			return true, nil
 		}); err != nil {
 		return errors.Wrapf(err, "object %s, %s is not being added to the testenv client cache", obj.GetObjectKind().GroupVersionKind().String(), key)
 	}
+
 	return nil
 }
 
@@ -279,6 +302,7 @@ func getFilePathToClusterctlCRDs(root string) string {
 	}
 
 	var clusterAPIVersion string
+
 	for _, line := range strings.Split(string(modBits), "\n") {
 		matches := clusterAPIVersionRegex.FindStringSubmatch(line)
 		if len(matches) == 3 {
@@ -291,6 +315,7 @@ func getFilePathToClusterctlCRDs(root string) string {
 	}
 
 	gopath := envOr("GOPATH", build.Default.GOPATH)
+
 	return filepath.Join(gopath, "pkg", "mod", "sigs.k8s.io", fmt.Sprintf("cluster-api@v%s", clusterAPIVersion), "cmd", "clusterctl", "config", "crd", "bases")
 }
 
@@ -298,5 +323,6 @@ func envOr(envKey, defaultValue string) string {
 	if value, ok := os.LookupEnv(envKey); ok {
 		return value
 	}
+
 	return defaultValue
 }

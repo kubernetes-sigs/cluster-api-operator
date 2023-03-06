@@ -70,11 +70,11 @@ var (
 func init() {
 	klog.InitFlags(nil)
 
+	// +kubebuilder:scaffold:scheme
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(operatorv1.AddToScheme(scheme))
 	utilruntime.Must(apiextensionsv1.AddToScheme(scheme))
 	utilruntime.Must(clusterctlv1.AddToScheme(scheme))
-	// +kubebuilder:scaffold:scheme
 }
 
 // InitFlags initializes the flags.
@@ -128,6 +128,7 @@ func main() {
 
 	if profilerAddress != "" {
 		klog.Infof("Profiler listening for requests at %s", profilerAddress)
+
 		go func() {
 			klog.Info(http.ListenAndServe(profilerAddress, nil))
 		}()
@@ -164,6 +165,7 @@ func main() {
 
 	// +kubebuilder:scaffold:builder
 	setupLog.Info("starting manager", "version", version.Get().String())
+
 	if err := mgr.Start(ctx); err != nil {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
@@ -229,14 +231,17 @@ func setupWebhooks(mgr ctrl.Manager) {
 		setupLog.Error(err, "unable to create webhook", "webhook", "CoreProvider")
 		os.Exit(1)
 	}
+
 	if err := (&webhook.BootstrapProviderWebhook{}).SetupWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "BootstrapProvider")
 		os.Exit(1)
 	}
+
 	if err := (&webhook.ControlPlaneProviderWebhook{}).SetupWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "ControlPlaneProvider")
 		os.Exit(1)
 	}
+
 	if err := (&webhook.InfrastructureProviderWebhook{}).SetupWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "InfrastructureProvider")
 		os.Exit(1)

@@ -61,6 +61,7 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 			clusterv1.ConditionSeverityError,
 			emptyVersionMessage,
 		))
+
 		return ctrl.Result{RequeueAfter: preflightFailedRequeueAfter}, fmt.Errorf("version can't be empty for provider %s", provider.GetName())
 	}
 
@@ -73,6 +74,7 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 			clusterv1.ConditionSeverityError,
 			err.Error(),
 		))
+
 		return ctrl.Result{RequeueAfter: preflightFailedRequeueAfter}, fmt.Errorf("version contains invalid value for provider %s", provider.GetName())
 	}
 
@@ -84,6 +86,7 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 			clusterv1.ConditionSeverityError,
 			"Only one of Selector and URL must be provided, not both",
 		))
+
 		return ctrl.Result{RequeueAfter: preflightFailedRequeueAfter},
 			fmt.Errorf("only one of Selector and URL must be provided for provider %s", provider.GetName())
 	}
@@ -111,6 +114,7 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 			log.Info(moreThanOneCoreProviderInstanceExistsMessage)
 			preflightFalseCondition.Message = moreThanOneCoreProviderInstanceExistsMessage
 			conditions.Set(provider, preflightFalseCondition)
+
 			return ctrl.Result{RequeueAfter: preflightFailedRequeueAfter}, fmt.Errorf("only one instance of CoreProvider is allowed")
 		}
 
@@ -119,6 +123,7 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 			preflightFalseCondition.Message = fmt.Sprintf(moreThanOneProviderInstanceExistsMessage, p.GetName(), p.GetNamespace())
 			log.Info(preflightFalseCondition.Message)
 			conditions.Set(provider, preflightFalseCondition)
+
 			return ctrl.Result{RequeueAfter: preflightFailedRequeueAfter}, fmt.Errorf("only one %s provider is allowed in the cluster", p.GetName())
 		}
 	}
@@ -129,6 +134,7 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 		if err != nil {
 			return ctrl.Result{}, errors.Wrap(err, "failed to get coreProvider ready condition")
 		}
+
 		if !ready {
 			log.Info(waitingForCoreProviderReadyMessage)
 			conditions.Set(provider, conditions.FalseCondition(
@@ -137,6 +143,7 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 				clusterv1.ConditionSeverityInfo,
 				waitingForCoreProviderReadyMessage,
 			))
+
 			return ctrl.Result{RequeueAfter: preflightFailedRequeueAfter}, nil
 		}
 	}
@@ -144,16 +151,18 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 	conditions.Set(provider, conditions.TrueCondition(operatorv1.PreflightCheckCondition))
 
 	log.Info("Preflight checks passed")
+
 	return ctrl.Result{}, nil
 }
 
 // coreProviderIsReady returns true if the core provider is ready.
 func coreProviderIsReady(ctx context.Context, c client.Client) (bool, error) {
 	cpl := &operatorv1.CoreProviderList{}
-	err := c.List(ctx, cpl)
-	if err != nil {
+
+	if err := c.List(ctx, cpl); err != nil {
 		return false, err
 	}
+
 	for _, cp := range cpl.Items {
 		for _, cond := range cp.Status.Conditions {
 			if cond.Type == clusterv1.ReadyCondition && cond.Status == corev1.ConditionTrue {
@@ -161,5 +170,6 @@ func coreProviderIsReady(ctx context.Context, c client.Client) (bool, error) {
 			}
 		}
 	}
+
 	return false, nil
 }
