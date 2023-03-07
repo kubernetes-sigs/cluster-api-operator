@@ -23,9 +23,6 @@ cd "${REPO_ROOT}" || exit 1
 # shellcheck source=./hack/ensure-go.sh
 source "${REPO_ROOT}/hack/ensure-go.sh"
 
-# shellcheck source=./hack/ensure-kustomize.sh
-source "${REPO_ROOT}/hack/ensure-kustomize.sh"
-
 # shellcheck source=./hack/ensure-kind.sh
 source "${REPO_ROOT}/hack/ensure-kind.sh"
 
