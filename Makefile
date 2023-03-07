@@ -41,8 +41,7 @@ TOOLS_DIR := $(ROOT)/hack/tools
 TOOLS_BIN_DIR := $(TOOLS_DIR)/bin
 JUNIT_REPORT_DIR := $(TOOLS_DIR)/_out
 BIN_DIR := bin
-GO_APIDIFF_BIN := $(BIN_DIR)/go-apidiff
-GO_APIDIFF := $(TOOLS_DIR)/$(GO_APIDIFF_BIN)
+GO_INSTALL := ./scripts/go_install.sh
 
 export PATH := $(abspath $(TOOLS_BIN_DIR)):$(PATH)
 
@@ -53,13 +52,37 @@ export KUBEBUILDER_CONTROLPLANE_STOP_TIMEOUT ?= 60s
 
 # Binaries.
 # Need to use abspath so we can invoke these from subdirectories
-CONTROLLER_GEN := $(abspath $(TOOLS_BIN_DIR)/controller-gen)
-GOLANGCI_LINT := $(TOOLS_BIN_DIR)/golangci-lint
-KUSTOMIZE := $(abspath $(TOOLS_BIN_DIR)/kustomize)
-SETUP_ENVTEST := $(abspath $(TOOLS_BIN_DIR)/setup-envtest)
-GOTESTSUM := $(abspath $(TOOLS_BIN_DIR)/gotestsum)
-GINKGO := $(abspath $(TOOLS_BIN_DIR)/ginkgo)
-ENVSUBST := $(abspath $(TOOLS_BIN_DIR)/envsubst)
+CONTROLLER_GEN_VER := v0.9.2
+CONTROLLER_GEN_BIN := controller-gen
+CONTROLLER_GEN := $(TOOLS_BIN_DIR)/$(CONTROLLER_GEN_BIN)-$(CONTROLLER_GEN_VER)
+
+GOLANGCI_LINT_VER := v1.50.1
+GOLANGCI_LINT_BIN := golangci-lint
+GOLANGCI_LINT := $(TOOLS_BIN_DIR)/$(GOLANGCI_LINT_BIN)-$(GOLANGCI_LINT_VER)
+
+KUSTOMIZE_VER := v4.5.2
+KUSTOMIZE_BIN := kustomize
+KUSTOMIZE := $(TOOLS_BIN_DIR)/$(KUSTOMIZE_BIN)-$(KUSTOMIZE_VER)
+
+SETUP_ENVTEST_VER := v0.0.0-20211110210527-619e6b92dab9
+SETUP_ENVTEST_BIN := setup-envtest
+SETUP_ENVTEST := $(TOOLS_BIN_DIR)/$(SETUP_ENVTEST_BIN)-$(SETUP_ENVTEST_VER)
+
+GOTESTSUM_VER := v1.6.4
+GOTESTSUM_BIN := gotestsum
+GOTESTSUM := $(TOOLS_BIN_DIR)/$(GOTESTSUM_BIN)-$(GOTESTSUM_VER)
+
+GINKGO_VER := v2.8.3
+GINKGO_BIN := ginkgo
+GINKGO := $(TOOLS_BIN_DIR)/$(GINKGO_BIN)-$(GINKGO_VER)
+
+ENVSUBST_VER := v2.0.0-20210730161058-179042472c46
+ENVSUBST_BIN := envsubst
+ENVSUBST := $(TOOLS_BIN_DIR)/$(ENVSUBST_BIN)-$(ENVSUBST_VER)
+
+GO_APIDIFF_VER := v0.5.0
+GO_APIDIFF_BIN := go-apidiff
+GO_APIDIFF := $(TOOLS_BIN_DIR)/$(GO_APIDIFF_BIN)
 
 # It is set by Prow GIT_TAG, a git-based tag of the form vYYYYMMDD-hash, e.g., v20210120-v0.3.10-308-gc61521971
 TAG ?= dev
@@ -108,32 +131,34 @@ kustomize: $(KUSTOMIZE) ## Build a local copy of kustomize.
 go-apidiff: $(GO_APIDIFF) ## Build a local copy of apidiff
 ginkgo: $(GINKGO) ## Build a local copy of ginkgo
 envsubst: $(ENVSUBST) ## Build a local copy of envsubst
+controller-gen: $(CONTROLLER_GEN) ## Build a local copy of controller-gen.
+setup-envtest: $(SETUP_ENVTEST) ## Build a local copy of setup-envtest.
+golangci-lint: $(GOLANGCI_LINT) ## Build a local copy of golang ci-lint.
+gotestsum: $(GOTESTSUM) ## Build a local copy of gotestsum.
 
-$(CONTROLLER_GEN): $(TOOLS_DIR)/go.mod # Build controller-gen from tools folder.
-	cd $(TOOLS_DIR); go build -tags=tools -o $(BIN_DIR)/controller-gen sigs.k8s.io/controller-tools/cmd/controller-gen
+$(KUSTOMIZE): ## Build kustomize from tools folder.
+	GOBIN=$(TOOLS_BIN_DIR) $(GO_INSTALL) sigs.k8s.io/kustomize/kustomize/v4 $(KUSTOMIZE_BIN) $(KUSTOMIZE_VER)
 
-$(KUSTOMIZE): # Build kustomize from tools folder.
-	$(ROOT)/hack/ensure-kustomize.sh
+$(GO_APIDIFF): ## Build go-apidiff from tools folder.
+	GOBIN=$(TOOLS_BIN_DIR) $(GO_INSTALL) github.com/joelanford/go-apidiff $(GO_APIDIFF_BIN) $(GO_APIDIFF_VER)
 
-$(SETUP_ENVTEST): $(TOOLS_DIR)/go.mod # Build setup-envtest from tools folder.
-	cd $(TOOLS_DIR); go build -tags=tools -o $(BIN_DIR)/setup-envtest sigs.k8s.io/controller-runtime/tools/setup-envtest
-
-$(GOTESTSUM): $(TOOLS_DIR)/go.mod # Build gotestsum from tools folder.
-	cd $(TOOLS_DIR); go build -tags=tools -o $(BIN_DIR)/gotestsum gotest.tools/gotestsum
-
-$(GOLANGCI_LINT): .github/workflows/golangci-lint.yml # Download golanci-lint using hack script into tools folder.
-	hack/ensure-golangci-lint.sh \
-		-b $(TOOLS_DIR)/$(BIN_DIR) \
-		$(shell cat .github/workflows/golangci-lint.yml | grep -e "^[ \t]*version" | sed 's/.*version: //')
-
-$(GO_APIDIFF): $(TOOLS_DIR)/go.mod # Build go-apidiff from tools folder.
-	cd $(TOOLS_DIR); go build -tags=tools -o $(GO_APIDIFF_BIN) github.com/joelanford/go-apidiff
-
-$(GINKGO): ## Build ginkgo.
-	cd $(TOOLS_DIR); go build -tags=tools -o $(BIN_DIR)/ginkgo github.com/onsi/ginkgo/v2/ginkgo
+$(GINKGO): ## Build ginkgo from tools folder.
+	GOBIN=$(TOOLS_BIN_DIR) $(GO_INSTALL) github.com/onsi/ginkgo/v2/ginkgo $(GINKGO_BIN) $(GINKGO_VER)
 
 $(ENVSUBST): ## Build envsubst from tools folder.
-	cd $(TOOLS_DIR); go build -tags=tools -o $(BIN_DIR)/envsubst github.com/drone/envsubst/v2/cmd/envsubst
+	GOBIN=$(TOOLS_BIN_DIR) $(GO_INSTALL) github.com/drone/envsubst/v2/cmd/envsubst $(ENVSUBST_BIN) $(ENVSUBST_VER)
+
+$(CONTROLLER_GEN): ## Build controller-gen from tools folder.
+	GOBIN=$(TOOLS_BIN_DIR) $(GO_INSTALL) sigs.k8s.io/controller-tools/cmd/controller-gen $(CONTROLLER_GEN_BIN) $(CONTROLLER_GEN_VER)
+
+$(SETUP_ENVTEST): # Build setup-envtest from tools folder.
+	GOBIN=$(TOOLS_BIN_DIR) $(GO_INSTALL) sigs.k8s.io/controller-runtime/tools/setup-envtest $(SETUP_ENVTEST_BIN) $(SETUP_ENVTEST_VER)
+
+$(GOTESTSUM): # Build gotestsum from tools folder.
+	GOBIN=$(TOOLS_BIN_DIR) $(GO_INSTALL) gotest.tools/gotestsum $(GOTESTSUM_BIN) $(GOTESTSUM_VER)
+
+$(GOLANGCI_LINT): ## Build golangci-lint from tools folder.
+	GOBIN=$(TOOLS_BIN_DIR) $(GO_INSTALL) github.com/golangci/golangci-lint/cmd/golangci-lint $(GOLANGCI_LINT_BIN) $(GOLANGCI_LINT_VER)
 
 .PHONY: cert-mananger
 cert-manager: # Install cert-manager on the cluster. This is used for development purposes only.
@@ -363,7 +388,7 @@ clean-release: ## Remove the release folder
 ## --------------------------------------
 
 .PHONY: e2e-test
-test-e2e:
+test-e2e: $(KUSTOMIZE)
 	$(MAKE) release-manifests
 	$(MAKE) test-e2e-run
 
