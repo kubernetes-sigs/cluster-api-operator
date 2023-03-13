@@ -79,7 +79,7 @@ stringData:
   AZURE_TENANT_ID_B64: Zm9vCg==
   github-token: ghp_fff
 ---
-apiVersion: management.cluster.x-k8s.io/v1alpha1
+apiVersion: operator.cluster.x-k8s.io/v1alpha1
 kind: InfrastructureProvider
 metadata:
  name: azure
