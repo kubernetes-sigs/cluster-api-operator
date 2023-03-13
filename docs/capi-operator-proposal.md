@@ -473,7 +473,7 @@ data:
  AWS_ACCESS_KEY_ID: ...
  AWS_SECRET_ACCESS_KEY: ...
 ---
-apiVersion: management.cluster.x-k8s.io/v1alpha1
+apiVersion: operator.cluster.x-k8s.io/v1alpha1
 kind: InfrastructureProvider
 metadata:
  name: aws
@@ -504,7 +504,7 @@ spec:
 
 ```yaml
 ---
-apiVersion: management.cluster.x-k8s.io/v1alpha1
+apiVersion: operator.cluster.x-k8s.io/v1alpha1
 kind: InfrastructureProvider
 metadata:
  name: aws
@@ -523,7 +523,7 @@ spec:
 
 ```yaml
 ---
-apiVersion: management.cluster.x-k8s.io/v1alpha1
+apiVersion: operator.cluster.x-k8s.io/v1alpha1
 kind: ControlPlaneProvider
 metadata:
  name: kubeadm
@@ -548,7 +548,7 @@ spec:
 
 ```yaml
 ---
-apiVersion: management.cluster.x-k8s.io/v1alpha1
+apiVersion: operator.cluster.x-k8s.io/v1alpha1
 kind: InfrastructureProvider
 metadata:
  name: myazure
@@ -574,7 +574,7 @@ See more examples in the [air-gapped environment section](#air-gapped-environmen
 
 ```yaml
 ---
-apiVersion: management.cluster.x-k8s.io/v1alpha1
+apiVersion: operator.cluster.x-k8s.io/v1alpha1
 kind: InfrastructureProvider
 metadata:
  name: vsphere
@@ -701,7 +701,7 @@ as described in the previous paragraph (change the `spec.Version` field).
 
 When a provider is paused the number of replicas will be scaled to 0; the
 operator will add a new
-`management.cluster.x-k8s.io/original-controller-replicas` annotation to store
+`operator.cluster.x-k8s.io/original-controller-replicas` annotation to store
 the original replica count.
 
 Once all the providers are upgraded to a version that abides to the new
@@ -851,7 +851,7 @@ data:
  metadata: |
  # metadata information goes here
 ---
-apiVersion: management.cluster.x-k8s.io/v1alpha1
+apiVersion: operator.cluster.x-k8s.io/v1alpha1
 kind: InfrastructureProvider
 metadata:
  name: azure
