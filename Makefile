@@ -36,6 +36,8 @@ export GO111MODULE=on
 # This option is for running docker manifest command
 export DOCKER_CLI_EXPERIMENTAL := enabled
 
+CURL_RETRIES=3
+
 # Directories
 TOOLS_DIR := $(ROOT)/hack/tools
 TOOLS_BIN_DIR := $(TOOLS_DIR)/bin
@@ -82,7 +84,11 @@ ENVSUBST := $(TOOLS_BIN_DIR)/$(ENVSUBST_BIN)-$(ENVSUBST_VER)
 
 GO_APIDIFF_VER := v0.5.0
 GO_APIDIFF_BIN := go-apidiff
-GO_APIDIFF := $(TOOLS_BIN_DIR)/$(GO_APIDIFF_BIN)
+GO_APIDIFF := $(TOOLS_BIN_DIR)/$(GO_APIDIFF_BIN)-$(GO_APIDIFF_VER)
+
+HELM_VER := v3.8.1
+HELM_BIN := helm
+HELM := $(TOOLS_BIN_DIR)/$(HELM_BIN)-$(HELM_VER)
 
 # It is set by Prow GIT_TAG, a git-based tag of the form vYYYYMMDD-hash, e.g., v20210120-v0.3.10-308-gc61521971
 TAG ?= dev
@@ -115,8 +121,11 @@ SKIP_CREATE_MGMT_CLUSTER ?= false
 
 # Relase
 RELEASE_TAG := $(shell git describe --abbrev=0 2>/dev/null)
+HELM_CHART_TAG := $(shell echo $(RELEASE_TAG) | cut -c 2-)
 RELEASE_ALIAS_TAG ?= $(PULL_BASE_REF)
 RELEASE_DIR := out
+CHART_DIR := $(RELEASE_DIR)/charts/cluster-api-operator
+CHART_PACKAGE_DIR := $(RELEASE_DIR)/package
 
 all: generate test operator
 
@@ -135,6 +144,7 @@ controller-gen: $(CONTROLLER_GEN) ## Build a local copy of controller-gen.
 setup-envtest: $(SETUP_ENVTEST) ## Build a local copy of setup-envtest.
 golangci-lint: $(GOLANGCI_LINT) ## Build a local copy of golang ci-lint.
 gotestsum: $(GOTESTSUM) ## Build a local copy of gotestsum.
+helm: $(HELM) ## Build a local copy of helm.
 
 $(KUSTOMIZE): ## Build kustomize from tools folder.
 	GOBIN=$(TOOLS_BIN_DIR) $(GO_INSTALL) sigs.k8s.io/kustomize/kustomize/v4 $(KUSTOMIZE_BIN) $(KUSTOMIZE_VER)
@@ -159,6 +169,15 @@ $(GOTESTSUM): # Build gotestsum from tools folder.
 
 $(GOLANGCI_LINT): ## Build golangci-lint from tools folder.
 	GOBIN=$(TOOLS_BIN_DIR) $(GO_INSTALL) github.com/golangci/golangci-lint/cmd/golangci-lint $(GOLANGCI_LINT_BIN) $(GOLANGCI_LINT_VER)
+
+$(HELM): ## Put helm into tools folder.
+	mkdir -p $(TOOLS_BIN_DIR)
+	rm -f "$(TOOLS_BIN_DIR)/$(HELM_BIN)*"
+	curl --retry $(CURL_RETRIES) -fsSL -o $(TOOLS_BIN_DIR)/get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+	chmod 700 $(TOOLS_BIN_DIR)/get_helm.sh
+	USE_SUDO=false HELM_INSTALL_DIR=$(TOOLS_BIN_DIR) DESIRED_VERSION=$(HELM_VER) BINARY_NAME=$(HELM_BIN)-$(HELM_VER) $(TOOLS_BIN_DIR)/get_helm.sh
+	ln -sf $(HELM) $(TOOLS_BIN_DIR)/$(HELM_BIN)
+	rm -f $(TOOLS_BIN_DIR)/get_helm.sh
 
 .PHONY: cert-mananger
 cert-manager: # Install cert-manager on the cluster. This is used for development purposes only.
@@ -330,6 +349,12 @@ set-manifest-image:
 $(RELEASE_DIR):
 	mkdir -p $(RELEASE_DIR)/
 
+$(CHART_DIR):
+	mkdir -p $(CHART_DIR)/templates
+
+$(CHART_PACKAGE_DIR):
+	mkdir -p $(CHART_PACKAGE_DIR)
+
 .PHONY: release
 release: clean-release $(RELEASE_DIR)  ## Builds and push container images using the latest git tag for the commit.
 	@if [ -z "${RELEASE_TAG}" ]; then echo "RELEASE_TAG is not set"; exit 1; fi
@@ -337,7 +362,9 @@ release: clean-release $(RELEASE_DIR)  ## Builds and push container images using
 	git checkout "${RELEASE_TAG}"
 	# Set the manifest image to the production bucket.
 	$(MAKE) manifest-modification REGISTRY=$(PROD_REGISTRY)
+	$(MAKE) chart-manifest-modification REGISTRY=$(PROD_REGISTRY)
 	$(MAKE) release-manifests
+	$(MAKE) release-chart
 
 .PHONY: manifest-modification
 manifest-modification: # Set the manifest images to the staging/production bucket.
@@ -346,9 +373,21 @@ manifest-modification: # Set the manifest images to the staging/production bucke
 		TARGET_RESOURCE="./config/default/manager_image_patch.yaml"
 	$(MAKE) set-manifest-pull-policy PULL_POLICY=IfNotPresent TARGET_RESOURCE="./config/default/manager_pull_policy.yaml"
 
+.PHONY: chart-manifest-modification
+chart-manifest-modification: # Set the manifest images to the staging/production bucket.
+	$(MAKE) set-manifest-image \
+		MANIFEST_IMG=$(REGISTRY)/$(IMAGE_NAME) MANIFEST_TAG=$(RELEASE_TAG) \
+		TARGET_RESOURCE="./config/chart/manager_image_patch.yaml"
+	$(MAKE) set-manifest-pull-policy PULL_POLICY=IfNotPresent TARGET_RESOURCE="./config/chart/manager_pull_policy.yaml"
+
 .PHONY: release-manifests
 release-manifests: $(KUSTOMIZE) $(RELEASE_DIR) ## Builds the manifests to publish with a release
 	$(KUSTOMIZE) build ./config/default > $(RELEASE_DIR)/operator-components.yaml
+
+release-chart: $(HELM) $(KUSTOMIZE) $(RELEASE_DIR) $(CHART_DIR) $(CHART_PACKAGE_DIR) ## Builds the chart to publish with a release
+	$(KUSTOMIZE) build ./config/chart > $(CHART_DIR)/templates/operator-components.yaml
+	cp -rf $(ROOT)/hack/chart/. $(CHART_DIR)
+	$(HELM) package $(CHART_DIR) --app-version=$(HELM_CHART_TAG) --version=$(HELM_CHART_TAG) --destination=$(CHART_PACKAGE_DIR)
 
 .PHONY: release-staging
 release-staging: ## Builds and push container images and manifests to the staging bucket.
