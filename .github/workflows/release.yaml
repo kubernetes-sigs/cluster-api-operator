@@ -1,0 +1,36 @@
+name: release
+
+on:
+  push:
+    tags:
+    - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
+
+permissions:
+  contents: write # Allow to create a release.
+
+jobs:
+  release:
+    name: Create draft release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set env
+        run:  echo "RELEASE_TAG=${GITHUB_REF:10}" >> $GITHUB_ENV
+      - name: checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: '1.19'
+      - name: Generate release artifacts
+        run: |
+          make release
+      - name: Create draft GH release
+        uses: softprops/action-gh-release@1
+        with:
+          draft: true
+          files: |
+            out/operator-components.yaml
+            out/package/*
+          body: "TODO: Add release notes here."
