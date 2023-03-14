@@ -1,5 +1,5 @@
 # Adds namespace to all resources.
-namespace: capi-operator-system
+namespace: "{{ .Release.Namespace }}"
 
 # Value of this field is prepended to the
 # names of all resources, e.g. a deployment named
@@ -23,7 +23,6 @@ bases:
 - ../certmanager
 # [PROMETHEUS] To enable prometheus monitor, uncomment all sections with 'PROMETHEUS'.
 #- ../prometheus
-- ../namespace
 
 patchesStrategicMerge:
   # Protect the /metrics endpoint by putting it behind auth.
@@ -31,8 +30,8 @@ patchesStrategicMerge:
   # endpoint w/o any authn/z, please comment the following line.
 - manager_auth_proxy_patch.yaml
   # Provide customizable hook for make targets.
-- manager_image_patch.yaml
 - manager_pull_policy.yaml
+- manager_image_patch.yaml
 
 # [WEBHOOK] To enable webhook, uncomment all the sections with [WEBHOOK] prefix including the one in
 # crd/kustomization.yaml
