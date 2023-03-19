@@ -22,7 +22,6 @@ package e2e
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha1"
@@ -30,7 +29,6 @@ import (
 )
 
 var _ = Describe("Create providers with minimal specified configuration", func() {
-	version := "v1.1.1"
 	It("should succefully create a CoreProvider", func() {
 		k8sclient := bootstrapClusterProxy.GetClient()
 		coreProvider := &operatorv1.CoreProvider{
@@ -40,7 +38,7 @@ var _ = Describe("Create providers with minimal specified configuration", func()
 			},
 			Spec: operatorv1.CoreProviderSpec{
 				ProviderSpec: operatorv1.ProviderSpec{
-					Version: version,
+					Version: capiVersion,
 				},
 			},
 		}
@@ -49,19 +47,11 @@ var _ = Describe("Create providers with minimal specified configuration", func()
 
 		By("Waiting for the core provider deployment to be ready")
 		Eventually(func() bool {
-			deployment := &appsv1.Deployment{}
-			key := client.ObjectKey{Namespace: operatorNamespace, Name: coreProviderDeploymentName}
-			if err := k8sclient.Get(ctx, key, deployment); err != nil {
+			isReady, err := waitForDeployment(k8sclient, ctx, coreProviderDeploymentName, operatorNamespace)
+			if err != nil {
 				return false
 			}
-
-			for _, c := range deployment.Status.Conditions {
-				if c.Type == appsv1.DeploymentAvailable && c.Status == corev1.ConditionTrue {
-					return true
-				}
-			}
-
-			return false
+			return isReady
 		}, timeout).Should(Equal(true))
 
 		By("Waiting for core provider to be ready")
@@ -88,7 +78,175 @@ var _ = Describe("Create providers with minimal specified configuration", func()
 				return false
 			}
 
-			if coreProvider.Status.InstalledVersion != nil && *coreProvider.Status.InstalledVersion == version {
+			if coreProvider.Status.InstalledVersion != nil && *coreProvider.Status.InstalledVersion == capiVersion {
+				return true
+			}
+			return false
+		}, timeout).Should(Equal(true))
+	})
+
+	It("should succefully create a BootstrapProvider", func() {
+		k8sclient := bootstrapClusterProxy.GetClient()
+		bootstrapProvider := &operatorv1.BootstrapProvider{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      bootstrapProviderName,
+				Namespace: operatorNamespace,
+			},
+			Spec: operatorv1.BootstrapProviderSpec{
+				ProviderSpec: operatorv1.ProviderSpec{
+					Version: capiVersion,
+				},
+			},
+		}
+
+		Expect(k8sclient.Create(ctx, bootstrapProvider)).To(Succeed())
+
+		By("Waiting for the bootstrap provider deployment to be ready")
+		Eventually(func() bool {
+			isReady, err := waitForDeployment(k8sclient, ctx, bootstrapProviderDeploymentName, operatorNamespace)
+			if err != nil {
+				return false
+			}
+			return isReady
+		}, timeout).Should(Equal(true))
+
+		By("Waiting for bootstrap provider to be ready")
+		Eventually(func() bool {
+			bootstrapProvider := &operatorv1.BootstrapProvider{}
+			key := client.ObjectKey{Namespace: operatorNamespace, Name: bootstrapProviderName}
+			if err := k8sclient.Get(ctx, key, bootstrapProvider); err != nil {
+				return false
+			}
+
+			for _, c := range bootstrapProvider.Status.Conditions {
+				if c.Type == operatorv1.ProviderInstalledCondition && c.Status == corev1.ConditionTrue {
+					return true
+				}
+			}
+			return false
+		}, timeout).Should(Equal(true))
+
+		By("Waiting for status.IntalledVersion to be set")
+		Eventually(func() bool {
+			bootstrapProvider := &operatorv1.BootstrapProvider{}
+			key := client.ObjectKey{Namespace: operatorNamespace, Name: bootstrapProviderName}
+			if err := k8sclient.Get(ctx, key, bootstrapProvider); err != nil {
+				return false
+			}
+
+			if bootstrapProvider.Status.InstalledVersion != nil && *bootstrapProvider.Status.InstalledVersion == capiVersion {
+				return true
+			}
+			return false
+		}, timeout).Should(Equal(true))
+	})
+
+	It("should succefully create a ControlPlaneProvider", func() {
+		k8sclient := bootstrapClusterProxy.GetClient()
+		cpProvider := &operatorv1.ControlPlaneProvider{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      cpProviderName,
+				Namespace: operatorNamespace,
+			},
+			Spec: operatorv1.ControlPlaneProviderSpec{
+				ProviderSpec: operatorv1.ProviderSpec{
+					Version: capiVersion,
+				},
+			},
+		}
+
+		Expect(k8sclient.Create(ctx, cpProvider)).To(Succeed())
+
+		By("Waiting for the control plane provider deployment to be ready")
+		Eventually(func() bool {
+			isReady, err := waitForDeployment(k8sclient, ctx, cpProviderDeploymentName, operatorNamespace)
+			if err != nil {
+				return false
+			}
+			return isReady
+		}, timeout).Should(Equal(true))
+
+		By("Waiting for the control plane provider to be ready")
+		Eventually(func() bool {
+			cpProvider := &operatorv1.ControlPlaneProvider{}
+			key := client.ObjectKey{Namespace: operatorNamespace, Name: cpProviderName}
+			if err := k8sclient.Get(ctx, key, cpProvider); err != nil {
+				return false
+			}
+
+			for _, c := range cpProvider.Status.Conditions {
+				if c.Type == operatorv1.ProviderInstalledCondition && c.Status == corev1.ConditionTrue {
+					return true
+				}
+			}
+			return false
+		}, timeout).Should(Equal(true))
+
+		By("Waiting for status.IntalledVersion to be set")
+		Eventually(func() bool {
+			cpProvider := &operatorv1.ControlPlaneProvider{}
+			key := client.ObjectKey{Namespace: operatorNamespace, Name: cpProviderName}
+			if err := k8sclient.Get(ctx, key, cpProvider); err != nil {
+				return false
+			}
+
+			if cpProvider.Status.InstalledVersion != nil && *cpProvider.Status.InstalledVersion == capiVersion {
+				return true
+			}
+			return false
+		}, timeout).Should(Equal(true))
+	})
+
+	It("should succefully create a InfrastructureProvider", func() {
+		k8sclient := bootstrapClusterProxy.GetClient()
+		infraProvider := &operatorv1.InfrastructureProvider{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      infraProviderName,
+				Namespace: operatorNamespace,
+			},
+			Spec: operatorv1.InfrastructureProviderSpec{
+				ProviderSpec: operatorv1.ProviderSpec{
+					Version: capiVersion,
+				},
+			},
+		}
+
+		Expect(k8sclient.Create(ctx, infraProvider)).To(Succeed())
+
+		By("Waiting for the infrastructure provider deployment to be ready")
+		Eventually(func() bool {
+			isReady, err := waitForDeployment(k8sclient, ctx, infraProviderDeploymentName, operatorNamespace)
+			if err != nil {
+				return false
+			}
+			return isReady
+		}, timeout).Should(Equal(true))
+
+		By("Waiting for the infrastructure provider to be ready")
+		Eventually(func() bool {
+			infraProvider := &operatorv1.InfrastructureProvider{}
+			key := client.ObjectKey{Namespace: operatorNamespace, Name: infraProviderName}
+			if err := k8sclient.Get(ctx, key, infraProvider); err != nil {
+				return false
+			}
+
+			for _, c := range infraProvider.Status.Conditions {
+				if c.Type == operatorv1.ProviderInstalledCondition && c.Status == corev1.ConditionTrue {
+					return true
+				}
+			}
+			return false
+		}, timeout).Should(Equal(true))
+
+		By("Waiting for status.IntalledVersion to be set")
+		Eventually(func() bool {
+			infraProvider := &operatorv1.InfrastructureProvider{}
+			key := client.ObjectKey{Namespace: operatorNamespace, Name: infraProviderName}
+			if err := k8sclient.Get(ctx, key, infraProvider); err != nil {
+				return false
+			}
+
+			if infraProvider.Status.InstalledVersion != nil && *infraProvider.Status.InstalledVersion == capiVersion {
 				return true
 			}
 			return false
