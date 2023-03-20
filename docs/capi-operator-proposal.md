@@ -12,8 +12,7 @@ reviewers:
 creation-date: 2020-09-14
 last-updated: 2021-01-20
 status: implementable
-see-also:
-https://github.com/kubernetes-sigs/cluster-api/blob/main/docs/proposals/20191016-clusterctl-redesign.md
+see-also: https://github.com/kubernetes-sigs/cluster-api/blob/main/docs/proposals/20191016-clusterctl-redesign.md
 ---
 
 # CAPI Provider operator
