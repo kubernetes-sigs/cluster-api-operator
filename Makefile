@@ -52,6 +52,13 @@ export KUBEBUILDER_ENVTEST_KUBERNETES_VERSION ?= 1.24.2
 export KUBEBUILDER_CONTROLPLANE_START_TIMEOUT ?= 60s
 export KUBEBUILDER_CONTROLPLANE_STOP_TIMEOUT ?= 60s
 
+# Release
+USER_FORK ?= $(shell git config --get remote.origin.url | cut -d/ -f4) # only works on https://github.com/<username>/cluster-api.git style URLs
+ifeq ($(USER_FORK),)
+USER_FORK := $(shell git config --get remote.origin.url | cut -d: -f2 | cut -d/ -f1) # for git@github.com:<username>/cluster-api.git style URLs
+endif
+IMAGE_REVIEWERS ?= $(shell ./hack/get-project-maintainers.sh)
+
 # Binaries.
 # Need to use abspath so we can invoke these from subdirectories
 CONTROLLER_GEN_VER := v0.9.2
@@ -89,6 +96,10 @@ GO_APIDIFF := $(TOOLS_BIN_DIR)/$(GO_APIDIFF_BIN)-$(GO_APIDIFF_VER)
 HELM_VER := v3.8.1
 HELM_BIN := helm
 HELM := $(TOOLS_BIN_DIR)/$(HELM_BIN)-$(HELM_VER)
+
+YQ_VER := v4.25.2
+YQ_BIN := yq
+YQ := $(TOOLS_BIN_DIR)/$(YQ_BIN)-$(YQ_VER)
 
 # It is set by Prow GIT_TAG, a git-based tag of the form vYYYYMMDD-hash, e.g., v20210120-v0.3.10-308-gc61521971
 TAG ?= dev
@@ -145,6 +156,7 @@ setup-envtest: $(SETUP_ENVTEST) ## Build a local copy of setup-envtest.
 golangci-lint: $(GOLANGCI_LINT) ## Build a local copy of golang ci-lint.
 gotestsum: $(GOTESTSUM) ## Build a local copy of gotestsum.
 helm: $(HELM) ## Build a local copy of helm.
+yq: $(YQ) ## Build a local copy of yq.
 
 $(KUSTOMIZE): ## Build kustomize from tools folder.
 	GOBIN=$(TOOLS_BIN_DIR) $(GO_INSTALL) sigs.k8s.io/kustomize/kustomize/v4 $(KUSTOMIZE_BIN) $(KUSTOMIZE_VER)
@@ -178,6 +190,9 @@ $(HELM): ## Put helm into tools folder.
 	USE_SUDO=false HELM_INSTALL_DIR=$(TOOLS_BIN_DIR) DESIRED_VERSION=$(HELM_VER) BINARY_NAME=$(HELM_BIN)-$(HELM_VER) $(TOOLS_BIN_DIR)/get_helm.sh
 	ln -sf $(HELM) $(TOOLS_BIN_DIR)/$(HELM_BIN)
 	rm -f $(TOOLS_BIN_DIR)/get_helm.sh
+
+$(YQ):
+	GOBIN=$(TOOLS_BIN_DIR) $(GO_INSTALL) github.com/mikefarah/yq/v4 $(YQ_BIN) ${YQ_VER}
 
 .PHONY: cert-mananger
 cert-manager: # Install cert-manager on the cluster. This is used for development purposes only.
@@ -408,6 +423,10 @@ upload-staging-artifacts: ## Upload release artifacts to the staging bucket
 .PHONY: update-helm-repo
 update-helm-repo:
 	./hack/update-helm-repo.sh $(RELEASE_TAG)
+
+.PHONY: promote-images
+promote-images: $(KPROMO)
+	$(KPROMO) pr --project capi-operator --tag $(RELEASE_TAG) --reviewers "$(IMAGE_REVIEWERS)" --fork $(USER_FORK) --image cluster-api-operator
 
 ## --------------------------------------
 ## Cleanup / Verification
