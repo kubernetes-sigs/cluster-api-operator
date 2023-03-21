@@ -18,9 +18,10 @@ package controllers
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"strings"
 
-	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -130,7 +131,7 @@ func listObjByGVK(c client.Client, groupVersion, kind string, options []client.L
 
 	if err := c.List(ctx, objList, options...); err != nil {
 		if !errors.Is(err, &meta.NoKindMatchError{}) {
-			return nil, errors.Wrapf(err, "failed to list objects for the %q GroupVersionKind", objList.GroupVersionKind())
+			return nil, fmt.Errorf("failed to list objects for the %q GroupVersionKind: %w", objList.GroupVersionKind(), err)
 		}
 	}
 

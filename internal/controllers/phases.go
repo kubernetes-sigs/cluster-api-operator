@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -260,7 +259,7 @@ func (p *phaseReconciler) validateRepoCAPIVersion() error {
 
 	file, err := p.repo.GetFile(p.options.Version, metadataFile)
 	if err != nil {
-		return errors.Wrapf(err, "failed to read %q from the repository for provider %q", metadataFile, name)
+		return fmt.Errorf("failed to read %q from the repository for provider %q: %w", metadataFile, name, err)
 	}
 
 	// Convert the yaml into a typed object
@@ -268,22 +267,22 @@ func (p *phaseReconciler) validateRepoCAPIVersion() error {
 	codecFactory := serializer.NewCodecFactory(scheme.Scheme)
 
 	if err := runtime.DecodeInto(codecFactory.UniversalDecoder(), file, latestMetadata); err != nil {
-		return errors.Wrapf(err, "error decoding %q for provider %q", metadataFile, name)
+		return fmt.Errorf("error decoding %q for provider %q: %w", metadataFile, name, err)
 	}
 
 	// Gets the contract for the target release.
 	targetVersion, err := versionutil.ParseSemantic(p.options.Version)
 	if err != nil {
-		return errors.Wrapf(err, "failed to parse current version for the %s provider", name)
+		return fmt.Errorf("failed to parse current version for the %s provider: %w", name, err)
 	}
 
 	releaseSeries := latestMetadata.GetReleaseSeriesForVersion(targetVersion)
 	if releaseSeries == nil {
-		return errors.Errorf("invalid provider metadata: version %s for the provider %s does not match any release series", p.options.Version, name)
+		return fmt.Errorf("invalid provider metadata: version %s for the provider %s does not match any release series", p.options.Version, name)
 	}
 
 	if releaseSeries.Contract != "v1alpha4" && releaseSeries.Contract != "v1beta1" {
-		return errors.Errorf(capiVersionIncompatibilityMessage, clusterv1.GroupVersion.Version, releaseSeries.Contract, name)
+		return fmt.Errorf(capiVersionIncompatibilityMessage, clusterv1.GroupVersion.Version, releaseSeries.Contract, name)
 	}
 
 	p.contract = releaseSeries.Contract
