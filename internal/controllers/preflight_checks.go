@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/version"
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha1"
@@ -92,7 +91,7 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 	}
 
 	if err := c.List(ctx, providerList.GetObject()); err != nil {
-		return ctrl.Result{}, errors.Wrap(err, "failed to list providers")
+		return ctrl.Result{}, fmt.Errorf("failed to list providers: %w", err)
 	}
 
 	// Check that no more than one instance of the provider is installed.
@@ -132,7 +131,7 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 	if !util.IsCoreProvider(provider) {
 		ready, err := coreProviderIsReady(ctx, c)
 		if err != nil {
-			return ctrl.Result{}, errors.Wrap(err, "failed to get coreProvider ready condition")
+			return ctrl.Result{}, fmt.Errorf("failed to get coreProvider ready condition: %w", err)
 		}
 
 		if !ready {

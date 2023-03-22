@@ -30,7 +30,6 @@ import (
 	"time"
 
 	"github.com/onsi/ginkgo/v2"
-	"github.com/pkg/errors"
 	admissionv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -79,8 +78,8 @@ var (
 		Jitter:   0.4,
 	}
 
-	errAlreadyStarted      = errors.New("environment has already been started")
-	errAlreadyStopped      = errors.New("environment has already been stopped")
+	errAlreadyStarted      = fmt.Errorf("environment has already been started")
+	errAlreadyStopped      = fmt.Errorf("environment has already been stopped")
 	clusterAPIVersionRegex = regexp.MustCompile(`^(\W)sigs.k8s.io/cluster-api v(.+)`)
 )
 
@@ -234,7 +233,10 @@ func (e *Environment) CleanupAndWait(ctx context.Context, objs ...client.Object)
 
 				return false, nil
 			})
-		errs = append(errs, errors.Wrapf(err, "key %s, %s is not being deleted from the testenv client cache", o.GetObjectKind().GroupVersionKind().String(), key))
+
+		if err != nil {
+			errs = append(errs, fmt.Errorf("key %s, %s is not being deleted from the testenv client cache: %w", o.GetObjectKind().GroupVersionKind().String(), key, err))
+		}
 	}
 
 	return kerrors.NewAggregate(errs)
@@ -268,7 +270,7 @@ func (e *Environment) CreateAndWait(ctx context.Context, obj client.Object, opts
 
 			return true, nil
 		}); err != nil {
-		return errors.Wrapf(err, "object %s, %s is not being added to the testenv client cache", obj.GetObjectKind().GroupVersionKind().String(), key)
+		return fmt.Errorf("object %s, %s is not being added to the testenv client cache: %w", obj.GetObjectKind().GroupVersionKind().String(), key, err)
 	}
 
 	return nil
