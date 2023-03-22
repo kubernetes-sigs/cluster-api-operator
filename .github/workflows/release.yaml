@@ -27,7 +27,7 @@ jobs:
         run: |
           make release
       - name: Create draft GH release
-        uses: softprops/action-gh-release@1
+        uses: softprops/action-gh-release@v1
         with:
           draft: true
           files: |
