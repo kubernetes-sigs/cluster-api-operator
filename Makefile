@@ -101,6 +101,10 @@ YQ_VER := v4.25.2
 YQ_BIN := yq
 YQ := $(TOOLS_BIN_DIR)/$(YQ_BIN)-$(YQ_VER)
 
+KPROMO_VER := v3.5.1
+KPROMO_BIN := kpromo
+KPROMO :=  $(TOOLS_BIN_DIR)/$(KPROMO_BIN)-$(KPROMO_VER)
+
 # It is set by Prow GIT_TAG, a git-based tag of the form vYYYYMMDD-hash, e.g., v20210120-v0.3.10-308-gc61521971
 TAG ?= dev
 ARCH ?= amd64
@@ -157,6 +161,7 @@ golangci-lint: $(GOLANGCI_LINT) ## Build a local copy of golang ci-lint.
 gotestsum: $(GOTESTSUM) ## Build a local copy of gotestsum.
 helm: $(HELM) ## Build a local copy of helm.
 yq: $(YQ) ## Build a local copy of yq.
+kpromo: $(KPROMO) ## Build a local copy of kpromo.
 
 $(KUSTOMIZE): ## Build kustomize from tools folder.
 	GOBIN=$(TOOLS_BIN_DIR) $(GO_INSTALL) sigs.k8s.io/kustomize/kustomize/v4 $(KUSTOMIZE_BIN) $(KUSTOMIZE_VER)
@@ -193,6 +198,9 @@ $(HELM): ## Put helm into tools folder.
 
 $(YQ):
 	GOBIN=$(TOOLS_BIN_DIR) $(GO_INSTALL) github.com/mikefarah/yq/v4 $(YQ_BIN) ${YQ_VER}
+
+$(KPROMO):
+	GOBIN=$(TOOLS_BIN_DIR) $(GO_INSTALL) sigs.k8s.io/promo-tools/v3/cmd/kpromo $(KPROMO_BIN) ${KPROMO_VER}
 
 .PHONY: cert-mananger
 cert-manager: # Install cert-manager on the cluster. This is used for development purposes only.

@@ -112,7 +112,7 @@ func downloadChart(chartAsset *github.ReleaseAsset) (string, *chart.Chart) {
 
 	archivePath := filepath.Join(tempDirPath, *chartAsset.Name)
 
-	resp, err := http.Get(*chartAsset.URL)
+	resp, err := http.Get(*chartAsset.BrowserDownloadURL)
 	if err != nil {
 		fmt.Println("❌ Error downloading chart archive: ", err)
 		os.Exit(1)
@@ -141,7 +141,7 @@ func downloadChart(chartAsset *github.ReleaseAsset) (string, *chart.Chart) {
 }
 
 func addEntryToIndexFile(indexFile *repo.IndexFile, chartAsset *github.ReleaseAsset, archivePath string, chart *chart.Chart) {
-	s := strings.Split(*chartAsset.URL, "/") // https://github.com/helm/chart-releaser/blob/main/pkg/releaser/releaser.go#L299
+	s := strings.Split(*chartAsset.BrowserDownloadURL, "/") // https://github.com/helm/chart-releaser/blob/main/pkg/releaser/releaser.go#L299
 	s = s[:len(s)-1]
 
 	hash, err := provenance.DigestFile(archivePath)
