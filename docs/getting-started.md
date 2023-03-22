@@ -25,8 +25,15 @@ Wait for the cert-manager to be ready.
 
 Install the Cluster API operator:
 
+1. Operator can be installed directly by applying manifests from release assets:
 ```bash
 kubectl apply -f https://github.com/kubernetes-sigs/cluster-api-operator/releases/latest/download/operator-components.yaml
+```
+2. Another option is using helm charts:
+```bash
+helm repo add capi-operator https://kubernetes-sigs.github.io/cluster-api-operator
+helm repo update
+helm install capi-operator capi-operator/cluster-api-operator --create-namespace -n capi-operator-system
 ```
 
 ***Note***: :warning: Take a look at RBAC permissions and adjust them, the operator will be creating and updating CRDs.

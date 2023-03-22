@@ -2,7 +2,12 @@
 
 This documents describes release process for the Cluster API Operator.
 
-1. Cut the release branch.
+1. Create the release branch and cut release tag.
+
+```bash
+git checkout -b release-0.1
+git push -u upstream release-0.1
+```
 
 ```bash
 export RELEASE_TAG=v0.1.1
@@ -28,7 +33,7 @@ make promote-images
 Merge the PR after it was created and verify that image is present in the production registry.
 
 ```bash
-docker pull registry.k8s.io/capi-operator:${RELEASE_TAG}
+docker pull registry.k8s.io/capi-operator/cluster-api-operator:${RELEASE_TAG}
 ```
 
 4. Publish the release on Github.
