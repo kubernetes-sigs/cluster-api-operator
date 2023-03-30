@@ -110,11 +110,11 @@ func TestCustomizeDeployment(t *testing.T) {
 		{
 			name: "only replicas modified",
 			inputDeploymentSpec: &operatorv1.DeploymentSpec{
-				Replicas: pointer.IntPtr(3),
+				Replicas: pointer.Int(3),
 			},
 			expectedDeploymentSpec: func(inputDS *appsv1.DeploymentSpec) (*appsv1.DeploymentSpec, bool) {
 				expectedDS := &appsv1.DeploymentSpec{
-					Replicas: pointer.Int32Ptr(3),
+					Replicas: pointer.Int32(3),
 				}
 
 				return expectedDS, reflect.DeepEqual(inputDS.Replicas, expectedDS.Replicas)
@@ -284,7 +284,7 @@ func TestCustomizeDeployment(t *testing.T) {
 		{
 			name: "all deployment options",
 			inputDeploymentSpec: &operatorv1.DeploymentSpec{
-				Replicas:     pointer.IntPtr(3),
+				Replicas:     pointer.Int(3),
 				NodeSelector: map[string]string{"a": "b"},
 				Tolerations: []corev1.Toleration{
 					{
@@ -434,11 +434,11 @@ func TestCustomizeDeployment(t *testing.T) {
 						LivenessEndpointName:   "mostly",
 					},
 					Webhook: configv1.ControllerWebhook{
-						Port:    pointer.IntPtr(3579),
+						Port:    pointer.Int(3579),
 						CertDir: "/tmp/certs",
 					},
 					LeaderElection: &configv1alpha1.LeaderElectionConfiguration{
-						LeaderElect:       pointer.BoolPtr(true),
+						LeaderElect:       pointer.Bool(true),
 						ResourceName:      "foo",
 						ResourceNamespace: "here",
 						LeaseDuration:     metav1.Duration{Duration: sevenHours},

@@ -1079,6 +1079,29 @@ spec:
                         resources:
                           description: Compute resources required by this container.
                           properties:
+                            claims:
+                              description: "Claims lists the names of resources, defined
+                                in spec.resourceClaims, that are used by this container.
+                                \n This is an alpha field and requires enabling the
+                                DynamicResourceAllocation feature gate. \n This field
+                                is immutable."
+                              items:
+                                description: ResourceClaim references one entry in
+                                  PodSpec.ResourceClaims.
+                                properties:
+                                  name:
+                                    description: Name must match the name of one entry
+                                      in pod.spec.resourceClaims of the Pod where
+                                      this field is used. It makes that resource available
+                                      inside a container.
+                                    type: string
+                                required:
+                                - name
+                                type: object
+                              type: array
+                              x-kubernetes-list-map-keys:
+                              - name
+                              x-kubernetes-list-type: map
                             limits:
                               additionalProperties:
                                 anyOf:
@@ -1262,6 +1285,9 @@ spec:
                           with GroupKind.String(), e.g. ReplicaSet in apps group (regardless
                           of version) would be `ReplicaSet.apps`."
                         type: object
+                      recoverPanic:
+                        description: RecoverPanic indicates if panics should be recovered.
+                        type: boolean
                     type: object
                   featureGates:
                     additionalProperties:
@@ -1284,6 +1310,8 @@ spec:
                       healthProbeBindAddress:
                         description: HealthProbeBindAddress is the TCP address that
                           the controller should bind to for serving health probes
+                          It can be set to "0" or "" to disable serving the health
+                          probe.
                         type: string
                       livenessEndpointName:
                         description: LivenessEndpointName, defaults to "healthz"

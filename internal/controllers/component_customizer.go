@@ -97,7 +97,7 @@ func customizeDeployment(pSpec operatorv1.ProviderSpec, d *appsv1.Deployment) {
 		dSpec := pSpec.Deployment
 
 		if dSpec.Replicas != nil {
-			d.Spec.Replicas = pointer.Int32Ptr(int32(*dSpec.Replicas))
+			d.Spec.Replicas = pointer.Int32(int32(*dSpec.Replicas))
 		}
 
 		if dSpec.Affinity != nil {
