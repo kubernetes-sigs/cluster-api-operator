@@ -142,7 +142,7 @@ func customizeManager(mSpec *operatorv1.ManagerSpec, c *corev1.Container) {
 	}
 
 	if mSpec.CacheNamespace != "" {
-		// This field seems somewhat in confilict with:
+		// This field seems somewhat in conflict with:
 		// The `ContainerSpec.Args` will ignore the key `namespace` since the operator
 		// enforces a deployment model where all the providers should be configured to
 		// watch all the namespaces.
@@ -168,8 +168,7 @@ func customizeManager(mSpec *operatorv1.ManagerSpec, c *corev1.Container) {
 	}
 
 	if mSpec.Metrics.BindAddress != "" {
-		// TODO or --metrics-bind-addr
-		c.Args = setArgs(c.Args, "--metrics-addr", mSpec.Metrics.BindAddress)
+		c.Args = setArgs(c.Args, "--metrics-bind-addr", mSpec.Metrics.BindAddress)
 	}
 
 	// webhooks
@@ -286,7 +285,7 @@ func imageMetaToURL(im *operatorv1.ImageMeta) string {
 
 // leaderElectionArgs set leader election flags.
 func leaderElectionArgs(lec *configv1alpha1.LeaderElectionConfiguration, args []string) []string {
-	args = setArgs(args, "--enable-leader-election", bool2Str[*lec.LeaderElect])
+	args = setArgs(args, "--leader-elect", bool2Str[*lec.LeaderElect])
 
 	if *lec.LeaderElect {
 		if lec.ResourceName != "" && lec.ResourceNamespace != "" {
