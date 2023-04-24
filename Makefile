@@ -310,7 +310,7 @@ modules: ## Runs go mod to ensure modules are up to date.
 
 .PHONY: docker-pull-prerequisites
 docker-pull-prerequisites:
-	docker pull docker.io/docker/dockerfile:1.1-experimental
+	docker pull docker.io/docker/dockerfile:1.4
 	docker pull docker.io/library/golang:1.19.0
 	docker pull gcr.io/distroless/static:latest
 
