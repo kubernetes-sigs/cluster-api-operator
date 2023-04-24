@@ -23,12 +23,12 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -51,7 +51,7 @@ const (
 	capiOperatorManagerDeployment   = "capi-operator-controller-manager"
 )
 
-// Test suite flags
+// Test suite flags.
 var (
 	// configPath is the path to the e2e config file.
 	configPath string
@@ -69,7 +69,7 @@ var (
 	componentsPath string
 )
 
-// Test suite global vars
+// Test suite global vars.
 var (
 	// e2eConfig to be used for this test, read from configPath.
 	e2eConfig *clusterctl.E2EConfig
@@ -85,16 +85,16 @@ var (
 	// bootstrapClusterProxy allows to interact with the bootstrap cluster to be used for the e2e tests.
 	bootstrapClusterProxy framework.ClusterProxy
 
-	// kubetestConfigFilePath is the path to the kubetest configuration file
+	// kubetestConfigFilePath is the path to the kubetest configuration file.
 	kubetestConfigFilePath string
 
-	// kubetestRepoListPath
+	// kubetestRepoListPath.
 	kubetestRepoListPath string
 
-	// useCIArtifacts specifies whether or not to use the latest build from the main branch of the Kubernetes repository
+	// useCIArtifacts specifies whether or not to use the latest build from the main branch of the Kubernetes repository.
 	useCIArtifacts bool
 
-	// usePRArtifacts specifies whether or not to use the build from a PR of the Kubernetes repository
+	// usePRArtifacts specifies whether or not to use the build from a PR of the Kubernetes repository.
 	usePRArtifacts bool
 )
 
@@ -159,8 +159,8 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 	kubeconfigPath := parts[3]
 
 	e2eConfig = loadE2EConfig(configPath)
-	proxy, ok := framework.NewClusterProxy("bootstrap", kubeconfigPath, initScheme()).(framework.ClusterProxy)
-	Expect(ok).To(BeTrue(), "framework.NewClusterProxy must implement capi_e2e.ClusterProxy")
+	proxy := framework.NewClusterProxy("bootstrap", kubeconfigPath, initScheme())
+
 	bootstrapClusterProxy = proxy
 })
 
@@ -212,8 +212,7 @@ func setupBootstrapCluster(config *clusterctl.E2EConfig, scheme *runtime.Scheme,
 		Expect(kubeconfigPath).To(BeAnExistingFile(), "Failed to get the kubeconfig file for the bootstrap cluster")
 	}
 
-	proxy, ok := framework.NewClusterProxy("bootstrap", kubeconfigPath, scheme).(framework.ClusterProxy)
-	Expect(ok).To(BeTrue(), "framework.NewClusterProxy must implement capi_e2e.ClusterProxy")
+	proxy := framework.NewClusterProxy("bootstrap", kubeconfigPath, scheme)
 
 	return clusterProvider, proxy
 }
@@ -227,7 +226,12 @@ func initBootstrapCluster(bootstrapClusterProxy framework.ClusterProxy, config *
 	By("Deploying cert-manager")
 	Expect(config.Variables).To(HaveKey(certManagerURL), "Missing %s variable in the config", certManagerURL)
 	certManagerComponentsUrl := config.GetVariable(certManagerURL)
-	certManagerResponse, err := http.Get(certManagerComponentsUrl) //use package "net/http"
+
+	var netClient = &http.Client{
+		Timeout: time.Second * 10,
+	}
+
+	certManagerResponse, err := netClient.Get(certManagerComponentsUrl)
 	Expect(err).ToNot(HaveOccurred(), "Failed to download cert-manager components from %s", certManagerComponentsUrl)
 	defer certManagerResponse.Body.Close()
 
@@ -256,7 +260,7 @@ func initBootstrapCluster(bootstrapClusterProxy framework.ClusterProxy, config *
 		}, config.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 	}
 
-	operatorComponents, err := ioutil.ReadFile(componentsPath)
+	operatorComponents, err := os.ReadFile(componentsPath)
 	Expect(err).ToNot(HaveOccurred(), "Failed to read the operator components file")
 
 	By("Applying operator components to the bootstrap cluster")

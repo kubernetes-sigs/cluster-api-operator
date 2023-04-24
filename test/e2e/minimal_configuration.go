@@ -47,7 +47,7 @@ var _ = Describe("Create providers with minimal specified configuration", func()
 
 		By("Waiting for the core provider deployment to be ready")
 		Eventually(func() bool {
-			isReady, err := waitForDeployment(k8sclient, ctx, coreProviderDeploymentName, operatorNamespace)
+			isReady, err := waitForDeployment(k8sclient, ctx, coreProviderDeploymentName)
 			if err != nil {
 				return false
 			}
@@ -103,7 +103,7 @@ var _ = Describe("Create providers with minimal specified configuration", func()
 
 		By("Waiting for the bootstrap provider deployment to be ready")
 		Eventually(func() bool {
-			isReady, err := waitForDeployment(k8sclient, ctx, bootstrapProviderDeploymentName, operatorNamespace)
+			isReady, err := waitForDeployment(k8sclient, ctx, bootstrapProviderDeploymentName)
 			if err != nil {
 				return false
 			}
@@ -159,7 +159,7 @@ var _ = Describe("Create providers with minimal specified configuration", func()
 
 		By("Waiting for the control plane provider deployment to be ready")
 		Eventually(func() bool {
-			isReady, err := waitForDeployment(k8sclient, ctx, cpProviderDeploymentName, operatorNamespace)
+			isReady, err := waitForDeployment(k8sclient, ctx, cpProviderDeploymentName)
 			if err != nil {
 				return false
 			}
@@ -215,7 +215,7 @@ var _ = Describe("Create providers with minimal specified configuration", func()
 
 		By("Waiting for the infrastructure provider deployment to be ready")
 		Eventually(func() bool {
-			isReady, err := waitForDeployment(k8sclient, ctx, infraProviderDeploymentName, operatorNamespace)
+			isReady, err := waitForDeployment(k8sclient, ctx, infraProviderDeploymentName)
 			if err != nil {
 				return false
 			}

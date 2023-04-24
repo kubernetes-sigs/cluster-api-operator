@@ -51,9 +51,9 @@ const (
 	infraProviderDeploymentName = "capd-controller-manager"
 )
 
-func waitForDeployment(cl client.Client, ctx context.Context, name, namespace string) (bool, error) {
+func waitForDeployment(cl client.Client, ctx context.Context, name string) (bool, error) {
 	deployment := &appsv1.Deployment{}
-	key := client.ObjectKey{Namespace: namespace, Name: name}
+	key := client.ObjectKey{Namespace: operatorNamespace, Name: name}
 	if err := cl.Get(ctx, key, deployment); err != nil {
 		return false, err
 	}
