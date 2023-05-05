@@ -27,9 +27,6 @@ source "${REPO_ROOT}/hack/ensure-go.sh"
 source "${REPO_ROOT}/hack/ensure-kind.sh"
 
 # Build operator images
-export CERT_MANAGER_VERSION=v1.7.1
-export OPERATOR_IMAGE=gcr.io/k8s-staging-capi-operator/cluster-api-operator:dev
-
 echo "+ Building CAPI operator image"
 make docker-build-e2e
 

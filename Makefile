@@ -133,6 +133,8 @@ E2E_CONF_FILE ?= $(ROOT)/test/e2e/config/operator-dev.yaml
 E2E_CONF_FILE_ENVSUBST ?= $(ROOT)/test/e2e/config/operator-dev-envsubst.yaml
 SKIP_CLEANUP ?= false
 SKIP_CREATE_MGMT_CLUSTER ?= false
+E2E_CERT_MANAGER_VERSION ?= v1.7.1
+E2E_OPERATOR_IMAGE ?= $(CONTROLLER_IMG):$(TAG)
 
 # Relase
 RELEASE_TAG ?= $(shell git describe --abbrev=0 2>/dev/null)
@@ -353,7 +355,7 @@ docker-push-%:
 
 .PHONY: docker-build-e2e
 docker-build-e2e:
-	$(MAKE) CONTROLLER_IMG_TAG="gcr.io/k8s-staging-capi-operator/cluster-api-operator:dev" docker-build
+	$(MAKE) CONTROLLER_IMG_TAG="$(E2E_OPERATOR_IMAGE)" docker-build
 
 .PHONY: set-manifest-pull-policy
 set-manifest-pull-policy:
@@ -464,7 +466,7 @@ test-e2e: $(KUSTOMIZE)
 
 .PHONY: test-e2e-run
 test-e2e-run: $(GINKGO) $(ENVSUBST) ## Run e2e tests
-	$(ENVSUBST) < $(E2E_CONF_FILE) > $(E2E_CONF_FILE_ENVSUBST) && \
+	E2E_OPERATOR_IMAGE=$(E2E_OPERATOR_IMAGE) E2E_CERT_MANAGER_VERSION=$(E2E_CERT_MANAGER_VERSION) $(ENVSUBST) < $(E2E_CONF_FILE) > $(E2E_CONF_FILE_ENVSUBST) && \
 	$(GINKGO) -v -trace -tags=e2e --junit-report=junit_cluster_api_operator_e2e.xml --output-dir="${JUNIT_REPORT_DIR}" --no-color=$(GINKGO_NOCOLOR) $(GINKGO_ARGS) ./test/e2e -- \
 		-e2e.artifacts-folder="$(ARTIFACTS)" \
 		-e2e.config="$(E2E_CONF_FILE_ENVSUBST)"  -e2e.components=$(ROOT)/$(RELEASE_DIR)/operator-components.yaml \
