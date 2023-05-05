@@ -38,10 +38,10 @@ COPY ./ ./
 # Cache the go build into the the Go’s compiler cache folder so we take benefits of compiler caching across docker build calls
 RUN --mount=type=cache,target=/root/.cache/go-build \
   --mount=type=cache,target=/go/pkg/mod \
-  go build .
+  go build cmd/main.go
 
 # Build
-ARG package=.
+ARG path=cmd/main.go
 ARG ARCH
 ARG ldflags
 
@@ -50,7 +50,7 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
   --mount=type=cache,target=/go/pkg/mod \
   CGO_ENABLED=0 GOOS=linux GOARCH=${ARCH} \
   go build -ldflags "${ldflags} -extldflags '-static'" \
-  -o manager ${package}
+  -o manager ${path}
 
 # Production image
 FROM gcr.io/distroless/static:nonroot

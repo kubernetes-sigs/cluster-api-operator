@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package controllers
+package controller
 
 import (
 	"reflect"
@@ -28,7 +28,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha1"
-	"sigs.k8s.io/cluster-api-operator/internal/controllers/genericprovider"
+	"sigs.k8s.io/cluster-api-operator/internal/controller/genericprovider"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	clusterctlv1 "sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3"
 )
