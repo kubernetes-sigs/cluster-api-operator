@@ -456,7 +456,7 @@ clean-release: ## Remove the release folder
 ## E2E
 ## --------------------------------------
 
-.PHONY: e2e-test
+.PHONY: test-e2e
 test-e2e: $(KUSTOMIZE)
 	$(MAKE) release-manifests
 	$(MAKE) test-e2e-run

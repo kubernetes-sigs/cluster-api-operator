@@ -147,7 +147,7 @@ func (r *GenericProviderReconciler) reconcile(ctx context.Context, provider gene
 		}
 
 		if !res.IsZero() || err != nil {
-			// the steps are sequencial, so we must be complete before progressing.
+			// the steps are sequential, so we must be complete before progressing.
 			return res, err
 		}
 	}
@@ -179,7 +179,7 @@ func (r *GenericProviderReconciler) reconcileDelete(ctx context.Context, provide
 		}
 
 		if !res.IsZero() || err != nil {
-			// the steps are sequencial, so we must be complete before progressing.
+			// the steps are sequential, so we must be complete before progressing.
 			return res, err
 		}
 	}

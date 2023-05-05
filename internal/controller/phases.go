@@ -134,7 +134,7 @@ func (p *phaseReconciler) load(ctx context.Context) (reconcile.Result, error) {
 
 	spec := p.provider.GetSpec()
 
-	// If a configmap selector was specified, use it to find the configmap with provider configuraion. This is
+	// If a configmap selector was specified, use it to find the configmap with provider configuration. This is
 	// a case for "air-gapped" environments. If no selector was specified, use GitHub repository.
 	if spec.FetchConfig != nil && spec.FetchConfig.Selector != nil {
 		log.V(5).Info("Custom ConfigMap was provided for fetching manifests")
@@ -173,7 +173,7 @@ func (p *phaseReconciler) secretReader(ctx context.Context) (configclient.Reader
 		return nil, err
 	}
 
-	// Fetch configutation variables from the secret. See API field docs for more info.
+	// Fetch configuration variables from the secret. See API field docs for more info.
 	if p.provider.GetSpec().SecretName != "" {
 		secret := &corev1.Secret{}
 		key := types.NamespacedName{Namespace: p.provider.GetNamespace(), Name: p.provider.GetSpec().SecretName}
@@ -304,7 +304,7 @@ func (p *phaseReconciler) fetch(ctx context.Context) (reconcile.Result, error) {
 	}
 
 	// Generate a set of new objects using the clusterctl library. NewComponents() will do the yaml processing,
-	// like ensure all the provider components are in proper namespace, replcae variables, etc. See the clusterctl
+	// like ensure all the provider components are in proper namespace, replace variables, etc. See the clusterctl
 	// documentation for more details.
 	p.components, err = repository.NewComponents(repository.ComponentsInput{
 		Provider:     p.providerConfig,
@@ -375,7 +375,7 @@ func (p *phaseReconciler) install(ctx context.Context) (reconcile.Result, error)
 	if err := clusterClient.ProviderComponents().Create(p.components.Objs()); err != nil {
 		reason := "Install failed"
 		if err == wait.ErrWaitTimeout {
-			reason = "Timedout waiting for deployment to become ready"
+			reason = "Timed out waiting for deployment to become ready"
 		}
 
 		return reconcile.Result{}, wrapPhaseError(err, reason, operatorv1.ProviderInstalledCondition)
