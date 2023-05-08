@@ -334,9 +334,14 @@ func (p *phaseReconciler) fetch(ctx context.Context) (reconcile.Result, error) {
 func (p *phaseReconciler) preInstall(ctx context.Context) (reconcile.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 
-	needPreDelete, err := p.updateRequiresPreDeletion()
-	if err != nil || !needPreDelete {
-		return reconcile.Result{}, wrapPhaseError(err, "failed getting clusterctl Provider", operatorv1.ProviderInstalledCondition)
+	needPreDelete, err := p.versionChanged()
+	if err != nil {
+		return reconcile.Result{}, wrapPhaseError(err, "failed getting clusterctl Provider version", operatorv1.ProviderInstalledCondition)
+	}
+
+	// we need to delete existing components only if their version changes and something has already been installed.
+	if !needPreDelete || p.provider.GetStatus().InstalledVersion == nil {
+		return reconcile.Result{}, nil
 	}
 
 	log.Info("Upgrade detected, deleting existing components")
@@ -344,11 +349,11 @@ func (p *phaseReconciler) preInstall(ctx context.Context) (reconcile.Result, err
 	return p.delete(ctx)
 }
 
-// updateRequiresPreDeletion try to get installed version from provider status and decide if it's an upgrade.
-func (s *phaseReconciler) updateRequiresPreDeletion() (bool, error) {
+// versionChanged try to get installed version from provider status and decide if it has changed.
+func (s *phaseReconciler) versionChanged() (bool, error) {
 	installedVersion := s.provider.GetStatus().InstalledVersion
 	if installedVersion == nil {
-		return false, nil
+		return true, nil
 	}
 
 	currentVersion, err := versionutil.ParseSemantic(*installedVersion)
@@ -362,14 +367,24 @@ func (s *phaseReconciler) updateRequiresPreDeletion() (bool, error) {
 	}
 
 	// we need to delete installed components if versions are different
-	needPreDelete := res != 0
+	versionChanged := res != 0
 
-	return needPreDelete, nil
+	return versionChanged, nil
 }
 
 // install installs the provider components using clusterctl library.
 func (p *phaseReconciler) install(ctx context.Context) (reconcile.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
+
+	versionChanged, err := p.versionChanged()
+	if err != nil {
+		return reconcile.Result{}, wrapPhaseError(err, "failed getting clusterctl Provider version", operatorv1.ProviderInstalledCondition)
+	}
+
+	// skip installation if the version hasn't changed.
+	if !versionChanged {
+		return reconcile.Result{}, nil
+	}
 
 	clusterClient := p.newClusterClient()
 
