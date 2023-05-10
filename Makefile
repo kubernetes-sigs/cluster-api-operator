@@ -48,7 +48,7 @@ GO_INSTALL := ./scripts/go_install.sh
 export PATH := $(abspath $(TOOLS_BIN_DIR)):$(PATH)
 
 # Kubebuilder
-export KUBEBUILDER_ENVTEST_KUBERNETES_VERSION ?= 1.24.2
+export KUBEBUILDER_ENVTEST_KUBERNETES_VERSION ?= 1.26.1
 export KUBEBUILDER_CONTROLPLANE_START_TIMEOUT ?= 60s
 export KUBEBUILDER_CONTROLPLANE_STOP_TIMEOUT ?= 60s
 
@@ -61,7 +61,7 @@ IMAGE_REVIEWERS ?= $(shell ./hack/get-project-maintainers.sh)
 
 # Binaries.
 # Need to use abspath so we can invoke these from subdirectories
-CONTROLLER_GEN_VER := v0.9.2
+CONTROLLER_GEN_VER := v0.12.0
 CONTROLLER_GEN_BIN := controller-gen
 CONTROLLER_GEN := $(TOOLS_BIN_DIR)/$(CONTROLLER_GEN_BIN)-$(CONTROLLER_GEN_VER)
 
@@ -69,7 +69,7 @@ GOLANGCI_LINT_VER := v1.51.2
 GOLANGCI_LINT_BIN := golangci-lint
 GOLANGCI_LINT := $(TOOLS_BIN_DIR)/$(GOLANGCI_LINT_BIN)-$(GOLANGCI_LINT_VER)
 
-KUSTOMIZE_VER := v4.5.2
+KUSTOMIZE_VER := v5.0.1
 KUSTOMIZE_BIN := kustomize
 KUSTOMIZE := $(TOOLS_BIN_DIR)/$(KUSTOMIZE_BIN)-$(KUSTOMIZE_VER)
 
@@ -81,7 +81,7 @@ GOTESTSUM_VER := v1.6.4
 GOTESTSUM_BIN := gotestsum
 GOTESTSUM := $(TOOLS_BIN_DIR)/$(GOTESTSUM_BIN)-$(GOTESTSUM_VER)
 
-GINKGO_VER := v2.9.0
+GINKGO_VER := v2.9.2
 GINKGO_BIN := ginkgo
 GINKGO := $(TOOLS_BIN_DIR)/$(GINKGO_BIN)-$(GINKGO_VER)
 
@@ -166,7 +166,7 @@ yq: $(YQ) ## Build a local copy of yq.
 kpromo: $(KPROMO) ## Build a local copy of kpromo.
 
 $(KUSTOMIZE): ## Build kustomize from tools folder.
-	GOBIN=$(TOOLS_BIN_DIR) $(GO_INSTALL) sigs.k8s.io/kustomize/kustomize/v4 $(KUSTOMIZE_BIN) $(KUSTOMIZE_VER)
+	GOBIN=$(TOOLS_BIN_DIR) $(GO_INSTALL) sigs.k8s.io/kustomize/kustomize/v5 $(KUSTOMIZE_BIN) $(KUSTOMIZE_VER)
 
 $(GO_APIDIFF): ## Build go-apidiff from tools folder.
 	GOBIN=$(TOOLS_BIN_DIR) $(GO_INSTALL) github.com/joelanford/go-apidiff $(GO_APIDIFF_BIN) $(GO_APIDIFF_VER)
@@ -236,7 +236,7 @@ test-junit: $(SETUP_ENVTEST) $(GOTESTSUM) ## Run tests with verbose setting and 
 
 .PHONY: operator
 operator: ## Build operator binary
-	go build -trimpath -ldflags "$(LDFLAGS)" -o $(BIN_DIR)/operator sigs.k8s.io/cluster-api-operator
+	go build -trimpath -ldflags "$(LDFLAGS)" -o $(BIN_DIR)/operator cmd/main.go
 
 ## --------------------------------------
 ## Lint / Verify
@@ -285,15 +285,14 @@ generate: $(CONTROLLER_GEN) ## Generate code
 .PHONY: generate-go
 generate-go: $(CONTROLLER_GEN) ## Runs Go related generate targets for the operator
 	$(CONTROLLER_GEN) \
-		object:headerFile=$(ROOT)/hack/boilerplate/boilerplate.generatego.txt \
+		object:headerFile=$(ROOT)/hack/boilerplate.go.txt \
 		paths=./api/...
 
 .PHONY: generate-manifests
 generate-manifests: $(CONTROLLER_GEN) ## Generate manifests for the operator e.g. CRD, RBAC etc.
 	$(CONTROLLER_GEN) \
 		paths=./api/... \
-		paths=./controllers/... \
-		paths=./webhook/... \
+		paths=./internal/controller/... \
 		crd:crdVersions=v1 \
 		rbac:roleName=manager-role \
 		output:crd:dir=./config/crd/bases \
@@ -459,7 +458,7 @@ clean-release: ## Remove the release folder
 ## E2E
 ## --------------------------------------
 
-.PHONY: e2e-test
+.PHONY: test-e2e
 test-e2e: $(KUSTOMIZE)
 	$(MAKE) release-manifests
 	$(MAKE) test-e2e-run

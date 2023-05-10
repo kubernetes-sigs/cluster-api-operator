@@ -18,7 +18,7 @@ package controllers
 
 import (
 	"k8s.io/client-go/rest"
-	internalcontrollers "sigs.k8s.io/cluster-api-operator/internal/controllers"
+	internalcontrollers "sigs.k8s.io/cluster-api-operator/internal/controller"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"

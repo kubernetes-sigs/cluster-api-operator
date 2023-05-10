@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package controllers
+package controller
 
 import (
 	"context"
@@ -25,7 +25,7 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/client-go/rest"
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha1"
-	"sigs.k8s.io/cluster-api-operator/internal/controllers/genericprovider"
+	"sigs.k8s.io/cluster-api-operator/internal/controller/genericprovider"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/patch"
@@ -147,7 +147,7 @@ func (r *GenericProviderReconciler) reconcile(ctx context.Context, provider gene
 		}
 
 		if !res.IsZero() || err != nil {
-			// the steps are sequencial, so we must be complete before progressing.
+			// the steps are sequential, so we must be complete before progressing.
 			return res, err
 		}
 	}
@@ -179,7 +179,7 @@ func (r *GenericProviderReconciler) reconcileDelete(ctx context.Context, provide
 		}
 
 		if !res.IsZero() || err != nil {
-			// the steps are sequencial, so we must be complete before progressing.
+			// the steps are sequential, so we must be complete before progressing.
 			return res, err
 		}
 	}

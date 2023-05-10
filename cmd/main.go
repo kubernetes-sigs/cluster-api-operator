@@ -45,7 +45,7 @@ import (
 	// +kubebuilder:scaffold:imports
 
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha1"
-	"sigs.k8s.io/cluster-api-operator/internal/controllers"
+	providercontroller "sigs.k8s.io/cluster-api-operator/internal/controller"
 )
 
 var (
@@ -185,7 +185,7 @@ func setupChecks(mgr ctrl.Manager) {
 }
 
 func setupReconcilers(mgr ctrl.Manager) {
-	if err := (&controllers.GenericProviderReconciler{
+	if err := (&providercontroller.GenericProviderReconciler{
 		Provider:     &operatorv1.CoreProvider{},
 		ProviderList: &operatorv1.CoreProviderList{},
 		Client:       mgr.GetClient(),
@@ -195,7 +195,7 @@ func setupReconcilers(mgr ctrl.Manager) {
 		os.Exit(1)
 	}
 
-	if err := (&controllers.GenericProviderReconciler{
+	if err := (&providercontroller.GenericProviderReconciler{
 		Provider:     &operatorv1.InfrastructureProvider{},
 		ProviderList: &operatorv1.InfrastructureProviderList{},
 		Client:       mgr.GetClient(),
@@ -205,7 +205,7 @@ func setupReconcilers(mgr ctrl.Manager) {
 		os.Exit(1)
 	}
 
-	if err := (&controllers.GenericProviderReconciler{
+	if err := (&providercontroller.GenericProviderReconciler{
 		Provider:     &operatorv1.BootstrapProvider{},
 		ProviderList: &operatorv1.BootstrapProviderList{},
 		Client:       mgr.GetClient(),
@@ -215,7 +215,7 @@ func setupReconcilers(mgr ctrl.Manager) {
 		os.Exit(1)
 	}
 
-	if err := (&controllers.GenericProviderReconciler{
+	if err := (&providercontroller.GenericProviderReconciler{
 		Provider:     &operatorv1.ControlPlaneProvider{},
 		ProviderList: &operatorv1.ControlPlaneProviderList{},
 		Client:       mgr.GetClient(),
