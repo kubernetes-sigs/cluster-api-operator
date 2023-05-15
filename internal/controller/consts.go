@@ -22,4 +22,9 @@ const (
 	// preflightFailedRequeueAfter is how long to wait before trying to reconcile
 	// if some preflight check has failed.
 	preflightFailedRequeueAfter = 30 * time.Second
+
+	httpsScheme             = "https"
+	githubDomain            = "github.com"
+	gitlabHostPrefix        = "gitlab."
+	gitlabPackagesAPIPrefix = "/api/v4/projects/"
 )

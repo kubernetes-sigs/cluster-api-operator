@@ -23,10 +23,13 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha1"
-	"sigs.k8s.io/cluster-api-operator/internal/controller/genericprovider"
+	clusterctlv1 "sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3"
+	configclient "sigs.k8s.io/cluster-api/cmd/clusterctl/client/config"
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/repository"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha1"
+	"sigs.k8s.io/cluster-api-operator/internal/controller/genericprovider"
 )
 
 func TestSecretReader(t *testing.T) {
@@ -355,6 +358,84 @@ metadata:
 			g.Expect(got.GetFile(got.DefaultVersion(), got.ComponentsPath())).To(Equal([]byte(components)))
 			g.Expect(got.GetFile(got.DefaultVersion(), "metadata.yaml")).To(Equal([]byte(metadata)))
 			g.Expect(got.DefaultVersion()).To(Equal(tt.wantDefaultVersion))
+		})
+	}
+}
+
+func TestRepositoryFactory(t *testing.T) {
+	testCases := []struct {
+		name          string
+		fetchURL      string
+		expectedError bool
+	}{
+		{
+			name:     "github repo",
+			fetchURL: "https://github.com/kubernetes-sigs/cluster-api-provider-aws/releases/v1.4.1/infrastructure-components.yaml",
+		},
+		{
+			name:     "gitlab repo",
+			fetchURL: "https://gitlab.example.org/api/v4/projects/group%2Fproject/packages/generic/cluster-api-proviver-aws/v1.4.1/path",
+		},
+		{
+			name:          "unsupported url",
+			fetchURL:      "https://unsupported.xyz/kubernetes-sigs/cluster-api-provider-aws/releases/v1.4.1/infrastructure-components.yaml",
+			expectedError: true,
+		},
+		{
+			name:          "unsupported schema",
+			fetchURL:      "ftp://github.com/kubernetes-sigs/cluster-api-provider-aws/releases/v1.4.1/infrastructure-components.yaml",
+			expectedError: true,
+		},
+		{
+			name:          "not an url",
+			fetchURL:      "INVALID_URL",
+			expectedError: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			g := NewWithT(t)
+
+			mr := configclient.NewMemoryReader()
+
+			g.Expect(mr.Init("")).To(Succeed())
+
+			var configClient configclient.Client
+
+			var err error
+
+			providerName := "aws"
+			providerType := clusterctlv1.InfrastructureProviderType
+
+			// Initialize a client for interacting with the clusterctl configuration.
+			// Inject a provider with custom URL.
+			if tc.fetchURL != "" {
+				reader, err := mr.AddProvider(providerName, providerType, tc.fetchURL)
+				g.Expect(err).ToNot(HaveOccurred())
+
+				configClient, err = configclient.New("", configclient.InjectReader(reader))
+				g.Expect(err).ToNot(HaveOccurred())
+			} else {
+				configClient, err = configclient.New("")
+				g.Expect(err).ToNot(HaveOccurred())
+			}
+
+			// Get returns the configuration for the provider with a given name/type.
+			// This is done using clusterctl internal API types.
+			providerConfig, err := configClient.Providers().Get(providerName, providerType)
+			g.Expect(err).ToNot(HaveOccurred())
+
+			repo, err := repositoryFactory(providerConfig, configClient.Variables())
+			if tc.expectedError {
+				g.Expect(err).To(HaveOccurred())
+
+				return
+			} else {
+				g.Expect(err).ToNot(HaveOccurred())
+			}
+
+			g.Expect(repo.GetVersions()).To(ContainElement("v1.4.1"))
 		})
 	}
 }
