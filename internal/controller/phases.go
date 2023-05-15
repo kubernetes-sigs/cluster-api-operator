@@ -350,8 +350,8 @@ func (p *phaseReconciler) preInstall(ctx context.Context) (reconcile.Result, err
 }
 
 // versionChanged try to get installed version from provider status and decide if it has changed.
-func (s *phaseReconciler) versionChanged() (bool, error) {
-	installedVersion := s.provider.GetStatus().InstalledVersion
+func (p *phaseReconciler) versionChanged() (bool, error) {
+	installedVersion := p.provider.GetStatus().InstalledVersion
 	if installedVersion == nil {
 		return true, nil
 	}
@@ -361,7 +361,7 @@ func (s *phaseReconciler) versionChanged() (bool, error) {
 		return false, err
 	}
 
-	res, err := currentVersion.Compare(s.components.Version())
+	res, err := currentVersion.Compare(p.components.Version())
 	if err != nil {
 		return false, err
 	}
@@ -453,9 +453,9 @@ func clusterctlProviderName(provider genericprovider.GenericProvider) client.Obj
 }
 
 // newClusterClient returns a clusterctl client for interacting with management cluster.
-func (s *phaseReconciler) newClusterClient() cluster.Client {
-	return cluster.New(cluster.Kubeconfig{}, s.configClient, cluster.InjectProxy(&controllerProxy{
-		ctrlClient: s.ctrlClient,
-		ctrlConfig: s.ctrlConfig,
+func (p *phaseReconciler) newClusterClient() cluster.Client {
+	return cluster.New(cluster.Kubeconfig{}, p.configClient, cluster.InjectProxy(&controllerProxy{
+		ctrlClient: p.ctrlClient,
+		ctrlConfig: p.ctrlConfig,
 	}))
 }
