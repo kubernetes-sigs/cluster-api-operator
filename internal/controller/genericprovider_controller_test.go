@@ -71,6 +71,8 @@ spec:
           requests:
             cpu: 200m
 `
+
+	testCurrentVersion = "v0.4.2"
 )
 
 func insertDummyConfig(provider genericprovider.GenericProvider) {
@@ -85,10 +87,10 @@ func insertDummyConfig(provider genericprovider.GenericProvider) {
 	provider.SetSpec(spec)
 }
 
-func dummyConfigMap(ns string) *corev1.ConfigMap {
+func dummyConfigMap(ns, name string) *corev1.ConfigMap {
 	return &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "v0.4.2",
+			Name:      name,
 			Namespace: ns,
 			Labels: map[string]string{
 				"test": "dummy-config",
@@ -118,7 +120,7 @@ func TestReconcilerPreflightConditions(t *testing.T) {
 						},
 						Spec: operatorv1.CoreProviderSpec{
 							ProviderSpec: operatorv1.ProviderSpec{
-								Version: "v0.4.2",
+								Version: testCurrentVersion,
 							},
 						},
 					},
@@ -136,7 +138,7 @@ func TestReconcilerPreflightConditions(t *testing.T) {
 						},
 						Spec: operatorv1.CoreProviderSpec{
 							ProviderSpec: operatorv1.ProviderSpec{
-								Version: "v0.4.2",
+								Version: testCurrentVersion,
 							},
 						},
 						Status: operatorv1.CoreProviderStatus{
@@ -158,7 +160,7 @@ func TestReconcilerPreflightConditions(t *testing.T) {
 						},
 						Spec: operatorv1.ControlPlaneProviderSpec{
 							ProviderSpec: operatorv1.ProviderSpec{
-								Version: "v0.4.2",
+								Version: testCurrentVersion,
 							},
 						},
 					},
@@ -171,10 +173,10 @@ func TestReconcilerPreflightConditions(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			g := NewWithT(t)
 
-			t.Log("creating namespace", tc.namespace)
-			namespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: tc.namespace}}
-			g.Expect(env.CreateAndWait(ctx, namespace)).To(Succeed())
-			g.Expect(env.CreateAndWait(ctx, dummyConfigMap(tc.namespace))).To(Succeed())
+			t.Log("Ensure namespace exists", tc.namespace)
+			g.Expect(env.EnsureNamespaceExists(ctx, tc.namespace)).To(Succeed())
+
+			g.Expect(env.CreateAndWait(ctx, dummyConfigMap(tc.namespace, testCurrentVersion))).To(Succeed())
 
 			for _, p := range tc.providers {
 				insertDummyConfig(p)
@@ -206,6 +208,131 @@ func TestReconcilerPreflightConditions(t *testing.T) {
 			for _, p := range tc.providers {
 				objs = append(objs, p.GetObject())
 			}
+
+			objs = append(objs, &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      testCurrentVersion,
+					Namespace: tc.namespace,
+				},
+			})
+
+			g.Expect(env.CleanupAndWait(ctx, objs...)).To(Succeed())
+		})
+	}
+}
+
+func TestUpgradeDowngradeProvider(t *testing.T) {
+	testCases := []struct {
+		name       string
+		namespace  string
+		newVersion string
+	}{
+		{
+			name:       "upgrade provider version",
+			namespace:  "test-core-provider",
+			newVersion: "v0.4.3",
+		},
+		{
+			name:       "downgrade provider version",
+			namespace:  "test-core-provider",
+			newVersion: "v0.4.1",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			g := NewWithT(t)
+
+			provider := &genericprovider.CoreProviderWrapper{
+				CoreProvider: &operatorv1.CoreProvider{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "cluster-api",
+					},
+					Spec: operatorv1.CoreProviderSpec{
+						ProviderSpec: operatorv1.ProviderSpec{
+							Version: testCurrentVersion,
+						},
+					},
+				},
+			}
+
+			t.Log("Ensure namespace exists", tc.namespace)
+			g.Expect(env.EnsureNamespaceExists(ctx, tc.namespace)).To(Succeed())
+
+			g.Expect(env.CreateAndWait(ctx, dummyConfigMap(tc.namespace, testCurrentVersion))).To(Succeed())
+
+			insertDummyConfig(provider)
+			provider.SetNamespace(tc.namespace)
+			t.Log("creating test provider", provider.GetName())
+			g.Expect(env.CreateAndWait(ctx, provider.GetObject())).To(Succeed())
+
+			g.Eventually(func() bool {
+				if err := env.Get(ctx, client.ObjectKeyFromObject(provider.GetObject()), provider.GetObject()); err != nil {
+					return false
+				}
+
+				if provider.GetStatus().InstalledVersion == nil || *provider.GetStatus().InstalledVersion != testCurrentVersion {
+					return false
+				}
+
+				for _, cond := range provider.GetStatus().Conditions {
+					if cond.Type == operatorv1.PreflightCheckCondition {
+						t.Log(t.Name(), provider.GetName(), cond)
+						if cond.Status == corev1.ConditionTrue {
+							return true
+						}
+					}
+				}
+
+				return false
+			}, timeout).Should(BeEquivalentTo(true))
+
+			// creating another configmap with another version
+			g.Expect(env.CreateAndWait(ctx, dummyConfigMap(tc.namespace, tc.newVersion))).To(Succeed())
+
+			// Change provider version
+			providerSpec := provider.GetSpec()
+			providerSpec.Version = tc.newVersion
+			provider.SetSpec(providerSpec)
+			g.Expect(env.Client.Update(ctx, provider.GetObject())).To(Succeed())
+
+			g.Eventually(func() bool {
+				if err := env.Get(ctx, client.ObjectKeyFromObject(provider.GetObject()), provider.GetObject()); err != nil {
+					return false
+				}
+
+				if provider.GetStatus().InstalledVersion == nil || *provider.GetStatus().InstalledVersion != tc.newVersion {
+					return false
+				}
+
+				for _, cond := range provider.GetStatus().Conditions {
+					if cond.Type == operatorv1.PreflightCheckCondition {
+						t.Log(t.Name(), provider.GetName(), cond)
+						if cond.Status == corev1.ConditionTrue {
+							return true
+						}
+					}
+				}
+
+				return false
+			}, timeout).Should(BeEquivalentTo(true))
+
+			// Clean up
+			objs := []client.Object{provider.GetObject()}
+			objs = append(objs, &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      testCurrentVersion,
+					Namespace: tc.namespace,
+				},
+			})
+
+			objs = append(objs, &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      tc.newVersion,
+					Namespace: tc.namespace,
+				},
+			})
+
 			g.Expect(env.CleanupAndWait(ctx, objs...)).To(Succeed())
 		})
 	}

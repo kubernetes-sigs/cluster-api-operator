@@ -293,6 +293,33 @@ func (e *Environment) CreateNamespace(ctx context.Context, generateName string) 
 	return ns, nil
 }
 
+func (e *Environment) EnsureNamespaceExists(ctx context.Context, namespace string) error {
+	// Check if the namespace exists
+	ns := &corev1.Namespace{}
+
+	err := e.Client.Get(ctx, client.ObjectKey{Name: namespace}, ns)
+	if err == nil {
+		return nil
+	}
+
+	if !apierrors.IsNotFound(err) {
+		return fmt.Errorf("unexpected error during namespace checking: %w", err)
+	}
+
+	// Create the namespace if it doesn't exist
+	newNamespace := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: namespace,
+		},
+	}
+
+	if err := e.Client.Create(ctx, newNamespace); err != nil {
+		return fmt.Errorf("unable to create namespace %s: %w", namespace, err)
+	}
+
+	return nil
+}
+
 func getFilePathToClusterctlCRDs(root string) string {
 	if clusterctlCRDPath := os.Getenv("CLUSTERCTL_CRD_PATH"); clusterctlCRDPath != "" {
 		return clusterctlCRDPath

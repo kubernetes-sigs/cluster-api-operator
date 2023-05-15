@@ -351,17 +351,20 @@ func (s *phaseReconciler) updateRequiresPreDeletion() (bool, error) {
 		return false, nil
 	}
 
-	nextVersion, err := versionutil.ParseSemantic(s.components.Version())
-	if err != nil {
-		return false, err
-	}
-
 	currentVersion, err := versionutil.ParseSemantic(*installedVersion)
 	if err != nil {
 		return false, err
 	}
 
-	return currentVersion.LessThan(nextVersion), nil
+	res, err := currentVersion.Compare(s.components.Version())
+	if err != nil {
+		return false, err
+	}
+
+	// we need to delete installed components if versions are different
+	needPreDelete := res != 0
+
+	return needPreDelete, nil
 }
 
 // install installs the provider components using clusterctl library.
