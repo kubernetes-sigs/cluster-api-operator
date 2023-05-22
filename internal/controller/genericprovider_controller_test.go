@@ -224,17 +224,18 @@ func TestReconcilerPreflightConditions(t *testing.T) {
 func TestUpgradeDowngradeProvider(t *testing.T) {
 	testCases := []struct {
 		name       string
-		namespace  string
 		newVersion string
 	}{
 		{
+			name:       "same provider version",
+			newVersion: "v0.4.2",
+		},
+		{
 			name:       "upgrade provider version",
-			namespace:  "test-core-provider",
 			newVersion: "v0.4.3",
 		},
 		{
 			name:       "downgrade provider version",
-			namespace:  "test-core-provider",
 			newVersion: "v0.4.1",
 		},
 	}
@@ -256,13 +257,15 @@ func TestUpgradeDowngradeProvider(t *testing.T) {
 				},
 			}
 
-			t.Log("Ensure namespace exists", tc.namespace)
-			g.Expect(env.EnsureNamespaceExists(ctx, tc.namespace)).To(Succeed())
+			namespace := "test-upgrades-downgrades"
 
-			g.Expect(env.CreateAndWait(ctx, dummyConfigMap(tc.namespace, testCurrentVersion))).To(Succeed())
+			t.Log("Ensure namespace exists", namespace)
+			g.Expect(env.EnsureNamespaceExists(ctx, namespace)).To(Succeed())
+
+			g.Expect(env.CreateAndWait(ctx, dummyConfigMap(namespace, testCurrentVersion))).To(Succeed())
 
 			insertDummyConfig(provider)
-			provider.SetNamespace(tc.namespace)
+			provider.SetNamespace(namespace)
 			t.Log("creating test provider", provider.GetName())
 			g.Expect(env.CreateAndWait(ctx, provider.GetObject())).To(Succeed())
 
@@ -288,12 +291,23 @@ func TestUpgradeDowngradeProvider(t *testing.T) {
 			}, timeout).Should(BeEquivalentTo(true))
 
 			// creating another configmap with another version
-			g.Expect(env.CreateAndWait(ctx, dummyConfigMap(tc.namespace, tc.newVersion))).To(Succeed())
+			if tc.newVersion != testCurrentVersion {
+				g.Expect(env.CreateAndWait(ctx, dummyConfigMap(namespace, tc.newVersion))).To(Succeed())
+			}
 
 			// Change provider version
 			providerSpec := provider.GetSpec()
 			providerSpec.Version = tc.newVersion
 			provider.SetSpec(providerSpec)
+
+			// Set label (needed to start a reconciliation of the provider)
+			labels := provider.GetLabels()
+			if labels == nil {
+				labels = map[string]string{}
+			}
+			labels["provider-version"] = tc.newVersion
+			provider.SetLabels(labels)
+
 			g.Expect(env.Client.Update(ctx, provider.GetObject())).To(Succeed())
 
 			g.Eventually(func() bool {
@@ -302,6 +316,10 @@ func TestUpgradeDowngradeProvider(t *testing.T) {
 				}
 
 				if provider.GetStatus().InstalledVersion == nil || *provider.GetStatus().InstalledVersion != tc.newVersion {
+					return false
+				}
+
+				if provider.GetLabels()["provider-version"] != tc.newVersion {
 					return false
 				}
 
@@ -322,14 +340,14 @@ func TestUpgradeDowngradeProvider(t *testing.T) {
 			objs = append(objs, &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      testCurrentVersion,
-					Namespace: tc.namespace,
+					Namespace: namespace,
 				},
 			})
 
 			objs = append(objs, &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      tc.newVersion,
-					Namespace: tc.namespace,
+					Namespace: namespace,
 				},
 			})
 
