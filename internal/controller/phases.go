@@ -19,6 +19,8 @@ package controller
 import (
 	"context"
 	"fmt"
+	"net/url"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -135,13 +137,13 @@ func (p *phaseReconciler) load(ctx context.Context) (reconcile.Result, error) {
 	spec := p.provider.GetSpec()
 
 	// If a configmap selector was specified, use it to find the configmap with provider configuration. This is
-	// a case for "air-gapped" environments. If no selector was specified, use GitHub repository.
+	// a case for "air-gapped" environments. If no selector was specified, use GitHub/Gitlab repository.
 	if spec.FetchConfig != nil && spec.FetchConfig.Selector != nil {
 		log.V(5).Info("Custom ConfigMap was provided for fetching manifests")
 
 		p.repo, err = p.configmapRepository(ctx)
 	} else {
-		p.repo, err = repository.NewGitHubRepository(p.providerConfig, p.configClient.Variables())
+		p.repo, err = repositoryFactory(p.providerConfig, p.configClient.Variables())
 	}
 
 	if err != nil {
@@ -295,7 +297,7 @@ func (p *phaseReconciler) fetch(ctx context.Context) (reconcile.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 	log.Info("Fetching provider")
 
-	// Fetch the provider components yaml file from the provided repository Github/ConfigMap.
+	// Fetch the provider components yaml file from the provided repository GitHub/GitLab/ConfigMap.
 	componentsFile, err := p.repo.GetFile(p.options.Version, p.repo.ComponentsPath())
 	if err != nil {
 		err = fmt.Errorf("failed to read %q from provider's repository %q: %w", p.repo.ComponentsPath(), p.providerConfig.ManifestLabel(), err)
@@ -458,4 +460,40 @@ func (p *phaseReconciler) newClusterClient() cluster.Client {
 		ctrlClient: p.ctrlClient,
 		ctrlConfig: p.ctrlConfig,
 	}))
+}
+
+// repositoryFactory returns the repository implementation corresponding to the provider URL.
+// inspired by https://github.com/kubernetes-sigs/cluster-api/blob/124d9be7035e492f027cdc7a701b6b179451190a/cmd/clusterctl/client/repository/client.go#L170
+func repositoryFactory(providerConfig configclient.Provider, configVariablesClient configclient.VariablesClient) (repository.Repository, error) {
+	// parse the repository url
+	rURL, err := url.Parse(providerConfig.URL())
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse repository url %q", providerConfig.URL())
+	}
+
+	if rURL.Scheme != httpsScheme {
+		return nil, fmt.Errorf("invalid provider url. there are no provider implementation for %q schema", rURL.Scheme)
+	}
+
+	// if the url is a GitHub repository
+	if rURL.Host == githubDomain {
+		repo, err := repository.NewGitHubRepository(providerConfig, configVariablesClient)
+		if err != nil {
+			return nil, fmt.Errorf("error creating the GitHub repository client: %w", err)
+		}
+
+		return repo, err
+	}
+
+	// if the url is a GitLab repository
+	if strings.HasPrefix(rURL.Host, gitlabHostPrefix) && strings.HasPrefix(rURL.RawPath, gitlabPackagesAPIPrefix) {
+		repo, err := repository.NewGitLabRepository(providerConfig, configVariablesClient)
+		if err != nil {
+			return nil, fmt.Errorf("error creating the GitLab repository client: %w", err)
+		}
+
+		return repo, err
+	}
+
+	return nil, fmt.Errorf("invalid provider url. Only GitHub and GitLab are supported for %q schema", rURL.Scheme)
 }
