@@ -531,6 +531,105 @@ func TestPreflightChecks(t *testing.T) {
 				InfrastructureProviderList: &operatorv1.InfrastructureProviderList{},
 			},
 		},
+		{
+			name: "predefined Core Provider without fetch config, preflight check passed",
+			providers: []genericprovider.GenericProvider{
+				&genericprovider.CoreProviderWrapper{
+					CoreProvider: &operatorv1.CoreProvider{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "cluster-api",
+							Namespace: namespaceName1,
+						},
+						TypeMeta: metav1.TypeMeta{
+							Kind:       "CoreProvider",
+							APIVersion: "operator.cluster.x-k8s.io/v1alpha1",
+						},
+						Spec: operatorv1.CoreProviderSpec{
+							ProviderSpec: operatorv1.ProviderSpec{
+								Version: "v1.0.0",
+							},
+						},
+					},
+				},
+			},
+			expectedCondition: clusterv1.Condition{
+				Type:   operatorv1.PreflightCheckCondition,
+				Status: corev1.ConditionTrue,
+			},
+			providerList: &genericprovider.CoreProviderListWrapper{
+				CoreProviderList: &operatorv1.CoreProviderList{},
+			},
+		},
+		{
+			name:          "custom Core Provider without fetch config, preflight check failed",
+			expectedError: true,
+			providers: []genericprovider.GenericProvider{
+				&genericprovider.CoreProviderWrapper{
+					CoreProvider: &operatorv1.CoreProvider{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "my-custom-cluster-api",
+							Namespace: namespaceName1,
+						},
+						TypeMeta: metav1.TypeMeta{
+							Kind:       "CoreProvider",
+							APIVersion: "operator.cluster.x-k8s.io/v1alpha1",
+						},
+						Spec: operatorv1.CoreProviderSpec{
+							ProviderSpec: operatorv1.ProviderSpec{
+								Version: "v1.0.0",
+							},
+						},
+					},
+				},
+			},
+			expectedCondition: clusterv1.Condition{
+				Type:     operatorv1.PreflightCheckCondition,
+				Reason:   operatorv1.FetchConfigValidationErrorReason,
+				Severity: clusterv1.ConditionSeverityError,
+				Message:  "Either Selector or URL must be provided for a not predefined provider",
+				Status:   corev1.ConditionFalse,
+			},
+			providerList: &genericprovider.CoreProviderListWrapper{
+				CoreProviderList: &operatorv1.CoreProviderList{},
+			},
+		},
+		{
+			name:          "custom Core Provider with fetch config with empty values, preflight check failed",
+			expectedError: true,
+			providers: []genericprovider.GenericProvider{
+				&genericprovider.CoreProviderWrapper{
+					CoreProvider: &operatorv1.CoreProvider{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "my-custom-cluster-api",
+							Namespace: namespaceName1,
+						},
+						TypeMeta: metav1.TypeMeta{
+							Kind:       "CoreProvider",
+							APIVersion: "operator.cluster.x-k8s.io/v1alpha1",
+						},
+						Spec: operatorv1.CoreProviderSpec{
+							ProviderSpec: operatorv1.ProviderSpec{
+								Version: "v1.0.0",
+								FetchConfig: &operatorv1.FetchConfiguration{
+									URL:      "",
+									Selector: nil,
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedCondition: clusterv1.Condition{
+				Type:     operatorv1.PreflightCheckCondition,
+				Reason:   operatorv1.FetchConfigValidationErrorReason,
+				Severity: clusterv1.ConditionSeverityError,
+				Message:  "Either Selector or URL must be provided for a not predefined provider",
+				Status:   corev1.ConditionFalse,
+			},
+			providerList: &genericprovider.CoreProviderListWrapper{
+				CoreProviderList: &operatorv1.CoreProviderList{},
+			},
+		},
 	}
 
 	for _, tc := range testCases {
