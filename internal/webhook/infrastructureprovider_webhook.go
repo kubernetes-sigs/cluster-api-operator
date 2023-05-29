@@ -23,7 +23,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
-	"sigs.k8s.io/cluster-api-operator/api/v1alpha1"
+	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha1"
 )
 
 type InfrastructureProviderWebhook struct {
@@ -32,7 +32,7 @@ type InfrastructureProviderWebhook struct {
 func (r *InfrastructureProviderWebhook) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
 		WithValidator(r).
-		For(&v1alpha1.InfrastructureProvider{}).
+		For(&operatorv1.InfrastructureProvider{}).
 		Complete()
 }
 

@@ -30,7 +30,7 @@ import (
 	configv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	"k8s.io/utils/pointer"
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha1"
-	configv1 "sigs.k8s.io/controller-runtime/pkg/config/v1alpha1"
+	ctrlconfigv1 "sigs.k8s.io/controller-runtime/pkg/config/v1alpha1"
 )
 
 func TestCustomizeDeployment(t *testing.T) {
@@ -423,17 +423,17 @@ func TestCustomizeDeployment(t *testing.T) {
 				FeatureGates:    map[string]bool{"TEST": true, "ANOTHER": false},
 				ProfilerAddress: "localhost:1234",
 				Verbosity:       5,
-				ControllerManagerConfigurationSpec: configv1.ControllerManagerConfigurationSpec{
+				ControllerManagerConfigurationSpec: ctrlconfigv1.ControllerManagerConfigurationSpec{
 					CacheNamespace: "testNS",
 					SyncPeriod:     &metav1.Duration{Duration: sevenHours},
-					Controller:     &configv1.ControllerConfigurationSpec{GroupKindConcurrency: map[string]int{"machine": 3}},
-					Metrics:        configv1.ControllerMetrics{BindAddress: ":4567"},
-					Health: configv1.ControllerHealth{
+					Controller:     &ctrlconfigv1.ControllerConfigurationSpec{GroupKindConcurrency: map[string]int{"machine": 3}},
+					Metrics:        ctrlconfigv1.ControllerMetrics{BindAddress: ":4567"},
+					Health: ctrlconfigv1.ControllerHealth{
 						HealthProbeBindAddress: ":6789",
 						ReadinessEndpointName:  "readyish",
 						LivenessEndpointName:   "mostly",
 					},
-					Webhook: configv1.ControllerWebhook{
+					Webhook: ctrlconfigv1.ControllerWebhook{
 						Port:    pointer.Int(3579),
 						CertDir: "/tmp/certs",
 					},
