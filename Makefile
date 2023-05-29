@@ -61,7 +61,7 @@ IMAGE_REVIEWERS ?= $(shell ./hack/get-project-maintainers.sh)
 
 # Binaries.
 # Need to use abspath so we can invoke these from subdirectories
-CONTROLLER_GEN_VER := v0.12.0
+CONTROLLER_GEN_VER := v0.11.4
 CONTROLLER_GEN_BIN := controller-gen
 CONTROLLER_GEN := $(TOOLS_BIN_DIR)/$(CONTROLLER_GEN_BIN)-$(CONTROLLER_GEN_VER)
 
