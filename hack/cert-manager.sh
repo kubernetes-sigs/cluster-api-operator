@@ -14,5 +14,5 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-CERT_MANAGER_VERSION=v1.7.1
+CERT_MANAGER_VERSION=v1.11.1
 kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/${CERT_MANAGER_VERSION}/cert-manager.yaml

@@ -133,7 +133,7 @@ E2E_CONF_FILE ?= $(ROOT)/test/e2e/config/operator-dev.yaml
 E2E_CONF_FILE_ENVSUBST ?= $(ROOT)/test/e2e/config/operator-dev-envsubst.yaml
 SKIP_CLEANUP ?= false
 SKIP_CREATE_MGMT_CLUSTER ?= false
-E2E_CERT_MANAGER_VERSION ?= v1.7.1
+E2E_CERT_MANAGER_VERSION ?= v1.11.1
 E2E_OPERATOR_IMAGE ?= $(CONTROLLER_IMG):$(TAG)
 
 # Relase
