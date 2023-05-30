@@ -19,7 +19,7 @@ set -o nounset
 set -o pipefail
 
 GOPATH_BIN="$(go env GOPATH)/bin/"
-MINIMUM_KIND_VERSION=v0.10.0
+MINIMUM_KIND_VERSION=v0.18.0
 goarch="$(go env GOARCH)"
 goos="$(go env GOOS)"
 
