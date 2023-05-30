@@ -1,4 +1,9 @@
-
+run:
+  timeout: 5m
+  go: "1.19"
+  skip-files:
+    - "zz_generated.*\\.go$"
+  allow-parallel-runners: true
 
 linters:
   disable-all: true
@@ -95,6 +100,37 @@ linters-settings:
     checks: ["all", "-ST1000"]
     dot-import-whitelist:
       - "github.com/onsi/gomega"
+  importas:
+    no-unaliased: true
+    alias:
+      # Kubernetes
+      - pkg: k8s.io/api/core/v1
+        alias: corev1
+      - pkg: k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1
+        alias: apiextensionsv1
+      - pkg: k8s.io/apimachinery/pkg/apis/meta/v1
+        alias: metav1
+      - pkg: k8s.io/apimachinery/pkg/api/errors
+        alias: apierrors
+      - pkg: k8s.io/apimachinery/pkg/util/errors
+        alias: kerrors
+      - pkg: k8s.io/apimachinery/pkg/util/runtime
+        alias: utilruntime
+      # Controller Runtime
+      - pkg: sigs.k8s.io/controller-runtime
+        alias: ctrl
+      # CAPI
+      - pkg: sigs.k8s.io/cluster-api/api/v1beta1
+        alias: clusterv1
+      - pkg: sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3
+        alias: clusterctlv1
+      - pkg: sigs.k8s.io/cluster-api/cmd/clusterctl/client/config
+        alias: configclient
+      # CAPI Operator
+      - pkg: sigs.k8s.io/cluster-api-operator/api/v1alpha1
+        alias: operatorv1
+      - pkg: sigs.k8s.io/cluster-api-operator/internal/controller
+        alias: providercontroller
 issues:
   exclude:
     # Not all platforms are supported by this operator, those which aren't
