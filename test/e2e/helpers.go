@@ -25,6 +25,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -36,7 +37,8 @@ const (
 	timeout           = 5 * time.Minute
 	operatorNamespace = "capi-operator-system"
 
-	capiVersion = "v1.4.2"
+	capiVersion         = "v1.4.2"
+	previousCAPIVersion = "v1.4.0"
 
 	coreProviderName           = "cluster-api"
 	coreProviderDeploymentName = "capi-controller-manager"
@@ -62,6 +64,18 @@ func waitForDeployment(cl client.Client, ctx context.Context, name string) (bool
 		if c.Type == appsv1.DeploymentAvailable && c.Status == corev1.ConditionTrue {
 			return true, nil
 		}
+	}
+
+	return false, nil
+}
+
+func waitForObjectToBeDeleted(cl client.Client, ctx context.Context, key client.ObjectKey, obj client.Object) (bool, error) {
+	if err := cl.Get(ctx, key, obj); err != nil {
+		if apierrors.IsNotFound(err) {
+			return true, nil
+		}
+
+		return false, err
 	}
 
 	return false, nil
