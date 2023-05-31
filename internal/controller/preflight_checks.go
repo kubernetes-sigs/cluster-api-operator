@@ -26,6 +26,8 @@ import (
 	"sigs.k8s.io/cluster-api-operator/internal/controller/genericprovider"
 	"sigs.k8s.io/cluster-api-operator/util"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	clusterctlv1 "sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3"
+	configclient "sigs.k8s.io/cluster-api/cmd/clusterctl/client/config"
 	"sigs.k8s.io/cluster-api/util/conditions"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -75,6 +77,25 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 		))
 
 		return ctrl.Result{RequeueAfter: preflightFailedRequeueAfter}, fmt.Errorf("version contains invalid value for provider %s", provider.GetName())
+	}
+
+	// Check that if a predefined provider is being installed, and if it's not - ensure that FetchConfig is specified.
+	isPredefinedProvider, err := isPredefinedProvider(provider.GetName(), util.ClusterctlProviderType(provider))
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to generate a list of predefined providers: %w", err)
+	}
+
+	if !isPredefinedProvider {
+		if spec.FetchConfig == nil || spec.FetchConfig.Selector == nil && spec.FetchConfig.URL == "" {
+			conditions.Set(provider, conditions.FalseCondition(
+				operatorv1.PreflightCheckCondition,
+				operatorv1.FetchConfigValidationErrorReason,
+				clusterv1.ConditionSeverityError,
+				"Either Selector or URL must be provided for a not predefined provider",
+			))
+
+			return ctrl.Result{}, fmt.Errorf("either selector or URL must be provided for a not predefined provider %s", provider.GetName())
+		}
 	}
 
 	if spec.FetchConfig != nil && spec.FetchConfig.Selector != nil && spec.FetchConfig.URL != "" {
@@ -171,4 +192,20 @@ func coreProviderIsReady(ctx context.Context, c client.Client) (bool, error) {
 	}
 
 	return false, nil
+}
+
+// isPredefinedProvider checks if a given provider is known for Cluster API.
+// The list of known providers can be found here:
+// https://github.com/kubernetes-sigs/cluster-api/blob/main/cmd/clusterctl/client/config/providers_client.go
+func isPredefinedProvider(providerName string, providerType clusterctlv1.ProviderType) (bool, error) {
+	// Initialize a client that contains predefined providers only.
+	configClient, err := configclient.New("")
+	if err != nil {
+		return false, err
+	}
+
+	// Try to find given provider in the predefined ones. If there is nothing, the function returns an error.
+	_, err = configClient.Providers().Get(providerName, providerType)
+
+	return err == nil, nil
 }
