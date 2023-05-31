@@ -63,7 +63,7 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 			emptyVersionMessage,
 		))
 
-		return ctrl.Result{RequeueAfter: preflightFailedRequeueAfter}, fmt.Errorf("version can't be empty for provider %s", provider.GetName())
+		return ctrl.Result{}, fmt.Errorf("version can't be empty for provider %s", provider.GetName())
 	}
 
 	// Check that provider version contains a valid value.
@@ -76,7 +76,7 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 			err.Error(),
 		))
 
-		return ctrl.Result{RequeueAfter: preflightFailedRequeueAfter}, fmt.Errorf("version contains invalid value for provider %s", provider.GetName())
+		return ctrl.Result{}, fmt.Errorf("version contains invalid value for provider %s", provider.GetName())
 	}
 
 	// Check that if a predefined provider is being installed, and if it's not - ensure that FetchConfig is specified.
@@ -107,8 +107,7 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 			"Only one of Selector and URL must be provided, not both",
 		))
 
-		return ctrl.Result{RequeueAfter: preflightFailedRequeueAfter},
-			fmt.Errorf("only one of Selector and URL must be provided for provider %s", provider.GetName())
+		return ctrl.Result{}, fmt.Errorf("only one of Selector and URL must be provided for provider %s", provider.GetName())
 	}
 
 	if err := c.List(ctx, providerList.GetObject()); err != nil {
@@ -135,7 +134,7 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 			preflightFalseCondition.Message = moreThanOneCoreProviderInstanceExistsMessage
 			conditions.Set(provider, preflightFalseCondition)
 
-			return ctrl.Result{RequeueAfter: preflightFailedRequeueAfter}, fmt.Errorf("only one instance of CoreProvider is allowed")
+			return ctrl.Result{}, fmt.Errorf("only one instance of CoreProvider is allowed")
 		}
 
 		// For any other provider we should check that instances with similar name exist in any namespace
@@ -144,7 +143,7 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 			log.Info(preflightFalseCondition.Message)
 			conditions.Set(provider, preflightFalseCondition)
 
-			return ctrl.Result{RequeueAfter: preflightFailedRequeueAfter}, fmt.Errorf("only one %s provider is allowed in the cluster", p.GetName())
+			return ctrl.Result{}, fmt.Errorf("only one %s provider is allowed in the cluster", p.GetName())
 		}
 	}
 
