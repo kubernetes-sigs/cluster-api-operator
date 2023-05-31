@@ -22,14 +22,15 @@ package e2e
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var _ = Describe("Create providers with minimal specified configuration", func() {
-	It("should succefully create a CoreProvider", func() {
+var _ = Describe("Create, upgrade, downgrade and delete providers with minimal specified configuration", func() {
+	It("should successfully create a CoreProvider", func() {
 		k8sclient := bootstrapClusterProxy.GetClient()
 		coreProvider := &operatorv1.CoreProvider{
 			ObjectMeta: metav1.ObjectMeta{
@@ -85,7 +86,7 @@ var _ = Describe("Create providers with minimal specified configuration", func()
 		}, timeout).Should(Equal(true))
 	})
 
-	It("should succefully create a BootstrapProvider", func() {
+	It("should successfully create and delete a BootstrapProvider", func() {
 		k8sclient := bootstrapClusterProxy.GetClient()
 		bootstrapProvider := &operatorv1.BootstrapProvider{
 			ObjectMeta: metav1.ObjectMeta{
@@ -139,9 +140,22 @@ var _ = Describe("Create providers with minimal specified configuration", func()
 			}
 			return false
 		}, timeout).Should(Equal(true))
+
+		Expect(k8sclient.Delete(ctx, bootstrapProvider)).To(Succeed())
+
+		By("Waiting for the bootstrap provider deployment to be deleted")
+		Eventually(func() bool {
+			deployment := &appsv1.Deployment{}
+			key := client.ObjectKey{Namespace: operatorNamespace, Name: bootstrapProviderDeploymentName}
+			isBootstrapProviderReady, err := waitForObjectToBeDeleted(k8sclient, ctx, key, deployment)
+			if err != nil {
+				return false
+			}
+			return isBootstrapProviderReady
+		}, timeout).Should(Equal(true))
 	})
 
-	It("should succefully create a ControlPlaneProvider", func() {
+	It("should successfully create and delete a ControlPlaneProvider", func() {
 		k8sclient := bootstrapClusterProxy.GetClient()
 		cpProvider := &operatorv1.ControlPlaneProvider{
 			ObjectMeta: metav1.ObjectMeta{
@@ -195,9 +209,22 @@ var _ = Describe("Create providers with minimal specified configuration", func()
 			}
 			return false
 		}, timeout).Should(Equal(true))
+
+		Expect(k8sclient.Delete(ctx, cpProvider)).To(Succeed())
+
+		By("Waiting for the control plane provider deployment to be deleted")
+		Eventually(func() bool {
+			deployment := &appsv1.Deployment{}
+			key := client.ObjectKey{Namespace: operatorNamespace, Name: cpProviderDeploymentName}
+			isCPProviderDeleted, err := waitForObjectToBeDeleted(k8sclient, ctx, key, deployment)
+			if err != nil {
+				return false
+			}
+			return isCPProviderDeleted
+		}, timeout).Should(Equal(true))
 	})
 
-	It("should succefully create a InfrastructureProvider", func() {
+	It("should successfully create and delete an InfrastructureProvider", func() {
 		k8sclient := bootstrapClusterProxy.GetClient()
 		infraProvider := &operatorv1.InfrastructureProvider{
 			ObjectMeta: metav1.ObjectMeta{
@@ -250,6 +277,147 @@ var _ = Describe("Create providers with minimal specified configuration", func()
 				return true
 			}
 			return false
+		}, timeout).Should(Equal(true))
+
+		Expect(k8sclient.Delete(ctx, infraProvider)).To(Succeed())
+
+		By("Waiting for the infrastructure provider deployment to be deleted")
+		Eventually(func() bool {
+			deployment := &appsv1.Deployment{}
+			key := client.ObjectKey{Namespace: operatorNamespace, Name: infraProviderDeploymentName}
+			isInfraProviderDeleted, err := waitForObjectToBeDeleted(k8sclient, ctx, key, deployment)
+			if err != nil {
+				return false
+			}
+			return isInfraProviderDeleted
+		}, timeout).Should(Equal(true))
+	})
+
+	It("should successfully downgrade a CoreProvider (v1.4.2 -> v1.4.0)", func() {
+		k8sclient := bootstrapClusterProxy.GetClient()
+		coreProvider := &operatorv1.CoreProvider{}
+		key := client.ObjectKey{Namespace: operatorNamespace, Name: coreProviderName}
+		Expect(k8sclient.Get(ctx, key, coreProvider)).To(Succeed())
+
+		coreProvider.Spec.Version = previousCAPIVersion
+
+		Expect(k8sclient.Update(ctx, coreProvider)).To(Succeed())
+
+		By("Waiting for the core provider deployment to be ready")
+		Eventually(func() bool {
+			isReady, err := waitForDeployment(k8sclient, ctx, coreProviderDeploymentName)
+			if err != nil {
+				return false
+			}
+			return isReady
+		}, timeout).Should(Equal(true))
+
+		By("Waiting for core provider to be ready")
+		Eventually(func() bool {
+			coreProvider := &operatorv1.CoreProvider{}
+			key := client.ObjectKey{Namespace: operatorNamespace, Name: coreProviderName}
+			if err := k8sclient.Get(ctx, key, coreProvider); err != nil {
+				return false
+			}
+
+			for _, c := range coreProvider.Status.Conditions {
+				if c.Type == operatorv1.ProviderInstalledCondition && c.Status == corev1.ConditionTrue {
+					return true
+				}
+			}
+			return false
+		}, timeout).Should(Equal(true))
+
+		By("Waiting for status.IntalledVersion to be set")
+		Eventually(func() bool {
+			coreProvider := &operatorv1.CoreProvider{}
+			key := client.ObjectKey{Namespace: operatorNamespace, Name: coreProviderName}
+			if err := k8sclient.Get(ctx, key, coreProvider); err != nil {
+				return false
+			}
+
+			if coreProvider.Status.InstalledVersion != nil && *coreProvider.Status.InstalledVersion == previousCAPIVersion {
+				return true
+			}
+			return false
+		}, timeout).Should(Equal(true))
+	})
+
+	It("should successfully upgrade a CoreProvider (v1.4.0 -> v1.4.2)", func() {
+		k8sclient := bootstrapClusterProxy.GetClient()
+		coreProvider := &operatorv1.CoreProvider{}
+		key := client.ObjectKey{Namespace: operatorNamespace, Name: coreProviderName}
+		Expect(k8sclient.Get(ctx, key, coreProvider)).To(Succeed())
+
+		coreProvider.Spec.Version = capiVersion
+
+		Expect(k8sclient.Update(ctx, coreProvider)).To(Succeed())
+
+		By("Waiting for the core provider deployment to be ready")
+		Eventually(func() bool {
+			isReady, err := waitForDeployment(k8sclient, ctx, coreProviderDeploymentName)
+			if err != nil {
+				return false
+			}
+			return isReady
+		}, timeout).Should(Equal(true))
+
+		By("Waiting for core provider to be ready")
+		Eventually(func() bool {
+			coreProvider := &operatorv1.CoreProvider{}
+			key := client.ObjectKey{Namespace: operatorNamespace, Name: coreProviderName}
+			if err := k8sclient.Get(ctx, key, coreProvider); err != nil {
+				return false
+			}
+
+			for _, c := range coreProvider.Status.Conditions {
+				if c.Type == operatorv1.ProviderInstalledCondition && c.Status == corev1.ConditionTrue {
+					return true
+				}
+			}
+			return false
+		}, timeout).Should(Equal(true))
+
+		By("Waiting for status.IntalledVersion to be set")
+		Eventually(func() bool {
+			coreProvider := &operatorv1.CoreProvider{}
+			key := client.ObjectKey{Namespace: operatorNamespace, Name: coreProviderName}
+			if err := k8sclient.Get(ctx, key, coreProvider); err != nil {
+				return false
+			}
+
+			if coreProvider.Status.InstalledVersion != nil && *coreProvider.Status.InstalledVersion == capiVersion {
+				return true
+			}
+			return false
+		}, timeout).Should(Equal(true))
+	})
+
+	It("should successfully delete a CoreProvider", func() {
+		k8sclient := bootstrapClusterProxy.GetClient()
+		coreProvider := &operatorv1.CoreProvider{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      coreProviderName,
+				Namespace: operatorNamespace,
+			},
+			Spec: operatorv1.CoreProviderSpec{
+				ProviderSpec: operatorv1.ProviderSpec{
+					Version: capiVersion,
+				},
+			},
+		}
+
+		Expect(k8sclient.Delete(ctx, coreProvider)).To(Succeed())
+
+		By("Waiting for the core provider deployment to be deleted")
+		Eventually(func() bool {
+			deployment := &appsv1.Deployment{}
+			key := client.ObjectKey{Namespace: operatorNamespace, Name: coreProviderDeploymentName}
+			isReady, err := waitForObjectToBeDeleted(k8sclient, ctx, key, deployment)
+			if err != nil {
+				return false
+			}
+			return isReady
 		}, timeout).Should(Equal(true))
 	})
 })
