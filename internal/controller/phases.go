@@ -237,14 +237,14 @@ func (p *phaseReconciler) configmapRepository(ctx context.Context) (repository.R
 			return nil, fmt.Errorf("ConfigMap %s/%s has invalid version:%s (%s)", cm.Namespace, cm.Name, version, errMsg)
 		}
 
-		metadata, ok := cm.Data["metadata"]
+		metadata, ok := cm.Data[metadataConfigMapKey]
 		if !ok {
 			return nil, fmt.Errorf("ConfigMap %s/%s has no metadata", cm.Namespace, cm.Name)
 		}
 
 		mr.WithFile(version, metadataFile, []byte(metadata))
 
-		components, ok := cm.Data["components"]
+		components, ok := cm.Data[componentsConfigMapKey]
 		if !ok {
 			return nil, fmt.Errorf("ConfigMap %s/%s has no components", cm.Namespace, cm.Name)
 		}
