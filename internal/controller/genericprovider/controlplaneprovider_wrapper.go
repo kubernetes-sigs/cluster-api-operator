@@ -22,11 +22,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-const (
-	ControlPlaneProviderKind     = "ControlPlaneProvider"
-	ControlPlaneProviderListKind = "ControlPlaneProviderList"
-)
-
 type ControlPlaneProviderWrapper struct {
 	*operatorv1.ControlPlaneProvider
 }

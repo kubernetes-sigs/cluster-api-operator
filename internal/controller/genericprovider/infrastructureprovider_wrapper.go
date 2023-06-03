@@ -22,11 +22,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-const (
-	InfrastructureProviderKind     = "InfrastructureProvider"
-	InfrastructureProviderListKind = "InfrastructureProviderList"
-)
-
 type InfrastructureProviderWrapper struct {
 	*operatorv1.InfrastructureProvider
 }

@@ -67,7 +67,6 @@ func init() {
 	utilruntime.Must(admissionv1.AddToScheme(scheme.Scheme))
 	utilruntime.Must(operatorv1.AddToScheme(scheme.Scheme))
 	utilruntime.Must(clusterctlv1.AddToScheme(scheme.Scheme))
-	utilruntime.Must(admissionv1.AddToScheme(scheme.Scheme))
 }
 
 var (

@@ -22,11 +22,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-const (
-	CoreProviderKind     = "CoreProvider"
-	CoreProviderListKind = "CoreProviderList"
-)
-
 type CoreProviderWrapper struct {
 	*operatorv1.CoreProvider
 }

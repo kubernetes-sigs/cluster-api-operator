@@ -22,11 +22,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-const (
-	BootstrapProviderKind     = "BootstrapProvider"
-	BootstrapProviderListKind = "BootstrapProviderList"
-)
-
 type BootstrapProviderWrapper struct {
 	*operatorv1.BootstrapProvider
 }
