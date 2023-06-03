@@ -54,6 +54,10 @@ func (i *InfrastructureProviderWrapper) GetObject() client.Object {
 	return i.InfrastructureProvider
 }
 
+func (i *InfrastructureProviderWrapper) GetType() string {
+	return "infrastructure"
+}
+
 type InfrastructureProviderListWrapper struct {
 	*operatorv1.InfrastructureProviderList
 }

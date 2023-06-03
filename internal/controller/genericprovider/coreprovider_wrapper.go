@@ -54,6 +54,10 @@ func (c *CoreProviderWrapper) GetObject() client.Object {
 	return c.CoreProvider
 }
 
+func (c *CoreProviderWrapper) GetType() string {
+	return "core"
+}
+
 type CoreProviderListWrapper struct {
 	*operatorv1.CoreProviderList
 }

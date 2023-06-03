@@ -54,6 +54,10 @@ func (c *ControlPlaneProviderWrapper) GetObject() client.Object {
 	return c.ControlPlaneProvider
 }
 
+func (c *ControlPlaneProviderWrapper) GetType() string {
+	return "controlplane"
+}
+
 type ControlPlaneProviderListWrapper struct {
 	*operatorv1.ControlPlaneProviderList
 }

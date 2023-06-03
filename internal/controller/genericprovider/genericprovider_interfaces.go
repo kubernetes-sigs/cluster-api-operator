@@ -30,6 +30,7 @@ type GenericProvider interface {
 	GetStatus() operatorv1.ProviderStatus
 	SetStatus(in operatorv1.ProviderStatus)
 	GetObject() client.Object
+	GetType() string
 }
 
 type GenericProviderList interface {

@@ -54,6 +54,10 @@ func (b *BootstrapProviderWrapper) GetObject() client.Object {
 	return b.BootstrapProvider
 }
 
+func (b *BootstrapProviderWrapper) GetType() string {
+	return "bootstrap"
+}
+
 type BootstrapProviderListWrapper struct {
 	*operatorv1.BootstrapProviderList
 }
