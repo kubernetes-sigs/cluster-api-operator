@@ -349,7 +349,7 @@ metadata:
 				g.Expect(fakeclient.Create(ctx, &tt.configMaps[i])).To(Succeed())
 			}
 
-			got, err := p.configmapRepository(context.TODO())
+			got, err := p.configmapRepository(context.TODO(), p.provider.GetSpec().FetchConfig.Selector)
 			if len(tt.wantErr) > 0 {
 				g.Expect(err).Should(MatchError(tt.wantErr))
 				return

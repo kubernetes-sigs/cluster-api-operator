@@ -24,8 +24,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha1"
-	"sigs.k8s.io/cluster-api-operator/util"
-	configclient "sigs.k8s.io/cluster-api/cmd/clusterctl/client/config"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -70,25 +68,6 @@ func (p *phaseReconciler) downloadManifests(ctx context.Context) (reconcile.Resu
 		return reconcile.Result{}, nil
 	}
 
-	// Load provider's secret and config url.
-	reader, err := p.secretReader(ctx)
-	if err != nil {
-		return reconcile.Result{}, wrapPhaseError(err, "failed to load the secret reader", operatorv1.PreflightCheckCondition)
-	}
-
-	// Initialize a client for interacting with the clusterctl configuration.
-	p.configClient, err = configclient.New("", configclient.InjectReader(reader))
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-
-	// Get returns the configuration for the provider with a given name/type.
-	// This is done using clusterctl internal API types.
-	p.providerConfig, err = p.configClient.Providers().Get(p.provider.GetName(), util.ClusterctlProviderType(p.provider))
-	if err != nil {
-		return reconcile.Result{}, wrapPhaseError(err, operatorv1.UnknownProviderReason, operatorv1.PreflightCheckCondition)
-	}
-
 	repo, err := repositoryFactory(p.providerConfig, p.configClient.Variables())
 	if err != nil {
 		err = fmt.Errorf("failed to create repo from provider url for provider %q: %w", p.provider.GetName(), err)
@@ -104,9 +83,9 @@ func (p *phaseReconciler) downloadManifests(ctx context.Context) (reconcile.Resu
 		return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.PreflightCheckCondition)
 	}
 
-	componentsFile, err := p.repo.GetFile(p.options.Version, p.repo.ComponentsPath())
+	componentsFile, err := repo.GetFile(p.options.Version, repo.ComponentsPath())
 	if err != nil {
-		err = fmt.Errorf("failed to read %q from provider's repository %q: %w", p.repo.ComponentsPath(), p.providerConfig.ManifestLabel(), err)
+		err = fmt.Errorf("failed to read %q from the repository for provider %q: %w", componentsFile, p.provider.GetName(), err)
 
 		return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.PreflightCheckCondition)
 	}

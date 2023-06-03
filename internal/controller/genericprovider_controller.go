@@ -127,6 +127,8 @@ func (r *GenericProviderReconciler) reconcile(ctx context.Context, provider gene
 	reconciler := newPhaseReconciler(*r, provider, genericProviderList)
 	phases := []reconcilePhaseFn{
 		reconciler.preflightChecks,
+		reconciler.initializePhaseReconciler,
+		reconciler.downloadManifests,
 		reconciler.load,
 		reconciler.fetch,
 		reconciler.preInstall,
