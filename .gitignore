@@ -7,6 +7,10 @@ cmd/clusterctl/clusterctl
 bin
 hack/tools/bin
 
+# go.work files
+go.work
+go.work.sum
+
 # Test binary, build with `go test -c`
 *.test
 
