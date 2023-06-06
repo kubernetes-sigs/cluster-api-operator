@@ -20,7 +20,10 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/google/go-github/v52/github"
+	"golang.org/x/oauth2"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/version"
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha1"
 	"sigs.k8s.io/cluster-api-operator/internal/controller/genericprovider"
@@ -40,9 +43,10 @@ const (
 var (
 	moreThanOneCoreProviderInstanceExistsMessage = "CoreProvider already exists in the cluster. Only one is allowed."
 	moreThanOneProviderInstanceExistsMessage     = "There is already a %s with name %s in the cluster. Only one is allowed."
-	capiVersionIncompatibilityMessage            = "capi operator is only compatible with %s providers, detected %s for provider %s."
-	waitingForCoreProviderReadyMessage           = "waiting for the core provider to install."
-	emptyVersionMessage                          = "version cannot be empty"
+	capiVersionIncompatibilityMessage            = "CAPI operator is only compatible with %s providers, detected %s for provider %s."
+	invalidGithubTokenMessage                    = "Invalid github token, please check your github token value and it's permissions"
+	waitingForCoreProviderReadyMessage           = "Waiting for the core provider to be installed."
+	emptyVersionMessage                          = "Version cannot be empty"
 )
 
 // preflightChecks performs preflight checks before installing provider.
@@ -108,6 +112,32 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 		))
 
 		return ctrl.Result{}, fmt.Errorf("only one of Selector and URL must be provided for provider %s", provider.GetName())
+	}
+
+	// Validate that provided github token works and has repository access.
+	if spec.SecretName != "" {
+		secret := &corev1.Secret{}
+		key := types.NamespacedName{Namespace: provider.GetNamespace(), Name: provider.GetSpec().SecretName}
+
+		if err := c.Get(ctx, key, secret); err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to get providers secret: %w", err)
+		}
+
+		if token, ok := secret.Data[configclient.GitHubTokenVariable]; ok {
+			client := github.NewClient(oauth2.NewClient(ctx, oauth2.StaticTokenSource(
+				&oauth2.Token{AccessToken: string(token)},
+			)))
+			if _, _, err := client.Organizations.List(ctx, "kubernetes-sigs", nil); err != nil {
+				conditions.Set(provider, conditions.FalseCondition(
+					operatorv1.PreflightCheckCondition,
+					operatorv1.InvalidGithubTokenReason,
+					clusterv1.ConditionSeverityError,
+					invalidGithubTokenMessage,
+				))
+
+				return ctrl.Result{}, fmt.Errorf("failed to validate provided github token: %w", err)
+			}
+		}
 	}
 
 	if err := c.List(ctx, providerList.GetObject()); err != nil {

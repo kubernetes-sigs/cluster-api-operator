@@ -485,7 +485,7 @@ func TestPreflightChecks(t *testing.T) {
 				Type:     operatorv1.PreflightCheckCondition,
 				Reason:   operatorv1.IncorrectVersionFormatReason,
 				Severity: clusterv1.ConditionSeverityError,
-				Message:  "version cannot be empty",
+				Message:  "Version cannot be empty",
 				Status:   corev1.ConditionFalse,
 			},
 			providerList: &genericprovider.InfrastructureProviderListWrapper{
