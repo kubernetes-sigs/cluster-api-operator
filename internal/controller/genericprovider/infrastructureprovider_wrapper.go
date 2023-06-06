@@ -22,11 +22,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-const (
-	InfrastructureProviderKind     = "InfrastructureProvider"
-	InfrastructureProviderListKind = "InfrastructureProviderList"
-)
-
 type InfrastructureProviderWrapper struct {
 	*operatorv1.InfrastructureProvider
 }
@@ -57,6 +52,10 @@ func (i *InfrastructureProviderWrapper) SetStatus(in operatorv1.ProviderStatus) 
 
 func (i *InfrastructureProviderWrapper) GetObject() client.Object {
 	return i.InfrastructureProvider
+}
+
+func (i *InfrastructureProviderWrapper) GetType() string {
+	return "infrastructure"
 }
 
 type InfrastructureProviderListWrapper struct {

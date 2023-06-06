@@ -22,11 +22,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-const (
-	ControlPlaneProviderKind     = "ControlPlaneProvider"
-	ControlPlaneProviderListKind = "ControlPlaneProviderList"
-)
-
 type ControlPlaneProviderWrapper struct {
 	*operatorv1.ControlPlaneProvider
 }
@@ -57,6 +52,10 @@ func (c *ControlPlaneProviderWrapper) SetStatus(in operatorv1.ProviderStatus) {
 
 func (c *ControlPlaneProviderWrapper) GetObject() client.Object {
 	return c.ControlPlaneProvider
+}
+
+func (c *ControlPlaneProviderWrapper) GetType() string {
+	return "controlplane"
 }
 
 type ControlPlaneProviderListWrapper struct {

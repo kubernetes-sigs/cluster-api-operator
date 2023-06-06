@@ -109,12 +109,8 @@ func (p *phaseReconciler) preflightChecks(ctx context.Context) (reconcile.Result
 	return preflightChecks(ctx, p.ctrlClient, p.provider, p.providerList)
 }
 
-// load provider specific configuration into phaseReconciler object.
-func (p *phaseReconciler) load(ctx context.Context) (reconcile.Result, error) {
-	log := ctrl.LoggerFrom(ctx)
-
-	log.Info("Loading provider")
-
+// initializePhaseReconciler initializes phase reconciler.
+func (p *phaseReconciler) initializePhaseReconciler(ctx context.Context) (reconcile.Result, error) {
 	// Load provider's secret and config url.
 	reader, err := p.secretReader(ctx)
 	if err != nil {
@@ -136,16 +132,36 @@ func (p *phaseReconciler) load(ctx context.Context) (reconcile.Result, error) {
 
 	spec := p.provider.GetSpec()
 
-	// If a configmap selector was specified, use it to find the configmap with provider configuration. This is
-	// a case for "air-gapped" environments. If no selector was specified, use GitHub/Gitlab repository.
-	if spec.FetchConfig != nil && spec.FetchConfig.Selector != nil {
-		log.V(5).Info("Custom ConfigMap was provided for fetching manifests")
-
-		p.repo, err = p.configmapRepository(ctx)
-	} else {
-		p.repo, err = repositoryFactory(p.providerConfig, p.configClient.Variables())
+	// Store some provider specific inputs for passing it to clusterctl library
+	p.options = repository.ComponentsOptions{
+		TargetNamespace:     p.provider.GetNamespace(),
+		SkipTemplateProcess: false,
+		Version:             spec.Version,
 	}
 
+	return reconcile.Result{}, nil
+}
+
+// load provider specific configuration into phaseReconciler object.
+func (p *phaseReconciler) load(ctx context.Context) (reconcile.Result, error) {
+	log := ctrl.LoggerFrom(ctx)
+
+	log.Info("Loading provider")
+
+	var err error
+
+	spec := p.provider.GetSpec()
+
+	labelSelector := &metav1.LabelSelector{
+		MatchLabels: p.prepareConfigMapLabels(),
+	}
+
+	// Replace label selector if user wants to use custom config map
+	if p.provider.GetSpec().FetchConfig != nil && p.provider.GetSpec().FetchConfig.Selector != nil {
+		labelSelector = p.provider.GetSpec().FetchConfig.Selector
+	}
+
+	p.repo, err = p.configmapRepository(ctx, labelSelector)
 	if err != nil {
 		return reconcile.Result{}, wrapPhaseError(err, "failed to load the repository", operatorv1.PreflightCheckCondition)
 	}
@@ -202,13 +218,13 @@ func (p *phaseReconciler) secretReader(ctx context.Context) (configclient.Reader
 
 // configmapRepository use clusterctl NewMemoryRepository structure to store the manifests
 // and metadata from a given configmap.
-func (p *phaseReconciler) configmapRepository(ctx context.Context) (repository.Repository, error) {
+func (p *phaseReconciler) configmapRepository(ctx context.Context, labelSelector *metav1.LabelSelector) (repository.Repository, error) {
 	mr := repository.NewMemoryRepository()
 	mr.WithPaths("", "components.yaml")
 
 	cml := &corev1.ConfigMapList{}
 
-	selector, err := metav1.LabelSelectorAsSelector(p.provider.GetSpec().FetchConfig.Selector)
+	selector, err := metav1.LabelSelectorAsSelector(labelSelector)
 	if err != nil {
 		return nil, err
 	}
@@ -218,7 +234,7 @@ func (p *phaseReconciler) configmapRepository(ctx context.Context) (repository.R
 	}
 
 	if len(cml.Items) == 0 {
-		return nil, fmt.Errorf("no ConfigMaps found with selector %s", p.provider.GetSpec().FetchConfig.Selector.String())
+		return nil, fmt.Errorf("no ConfigMaps found with selector %s", labelSelector.String())
 	}
 
 	for _, cm := range cml.Items {
@@ -237,14 +253,14 @@ func (p *phaseReconciler) configmapRepository(ctx context.Context) (repository.R
 			return nil, fmt.Errorf("ConfigMap %s/%s has invalid version:%s (%s)", cm.Namespace, cm.Name, version, errMsg)
 		}
 
-		metadata, ok := cm.Data["metadata"]
+		metadata, ok := cm.Data[metadataConfigMapKey]
 		if !ok {
 			return nil, fmt.Errorf("ConfigMap %s/%s has no metadata", cm.Namespace, cm.Name)
 		}
 
 		mr.WithFile(version, metadataFile, []byte(metadata))
 
-		components, ok := cm.Data["components"]
+		components, ok := cm.Data[componentsConfigMapKey]
 		if !ok {
 			return nil, fmt.Errorf("ConfigMap %s/%s has no components", cm.Namespace, cm.Name)
 		}

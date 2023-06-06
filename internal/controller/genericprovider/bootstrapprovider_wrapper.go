@@ -22,11 +22,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-const (
-	BootstrapProviderKind     = "BootstrapProvider"
-	BootstrapProviderListKind = "BootstrapProviderList"
-)
-
 type BootstrapProviderWrapper struct {
 	*operatorv1.BootstrapProvider
 }
@@ -57,6 +52,10 @@ func (b *BootstrapProviderWrapper) SetStatus(in operatorv1.ProviderStatus) {
 
 func (b *BootstrapProviderWrapper) GetObject() client.Object {
 	return b.BootstrapProvider
+}
+
+func (b *BootstrapProviderWrapper) GetType() string {
+	return "bootstrap"
 }
 
 type BootstrapProviderListWrapper struct {

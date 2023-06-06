@@ -22,11 +22,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-const (
-	CoreProviderKind     = "CoreProvider"
-	CoreProviderListKind = "CoreProviderList"
-)
-
 type CoreProviderWrapper struct {
 	*operatorv1.CoreProvider
 }
@@ -57,6 +52,10 @@ func (c *CoreProviderWrapper) SetStatus(in operatorv1.ProviderStatus) {
 
 func (c *CoreProviderWrapper) GetObject() client.Object {
 	return c.CoreProvider
+}
+
+func (c *CoreProviderWrapper) GetType() string {
+	return "core"
 }
 
 type CoreProviderListWrapper struct {
