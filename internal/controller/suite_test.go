@@ -24,11 +24,11 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha1"
-	"sigs.k8s.io/cluster-api-operator/internal/envtest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
-	// +kubebuilder:scaffold:imports
+
+	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha1"
+	"sigs.k8s.io/cluster-api-operator/internal/envtest"
 )
 
 const (

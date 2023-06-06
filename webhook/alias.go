@@ -21,29 +21,25 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
-type BootstrapProviderWebhook struct {
-}
+type BootstrapProviderWebhook struct{}
 
 func (r *BootstrapProviderWebhook) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return (&internalwebhook.BootstrapProviderWebhook{}).SetupWebhookWithManager(mgr)
 }
 
-type ControlPlaneProviderWebhook struct {
-}
+type ControlPlaneProviderWebhook struct{}
 
 func (r *ControlPlaneProviderWebhook) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return (&internalwebhook.ControlPlaneProviderWebhook{}).SetupWebhookWithManager(mgr)
 }
 
-type CoreProviderWebhook struct {
-}
+type CoreProviderWebhook struct{}
 
 func (r *CoreProviderWebhook) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return (&internalwebhook.CoreProviderWebhook{}).SetupWebhookWithManager(mgr)
 }
 
-type InfrastructureProviderWebhook struct {
-}
+type InfrastructureProviderWebhook struct{}
 
 func (r *InfrastructureProviderWebhook) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return (&internalwebhook.InfrastructureProviderWebhook{}).SetupWebhookWithManager(mgr)

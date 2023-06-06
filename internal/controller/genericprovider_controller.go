@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"reflect"
 
@@ -142,9 +143,9 @@ func (r *GenericProviderReconciler) reconcile(ctx context.Context, provider gene
 	for _, phase := range phases {
 		res, err = phase(ctx)
 		if err != nil {
-			se, ok := err.(*PhaseError)
-			if ok {
-				conditions.Set(provider, conditions.FalseCondition(se.Type, se.Reason, se.Severity, err.Error()))
+			var pe *PhaseError
+			if errors.As(err, &pe) {
+				conditions.Set(provider, conditions.FalseCondition(pe.Type, pe.Reason, pe.Severity, err.Error()))
 			}
 		}
 
@@ -174,9 +175,9 @@ func (r *GenericProviderReconciler) reconcileDelete(ctx context.Context, provide
 	for _, phase := range phases {
 		res, err = phase(ctx)
 		if err != nil {
-			se, ok := err.(*PhaseError)
-			if ok {
-				conditions.Set(provider, conditions.FalseCondition(se.Type, se.Reason, se.Severity, err.Error()))
+			var pe *PhaseError
+			if errors.As(err, &pe) {
+				conditions.Set(provider, conditions.FalseCondition(pe.Type, pe.Reason, pe.Severity, err.Error()))
 			}
 		}
 

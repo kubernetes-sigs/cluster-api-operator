@@ -29,8 +29,9 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	configv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	"k8s.io/utils/pointer"
-	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha1"
 	ctrlconfigv1 "sigs.k8s.io/controller-runtime/pkg/config/v1alpha1"
+
+	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha1"
 )
 
 func TestCustomizeDeployment(t *testing.T) {
@@ -479,7 +480,8 @@ func TestCustomizeDeployment(t *testing.T) {
 										"--sync-period=25200s",
 										"--profiler-address=localhost:1234",
 										"--v=5",
-										"--feature-gates=ANOTHER=false,TEST=true"},
+										"--feature-gates=ANOTHER=false,TEST=true",
+									},
 									LivenessProbe: &corev1.Probe{
 										ProbeHandler: corev1.ProbeHandler{
 											HTTPGet: &corev1.HTTPGetAction{

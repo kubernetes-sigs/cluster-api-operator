@@ -24,10 +24,11 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha1"
-	"sigs.k8s.io/cluster-api-operator/internal/controller/genericprovider"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha1"
+	"sigs.k8s.io/cluster-api-operator/internal/controller/genericprovider"
 )
 
 func TestPreflightChecks(t *testing.T) {
@@ -650,7 +651,7 @@ func TestPreflightChecks(t *testing.T) {
 			}
 
 			// Check if proper condition is returned
-			gs.Expect(len(tc.providers[0].GetStatus().Conditions)).To(Equal(1))
+			gs.Expect(tc.providers[0].GetStatus().Conditions).To(HaveLen(1))
 			gs.Expect(tc.providers[0].GetStatus().Conditions[0].Type).To(Equal(tc.expectedCondition.Type))
 			gs.Expect(tc.providers[0].GetStatus().Conditions[0].Status).To(Equal(tc.expectedCondition.Status))
 			gs.Expect(tc.providers[0].GetStatus().Conditions[0].Message).To(Equal(tc.expectedCondition.Message))

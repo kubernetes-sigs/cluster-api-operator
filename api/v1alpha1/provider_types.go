@@ -19,9 +19,8 @@ package v1alpha1
 import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	ctrlconfigv1 "sigs.k8s.io/controller-runtime/pkg/config/v1alpha1"
-
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	ctrlconfigv1 "sigs.k8s.io/controller-runtime/pkg/config/v1alpha1"
 )
 
 const (

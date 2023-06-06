@@ -26,8 +26,7 @@ import (
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha1"
 )
 
-type CoreProviderWebhook struct {
-}
+type CoreProviderWebhook struct{}
 
 func (r *CoreProviderWebhook) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).

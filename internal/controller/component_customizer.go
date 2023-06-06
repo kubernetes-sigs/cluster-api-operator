@@ -41,9 +41,7 @@ const (
 	defaultVerbosity     = 1
 )
 
-var (
-	bool2Str = map[bool]string{true: "true", false: "false"}
-)
+var bool2Str = map[bool]string{true: "true", false: "false"}
 
 // customizeObjectsFn apply provider specific customization to a list of manifests.
 func customizeObjectsFn(provider genericprovider.GenericProvider) func(objs []unstructured.Unstructured) ([]unstructured.Unstructured, error) {
