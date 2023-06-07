@@ -293,7 +293,7 @@ var _ = Describe("Create, upgrade, downgrade and delete providers with minimal s
 		}, timeout).Should(Equal(true))
 	})
 
-	It("should successfully downgrade a CoreProvider (v1.4.2 -> v1.4.0)", func() {
+	It("should successfully downgrade a CoreProvider (v1.4.3 -> v1.4.2)", func() {
 		k8sclient := bootstrapClusterProxy.GetClient()
 		coreProvider := &operatorv1.CoreProvider{}
 		key := client.ObjectKey{Namespace: operatorNamespace, Name: coreProviderName}
@@ -343,7 +343,7 @@ var _ = Describe("Create, upgrade, downgrade and delete providers with minimal s
 		}, timeout).Should(Equal(true))
 	})
 
-	It("should successfully upgrade a CoreProvider (v1.4.0 -> v1.4.2)", func() {
+	It("should successfully upgrade a CoreProvider (v1.4.2 -> v1.4.3)", func() {
 		k8sclient := bootstrapClusterProxy.GetClient()
 		coreProvider := &operatorv1.CoreProvider{}
 		key := client.ObjectKey{Namespace: operatorNamespace, Name: coreProviderName}
