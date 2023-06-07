@@ -4,3 +4,4 @@
 approvers:
   - sig-cluster-lifecycle-leads
   - cluster-api-operator-admins
+  - cluster-api-operator-maintainers
