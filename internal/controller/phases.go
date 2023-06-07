@@ -401,6 +401,7 @@ func (p *phaseReconciler) install(ctx context.Context) (reconcile.Result, error)
 
 	// skip installation if the version hasn't changed.
 	if !versionChanged {
+		log.Info("Provider already installed")
 		return reconcile.Result{}, nil
 	}
 

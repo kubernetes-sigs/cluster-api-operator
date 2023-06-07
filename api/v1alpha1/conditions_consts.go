@@ -49,6 +49,9 @@ const (
 
 	// WaitingForCoreProviderReadyReason documents that the provider is waiting for the core provider to be ready.
 	WaitingForCoreProviderReadyReason = "WaitingForCoreProviderReady"
+
+	// InvalidGithubTokenReason documents that the provided github token is invalid.
+	InvalidGithubTokenReason = "InvalidGithubTokenError"
 )
 
 const (

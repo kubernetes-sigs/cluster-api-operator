@@ -68,7 +68,7 @@ Next, BootstrapProvider, ControlPlaneProvider and InfrastructureProvider can be 
 If provider requires variables to be set, a secret containing them has to be created and it has to be in the same namespace as the provider.
 
 It's also recommended to include github-token in the secret. This token is used to fetch the provider repository and it is required for the provider to be installed. 
-Operator might exceed the rate limit of the github API without the token.
+Operator might exceed the rate limit of the github API without the token. Similarly to [clusterctl](https://cluster-api.sigs.k8s.io/clusterctl/overview.html?highlight=github_token#avoiding-github-rate-limiting), the token need only `repo` scope.
 
 Example:
 ```yaml
