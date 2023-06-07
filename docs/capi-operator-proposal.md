@@ -975,7 +975,7 @@ type ControllerManagerConfigurationSpec struct {
 	// The graceful shutdown is skipped for safety reasons in case the leader election lease is lost.
 	GracefulShutdownTimeout *metav1.Duration `json:"gracefulShutDown,omitempty"`
 
-	// Metrics contains thw controller metrics configuration
+	// Metrics contains the controller metrics configuration
 	// +optional
 	Metrics ControllerMetrics `json:"metrics,omitempty"`
 
