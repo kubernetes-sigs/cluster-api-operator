@@ -64,8 +64,9 @@ type BootstrapProviderListWrapper struct {
 
 func (b *BootstrapProviderListWrapper) GetItems() []GenericProvider {
 	providers := []GenericProvider{}
-	for _, provider := range b.Items {
-		providers = append(providers, &BootstrapProviderWrapper{&provider})
+
+	for index := range b.Items {
+		providers = append(providers, &BootstrapProviderWrapper{&b.Items[index]})
 	}
 
 	return providers

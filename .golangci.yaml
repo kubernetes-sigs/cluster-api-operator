@@ -19,32 +19,29 @@ linters:
     - typecheck
     - unused
     # Additional linters
+    - asasalint
     - asciicheck
     - bidichk
     - bodyclose
     - contextcheck
-    # - cyclop
     - dogsled
-    # - dupl
     - durationcheck
     - errname
-    # - errorlint
+    - errorlint
     - exhaustive
-    # - exportloopref
+    - exportloopref
     - forcetypeassert
-    # - funlen
-    # - gochecknoglobals
-    # - gocognit
+    - ginkgolinter
     - goconst
     - gocritic
     - gocyclo
     - godot
-    # - goerr113
     - gofmt
+    - gofumpt
     - goheader
     - goimports
     - goprintffuncname
-    # - gosec
+    - gosec
     - importas
     - makezero
     - misspell
@@ -57,14 +54,23 @@ linters:
     - nolintlint
     - prealloc
     - predeclared
-    # - revive
+    - promlinter
+    - reassign
+    - rowserrcheck
+    - sqlclosecheck
+    - stylecheck
     - tagliatelle
     - tenv
+    - testableexamples
+    - thelper
+    - tparallel
     - unconvert
     - unparam
+    - usestdlibvars
+    - wastedassign
     - whitespace
-    # - wrapcheck
     - wsl
+
 linters-settings:
   goheader:
     values:
@@ -141,8 +147,9 @@ issues:
     # Exclude some linters from running on tests files.
     - path: _test\.go
       linters:
-        - gocyclo
-        - dupl
         - gosec
-        - gochecknoglobals
-        - goerr113
+    - path: internal/envtest/environment.go
+      linters:
+        - dogsled
+        - gosec
+        - wsl

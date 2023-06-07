@@ -64,8 +64,9 @@ type InfrastructureProviderListWrapper struct {
 
 func (i *InfrastructureProviderListWrapper) GetItems() []GenericProvider {
 	providers := []GenericProvider{}
-	for _, provider := range i.Items {
-		providers = append(providers, &InfrastructureProviderWrapper{&provider})
+
+	for index := range i.Items {
+		providers = append(providers, &InfrastructureProviderWrapper{&i.Items[index]})
 	}
 
 	return providers

@@ -100,7 +100,7 @@ type Environment struct {
 // usually the environment is initialized in a suite_test.go file within a `BeforeSuite` ginkgo block.
 func New(uncachedObjs ...client.Object) *Environment {
 	// Get the root of the current file to use in CRD paths.
-	_, filename, _, _ := goruntime.Caller(0) //nolint
+	_, filename, _, _ := goruntime.Caller(0)
 	root := path.Join(path.Dir(filename), "..", "..")
 	crdPaths := []string{
 		filepath.Join(root, "config", "crd", "bases"),
@@ -114,7 +114,7 @@ func New(uncachedObjs ...client.Object) *Environment {
 	env := &envtest.Environment{
 		Scheme:                scheme.Scheme,
 		ErrorIfCRDPathMissing: true,
-		//CRDInstallOptions:     envtest.CRDInstallOptions{CleanUpAfterUse: true},
+		// CRDInstallOptions:     envtest.CRDInstallOptions{CleanUpAfterUse: true},
 		CRDDirectoryPaths: crdPaths,
 	}
 
@@ -232,7 +232,6 @@ func (e *Environment) CleanupAndWait(ctx context.Context, objs ...client.Object)
 
 				return false, nil
 			})
-
 		if err != nil {
 			errs = append(errs, fmt.Errorf("key %s, %s is not being deleted from the testenv client cache: %w", o.GetObjectKind().GroupVersionKind().String(), key, err))
 		}

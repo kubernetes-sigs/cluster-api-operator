@@ -42,8 +42,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 
-	// +kubebuilder:scaffold:imports
-
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha1"
 	providercontroller "sigs.k8s.io/cluster-api-operator/internal/controller"
 )
@@ -130,7 +128,12 @@ func main() {
 		klog.Infof("Profiler listening for requests at %s", profilerAddress)
 
 		go func() {
-			klog.Info(http.ListenAndServe(profilerAddress, nil))
+			server := &http.Server{
+				Addr:              profilerAddress,
+				ReadHeaderTimeout: 3 * time.Second,
+			}
+
+			klog.Info(server.ListenAndServe())
 		}()
 	}
 
