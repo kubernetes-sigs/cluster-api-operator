@@ -40,6 +40,7 @@ CURL_RETRIES=3
 
 # Directories
 TOOLS_DIR := $(ROOT)/hack/tools
+CHART_UPDATE_DIR := $(ROOT)/hack/chart-update
 TOOLS_BIN_DIR := $(TOOLS_DIR)/bin
 JUNIT_REPORT_DIR := $(TOOLS_DIR)/_out
 BIN_DIR := bin
@@ -261,7 +262,7 @@ verify:
 
 .PHONY: verify-modules
 verify-modules: modules
-	@if !(git diff --quiet HEAD -- go.sum go.mod $(TOOLS_DIR)/go.mod $(TOOLS_DIR)/go.sum); then \
+	@if !(git diff --quiet HEAD -- go.sum go.mod $(TOOLS_DIR)/go.mod $(TOOLS_DIR)/go.sum $(CHART_UPDATE_DIR)/go.mod $(CHART_UPDATE_DIR)/go.sum); then \
 		git diff; \
 		echo "go module files are out of date"; exit 1; \
 	fi
@@ -304,6 +305,7 @@ generate-manifests: $(CONTROLLER_GEN) ## Generate manifests for the operator e.g
 modules: ## Runs go mod to ensure modules are up to date.
 	go mod tidy
 	cd $(TOOLS_DIR); go mod tidy
+	cd $(CHART_UPDATE_DIR); go mod tidy
 
 ## --------------------------------------
 ## Docker
