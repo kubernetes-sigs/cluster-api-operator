@@ -40,7 +40,7 @@ const (
 )
 
 // downloadManifests downloads CAPI manifests from a url.
-func (p *phaseReconciler) downloadManifests(ctx context.Context) (reconcile.Result, error) {
+func (p *phaseReconciler) downloadManifests(ctx context.Context) (reconcile.Result, bool, error) {
 	log := ctrl.LoggerFrom(ctx)
 
 	log.Info("Downloading provider manifests")
@@ -49,7 +49,7 @@ func (p *phaseReconciler) downloadManifests(ctx context.Context) (reconcile.Resu
 	if p.provider.GetSpec().FetchConfig != nil && p.provider.GetSpec().FetchConfig.Selector != nil {
 		log.V(5).Info("Custom config map is used, skip downloading provider manifests")
 
-		return reconcile.Result{}, nil
+		return reconcile.Result{}, false, nil
 	}
 
 	// Check if manifests are already downloaded and stored in a configmap
@@ -59,20 +59,20 @@ func (p *phaseReconciler) downloadManifests(ctx context.Context) (reconcile.Resu
 
 	exists, err := p.checkConfigMapExists(ctx, labelSelector)
 	if err != nil {
-		return reconcile.Result{}, wrapPhaseError(err, "failed to check that config map with manifests exists", operatorv1.PreflightCheckCondition)
+		return reconcile.Result{}, true, wrapPhaseError(err, "failed to check that config map with manifests exists", operatorv1.PreflightCheckCondition)
 	}
 
 	if exists {
 		log.V(5).Info("Config map with downloaded manifests already exists, skip downloading provider manifests")
 
-		return reconcile.Result{}, nil
+		return reconcile.Result{}, false, nil
 	}
 
 	repo, err := repositoryFactory(p.providerConfig, p.configClient.Variables())
 	if err != nil {
 		err = fmt.Errorf("failed to create repo from provider url for provider %q: %w", p.provider.GetName(), err)
 
-		return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.PreflightCheckCondition)
+		return reconcile.Result{}, true, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.PreflightCheckCondition)
 	}
 
 	// Fetch the provider metadata and components yaml files from the provided repository GitHub/GitLab.
@@ -80,23 +80,23 @@ func (p *phaseReconciler) downloadManifests(ctx context.Context) (reconcile.Resu
 	if err != nil {
 		err = fmt.Errorf("failed to read %q from the repository for provider %q: %w", metadataFile, p.provider.GetName(), err)
 
-		return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.PreflightCheckCondition)
+		return reconcile.Result{}, true, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.PreflightCheckCondition)
 	}
 
 	componentsFile, err := repo.GetFile(p.options.Version, repo.ComponentsPath())
 	if err != nil {
 		err = fmt.Errorf("failed to read %q from the repository for provider %q: %w", componentsFile, p.provider.GetName(), err)
 
-		return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.PreflightCheckCondition)
+		return reconcile.Result{}, true, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.PreflightCheckCondition)
 	}
 
 	if err := p.createManifestsConfigMap(ctx, string(metadataFile), string(componentsFile)); err != nil {
 		err = fmt.Errorf("failed to create config map for provider %q: %w", p.provider.GetName(), err)
 
-		return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.PreflightCheckCondition)
+		return reconcile.Result{}, true, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.PreflightCheckCondition)
 	}
 
-	return reconcile.Result{}, nil
+	return reconcile.Result{}, false, nil
 }
 
 // checkConfigMapExists checks if a config map exists in Kubernetes with the given LabelSelector.

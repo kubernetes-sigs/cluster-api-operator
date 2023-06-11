@@ -50,7 +50,7 @@ var (
 )
 
 // preflightChecks performs preflight checks before installing provider.
-func preflightChecks(ctx context.Context, c client.Client, provider genericprovider.GenericProvider, providerList genericprovider.GenericProviderList) (ctrl.Result, error) {
+func preflightChecks(ctx context.Context, c client.Client, provider genericprovider.GenericProvider, providerList genericprovider.GenericProviderList) (ctrl.Result, bool, error) {
 	log := ctrl.LoggerFrom(ctx)
 
 	log.Info("Performing preflight checks")
@@ -67,7 +67,7 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 			emptyVersionMessage,
 		))
 
-		return ctrl.Result{}, fmt.Errorf("version can't be empty for provider %s", provider.GetName())
+		return ctrl.Result{}, true, fmt.Errorf("version can't be empty for provider %s", provider.GetName())
 	}
 
 	// Check that provider version contains a valid value.
@@ -80,13 +80,13 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 			err.Error(),
 		))
 
-		return ctrl.Result{}, fmt.Errorf("version contains invalid value for provider %s", provider.GetName())
+		return ctrl.Result{}, true, fmt.Errorf("version contains invalid value for provider %s", provider.GetName())
 	}
 
 	// Check that if a predefined provider is being installed, and if it's not - ensure that FetchConfig is specified.
 	isPredefinedProvider, err := isPredefinedProvider(provider.GetName(), util.ClusterctlProviderType(provider))
 	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("failed to generate a list of predefined providers: %w", err)
+		return ctrl.Result{}, true, fmt.Errorf("failed to generate a list of predefined providers: %w", err)
 	}
 
 	if !isPredefinedProvider {
@@ -98,7 +98,7 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 				"Either Selector or URL must be provided for a not predefined provider",
 			))
 
-			return ctrl.Result{}, fmt.Errorf("either selector or URL must be provided for a not predefined provider %s", provider.GetName())
+			return ctrl.Result{}, true, fmt.Errorf("either selector or URL must be provided for a not predefined provider %s", provider.GetName())
 		}
 	}
 
@@ -111,7 +111,7 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 			"Only one of Selector and URL must be provided, not both",
 		))
 
-		return ctrl.Result{}, fmt.Errorf("only one of Selector and URL must be provided for provider %s", provider.GetName())
+		return ctrl.Result{}, true, fmt.Errorf("only one of Selector and URL must be provided for provider %s", provider.GetName())
 	}
 
 	// Validate that provided github token works and has repository access.
@@ -120,7 +120,7 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 		key := types.NamespacedName{Namespace: provider.GetNamespace(), Name: provider.GetSpec().SecretName}
 
 		if err := c.Get(ctx, key, secret); err != nil {
-			return ctrl.Result{}, fmt.Errorf("failed to get providers secret: %w", err)
+			return ctrl.Result{}, true, fmt.Errorf("failed to get providers secret: %w", err)
 		}
 
 		if token, ok := secret.Data[configclient.GitHubTokenVariable]; ok {
@@ -135,13 +135,13 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 					invalidGithubTokenMessage,
 				))
 
-				return ctrl.Result{}, fmt.Errorf("failed to validate provided github token: %w", err)
+				return ctrl.Result{}, true, fmt.Errorf("failed to validate provided github token: %w", err)
 			}
 		}
 	}
 
 	if err := c.List(ctx, providerList.GetObject()); err != nil {
-		return ctrl.Result{}, fmt.Errorf("failed to list providers: %w", err)
+		return ctrl.Result{}, true, fmt.Errorf("failed to list providers: %w", err)
 	}
 
 	// Check that no more than one instance of the provider is installed.
@@ -164,7 +164,7 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 			preflightFalseCondition.Message = moreThanOneCoreProviderInstanceExistsMessage
 			conditions.Set(provider, preflightFalseCondition)
 
-			return ctrl.Result{}, fmt.Errorf("only one instance of CoreProvider is allowed")
+			return ctrl.Result{}, true, fmt.Errorf("only one instance of CoreProvider is allowed")
 		}
 
 		// For any other provider we should check that instances with similar name exist in any namespace
@@ -173,7 +173,7 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 			log.Info(preflightFalseCondition.Message)
 			conditions.Set(provider, preflightFalseCondition)
 
-			return ctrl.Result{}, fmt.Errorf("only one %s provider is allowed in the cluster", p.GetName())
+			return ctrl.Result{}, true, fmt.Errorf("only one %s provider is allowed in the cluster", p.GetName())
 		}
 	}
 
@@ -181,7 +181,7 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 	if !util.IsCoreProvider(provider) {
 		ready, err := coreProviderIsReady(ctx, c)
 		if err != nil {
-			return ctrl.Result{}, fmt.Errorf("failed to get coreProvider ready condition: %w", err)
+			return ctrl.Result{}, true, fmt.Errorf("failed to get coreProvider ready condition: %w", err)
 		}
 
 		if !ready {
@@ -193,7 +193,7 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 				waitingForCoreProviderReadyMessage,
 			))
 
-			return ctrl.Result{RequeueAfter: preflightFailedRequeueAfter}, nil
+			return ctrl.Result{RequeueAfter: preflightFailedRequeueAfter}, true, nil
 		}
 	}
 
@@ -201,7 +201,7 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 
 	log.Info("Preflight checks passed")
 
-	return ctrl.Result{}, nil
+	return ctrl.Result{}, false, nil
 }
 
 // coreProviderIsReady returns true if the core provider is ready.

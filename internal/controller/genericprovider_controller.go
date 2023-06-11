@@ -136,12 +136,8 @@ func (r *GenericProviderReconciler) reconcile(ctx context.Context, provider gene
 		reconciler.install,
 	}
 
-	res := reconcile.Result{}
-
-	var err error
-
 	for _, phase := range phases {
-		res, err = phase(ctx)
+		res, halt, err := phase(ctx)
 		if err != nil {
 			var pe *PhaseError
 			if errors.As(err, &pe) {
@@ -149,13 +145,13 @@ func (r *GenericProviderReconciler) reconcile(ctx context.Context, provider gene
 			}
 		}
 
-		if !res.IsZero() || err != nil {
+		if !res.IsZero() || halt || err != nil {
 			// the steps are sequential, so we must be complete before progressing.
 			return res, err
 		}
 	}
 
-	return res, nil
+	return reconcile.Result{}, nil
 }
 
 func (r *GenericProviderReconciler) reconcileDelete(ctx context.Context, provider genericprovider.GenericProvider) (ctrl.Result, error) {
@@ -168,12 +164,8 @@ func (r *GenericProviderReconciler) reconcileDelete(ctx context.Context, provide
 		reconciler.delete,
 	}
 
-	res := reconcile.Result{}
-
-	var err error
-
 	for _, phase := range phases {
-		res, err = phase(ctx)
+		res, halt, err := phase(ctx)
 		if err != nil {
 			var pe *PhaseError
 			if errors.As(err, &pe) {
@@ -181,7 +173,7 @@ func (r *GenericProviderReconciler) reconcileDelete(ctx context.Context, provide
 			}
 		}
 
-		if !res.IsZero() || err != nil {
+		if !res.IsZero() || halt || err != nil {
 			// the steps are sequential, so we must be complete before progressing.
 			return res, err
 		}
@@ -189,7 +181,7 @@ func (r *GenericProviderReconciler) reconcileDelete(ctx context.Context, provide
 
 	controllerutil.RemoveFinalizer(provider.GetObject(), operatorv1.ProviderFinalizer)
 
-	return res, nil
+	return reconcile.Result{}, nil
 }
 
 func (r *GenericProviderReconciler) newGenericProvider() (genericprovider.GenericProvider, error) {

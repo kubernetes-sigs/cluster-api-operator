@@ -54,10 +54,10 @@ func TestManifestsDownloader(t *testing.T) {
 		},
 	}
 
-	_, err := p.initializePhaseReconciler(ctx)
+	_, _, err := p.initializePhaseReconciler(ctx)
 	g.Expect(err).ToNot(HaveOccurred())
 
-	_, err = p.downloadManifests(ctx)
+	_, _, err = p.downloadManifests(ctx)
 	g.Expect(err).ToNot(HaveOccurred())
 
 	// Ensure that config map was created

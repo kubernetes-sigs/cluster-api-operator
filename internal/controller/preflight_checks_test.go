@@ -643,7 +643,7 @@ func TestPreflightChecks(t *testing.T) {
 				gs.Expect(fakeclient.Create(ctx, c.GetObject())).To(Succeed())
 			}
 
-			_, err := preflightChecks(context.Background(), fakeclient, tc.providers[0], tc.providerList)
+			_, _, err := preflightChecks(context.Background(), fakeclient, tc.providers[0], tc.providerList)
 			if tc.expectedError {
 				gs.Expect(err).To(HaveOccurred())
 			} else {

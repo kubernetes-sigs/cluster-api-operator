@@ -67,7 +67,7 @@ type phaseReconciler struct {
 }
 
 // reconcilePhaseFn is a function that represent a phase of the reconciliation.
-type reconcilePhaseFn func(context.Context) (reconcile.Result, error)
+type reconcilePhaseFn func(context.Context) (reconcile.Result, bool, error)
 
 // PhaseError custom error type for phases.
 type PhaseError struct {
@@ -106,29 +106,29 @@ func newPhaseReconciler(r GenericProviderReconciler, provider genericprovider.Ge
 }
 
 // preflightChecks a wrapper around the preflight checks.
-func (p *phaseReconciler) preflightChecks(ctx context.Context) (reconcile.Result, error) {
+func (p *phaseReconciler) preflightChecks(ctx context.Context) (reconcile.Result, bool, error) {
 	return preflightChecks(ctx, p.ctrlClient, p.provider, p.providerList)
 }
 
 // initializePhaseReconciler initializes phase reconciler.
-func (p *phaseReconciler) initializePhaseReconciler(ctx context.Context) (reconcile.Result, error) {
+func (p *phaseReconciler) initializePhaseReconciler(ctx context.Context) (reconcile.Result, bool, error) {
 	// Load provider's secret and config url.
 	reader, err := p.secretReader(ctx)
 	if err != nil {
-		return reconcile.Result{}, wrapPhaseError(err, "failed to load the secret reader", operatorv1.PreflightCheckCondition)
+		return reconcile.Result{}, true, wrapPhaseError(err, "failed to load the secret reader", operatorv1.PreflightCheckCondition)
 	}
 
 	// Initialize a client for interacting with the clusterctl configuration.
 	p.configClient, err = configclient.New("", configclient.InjectReader(reader))
 	if err != nil {
-		return reconcile.Result{}, err
+		return reconcile.Result{}, true, err
 	}
 
 	// Get returns the configuration for the provider with a given name/type.
 	// This is done using clusterctl internal API types.
 	p.providerConfig, err = p.configClient.Providers().Get(p.provider.GetName(), util.ClusterctlProviderType(p.provider))
 	if err != nil {
-		return reconcile.Result{}, wrapPhaseError(err, operatorv1.UnknownProviderReason, operatorv1.PreflightCheckCondition)
+		return reconcile.Result{}, true, wrapPhaseError(err, operatorv1.UnknownProviderReason, operatorv1.PreflightCheckCondition)
 	}
 
 	spec := p.provider.GetSpec()
@@ -140,11 +140,11 @@ func (p *phaseReconciler) initializePhaseReconciler(ctx context.Context) (reconc
 		Version:             spec.Version,
 	}
 
-	return reconcile.Result{}, nil
+	return reconcile.Result{}, false, nil
 }
 
 // load provider specific configuration into phaseReconciler object.
-func (p *phaseReconciler) load(ctx context.Context) (reconcile.Result, error) {
+func (p *phaseReconciler) load(ctx context.Context) (reconcile.Result, bool, error) {
 	log := ctrl.LoggerFrom(ctx)
 
 	log.Info("Loading provider")
@@ -164,7 +164,7 @@ func (p *phaseReconciler) load(ctx context.Context) (reconcile.Result, error) {
 
 	p.repo, err = p.configmapRepository(ctx, labelSelector)
 	if err != nil {
-		return reconcile.Result{}, wrapPhaseError(err, "failed to load the repository", operatorv1.PreflightCheckCondition)
+		return reconcile.Result{}, true, wrapPhaseError(err, "failed to load the repository", operatorv1.PreflightCheckCondition)
 	}
 
 	// Store some provider specific inputs for passing it to clusterctl library
@@ -175,10 +175,10 @@ func (p *phaseReconciler) load(ctx context.Context) (reconcile.Result, error) {
 	}
 
 	if err := p.validateRepoCAPIVersion(); err != nil {
-		return reconcile.Result{}, wrapPhaseError(err, operatorv1.CAPIVersionIncompatibilityReason, operatorv1.PreflightCheckCondition)
+		return reconcile.Result{}, true, wrapPhaseError(err, operatorv1.CAPIVersionIncompatibilityReason, operatorv1.PreflightCheckCondition)
 	}
 
-	return reconcile.Result{}, nil
+	return reconcile.Result{}, false, nil
 }
 
 // secretReader use clusterctl MemoryReader structure to store the configuration variables
@@ -310,7 +310,7 @@ func (p *phaseReconciler) validateRepoCAPIVersion() error {
 }
 
 // fetch fetches the provider components from the repository and processes all yaml manifests.
-func (p *phaseReconciler) fetch(ctx context.Context) (reconcile.Result, error) {
+func (p *phaseReconciler) fetch(ctx context.Context) (reconcile.Result, bool, error) {
 	log := ctrl.LoggerFrom(ctx)
 	log.Info("Fetching provider")
 
@@ -319,7 +319,7 @@ func (p *phaseReconciler) fetch(ctx context.Context) (reconcile.Result, error) {
 	if err != nil {
 		err = fmt.Errorf("failed to read %q from provider's repository %q: %w", p.repo.ComponentsPath(), p.providerConfig.ManifestLabel(), err)
 
-		return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.PreflightCheckCondition)
+		return reconcile.Result{}, true, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.PreflightCheckCondition)
 	}
 
 	// Generate a set of new objects using the clusterctl library. NewComponents() will do the yaml processing,
@@ -333,34 +333,33 @@ func (p *phaseReconciler) fetch(ctx context.Context) (reconcile.Result, error) {
 		Options:      p.options,
 	})
 	if err != nil {
-		return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.PreflightCheckCondition)
+		return reconcile.Result{}, true, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.PreflightCheckCondition)
 	}
 
 	// ProviderSpec provides fields for customizing the provider deployment options.
 	// We can use clusterctl library to apply this customizations.
-	err = repository.AlterComponents(p.components, customizeObjectsFn(p.provider))
-	if err != nil {
-		return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.PreflightCheckCondition)
+	if err = repository.AlterComponents(p.components, customizeObjectsFn(p.provider)); err != nil {
+		return reconcile.Result{}, true, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.PreflightCheckCondition)
 	}
 
 	conditions.Set(p.provider, conditions.TrueCondition(operatorv1.PreflightCheckCondition))
 
-	return reconcile.Result{}, nil
+	return reconcile.Result{}, false, nil
 }
 
 // preInstall ensure all the clusterctl CRDs are available before installing the provider,
 // and delete existing components if required for upgrade.
-func (p *phaseReconciler) preInstall(ctx context.Context) (reconcile.Result, error) {
+func (p *phaseReconciler) preInstall(ctx context.Context) (reconcile.Result, bool, error) {
 	log := ctrl.LoggerFrom(ctx)
 
 	needPreDelete, err := p.versionChanged()
 	if err != nil {
-		return reconcile.Result{}, wrapPhaseError(err, "failed getting clusterctl Provider version", operatorv1.ProviderInstalledCondition)
+		return reconcile.Result{}, true, wrapPhaseError(err, "failed getting clusterctl Provider version", operatorv1.ProviderInstalledCondition)
 	}
 
 	// we need to delete existing components only if their version changes and something has already been installed.
 	if !needPreDelete || p.provider.GetStatus().InstalledVersion == nil {
-		return reconcile.Result{}, nil
+		return reconcile.Result{}, false, nil
 	}
 
 	log.Info("Upgrade detected, deleting existing components")
@@ -392,19 +391,8 @@ func (p *phaseReconciler) versionChanged() (bool, error) {
 }
 
 // install installs the provider components using clusterctl library.
-func (p *phaseReconciler) install(ctx context.Context) (reconcile.Result, error) {
+func (p *phaseReconciler) install(ctx context.Context) (reconcile.Result, bool, error) {
 	log := ctrl.LoggerFrom(ctx)
-
-	versionChanged, err := p.versionChanged()
-	if err != nil {
-		return reconcile.Result{}, wrapPhaseError(err, "failed getting clusterctl Provider version", operatorv1.ProviderInstalledCondition)
-	}
-
-	// skip installation if the version hasn't changed.
-	if !versionChanged {
-		log.Info("Provider already installed")
-		return reconcile.Result{}, nil
-	}
 
 	clusterClient := p.newClusterClient()
 
@@ -416,7 +404,7 @@ func (p *phaseReconciler) install(ctx context.Context) (reconcile.Result, error)
 			reason = "Timed out waiting for deployment to become ready"
 		}
 
-		return reconcile.Result{}, wrapPhaseError(err, reason, operatorv1.ProviderInstalledCondition)
+		return reconcile.Result{}, true, wrapPhaseError(err, reason, operatorv1.ProviderInstalledCondition)
 	}
 
 	status := p.provider.GetStatus()
@@ -428,11 +416,11 @@ func (p *phaseReconciler) install(ctx context.Context) (reconcile.Result, error)
 	log.Info("Provider successfully installed")
 	conditions.Set(p.provider, conditions.TrueCondition(operatorv1.ProviderInstalledCondition))
 
-	return reconcile.Result{}, nil
+	return reconcile.Result{}, false, nil
 }
 
 // delete deletes the provider components using clusterctl library.
-func (p *phaseReconciler) delete(ctx context.Context) (reconcile.Result, error) {
+func (p *phaseReconciler) delete(ctx context.Context) (reconcile.Result, bool, error) {
 	log := ctrl.LoggerFrom(ctx)
 	log.Info("Deleting provider")
 
@@ -455,7 +443,7 @@ func (p *phaseReconciler) delete(ctx context.Context) (reconcile.Result, error) 
 		IncludeCRDs:      false,
 	})
 
-	return reconcile.Result{}, wrapPhaseError(err, operatorv1.OldComponentsDeletionErrorReason, operatorv1.ProviderInstalledCondition)
+	return reconcile.Result{}, false, wrapPhaseError(err, operatorv1.OldComponentsDeletionErrorReason, operatorv1.ProviderInstalledCondition)
 }
 
 func clusterctlProviderName(provider genericprovider.GenericProvider) client.ObjectKey {
