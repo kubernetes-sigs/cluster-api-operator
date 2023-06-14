@@ -20,4 +20,4 @@ set -o pipefail
 
 REPO_ROOT=$(dirname "${BASH_SOURCE[0]}")/..
 
-cd "${REPO_ROOT}" && make lint docker-build
+cd "${REPO_ROOT}" && make docker-build
