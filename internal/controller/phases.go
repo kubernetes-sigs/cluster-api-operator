@@ -300,10 +300,6 @@ func (p *phaseReconciler) validateRepoCAPIVersion() error {
 		return fmt.Errorf("invalid provider metadata: version %s for the provider %s does not match any release series", p.options.Version, name)
 	}
 
-	if releaseSeries.Contract != "v1alpha4" && releaseSeries.Contract != "v1beta1" {
-		return fmt.Errorf(capiVersionIncompatibilityMessage, clusterv1.GroupVersion.Version, releaseSeries.Contract, name)
-	}
-
 	p.contract = releaseSeries.Contract
 
 	return nil
