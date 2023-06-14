@@ -59,7 +59,7 @@ func (p *phaseReconciler) downloadManifests(ctx context.Context) (reconcile.Resu
 
 	exists, err := p.checkConfigMapExists(ctx, labelSelector)
 	if err != nil {
-		return reconcile.Result{}, wrapPhaseError(err, "failed to check that config map with manifests exists", operatorv1.PreflightCheckCondition)
+		return reconcile.Result{}, wrapPhaseError(err, "failed to check that config map with manifests exists", operatorv1.ProviderInstalledCondition)
 	}
 
 	if exists {
@@ -72,7 +72,7 @@ func (p *phaseReconciler) downloadManifests(ctx context.Context) (reconcile.Resu
 	if err != nil {
 		err = fmt.Errorf("failed to create repo from provider url for provider %q: %w", p.provider.GetName(), err)
 
-		return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.PreflightCheckCondition)
+		return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.ProviderInstalledCondition)
 	}
 
 	// Fetch the provider metadata and components yaml files from the provided repository GitHub/GitLab.
@@ -80,20 +80,20 @@ func (p *phaseReconciler) downloadManifests(ctx context.Context) (reconcile.Resu
 	if err != nil {
 		err = fmt.Errorf("failed to read %q from the repository for provider %q: %w", metadataFile, p.provider.GetName(), err)
 
-		return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.PreflightCheckCondition)
+		return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.ProviderInstalledCondition)
 	}
 
 	componentsFile, err := repo.GetFile(p.options.Version, repo.ComponentsPath())
 	if err != nil {
 		err = fmt.Errorf("failed to read %q from the repository for provider %q: %w", componentsFile, p.provider.GetName(), err)
 
-		return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.PreflightCheckCondition)
+		return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.ProviderInstalledCondition)
 	}
 
 	if err := p.createManifestsConfigMap(ctx, string(metadataFile), string(componentsFile)); err != nil {
 		err = fmt.Errorf("failed to create config map for provider %q: %w", p.provider.GetName(), err)
 
-		return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.PreflightCheckCondition)
+		return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.ProviderInstalledCondition)
 	}
 
 	return reconcile.Result{}, nil
