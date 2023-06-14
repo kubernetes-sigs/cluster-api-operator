@@ -6,6 +6,7 @@
 cmd/clusterctl/clusterctl
 bin
 hack/tools/bin
+hack/tools/_out
 
 # go.work files
 go.work

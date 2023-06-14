@@ -2,7 +2,7 @@ module sigs.k8s.io/cluster-api-operator
 
 go 1.19
 
-replace sigs.k8s.io/cluster-api => sigs.k8s.io/cluster-api v1.4.2
+replace sigs.k8s.io/cluster-api => sigs.k8s.io/cluster-api v1.4.3
 
 require (
 	github.com/google/go-cmp v0.5.9
@@ -18,8 +18,8 @@ require (
 	k8s.io/component-base v0.26.1
 	k8s.io/klog/v2 v2.80.1
 	k8s.io/utils v0.0.0-20221128185143-99ec85e7a448
-	sigs.k8s.io/cluster-api v1.4.2
-	sigs.k8s.io/cluster-api/test v1.4.2
+	sigs.k8s.io/cluster-api v1.4.3
+	sigs.k8s.io/cluster-api/test v1.4.3
 	sigs.k8s.io/controller-runtime v0.14.5
 	sigs.k8s.io/yaml v1.3.0
 )
