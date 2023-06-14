@@ -32,9 +32,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
-	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha1"
-	"sigs.k8s.io/cluster-api-operator/internal/controller/genericprovider"
-	"sigs.k8s.io/cluster-api-operator/util"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	clusterctlv1 "sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3"
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/cluster"
@@ -45,6 +42,11 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha1"
+	"sigs.k8s.io/cluster-api-operator/internal/controller/genericprovider"
+	"sigs.k8s.io/cluster-api-operator/internal/controller/preflightchecks"
+	"sigs.k8s.io/cluster-api-operator/util"
 )
 
 const metadataFile = "metadata.yaml"
@@ -107,7 +109,7 @@ func newPhaseReconciler(r GenericProviderReconciler, provider genericprovider.Ge
 
 // preflightChecks a wrapper around the preflight checks.
 func (p *phaseReconciler) preflightChecks(ctx context.Context) (reconcile.Result, error) {
-	return preflightChecks(ctx, p.ctrlClient, p.provider, p.providerList)
+	return preflightchecks.PreflightChecks(ctx, p.ctrlClient, p.provider, p.providerList)
 }
 
 // initializePhaseReconciler initializes phase reconciler.

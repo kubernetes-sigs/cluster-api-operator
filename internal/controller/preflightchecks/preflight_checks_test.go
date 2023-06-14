@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package controller
+package preflightchecks
 
 import (
 	"context"
@@ -29,11 +29,16 @@ import (
 
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha1"
 	"sigs.k8s.io/cluster-api-operator/internal/controller/genericprovider"
+	"sigs.k8s.io/cluster-api-operator/internal/envtest"
 )
+
+var env *envtest.Environment
 
 func TestPreflightChecks(t *testing.T) {
 	namespaceName1 := "provider-test-ns-1"
 	namespaceName2 := "provider-test-ns-2"
+
+	env = envtest.New()
 
 	testCases := []struct {
 		name              string
@@ -640,10 +645,10 @@ func TestPreflightChecks(t *testing.T) {
 			fakeclient := fake.NewClientBuilder().WithObjects().Build()
 
 			for _, c := range tc.providers {
-				gs.Expect(fakeclient.Create(ctx, c.GetObject())).To(Succeed())
+				gs.Expect(fakeclient.Create(context.Background(), c.GetObject())).To(Succeed())
 			}
 
-			_, err := preflightChecks(context.Background(), fakeclient, tc.providers[0], tc.providerList)
+			_, err := PreflightChecks(context.Background(), fakeclient, tc.providers[0], tc.providerList)
 			if tc.expectedError {
 				gs.Expect(err).To(HaveOccurred())
 			} else {

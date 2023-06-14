@@ -14,11 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package controller
+package preflightchecks
 
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/google/go-github/v52/github"
 	"golang.org/x/oauth2"
@@ -38,19 +39,22 @@ import (
 
 const (
 	coreProvider = "CoreProvider"
+
+	// preflightFailedRequeueAfter is how long to wait before trying to reconcile
+	// if some preflight check has failed.
+	preflightFailedRequeueAfter = 30 * time.Second
 )
 
 var (
 	moreThanOneCoreProviderInstanceExistsMessage = "CoreProvider already exists in the cluster. Only one is allowed."
 	moreThanOneProviderInstanceExistsMessage     = "There is already a %s with name %s in the cluster. Only one is allowed."
-	capiVersionIncompatibilityMessage            = "CAPI operator is only compatible with %s providers, detected %s for provider %s."
 	invalidGithubTokenMessage                    = "Invalid github token, please check your github token value and it's permissions" //nolint:gosec
 	waitingForCoreProviderReadyMessage           = "Waiting for the core provider to be installed."
 	emptyVersionMessage                          = "Version cannot be empty"
 )
 
-// preflightChecks performs preflight checks before installing provider.
-func preflightChecks(ctx context.Context, c client.Client, provider genericprovider.GenericProvider, providerList genericprovider.GenericProviderList) (ctrl.Result, error) {
+// PreflightChecks performs preflight checks before installing provider.
+func PreflightChecks(ctx context.Context, c client.Client, provider genericprovider.GenericProvider, providerList genericprovider.GenericProviderList) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 
 	log.Info("Performing preflight checks")
