@@ -46,6 +46,7 @@ func TestPreflightChecks(t *testing.T) {
 		providerList      genericprovider.GenericProviderList
 		expectedCondition clusterv1.Condition
 		expectedError     bool
+		expectedHalt      bool
 	}{
 		{
 			name: "only one core provider exists, preflight check passed",
@@ -82,6 +83,7 @@ func TestPreflightChecks(t *testing.T) {
 		{
 			name:          "two core providers were created, preflight check failed",
 			expectedError: true,
+			expectedHalt:  true,
 			providers: []genericprovider.GenericProvider{
 				&genericprovider.CoreProviderWrapper{
 					CoreProvider: &operatorv1.CoreProvider{
@@ -132,6 +134,7 @@ func TestPreflightChecks(t *testing.T) {
 		{
 			name:          "two core providers in two different namespaces were created, preflight check failed",
 			expectedError: true,
+			expectedHalt:  true,
 			providers: []genericprovider.GenericProvider{
 				&genericprovider.CoreProviderWrapper{
 					CoreProvider: &operatorv1.CoreProvider{
@@ -387,6 +390,7 @@ func TestPreflightChecks(t *testing.T) {
 		{
 			name:          "two similar infra provider exist in different namespaces, preflight check failed",
 			expectedError: true,
+			expectedHalt:  true,
 			providers: []genericprovider.GenericProvider{
 				&genericprovider.InfrastructureProviderWrapper{
 					InfrastructureProvider: &operatorv1.InfrastructureProvider{
@@ -437,6 +441,7 @@ func TestPreflightChecks(t *testing.T) {
 		{
 			name:          "wrong version, preflight check failed",
 			expectedError: true,
+			expectedHalt:  true,
 			providers: []genericprovider.GenericProvider{
 				&genericprovider.InfrastructureProviderWrapper{
 					InfrastructureProvider: &operatorv1.InfrastructureProvider{
@@ -470,6 +475,7 @@ func TestPreflightChecks(t *testing.T) {
 		{
 			name:          "missing version, preflight check failed",
 			expectedError: true,
+			expectedHalt:  true,
 			providers: []genericprovider.GenericProvider{
 				&genericprovider.InfrastructureProviderWrapper{
 					InfrastructureProvider: &operatorv1.InfrastructureProvider{
@@ -501,6 +507,7 @@ func TestPreflightChecks(t *testing.T) {
 		{
 			name:          "incorrect fetchConfig, preflight check failed",
 			expectedError: true,
+			expectedHalt:  true,
 			providers: []genericprovider.GenericProvider{
 				&genericprovider.InfrastructureProviderWrapper{
 					InfrastructureProvider: &operatorv1.InfrastructureProvider{
@@ -569,6 +576,7 @@ func TestPreflightChecks(t *testing.T) {
 		{
 			name:          "custom Core Provider without fetch config, preflight check failed",
 			expectedError: true,
+			expectedHalt:  true,
 			providers: []genericprovider.GenericProvider{
 				&genericprovider.CoreProviderWrapper{
 					CoreProvider: &operatorv1.CoreProvider{
@@ -602,6 +610,7 @@ func TestPreflightChecks(t *testing.T) {
 		{
 			name:          "custom Core Provider with fetch config with empty values, preflight check failed",
 			expectedError: true,
+			expectedHalt:  true,
 			providers: []genericprovider.GenericProvider{
 				&genericprovider.CoreProviderWrapper{
 					CoreProvider: &operatorv1.CoreProvider{
@@ -648,11 +657,17 @@ func TestPreflightChecks(t *testing.T) {
 				gs.Expect(fakeclient.Create(context.Background(), c.GetObject())).To(Succeed())
 			}
 
-			_, err := PreflightChecks(context.Background(), fakeclient, tc.providers[0], tc.providerList)
+			_, halt, err := PreflightChecks(context.Background(), fakeclient, tc.providers[0], tc.providerList)
 			if tc.expectedError {
 				gs.Expect(err).To(HaveOccurred())
 			} else {
 				gs.Expect(err).ToNot(HaveOccurred())
+			}
+
+			if tc.expectedHalt {
+				gs.Expect(halt).To(BeTrue())
+			} else {
+				gs.Expect(halt).To(BeFalse())
 			}
 
 			// Check if proper condition is returned

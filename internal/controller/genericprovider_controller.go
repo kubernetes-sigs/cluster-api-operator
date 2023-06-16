@@ -108,10 +108,15 @@ func (r *GenericProviderReconciler) Reconcile(ctx context.Context, req reconcile
 	}
 
 	// Run preflight checks to ensure that we can proceed with given specification
-	res, err := preflightchecks.PreflightChecks(ctx, r.Client, typedProvider, typedProviderList)
+	res, halt, err := preflightchecks.PreflightChecks(ctx, r.Client, typedProvider, typedProviderList)
 	if !res.IsZero() || err != nil {
-		// the steps are sequential, so we must be complete before progressing.
 		return res, err
+	}
+
+	if halt {
+		log.Info("No changes detected, skipping further steps")
+
+		return res, nil
 	}
 
 	return r.reconcile(ctx, typedProvider, typedProviderList)
