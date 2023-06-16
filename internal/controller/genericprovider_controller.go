@@ -27,6 +27,7 @@ import (
 	"k8s.io/client-go/rest"
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha1"
 	"sigs.k8s.io/cluster-api-operator/internal/controller/genericprovider"
+	"sigs.k8s.io/cluster-api-operator/internal/controller/preflightchecks"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/patch"
@@ -106,6 +107,13 @@ func (r *GenericProviderReconciler) Reconcile(ctx context.Context, req reconcile
 		return r.reconcileDelete(ctx, typedProvider)
 	}
 
+	// Run preflight checks to ensure that we can proceed with given specification
+	res, err := preflightchecks.PreflightChecks(ctx, r.Client, typedProvider, typedProviderList)
+	if !res.IsZero() || err != nil {
+		// the steps are sequential, so we must be complete before progressing.
+		return res, err
+	}
+
 	return r.reconcile(ctx, typedProvider, typedProviderList)
 }
 
@@ -127,7 +135,6 @@ func patchProvider(ctx context.Context, provider genericprovider.GenericProvider
 func (r *GenericProviderReconciler) reconcile(ctx context.Context, provider genericprovider.GenericProvider, genericProviderList genericprovider.GenericProviderList) (ctrl.Result, error) {
 	reconciler := newPhaseReconciler(*r, provider, genericProviderList)
 	phases := []reconcilePhaseFn{
-		reconciler.preflightChecks,
 		reconciler.initializePhaseReconciler,
 		reconciler.downloadManifests,
 		reconciler.load,

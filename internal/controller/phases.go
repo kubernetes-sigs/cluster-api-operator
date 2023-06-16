@@ -45,7 +45,6 @@ import (
 
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha1"
 	"sigs.k8s.io/cluster-api-operator/internal/controller/genericprovider"
-	"sigs.k8s.io/cluster-api-operator/internal/controller/preflightchecks"
 	"sigs.k8s.io/cluster-api-operator/util"
 )
 
@@ -105,11 +104,6 @@ func newPhaseReconciler(r GenericProviderReconciler, provider genericprovider.Ge
 		provider:           provider,
 		providerList:       providerList,
 	}
-}
-
-// preflightChecks a wrapper around the preflight checks.
-func (p *phaseReconciler) preflightChecks(ctx context.Context) (reconcile.Result, error) {
-	return preflightchecks.PreflightChecks(ctx, p.ctrlClient, p.provider, p.providerList)
 }
 
 // initializePhaseReconciler initializes phase reconciler.
