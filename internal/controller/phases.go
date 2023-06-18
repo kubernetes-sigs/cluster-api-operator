@@ -365,7 +365,7 @@ func (p *phaseReconciler) preInstall(ctx context.Context) (reconcile.Result, err
 
 	log.Info("Upgrade detected, deleting existing components")
 
-	return p.delete(ctx)
+	return p.delete(ctx, false, false)
 }
 
 // versionChanged try to get installed version from provider status and decide if it has changed.
@@ -432,7 +432,7 @@ func (p *phaseReconciler) install(ctx context.Context) (reconcile.Result, error)
 }
 
 // delete deletes the provider components using clusterctl library.
-func (p *phaseReconciler) delete(ctx context.Context) (reconcile.Result, error) {
+func (p *phaseReconciler) delete(ctx context.Context, includeNamespace, includeCRDs bool) (reconcile.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 	log.Info("Deleting provider")
 
@@ -451,8 +451,8 @@ func (p *phaseReconciler) delete(ctx context.Context) (reconcile.Result, error) 
 
 	err := clusterClient.ProviderComponents().Delete(cluster.DeleteOptions{
 		Provider:         *p.clusterctlProvider,
-		IncludeNamespace: false,
-		IncludeCRDs:      false,
+		IncludeNamespace: includeNamespace,
+		IncludeCRDs:      includeCRDs,
 	})
 
 	return reconcile.Result{}, wrapPhaseError(err, operatorv1.OldComponentsDeletionErrorReason)

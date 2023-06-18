@@ -76,6 +76,8 @@ func (k *controllerProxy) ListResources(labels map[string]string, namespaces ...
 				{Kind: "Secret", Namespaced: true},
 				{Kind: "ConfigMap", Namespaced: true},
 				{Kind: "Service", Namespaced: true},
+				{Kind: "ServiceAccount", Namespaced: true},
+				{Kind: "Namespace"},
 			},
 		},
 		{
@@ -88,8 +90,30 @@ func (k *controllerProxy) ListResources(labels map[string]string, namespaces ...
 		{
 			GroupVersion: "admissionregistration.k8s.io/v1",
 			APIResources: []metav1.APIResource{
-				{Kind: "ValidatingWebhookConfiguration", Namespaced: true},
-				{Kind: "MutatingWebhookConfiguration", Namespaced: true},
+				{Kind: "ValidatingWebhookConfiguration"},
+				{Kind: "MutatingWebhookConfiguration"},
+			},
+		},
+		{
+			GroupVersion: "apiextensions.k8s.io/v1",
+			APIResources: []metav1.APIResource{
+				{Kind: "CustomResourceDefinition"},
+			},
+		},
+		{
+			GroupVersion: "cert-manager.io/v1",
+			APIResources: []metav1.APIResource{
+				{Kind: "Certificate", Namespaced: true},
+				{Kind: "Issuer", Namespaced: true},
+			},
+		},
+		{
+			GroupVersion: "rbac.authorization.k8s.io/v1",
+			APIResources: []metav1.APIResource{
+				{Kind: "Role", Namespaced: true},
+				{Kind: "RoleBinding", Namespaced: true},
+				{Kind: "ClusterRole"},
+				{Kind: "ClusterRoleBinding"},
 			},
 		},
 	}

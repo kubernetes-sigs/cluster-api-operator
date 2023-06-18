@@ -164,27 +164,18 @@ func (r *GenericProviderReconciler) reconcileDelete(ctx context.Context, provide
 	log.Info("Deleting provider resources")
 
 	reconciler := newPhaseReconciler(*r, provider, nil)
-	phases := []reconcilePhaseFn{
-		reconciler.delete,
+
+	// Delete all provider components including its namespace and CRDs.
+	res, err := reconciler.delete(ctx, true, true)
+	if err != nil {
+		var pe *PhaseError
+		if errors.As(err, &pe) {
+			conditions.Set(provider, conditions.FalseCondition(pe.Type, pe.Reason, pe.Severity, err.Error()))
+		}
 	}
 
-	res := reconcile.Result{}
-
-	var err error
-
-	for _, phase := range phases {
-		res, err = phase(ctx)
-		if err != nil {
-			var pe *PhaseError
-			if errors.As(err, &pe) {
-				conditions.Set(provider, conditions.FalseCondition(pe.Type, pe.Reason, pe.Severity, err.Error()))
-			}
-		}
-
-		if !res.IsZero() || err != nil {
-			// the steps are sequential, so we must be complete before progressing.
-			return res, err
-		}
+	if !res.IsZero() || err != nil {
+		return res, err
 	}
 
 	controllerutil.RemoveFinalizer(provider.GetObject(), operatorv1.ProviderFinalizer)
