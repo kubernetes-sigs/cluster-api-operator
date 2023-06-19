@@ -73,9 +73,7 @@ func customizeObjectsFn(provider genericprovider.GenericProvider) func(objs []un
 					return nil, err
 				}
 
-				if provider.GetSpec().Deployment != nil {
-					customizeDeployment(provider.GetSpec(), d)
-				}
+				customizeDeployment(provider.GetSpec(), d)
 
 				if err := scheme.Scheme.Convert(d, &o, nil); err != nil {
 					return nil, err
