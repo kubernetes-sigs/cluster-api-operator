@@ -110,6 +110,10 @@ func customizeDeployment(pSpec operatorv1.ProviderSpec, d *appsv1.Deployment) {
 			d.Spec.Template.Spec.Tolerations = dSpec.Tolerations
 		}
 
+		if dSpec.ImagePullSecrets != nil {
+			d.Spec.Template.Spec.ImagePullSecrets = dSpec.ImagePullSecrets
+		}
+
 		for _, pc := range dSpec.Containers {
 			customizeContainer(pc, d)
 		}

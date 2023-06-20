@@ -114,6 +114,10 @@ type DeploymentSpec struct {
 	// List of containers specified in the Deployment
 	// +optional
 	Containers []ContainerSpec `json:"containers"`
+
+	// List of image pull secrets specified in the Deployment
+	// +optional
+	ImagePullSecrets []corev1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
 }
 
 // ContainerSpec defines the properties available to override for each
