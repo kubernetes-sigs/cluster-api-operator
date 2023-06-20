@@ -203,6 +203,31 @@ func TestCustomizeDeployment(t *testing.T) {
 			},
 		},
 		{
+			name: "only image pull secrets modified",
+			inputDeploymentSpec: &operatorv1.DeploymentSpec{
+				ImagePullSecrets: []corev1.LocalObjectReference{
+					{
+						Name: "test",
+					},
+				},
+			},
+			expectedDeploymentSpec: func(inputDS *appsv1.DeploymentSpec) (*appsv1.DeploymentSpec, bool) {
+				expectedDS := &appsv1.DeploymentSpec{
+					Template: corev1.PodTemplateSpec{
+						Spec: corev1.PodSpec{
+							ImagePullSecrets: []corev1.LocalObjectReference{
+								{
+									Name: "test",
+								},
+							},
+						},
+					},
+				}
+
+				return expectedDS, reflect.DeepEqual(inputDS.Template.Spec.ImagePullSecrets, expectedDS.Template.Spec.ImagePullSecrets)
+			},
+		},
+		{
 			name: "only containers modified",
 			inputDeploymentSpec: &operatorv1.DeploymentSpec{
 				Containers: []operatorv1.ContainerSpec{
@@ -304,6 +329,11 @@ func TestCustomizeDeployment(t *testing.T) {
 						},
 					},
 				},
+				ImagePullSecrets: []corev1.LocalObjectReference{
+					{
+						Name: "test",
+					},
+				},
 				Containers: []operatorv1.ContainerSpec{
 					{
 						Name: "manager",
@@ -354,6 +384,11 @@ func TestCustomizeDeployment(t *testing.T) {
 											},
 										},
 									},
+								},
+							},
+							ImagePullSecrets: []corev1.LocalObjectReference{
+								{
+									Name: "test",
 								},
 							},
 							Containers: []corev1.Container{
