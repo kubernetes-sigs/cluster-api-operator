@@ -115,6 +115,10 @@ type DeploymentSpec struct {
 	// +optional
 	Containers []ContainerSpec `json:"containers"`
 
+	// If specified, the pod's service account
+	// +optional
+	ServiceAccountName string `json:"serviceAccountName,omitempty"`
+
 	// List of image pull secrets specified in the Deployment
 	// +optional
 	ImagePullSecrets []corev1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
