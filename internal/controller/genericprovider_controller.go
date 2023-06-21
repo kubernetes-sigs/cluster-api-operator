@@ -18,6 +18,8 @@ package controller
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"reflect"
@@ -43,6 +45,10 @@ type GenericProviderReconciler struct {
 	Client       client.Client
 	Config       *rest.Config
 }
+
+const (
+	appliedSpecHashAnnotation = "operator.cluster.x-k8s.io/applied-spec-hash"
+)
 
 func (r *GenericProviderReconciler) SetupWithManager(mgr ctrl.Manager, options controller.Options) error {
 	return ctrl.NewControllerManagedBy(mgr).
@@ -106,7 +112,35 @@ func (r *GenericProviderReconciler) Reconcile(ctx context.Context, req reconcile
 		return r.reconcileDelete(ctx, typedProvider)
 	}
 
-	return r.reconcile(ctx, typedProvider, typedProviderList)
+	// Check if spec hash stays the same and don't go further in this case.
+	specHash, err := calculateHash(typedProvider.GetSpec())
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	if typedProvider.GetAnnotations()[appliedSpecHashAnnotation] == specHash {
+		log.Info("No changes detected, skipping further steps")
+
+		return ctrl.Result{}, nil
+	}
+
+	res, err := r.reconcile(ctx, typedProvider, typedProviderList)
+
+	annotations := typedProvider.GetAnnotations()
+	if annotations == nil {
+		annotations = map[string]string{}
+	}
+
+	// Set the spec hash annotation if reconciliation was successful or reset it otherwise.
+	if res.IsZero() && err == nil {
+		annotations[appliedSpecHashAnnotation] = specHash
+	} else {
+		annotations[appliedSpecHashAnnotation] = ""
+	}
+
+	typedProvider.SetAnnotations(annotations)
+
+	return res, err
 }
 
 func patchProvider(ctx context.Context, provider genericprovider.GenericProvider, patchHelper *patch.Helper, options ...patch.Option) error {
@@ -226,4 +260,19 @@ func (r *GenericProviderReconciler) newGenericProviderList() (genericprovider.Ge
 
 		return nil, failedToCastInterfaceErr
 	}
+}
+
+func calculateHash(object interface{}) (string, error) {
+	jsonData, err := json.Marshal(object)
+	if err != nil {
+		return "", fmt.Errorf("cannot parse provider spec: %w", err)
+	}
+
+	hash := sha256.New()
+
+	if _, err = hash.Write(jsonData); err != nil {
+		return "", fmt.Errorf("cannot calculate provider spec hash: %w", err)
+	}
+
+	return fmt.Sprintf("%x", hash.Sum(nil)), nil
 }
