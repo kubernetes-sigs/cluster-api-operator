@@ -18,7 +18,9 @@ package webhook
 
 import (
 	"context"
+	"fmt"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -32,12 +34,17 @@ func (r *ControlPlaneProviderWebhook) SetupWebhookWithManager(mgr ctrl.Manager) 
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(&operatorv1.ControlPlaneProvider{}).
 		WithValidator(r).
+		WithDefaulter(r).
 		Complete()
 }
 
-//+kubebuilder:webhook:verbs=create;update,path=/validate-operator-cluster-x-k8s-io-v1alpha1-controlplaneprovider,mutating=false,failurePolicy=fail,groups=operator.cluster.x-k8s.io,resources=controlplaneproviders,versions=v1alpha1,name=vcontrolplaneprovider.kb.io,sideEffects=None,admissionReviewVersions=v1;v1alpha1
+//+kubebuilder:webhook:verbs=create;update,path=/validate-operator-cluster-x-k8s-io-v1alpha1-controlplaneprovider,mutating=false,failurePolicy=fail,matchPolicy=Equivalent,groups=operator.cluster.x-k8s.io,resources=controlplaneproviders,versions=v1alpha1,name=vcontrolplaneprovider.kb.io,sideEffects=None,admissionReviewVersions=v1;v1beta1
+//+kubebuilder:webhook:verbs=create;update,path=/mutate-operator-cluster-x-k8s-io-v1alpha1-controlplaneprovider,mutating=true,failurePolicy=fail,matchPolicy=Equivalent,groups=operator.cluster.x-k8s.io,resources=controlplaneproviders,versions=v1alpha1,name=vcontrolplaneprovider.kb.io,sideEffects=None,admissionReviewVersions=v1;v1beta1
 
-var _ webhook.CustomValidator = &ControlPlaneProviderWebhook{}
+var (
+	_ webhook.CustomValidator = &ControlPlaneProviderWebhook{}
+	_ webhook.CustomDefaulter = &ControlPlaneProviderWebhook{}
+)
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type.
 func (r *ControlPlaneProviderWebhook) ValidateCreate(ctx context.Context, obj runtime.Object) error {
@@ -51,5 +58,17 @@ func (r *ControlPlaneProviderWebhook) ValidateUpdate(ctx context.Context, oldObj
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type.
 func (r *ControlPlaneProviderWebhook) ValidateDelete(_ context.Context, obj runtime.Object) error {
+	return nil
+}
+
+// Default implements webhook.Default so a webhook will be registered for the type.
+func (r *ControlPlaneProviderWebhook) Default(ctx context.Context, obj runtime.Object) error {
+	controlPlaneProvider, ok := obj.(*operatorv1.ControlPlaneProvider)
+	if !ok {
+		return apierrors.NewBadRequest(fmt.Sprintf("expected a ControlPlaneProvider but got a %T", obj))
+	}
+
+	setDefaultProviderSpec(&controlPlaneProvider.Spec.ProviderSpec, controlPlaneProvider.Namespace)
+
 	return nil
 }

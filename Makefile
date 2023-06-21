@@ -294,6 +294,7 @@ generate-manifests: $(CONTROLLER_GEN) ## Generate manifests for the operator e.g
 	$(CONTROLLER_GEN) \
 		paths=./api/... \
 		paths=./internal/controller/... \
+		paths=./internal/webhook/... \
 		crd:crdVersions=v1 \
 		rbac:roleName=manager-role \
 		output:crd:dir=./config/crd/bases \
