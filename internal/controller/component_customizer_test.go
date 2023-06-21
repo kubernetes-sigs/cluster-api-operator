@@ -203,6 +203,23 @@ func TestCustomizeDeployment(t *testing.T) {
 			},
 		},
 		{
+			name: "only serviceAccountName modified",
+			inputDeploymentSpec: &operatorv1.DeploymentSpec{
+				ServiceAccountName: "foo-service-account",
+			},
+			expectedDeploymentSpec: func(inputDS *appsv1.DeploymentSpec) (*appsv1.DeploymentSpec, bool) {
+				expectedDS := &appsv1.DeploymentSpec{
+					Template: corev1.PodTemplateSpec{
+						Spec: corev1.PodSpec{
+							ServiceAccountName: "foo-service-account",
+						},
+					},
+				}
+
+				return expectedDS, reflect.DeepEqual(inputDS.Template.Spec.ServiceAccountName, expectedDS.Template.Spec.ServiceAccountName)
+			},
+		},
+		{
 			name: "only image pull secrets modified",
 			inputDeploymentSpec: &operatorv1.DeploymentSpec{
 				ImagePullSecrets: []corev1.LocalObjectReference{

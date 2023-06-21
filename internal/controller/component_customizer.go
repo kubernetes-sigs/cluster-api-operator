@@ -108,6 +108,10 @@ func customizeDeployment(pSpec operatorv1.ProviderSpec, d *appsv1.Deployment) {
 			d.Spec.Template.Spec.Tolerations = dSpec.Tolerations
 		}
 
+		if dSpec.ServiceAccountName != "" {
+			d.Spec.Template.Spec.ServiceAccountName = dSpec.ServiceAccountName
+		}
+
 		if dSpec.ImagePullSecrets != nil {
 			d.Spec.Template.Spec.ImagePullSecrets = dSpec.ImagePullSecrets
 		}

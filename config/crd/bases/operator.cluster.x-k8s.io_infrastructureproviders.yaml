@@ -1155,6 +1155,9 @@ spec:
                       between explicit zero and not specified. Defaults to 1.
                     minimum: 0
                     type: integer
+                  serviceAccountName:
+                    description: If specified, the pod's service account
+                    type: string
                   tolerations:
                     description: If specified, the pod's tolerations.
                     items:
