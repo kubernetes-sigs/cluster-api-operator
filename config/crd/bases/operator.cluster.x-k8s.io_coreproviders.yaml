@@ -1447,6 +1447,11 @@ spec:
                   name should be updated. The contents should be in the form of key:value.
                   This secret must be in the same namespace as the provider.
                 type: string
+              secretNamespace:
+                description: SecretNamespace is the namespace of the Secret providing
+                  the configuration variables. If not specified, the namespace of
+                  the provider will be used.
+                type: string
               version:
                 description: Version indicates the provider version.
                 type: string
