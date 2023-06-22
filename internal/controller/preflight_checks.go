@@ -44,7 +44,7 @@ var (
 	moreThanOneCoreProviderInstanceExistsMessage = "CoreProvider already exists in the cluster. Only one is allowed."
 	moreThanOneProviderInstanceExistsMessage     = "There is already a %s with name %s in the cluster. Only one is allowed."
 	capiVersionIncompatibilityMessage            = "CAPI operator is only compatible with %s providers, detected %s for provider %s."
-	invalidGithubTokenMessage                    = "Invalid github token, please check your github token value and it's permissions" //nolint:gosec
+	invalidGithubTokenMessage                    = "Invalid github token, please check your github token value and its permissions" //nolint:gosec
 	waitingForCoreProviderReadyMessage           = "Waiting for the core provider to be installed."
 	emptyVersionMessage                          = "Version cannot be empty"
 )
