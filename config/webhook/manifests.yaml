@@ -1,18 +1,19 @@
 ---
 apiVersion: admissionregistration.k8s.io/v1
-kind: ValidatingWebhookConfiguration
+kind: MutatingWebhookConfiguration
 metadata:
-  name: validating-webhook-configuration
+  name: mutating-webhook-configuration
 webhooks:
 - admissionReviewVersions:
   - v1
-  - v1alpha1
+  - v1beta1
   clientConfig:
     service:
       name: webhook-service
       namespace: system
-      path: /validate-operator-cluster-x-k8s-io-v1alpha1-bootstrapprovider
+      path: /mutate-operator-cluster-x-k8s-io-v1alpha1-bootstrapprovider
   failurePolicy: Fail
+  matchPolicy: Equivalent
   name: vbootstrapprovider.kb.io
   rules:
   - apiGroups:
@@ -27,13 +28,14 @@ webhooks:
   sideEffects: None
 - admissionReviewVersions:
   - v1
-  - v1alpha1
+  - v1beta1
   clientConfig:
     service:
       name: webhook-service
       namespace: system
-      path: /validate-operator-cluster-x-k8s-io-v1alpha1-controlplaneprovider
+      path: /mutate-operator-cluster-x-k8s-io-v1alpha1-controlplaneprovider
   failurePolicy: Fail
+  matchPolicy: Equivalent
   name: vcontrolplaneprovider.kb.io
   rules:
   - apiGroups:
@@ -48,13 +50,14 @@ webhooks:
   sideEffects: None
 - admissionReviewVersions:
   - v1
-  - v1alpha1
+  - v1beta1
   clientConfig:
     service:
       name: webhook-service
       namespace: system
-      path: /validate-operator-cluster-x-k8s-io-v1alpha1-coreprovider
+      path: /mutate-operator-cluster-x-k8s-io-v1alpha1-coreprovider
   failurePolicy: Fail
+  matchPolicy: Equivalent
   name: vcoreprovider.kb.io
   rules:
   - apiGroups:
@@ -69,13 +72,108 @@ webhooks:
   sideEffects: None
 - admissionReviewVersions:
   - v1
-  - v1alpha1
+  - v1beta1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /mutate-operator-cluster-x-k8s-io-v1alpha1-infrastructureprovider
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  name: vinfrastructureprovider.kb.io
+  rules:
+  - apiGroups:
+    - operator.cluster.x-k8s.io
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - infrastructureproviders
+  sideEffects: None
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: validating-webhook-configuration
+webhooks:
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /validate-operator-cluster-x-k8s-io-v1alpha1-bootstrapprovider
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  name: vbootstrapprovider.kb.io
+  rules:
+  - apiGroups:
+    - operator.cluster.x-k8s.io
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - bootstrapproviders
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /validate-operator-cluster-x-k8s-io-v1alpha1-controlplaneprovider
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  name: vcontrolplaneprovider.kb.io
+  rules:
+  - apiGroups:
+    - operator.cluster.x-k8s.io
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - controlplaneproviders
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /validate-operator-cluster-x-k8s-io-v1alpha1-coreprovider
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  name: vcoreprovider.kb.io
+  rules:
+  - apiGroups:
+    - operator.cluster.x-k8s.io
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - coreproviders
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  - v1beta1
   clientConfig:
     service:
       name: webhook-service
       namespace: system
       path: /validate-operator-cluster-x-k8s-io-v1alpha1-infrastructureprovider
   failurePolicy: Fail
+  matchPolicy: Equivalent
   name: vinfrastructureprovider.kb.io
   rules:
   - apiGroups:

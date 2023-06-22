@@ -51,6 +51,10 @@ type ProviderSpec struct {
 	// +optional
 	SecretName string `json:"secretName,omitempty"`
 
+	// SecretNamespace is the namespace of the Secret providing the configuration variables. If not specified,
+	// the namespace of the provider will be used.
+	SecretNamespace string `json:"secretNamespace,omitempty"`
+
 	// FetchConfig determines how the operator will fetch the components and metadata for the provider.
 	// If nil, the operator will try to fetch components according to default
 	// embedded fetch configuration for the given kind and `ObjectMeta.Name`.

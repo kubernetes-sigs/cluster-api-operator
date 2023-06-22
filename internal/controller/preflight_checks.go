@@ -117,7 +117,7 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 	// Validate that provided github token works and has repository access.
 	if spec.SecretName != "" {
 		secret := &corev1.Secret{}
-		key := types.NamespacedName{Namespace: provider.GetNamespace(), Name: provider.GetSpec().SecretName}
+		key := types.NamespacedName{Namespace: provider.GetSpec().SecretNamespace, Name: provider.GetSpec().SecretName}
 
 		if err := c.Get(ctx, key, secret); err != nil {
 			return ctrl.Result{}, fmt.Errorf("failed to get providers secret: %w", err)

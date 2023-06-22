@@ -38,6 +38,7 @@ func TestSecretReader(t *testing.T) {
 	fakeclient := fake.NewClientBuilder().WithObjects().Build()
 
 	secretName := "test-secret"
+	secretNamespace := "test-secret-namespace"
 	namespace := "test-namespace"
 
 	p := &phaseReconciler{
@@ -54,7 +55,8 @@ func TestSecretReader(t *testing.T) {
 				},
 				Spec: operatorv1.CoreProviderSpec{
 					ProviderSpec: operatorv1.ProviderSpec{
-						SecretName: secretName,
+						SecretName:      secretName,
+						SecretNamespace: secretNamespace,
 						FetchConfig: &operatorv1.FetchConfiguration{
 							URL: "https://example.com",
 						},
@@ -72,7 +74,7 @@ func TestSecretReader(t *testing.T) {
 	g.Expect(fakeclient.Create(ctx, &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      secretName,
-			Namespace: namespace,
+			Namespace: secretNamespace,
 		},
 		Data: map[string][]byte{
 			testKey1: []byte(testValue1),

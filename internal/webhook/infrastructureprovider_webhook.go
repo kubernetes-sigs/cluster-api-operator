@@ -18,7 +18,9 @@ package webhook
 
 import (
 	"context"
+	"fmt"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -31,13 +33,18 @@ type InfrastructureProviderWebhook struct{}
 func (r *InfrastructureProviderWebhook) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
 		WithValidator(r).
+		WithDefaulter(r).
 		For(&operatorv1.InfrastructureProvider{}).
 		Complete()
 }
 
-//+kubebuilder:webhook:verbs=create;update,path=/validate-operator-cluster-x-k8s-io-v1alpha1-infrastructureprovider,mutating=false,failurePolicy=fail,groups=operator.cluster.x-k8s.io,resources=infrastructureproviders,versions=v1alpha1,name=vinfrastructureprovider.kb.io,sideEffects=None,admissionReviewVersions=v1;v1alpha1
+//+kubebuilder:webhook:verbs=create;update,path=/validate-operator-cluster-x-k8s-io-v1alpha1-infrastructureprovider,mutating=false,failurePolicy=fail,matchPolicy=Equivalent,groups=operator.cluster.x-k8s.io,resources=infrastructureproviders,versions=v1alpha1,name=vinfrastructureprovider.kb.io,sideEffects=None,admissionReviewVersions=v1;v1beta1
+//+kubebuilder:webhook:verbs=create;update,path=/mutate-operator-cluster-x-k8s-io-v1alpha1-infrastructureprovider,mutating=true,failurePolicy=fail,matchPolicy=Equivalent,failurePolicy=fail,groups=operator.cluster.x-k8s.io,resources=infrastructureproviders,versions=v1alpha1,name=vinfrastructureprovider.kb.io,sideEffects=None,admissionReviewVersions=v1;v1beta1
 
-var _ webhook.CustomValidator = &InfrastructureProviderWebhook{}
+var (
+	_ webhook.CustomValidator = &InfrastructureProviderWebhook{}
+	_ webhook.CustomDefaulter = &InfrastructureProviderWebhook{}
+)
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type.
 func (r *InfrastructureProviderWebhook) ValidateCreate(ctx context.Context, obj runtime.Object) error {
@@ -51,5 +58,17 @@ func (r *InfrastructureProviderWebhook) ValidateUpdate(ctx context.Context, oldO
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type.
 func (r *InfrastructureProviderWebhook) ValidateDelete(_ context.Context, obj runtime.Object) error {
+	return nil
+}
+
+// Default implements webhook.Default so a webhook will be registered for the type.
+func (r *InfrastructureProviderWebhook) Default(ctx context.Context, obj runtime.Object) error {
+	infrastructureProvider, ok := obj.(*operatorv1.InfrastructureProvider)
+	if !ok {
+		return apierrors.NewBadRequest(fmt.Sprintf("expected a InfrastructureProvider but got a %T", obj))
+	}
+
+	setDefaultProviderSpec(&infrastructureProvider.Spec.ProviderSpec, infrastructureProvider.Namespace)
+
 	return nil
 }

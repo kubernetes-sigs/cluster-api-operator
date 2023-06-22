@@ -195,7 +195,7 @@ func (p *phaseReconciler) secretReader(ctx context.Context) (configclient.Reader
 	// Fetch configuration variables from the secret. See API field docs for more info.
 	if p.provider.GetSpec().SecretName != "" {
 		secret := &corev1.Secret{}
-		key := types.NamespacedName{Namespace: p.provider.GetNamespace(), Name: p.provider.GetSpec().SecretName}
+		key := types.NamespacedName{Namespace: p.provider.GetSpec().SecretNamespace, Name: p.provider.GetSpec().SecretName}
 
 		if err := p.ctrlClient.Get(ctx, key, secret); err != nil {
 			return nil, err
