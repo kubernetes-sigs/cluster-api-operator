@@ -37,7 +37,6 @@ const (
 	timeout           = 5 * time.Minute
 	operatorNamespace = "capi-operator-system"
 
-	capiVersion         = "v1.4.3"
 	previousCAPIVersion = "v1.4.2"
 
 	coreProviderName           = "cluster-api"

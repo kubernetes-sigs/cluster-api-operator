@@ -463,34 +463,34 @@ func TestPreflightChecks(t *testing.T) {
 			},
 		},
 		{
-			name:          "missing version, preflight check failed",
-			expectedError: true,
+			name: "missing version, preflight check passed",
 			providers: []genericprovider.GenericProvider{
-				&genericprovider.InfrastructureProviderWrapper{
-					InfrastructureProvider: &operatorv1.InfrastructureProvider{
+				&genericprovider.CoreProviderWrapper{
+					CoreProvider: &operatorv1.CoreProvider{
 						ObjectMeta: metav1.ObjectMeta{
-							Name:      "aws",
+							Name:      "cluster-api",
 							Namespace: namespaceName1,
 						},
 						TypeMeta: metav1.TypeMeta{
-							Kind:       "InfrastructureProvider",
+							Kind:       "CoreProvider",
 							APIVersion: "operator.cluster.x-k8s.io/v1alpha1",
 						},
-						Spec: operatorv1.InfrastructureProviderSpec{
-							ProviderSpec: operatorv1.ProviderSpec{},
+						Spec: operatorv1.CoreProviderSpec{
+							ProviderSpec: operatorv1.ProviderSpec{
+								FetchConfig: &operatorv1.FetchConfiguration{
+									URL: "https://example.com",
+								},
+							},
 						},
 					},
 				},
 			},
 			expectedCondition: clusterv1.Condition{
-				Type:     operatorv1.PreflightCheckCondition,
-				Reason:   operatorv1.IncorrectVersionFormatReason,
-				Severity: clusterv1.ConditionSeverityError,
-				Message:  "Version cannot be empty",
-				Status:   corev1.ConditionFalse,
+				Type:   operatorv1.PreflightCheckCondition,
+				Status: corev1.ConditionTrue,
 			},
-			providerList: &genericprovider.InfrastructureProviderListWrapper{
-				InfrastructureProviderList: &operatorv1.InfrastructureProviderList{},
+			providerList: &genericprovider.CoreProviderListWrapper{
+				CoreProviderList: &operatorv1.CoreProviderList{},
 			},
 		},
 		{

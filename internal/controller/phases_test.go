@@ -441,3 +441,54 @@ func TestRepositoryFactory(t *testing.T) {
 		})
 	}
 }
+
+func TestGetLatestVersion(t *testing.T) {
+	testCases := []struct {
+		name        string
+		versions    []string
+		expected    string
+		expectError bool
+	}{
+		{
+			name:        "Test empty input",
+			versions:    []string{},
+			expected:    "",
+			expectError: true,
+		},
+		{
+			name:        "Test single version",
+			versions:    []string{"v1.0.0"},
+			expected:    "v1.0.0",
+			expectError: false,
+		},
+		{
+			name:        "Test multiple versions",
+			versions:    []string{"v1.0.0", "v2.0.0", "v1.5.0"},
+			expected:    "v2.0.0",
+			expectError: false,
+		},
+		{
+			name:        "Test incorrect versions",
+			versions:    []string{"v1.0.0", "NOT_A_VERSION", "v1.5.0"},
+			expected:    "",
+			expectError: true,
+		},
+	}
+
+	g := NewWithT(t)
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := getLatestVersion(tc.versions)
+
+			if tc.expectError {
+				g.Expect(err).To(HaveOccurred())
+
+				return
+			}
+
+			g.Expect(got).To(Equal(tc.expected))
+			g.Expect(err).ToNot(HaveOccurred())
+		})
+	}
+}

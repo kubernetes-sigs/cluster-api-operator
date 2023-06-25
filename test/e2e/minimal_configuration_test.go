@@ -38,9 +38,7 @@ var _ = Describe("Create, upgrade, downgrade and delete providers with minimal s
 				Namespace: operatorNamespace,
 			},
 			Spec: operatorv1.CoreProviderSpec{
-				ProviderSpec: operatorv1.ProviderSpec{
-					Version: capiVersion,
-				},
+				ProviderSpec: operatorv1.ProviderSpec{},
 			},
 		}
 
@@ -79,7 +77,7 @@ var _ = Describe("Create, upgrade, downgrade and delete providers with minimal s
 				return false
 			}
 
-			if coreProvider.Status.InstalledVersion != nil && *coreProvider.Status.InstalledVersion == capiVersion {
+			if coreProvider.Status.InstalledVersion != nil && *coreProvider.Status.InstalledVersion == coreProvider.Spec.Version {
 				return true
 			}
 			return false
@@ -94,9 +92,7 @@ var _ = Describe("Create, upgrade, downgrade and delete providers with minimal s
 				Namespace: operatorNamespace,
 			},
 			Spec: operatorv1.BootstrapProviderSpec{
-				ProviderSpec: operatorv1.ProviderSpec{
-					Version: capiVersion,
-				},
+				ProviderSpec: operatorv1.ProviderSpec{},
 			},
 		}
 
@@ -135,7 +131,7 @@ var _ = Describe("Create, upgrade, downgrade and delete providers with minimal s
 				return false
 			}
 
-			if bootstrapProvider.Status.InstalledVersion != nil && *bootstrapProvider.Status.InstalledVersion == capiVersion {
+			if bootstrapProvider.Status.InstalledVersion != nil && *bootstrapProvider.Status.InstalledVersion == bootstrapProvider.Spec.Version {
 				return true
 			}
 			return false
@@ -163,9 +159,7 @@ var _ = Describe("Create, upgrade, downgrade and delete providers with minimal s
 				Namespace: operatorNamespace,
 			},
 			Spec: operatorv1.ControlPlaneProviderSpec{
-				ProviderSpec: operatorv1.ProviderSpec{
-					Version: capiVersion,
-				},
+				ProviderSpec: operatorv1.ProviderSpec{},
 			},
 		}
 
@@ -204,7 +198,7 @@ var _ = Describe("Create, upgrade, downgrade and delete providers with minimal s
 				return false
 			}
 
-			if cpProvider.Status.InstalledVersion != nil && *cpProvider.Status.InstalledVersion == capiVersion {
+			if cpProvider.Status.InstalledVersion != nil && *cpProvider.Status.InstalledVersion == cpProvider.Spec.Version {
 				return true
 			}
 			return false
@@ -232,9 +226,7 @@ var _ = Describe("Create, upgrade, downgrade and delete providers with minimal s
 				Namespace: operatorNamespace,
 			},
 			Spec: operatorv1.InfrastructureProviderSpec{
-				ProviderSpec: operatorv1.ProviderSpec{
-					Version: capiVersion,
-				},
+				ProviderSpec: operatorv1.ProviderSpec{},
 			},
 		}
 
@@ -273,7 +265,7 @@ var _ = Describe("Create, upgrade, downgrade and delete providers with minimal s
 				return false
 			}
 
-			if infraProvider.Status.InstalledVersion != nil && *infraProvider.Status.InstalledVersion == capiVersion {
+			if infraProvider.Status.InstalledVersion != nil && *infraProvider.Status.InstalledVersion == infraProvider.Spec.Version {
 				return true
 			}
 			return false
@@ -293,7 +285,7 @@ var _ = Describe("Create, upgrade, downgrade and delete providers with minimal s
 		}, timeout).Should(Equal(true))
 	})
 
-	It("should successfully downgrade a CoreProvider (v1.4.3 -> v1.4.2)", func() {
+	It("should successfully downgrade a CoreProvider (latest -> v1.4.2)", func() {
 		k8sclient := bootstrapClusterProxy.GetClient()
 		coreProvider := &operatorv1.CoreProvider{}
 		key := client.ObjectKey{Namespace: operatorNamespace, Name: coreProviderName}
@@ -343,13 +335,13 @@ var _ = Describe("Create, upgrade, downgrade and delete providers with minimal s
 		}, timeout).Should(Equal(true))
 	})
 
-	It("should successfully upgrade a CoreProvider (v1.4.2 -> v1.4.3)", func() {
+	It("should successfully upgrade a CoreProvider (v1.4.2 -> latest)", func() {
 		k8sclient := bootstrapClusterProxy.GetClient()
 		coreProvider := &operatorv1.CoreProvider{}
 		key := client.ObjectKey{Namespace: operatorNamespace, Name: coreProviderName}
 		Expect(k8sclient.Get(ctx, key, coreProvider)).To(Succeed())
 
-		coreProvider.Spec.Version = capiVersion
+		coreProvider.Spec.Version = ""
 
 		Expect(k8sclient.Update(ctx, coreProvider)).To(Succeed())
 
@@ -386,7 +378,7 @@ var _ = Describe("Create, upgrade, downgrade and delete providers with minimal s
 				return false
 			}
 
-			if coreProvider.Status.InstalledVersion != nil && *coreProvider.Status.InstalledVersion == capiVersion {
+			if coreProvider.Status.InstalledVersion != nil && *coreProvider.Status.InstalledVersion == coreProvider.Spec.Version {
 				return true
 			}
 			return false
@@ -401,9 +393,7 @@ var _ = Describe("Create, upgrade, downgrade and delete providers with minimal s
 				Namespace: operatorNamespace,
 			},
 			Spec: operatorv1.CoreProviderSpec{
-				ProviderSpec: operatorv1.ProviderSpec{
-					Version: capiVersion,
-				},
+				ProviderSpec: operatorv1.ProviderSpec{},
 			},
 		}
 
@@ -414,6 +404,16 @@ var _ = Describe("Create, upgrade, downgrade and delete providers with minimal s
 			deployment := &appsv1.Deployment{}
 			key := client.ObjectKey{Namespace: operatorNamespace, Name: coreProviderDeploymentName}
 			isReady, err := waitForObjectToBeDeleted(k8sclient, ctx, key, deployment)
+			if err != nil {
+				return false
+			}
+			return isReady
+		}, timeout).Should(Equal(true))
+
+		By("Waiting for the core provider object to be deleted")
+		Eventually(func() bool {
+			key := client.ObjectKey{Namespace: operatorNamespace, Name: coreProviderName}
+			isReady, err := waitForObjectToBeDeleted(k8sclient, ctx, key, coreProvider)
 			if err != nil {
 				return false
 			}
