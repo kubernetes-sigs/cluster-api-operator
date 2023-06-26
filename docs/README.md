@@ -7,15 +7,15 @@
   * [Glossary](#glossary)
   * [Prerequisites](#prerequisites)
   * [Installation](#installation)
-    + [Method 1: Apply Manifests from Release Assets](#method-1--apply-manifests-from-release-assets)
-    + [Method 2: Use Helm Charts](#method-2--use-helm-charts)
+    + [Method 1: Apply Manifests from Release Assets](#method-1-apply-manifests-from-release-assets)
+    + [Method 2: Use Helm Charts](#method-2-use-helm-charts)
   * [Configuration](#configuration)
     + [Examples of Configuration Options](#examples-of-configuration-options)
   * [Basic Cluster API Provider Installation](#basic-cluster-api-provider-installation)
     + [Installing the CoreProvider](#installing-the-coreprovider)
     + [Installing Azure Infrastructure Provider](#installing-azure-infrastructure-provider)
     + [Deleting providers](#deleting-providers)
-- [Custom Resource Definitions (CRDs)](#custom-resource-definitions--crds-)
+- [Custom Resource Definitions (CRDs)](#custom-resource-definitions-crds)
   * [Overview](#overview-1)
   * [Provider Spec](#provider-spec)
   * [Provider Status](#provider-status)
@@ -186,7 +186,7 @@ metadata:
  name: azure
  namespace: capz-system
 spec:
- version: v1.9.2
+ version: v1.9.3
  secretName: azure-variables
 ```
 
@@ -265,7 +265,8 @@ The following sections provide details about `ProviderSpec` and `ProviderStatus`
    - Version (string): provider version (e.g., "v0.1.0")
    - Manager (optional ManagerSpec): controller manager properties for the provider
    - Deployment (optional DeploymentSpec): deployment properties for the provider
-   - SecretName (optional string): secret containing provider credentials
+   - SecretName (optional string): name of the secret that contains provider credentials
+   - SecretNamespace (optional string): namespace of the secret that contains provider credentials
    - FetchConfig (optional FetchConfiguration): how the operator will fetch components and metadata
 
    YAML example:
@@ -309,6 +310,8 @@ The following sections provide details about `ProviderSpec` and `ProviderStatus`
    - Tolerations (optional []corev1.Toleration): pod tolerations
    - Affinity (optional corev1.Affinity): pod scheduling constraints
    - Containers (optional []ContainerSpec): list of deployment containers
+   - ServiceAccountName (optional string): pod service account
+   - ImagePullSecrets (optional []corev1.LocalObjectReference): list of image pull secrets specified in the Deployment
 
    YAML example:
    ```yaml
@@ -446,18 +449,19 @@ spec:
    # These top level controller manager flags, supported by all the providers.
    # These flags come with sensible defaults, thus requiring no or minimal
    # changes for the most common scenarios.
-   metricsAddress: ":8181"
-   syncPeriod: 660
+   metrics:
+    bindAddress: ":8181"
+   syncPeriod: "500s"
  fetchConfig:
    url: https://github.com/kubernetes-sigs/cluster-api-provider-aws/releases
  deployment:
    containers:
    - name: manager
      args:
-        # These are controller flags that are specific to a provider; usage
-        # is reserved for advanced scenarios only.
-        awscluster-concurrency: 12
-        awsmachine-concurrency: 11
+      # These are controller flags that are specific to a provider; usage
+      # is reserved for advanced scenarios only.
+      "--awscluster-concurrency": "12"
+      "--awsmachine-concurrency": "11"
 ```
 
 2. As an admin, I want to install aws infrastructure provider but override the container image of the CAPA deployment.
@@ -515,7 +519,7 @@ metadata:
  name: myazure
  namespace: capz-system
 spec:
- version: v1.9.2
+ version: v1.9.3
  secretName: azure-variables
  fetchConfig:
    url: https://github.com/myorg/awesome-azure-provider/releases
@@ -611,7 +615,7 @@ As an admin, I need to fetch the Azure provider components from within the clust
 
 In this example, there is a ConfigMap in the `capz-system` namespace that defines the components and metadata of the provider.
 
-The Azure InfrastructureProvider is configured with a `fetchConfig` specifying the label selector, allowing the operator to determine the available versions of the Azure provider. Since the provider's version is marked as `v1.9.2`, the operator uses the components information from the ConfigMap with matching label to install the Azure provider.
+The Azure InfrastructureProvider is configured with a `fetchConfig` specifying the label selector, allowing the operator to determine the available versions of the Azure provider. Since the provider's version is marked as `v1.9.3`, the operator uses the components information from the ConfigMap with matching label to install the Azure provider.
 
 ```yaml
 ---
@@ -620,11 +624,11 @@ kind: ConfigMap
 metadata:
   labels:
     provider-components: azure
-  name: v1.9.2
+  name: v1.9.3
   namespace: capz-system
 data:
   components: |
-    # Components for v1.9.2 YAML go here
+    # Components for v1.9.3 YAML go here
   metadata: |
     # Metadata information goes here
 ---
@@ -634,7 +638,7 @@ metadata:
   name: azure
   namespace: capz-system
 spec:
-  version: v1.9.2
+  version: v1.9.3
   secretName: azure-variables
   fetchConfig:
     selector:
