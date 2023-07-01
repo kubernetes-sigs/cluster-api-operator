@@ -564,10 +564,12 @@ func TestCustomizeDeployment(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			deployment := managerDepl.DeepCopy()
-			customizeDeployment(operatorv1.ProviderSpec{
+			if err := customizeDeployment(operatorv1.ProviderSpec{
 				Deployment: tc.inputDeploymentSpec,
 				Manager:    tc.inputManagerSpec,
-			}, deployment)
+			}, deployment); err != nil {
+				t.Error(err)
+			}
 
 			if ds, expected := tc.expectedDeploymentSpec(&deployment.Spec); !expected {
 				t.Error(cmp.Diff(ds, deployment.Spec))
