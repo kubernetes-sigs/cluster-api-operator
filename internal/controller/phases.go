@@ -131,15 +131,6 @@ func (p *phaseReconciler) initializePhaseReconciler(ctx context.Context) (reconc
 		return reconcile.Result{}, wrapPhaseError(err, operatorv1.UnknownProviderReason)
 	}
 
-	spec := p.provider.GetSpec()
-
-	// Store some provider specific inputs for passing it to clusterctl library
-	p.options = repository.ComponentsOptions{
-		TargetNamespace:     p.provider.GetNamespace(),
-		SkipTemplateProcess: false,
-		Version:             spec.Version,
-	}
-
 	return reconcile.Result{}, nil
 }
 
@@ -165,6 +156,22 @@ func (p *phaseReconciler) load(ctx context.Context) (reconcile.Result, error) {
 	p.repo, err = p.configmapRepository(ctx, labelSelector)
 	if err != nil {
 		return reconcile.Result{}, wrapPhaseError(err, "failed to load the repository")
+	}
+
+	if spec.Version == "" {
+		// User didn't set the version, so we need to find the latest one from the matching config maps.
+		repoVersions, err := p.repo.GetVersions()
+		if err != nil {
+			return reconcile.Result{}, wrapPhaseError(err, fmt.Sprintf("failed to get a list of available versions for provider %q", p.provider.GetName()))
+		}
+
+		spec.Version, err = getLatestVersion(repoVersions)
+		if err != nil {
+			return reconcile.Result{}, wrapPhaseError(err, fmt.Sprintf("failed to get the latest version for provider %q", p.provider.GetName()))
+		}
+
+		// Add latest version to the provider spec.
+		p.provider.SetSpec(spec)
 	}
 
 	// Store some provider specific inputs for passing it to clusterctl library
@@ -475,4 +482,28 @@ func repositoryFactory(providerConfig configclient.Provider, configVariablesClie
 	}
 
 	return nil, fmt.Errorf("invalid provider url. Only GitHub and GitLab are supported for %q schema", rURL.Scheme)
+}
+
+func getLatestVersion(repoVersions []string) (string, error) {
+	if len(repoVersions) == 0 {
+		err := fmt.Errorf("no versions available")
+
+		return "", wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason)
+	}
+
+	// Initialize latest version with the first element value.
+	latestVersion := versionutil.MustParseSemantic(repoVersions[0])
+
+	for _, versionString := range repoVersions {
+		parsedVersion, err := versionutil.ParseSemantic(versionString)
+		if err != nil {
+			return "", wrapPhaseError(err, fmt.Sprintf("cannot parse version string: %s", versionString))
+		}
+
+		if latestVersion.LessThan(parsedVersion) {
+			latestVersion = parsedVersion
+		}
+	}
+
+	return "v" + latestVersion.String(), nil
 }

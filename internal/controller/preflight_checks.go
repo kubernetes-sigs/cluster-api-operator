@@ -46,7 +46,6 @@ var (
 	capiVersionIncompatibilityMessage            = "CAPI operator is only compatible with %s providers, detected %s for provider %s."
 	invalidGithubTokenMessage                    = "Invalid github token, please check your github token value and its permissions" //nolint:gosec
 	waitingForCoreProviderReadyMessage           = "Waiting for the core provider to be installed."
-	emptyVersionMessage                          = "Version cannot be empty"
 )
 
 // preflightChecks performs preflight checks before installing provider.
@@ -57,30 +56,19 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 
 	spec := provider.GetSpec()
 
-	// Check that provider version is not empty.
-	if spec.Version == "" {
-		log.Info("Version can't be empty")
-		conditions.Set(provider, conditions.FalseCondition(
-			operatorv1.PreflightCheckCondition,
-			operatorv1.EmptyVersionReason,
-			clusterv1.ConditionSeverityError,
-			emptyVersionMessage,
-		))
+	// Check that provider version contains a valid value if it's not empty.
+	if spec.Version != "" {
+		if _, err := version.ParseSemantic(spec.Version); err != nil {
+			log.Info("Version contains invalid value")
+			conditions.Set(provider, conditions.FalseCondition(
+				operatorv1.PreflightCheckCondition,
+				operatorv1.IncorrectVersionFormatReason,
+				clusterv1.ConditionSeverityError,
+				err.Error(),
+			))
 
-		return ctrl.Result{}, fmt.Errorf("version can't be empty for provider %s", provider.GetName())
-	}
-
-	// Check that provider version contains a valid value.
-	if _, err := version.ParseSemantic(spec.Version); err != nil {
-		log.Info("Version contains invalid value")
-		conditions.Set(provider, conditions.FalseCondition(
-			operatorv1.PreflightCheckCondition,
-			operatorv1.IncorrectVersionFormatReason,
-			clusterv1.ConditionSeverityError,
-			err.Error(),
-		))
-
-		return ctrl.Result{}, fmt.Errorf("version contains invalid value for provider %s", provider.GetName())
+			return ctrl.Result{}, fmt.Errorf("version contains invalid value for provider %q", provider.GetName())
+		}
 	}
 
 	// Check that if a predefined provider is being installed, and if it's not - ensure that FetchConfig is specified.

@@ -21,6 +21,7 @@ import (
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha1"
@@ -75,15 +76,25 @@ func (p *phaseReconciler) downloadManifests(ctx context.Context) (reconcile.Resu
 		return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason)
 	}
 
+	spec := p.provider.GetSpec()
+
+	if spec.Version == "" {
+		// User didn't set the version, try to get repository default.
+		spec.Version = repo.DefaultVersion()
+
+		// Add version to the provider spec.
+		p.provider.SetSpec(spec)
+	}
+
 	// Fetch the provider metadata and components yaml files from the provided repository GitHub/GitLab.
-	metadataFile, err := repo.GetFile(p.options.Version, metadataFile)
+	metadataFile, err := repo.GetFile(spec.Version, metadataFile)
 	if err != nil {
 		err = fmt.Errorf("failed to read %q from the repository for provider %q: %w", metadataFile, p.provider.GetName(), err)
 
 		return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason)
 	}
 
-	componentsFile, err := repo.GetFile(p.options.Version, repo.ComponentsPath())
+	componentsFile, err := repo.GetFile(spec.Version, repo.ComponentsPath())
 	if err != nil {
 		err = fmt.Errorf("failed to read %q from the repository for provider %q: %w", componentsFile, p.provider.GetName(), err)
 
@@ -156,5 +167,9 @@ func (p *phaseReconciler) createManifestsConfigMap(ctx context.Context, metadata
 		},
 	})
 
-	return p.ctrlClient.Create(ctx, configMap)
+	if err := p.ctrlClient.Create(ctx, configMap); err != nil && !apierrors.IsAlreadyExists(err) {
+		return err
+	}
+
+	return nil
 }
