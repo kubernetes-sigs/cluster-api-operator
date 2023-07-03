@@ -73,7 +73,9 @@ func customizeObjectsFn(provider genericprovider.GenericProvider) func(objs []un
 					return nil, err
 				}
 
-				customizeDeployment(provider.GetSpec(), d)
+				if err := customizeDeployment(provider.GetSpec(), d); err != nil {
+					return nil, err
+				}
 
 				if err := scheme.Scheme.Convert(d, &o, nil); err != nil {
 					return nil, err
@@ -88,51 +90,68 @@ func customizeObjectsFn(provider genericprovider.GenericProvider) func(objs []un
 }
 
 // customizeDeployment customize provider deployment base on provider spec input.
-func customizeDeployment(pSpec operatorv1.ProviderSpec, d *appsv1.Deployment) {
+func customizeDeployment(pSpec operatorv1.ProviderSpec, d *appsv1.Deployment) error {
+	// Customize deployment spec first.
 	if pSpec.Deployment != nil {
-		dSpec := pSpec.Deployment
-
-		if dSpec.Replicas != nil {
-			d.Spec.Replicas = pointer.Int32(int32(*dSpec.Replicas))
-		}
-
-		if dSpec.Affinity != nil {
-			d.Spec.Template.Spec.Affinity = dSpec.Affinity
-		}
-
-		if dSpec.NodeSelector != nil {
-			d.Spec.Template.Spec.NodeSelector = dSpec.NodeSelector
-		}
-
-		if dSpec.Tolerations != nil {
-			d.Spec.Template.Spec.Tolerations = dSpec.Tolerations
-		}
-
-		if dSpec.ServiceAccountName != "" {
-			d.Spec.Template.Spec.ServiceAccountName = dSpec.ServiceAccountName
-		}
-
-		if dSpec.ImagePullSecrets != nil {
-			d.Spec.Template.Spec.ImagePullSecrets = dSpec.ImagePullSecrets
-		}
-
-		for _, pc := range dSpec.Containers {
-			customizeContainer(pc, d)
-		}
+		customizeDeploymentSpec(pSpec, d)
 	}
 
-	// run the customizeManager last so it overrides anything in the deploymentSpec.
+	// Run the customizeManagerContainer after so it overrides anything in the deploymentSpec.
 	if pSpec.Manager != nil {
-		for ic, c := range d.Spec.Template.Spec.Containers {
-			if c.Name == managerContainerName {
-				customizeManager(pSpec.Manager, &d.Spec.Template.Spec.Containers[ic])
-			}
+		container := findManagerContainer(&d.Spec)
+		if container == nil {
+			return fmt.Errorf("cannot find %q container in deployment %q", managerContainerName, d.Name)
 		}
+
+		customizeManagerContainer(pSpec.Manager, container)
+	}
+
+	return nil
+}
+
+func customizeDeploymentSpec(pSpec operatorv1.ProviderSpec, d *appsv1.Deployment) {
+	dSpec := pSpec.Deployment
+
+	if dSpec.Replicas != nil {
+		d.Spec.Replicas = pointer.Int32(int32(*dSpec.Replicas))
+	}
+
+	if dSpec.Affinity != nil {
+		d.Spec.Template.Spec.Affinity = dSpec.Affinity
+	}
+
+	if dSpec.NodeSelector != nil {
+		d.Spec.Template.Spec.NodeSelector = dSpec.NodeSelector
+	}
+
+	if dSpec.Tolerations != nil {
+		d.Spec.Template.Spec.Tolerations = dSpec.Tolerations
+	}
+
+	if dSpec.ServiceAccountName != "" {
+		d.Spec.Template.Spec.ServiceAccountName = dSpec.ServiceAccountName
+	}
+
+	if dSpec.ImagePullSecrets != nil {
+		d.Spec.Template.Spec.ImagePullSecrets = dSpec.ImagePullSecrets
+	}
+
+	for _, pc := range dSpec.Containers {
+		customizeContainer(pc, d)
 	}
 }
 
-// customizeManager customize manager container base on provider spec input.
-func customizeManager(mSpec *operatorv1.ManagerSpec, c *corev1.Container) {
+// findManagerContainer finds manager container in the provider deployment.
+func findManagerContainer(dSpec *appsv1.DeploymentSpec) *corev1.Container {
+	for ic := range dSpec.Template.Spec.Containers {
+		return &dSpec.Template.Spec.Containers[ic]
+	}
+
+	return nil
+}
+
+// customizeManagerContainer customize manager container base on provider spec input.
+func customizeManagerContainer(mSpec *operatorv1.ManagerSpec, c *corev1.Container) {
 	// ControllerManagerConfigurationSpec fields
 	if mSpec.Controller != nil {
 		// TODO can't find an arg for CacheSyncTimeout
