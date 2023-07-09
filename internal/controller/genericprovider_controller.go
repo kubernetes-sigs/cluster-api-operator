@@ -133,6 +133,12 @@ func (r *GenericProviderReconciler) Reconcile(ctx context.Context, req reconcile
 
 	// Set the spec hash annotation if reconciliation was successful or reset it otherwise.
 	if res.IsZero() && err == nil {
+		// Recalculate spec hash in case it was changed during reconciliation process.
+		specHash, err = calculateHash(typedProvider.GetSpec())
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+
 		annotations[appliedSpecHashAnnotation] = specHash
 	} else {
 		annotations[appliedSpecHashAnnotation] = ""

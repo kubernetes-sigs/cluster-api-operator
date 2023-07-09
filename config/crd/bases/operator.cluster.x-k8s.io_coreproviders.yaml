@@ -1458,8 +1458,6 @@ spec:
               version:
                 description: Version indicates the provider version.
                 type: string
-            required:
-            - version
             type: object
           status:
             description: CoreProviderStatus defines the observed state of CoreProvider.
