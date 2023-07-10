@@ -144,6 +144,9 @@ issues:
     - "missing cases in switch of type v1.PlatformType: (\\.*)"
   exclude-use-default: false
   exclude-rules:
+    - linters:
+      - staticcheck
+      text: "SA1019: (\"sigs.k8s.io/controller-runtime/pkg/config/v1alpha1\"|ctrlconfigv1.*) is deprecated: The component config package has been deprecated and will be removed in a future release."
     # Exclude some linters from running on tests files.
     - path: _test\.go
       linters:

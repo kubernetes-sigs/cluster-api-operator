@@ -25,6 +25,7 @@ import (
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 type CoreProviderWebhook struct{}
@@ -46,18 +47,18 @@ var (
 )
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type.
-func (r *CoreProviderWebhook) ValidateCreate(ctx context.Context, obj runtime.Object) error {
-	return nil
+func (r *CoreProviderWebhook) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+	return nil, nil
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type.
-func (r *CoreProviderWebhook) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) error {
-	return nil
+func (r *CoreProviderWebhook) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
+	return nil, nil
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type.
-func (r *CoreProviderWebhook) ValidateDelete(_ context.Context, obj runtime.Object) error {
-	return nil
+func (r *CoreProviderWebhook) ValidateDelete(_ context.Context, obj runtime.Object) (admission.Warnings, error) {
+	return nil, nil
 }
 
 // Default implements webhook.Default so a webhook will be registered for the type.

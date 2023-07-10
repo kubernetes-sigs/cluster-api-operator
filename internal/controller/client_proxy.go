@@ -101,13 +101,6 @@ func (k *controllerProxy) ListResources(labels map[string]string, namespaces ...
 			},
 		},
 		{
-			GroupVersion: "cert-manager.io/v1",
-			APIResources: []metav1.APIResource{
-				{Kind: "Certificate", Namespaced: true},
-				{Kind: "Issuer", Namespaced: true},
-			},
-		},
-		{
 			GroupVersion: "rbac.authorization.k8s.io/v1",
 			APIResources: []metav1.APIResource{
 				{Kind: "Role", Namespaced: true},

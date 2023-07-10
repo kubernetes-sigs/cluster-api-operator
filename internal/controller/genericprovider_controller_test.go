@@ -555,7 +555,7 @@ func TestProviderSpecChanges(t *testing.T) {
 			specHash, err := calculateHash(tc.spec)
 			g.Expect(err).ToNot(HaveOccurred())
 
-			updatedSpecHash, err := calculateHash(tc.spec)
+			updatedSpecHash, err := calculateHash(tc.updatedSpec)
 			g.Expect(err).ToNot(HaveOccurred())
 
 			provider := &genericprovider.CoreProviderWrapper{
