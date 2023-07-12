@@ -126,6 +126,9 @@ CONTROLLER_IMG_TAG ?= $(CONTROLLER_IMG)-$(ARCH):$(TAG)
 # Set build time variables including version details
 LDFLAGS := $(shell $(ROOT)/hack/version.sh)
 
+# Default cert-manager version
+CERT_MANAGER_VERSION ?= v1.12.2
+
 # E2E configuration
 GINKGO_NOCOLOR ?= false
 GINKGO_ARGS ?=
@@ -134,7 +137,7 @@ E2E_CONF_FILE ?= $(ROOT)/test/e2e/config/operator-dev.yaml
 E2E_CONF_FILE_ENVSUBST ?= $(ROOT)/test/e2e/config/operator-dev-envsubst.yaml
 SKIP_CLEANUP ?= false
 SKIP_CREATE_MGMT_CLUSTER ?= false
-E2E_CERT_MANAGER_VERSION ?= v1.11.1
+E2E_CERT_MANAGER_VERSION ?= $(CERT_MANAGER_VERSION)
 E2E_OPERATOR_IMAGE ?= $(CONTROLLER_IMG):$(TAG)
 
 # Relase
@@ -414,6 +417,7 @@ release-manifests: $(KUSTOMIZE) $(RELEASE_DIR) ## Builds the manifests to publis
 release-chart: $(HELM) $(KUSTOMIZE) $(RELEASE_DIR) $(CHART_DIR) $(CHART_PACKAGE_DIR) ## Builds the chart to publish with a release
 	$(KUSTOMIZE) build ./config/chart > $(CHART_DIR)/templates/operator-components.yaml
 	cp -rf $(ROOT)/hack/chart/. $(CHART_DIR)
+	./hack/inject-cert-manager-helm.sh $(CERT_MANAGER_VERSION)
 	$(HELM) package $(CHART_DIR) --app-version=$(HELM_CHART_TAG) --version=$(HELM_CHART_TAG) --destination=$(CHART_PACKAGE_DIR)
 
 .PHONY: release-staging
