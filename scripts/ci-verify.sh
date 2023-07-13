@@ -21,5 +21,5 @@ set -o pipefail
 REPO_ROOT=$(dirname "${BASH_SOURCE[0]}")/..
 cd "${REPO_ROOT}" || exit 1
 
-echo "*** Verifying Cluster API ***"
+echo "*** Verifying Cluster API Operator ***"
 make verify
