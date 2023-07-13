@@ -23,6 +23,9 @@ ROOT:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 
 .DEFAULT_GOAL:=help
 
+GO_VERSION ?= 1.20.4
+GO_CONTAINER_IMAGE ?= docker.io/library/golang:$(GO_VERSION)
+
 # Use GOPROXY environment variable if set
 GOPROXY := $(shell go env GOPROXY)
 ifeq ($(GOPROXY),)
@@ -318,12 +321,12 @@ modules: ## Runs go mod to ensure modules are up to date.
 .PHONY: docker-pull-prerequisites
 docker-pull-prerequisites:
 	docker pull docker.io/docker/dockerfile:1.4
-	docker pull docker.io/library/golang:1.19.0
+	docker pull $(GO_CONTAINER_IMAGE)
 	docker pull gcr.io/distroless/static:latest
 
 .PHONY: docker-build
 docker-build: docker-pull-prerequisites ## Build the docker image for controller-manager
-	docker build --build-arg goproxy=$(GOPROXY) --build-arg ARCH=$(ARCH) --build-arg LDFLAGS="$(LDFLAGS)" . -t $(CONTROLLER_IMG_TAG)
+	docker build --build-arg builder_image=$(GO_CONTAINER_IMAGE) --build-arg goproxy=$(GOPROXY) --build-arg ARCH=$(ARCH) --build-arg LDFLAGS="$(LDFLAGS)" . -t $(CONTROLLER_IMG_TAG)
 
 .PHONY: docker-push
 docker-push: ## Push the docker image
