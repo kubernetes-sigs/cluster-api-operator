@@ -11,7 +11,7 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
-      path: /mutate-operator-cluster-x-k8s-io-v1alpha1-bootstrapprovider
+      path: /mutate-operator-cluster-x-k8s-io-v1alpha2-bootstrapprovider
   failurePolicy: Fail
   matchPolicy: Equivalent
   name: vbootstrapprovider.kb.io
@@ -19,7 +19,7 @@ webhooks:
   - apiGroups:
     - operator.cluster.x-k8s.io
     apiVersions:
-    - v1alpha1
+    - v1alpha2
     operations:
     - CREATE
     - UPDATE
@@ -33,7 +33,7 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
-      path: /mutate-operator-cluster-x-k8s-io-v1alpha1-controlplaneprovider
+      path: /mutate-operator-cluster-x-k8s-io-v1alpha2-controlplaneprovider
   failurePolicy: Fail
   matchPolicy: Equivalent
   name: vcontrolplaneprovider.kb.io
@@ -41,7 +41,7 @@ webhooks:
   - apiGroups:
     - operator.cluster.x-k8s.io
     apiVersions:
-    - v1alpha1
+    - v1alpha2
     operations:
     - CREATE
     - UPDATE
@@ -55,7 +55,7 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
-      path: /mutate-operator-cluster-x-k8s-io-v1alpha1-coreprovider
+      path: /mutate-operator-cluster-x-k8s-io-v1alpha2-coreprovider
   failurePolicy: Fail
   matchPolicy: Equivalent
   name: vcoreprovider.kb.io
@@ -63,7 +63,7 @@ webhooks:
   - apiGroups:
     - operator.cluster.x-k8s.io
     apiVersions:
-    - v1alpha1
+    - v1alpha2
     operations:
     - CREATE
     - UPDATE
@@ -77,7 +77,7 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
-      path: /mutate-operator-cluster-x-k8s-io-v1alpha1-infrastructureprovider
+      path: /mutate-operator-cluster-x-k8s-io-v1alpha2-infrastructureprovider
   failurePolicy: Fail
   matchPolicy: Equivalent
   name: vinfrastructureprovider.kb.io
@@ -85,7 +85,7 @@ webhooks:
   - apiGroups:
     - operator.cluster.x-k8s.io
     apiVersions:
-    - v1alpha1
+    - v1alpha2
     operations:
     - CREATE
     - UPDATE
@@ -105,7 +105,7 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
-      path: /validate-operator-cluster-x-k8s-io-v1alpha1-bootstrapprovider
+      path: /validate-operator-cluster-x-k8s-io-v1alpha2-bootstrapprovider
   failurePolicy: Fail
   matchPolicy: Equivalent
   name: vbootstrapprovider.kb.io
@@ -113,7 +113,7 @@ webhooks:
   - apiGroups:
     - operator.cluster.x-k8s.io
     apiVersions:
-    - v1alpha1
+    - v1alpha2
     operations:
     - CREATE
     - UPDATE
@@ -127,7 +127,7 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
-      path: /validate-operator-cluster-x-k8s-io-v1alpha1-controlplaneprovider
+      path: /validate-operator-cluster-x-k8s-io-v1alpha2-controlplaneprovider
   failurePolicy: Fail
   matchPolicy: Equivalent
   name: vcontrolplaneprovider.kb.io
@@ -135,7 +135,7 @@ webhooks:
   - apiGroups:
     - operator.cluster.x-k8s.io
     apiVersions:
-    - v1alpha1
+    - v1alpha2
     operations:
     - CREATE
     - UPDATE
@@ -149,7 +149,7 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
-      path: /validate-operator-cluster-x-k8s-io-v1alpha1-coreprovider
+      path: /validate-operator-cluster-x-k8s-io-v1alpha2-coreprovider
   failurePolicy: Fail
   matchPolicy: Equivalent
   name: vcoreprovider.kb.io
@@ -157,7 +157,7 @@ webhooks:
   - apiGroups:
     - operator.cluster.x-k8s.io
     apiVersions:
-    - v1alpha1
+    - v1alpha2
     operations:
     - CREATE
     - UPDATE
@@ -171,7 +171,7 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
-      path: /validate-operator-cluster-x-k8s-io-v1alpha1-infrastructureprovider
+      path: /validate-operator-cluster-x-k8s-io-v1alpha2-infrastructureprovider
   failurePolicy: Fail
   matchPolicy: Equivalent
   name: vinfrastructureprovider.kb.io
@@ -179,7 +179,7 @@ webhooks:
   - apiGroups:
     - operator.cluster.x-k8s.io
     apiVersions:
-    - v1alpha1
+    - v1alpha2
     operations:
     - CREATE
     - UPDATE

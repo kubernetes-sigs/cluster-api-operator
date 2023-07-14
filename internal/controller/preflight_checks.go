@@ -25,7 +25,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/version"
-	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha1"
+	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
 	"sigs.k8s.io/cluster-api-operator/internal/controller/genericprovider"
 	"sigs.k8s.io/cluster-api-operator/util"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
@@ -118,9 +118,9 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 	}
 
 	// Validate that provided github token works and has repository access.
-	if spec.SecretName != "" {
+	if spec.ConfigSecret != nil {
 		secret := &corev1.Secret{}
-		key := types.NamespacedName{Namespace: provider.GetSpec().SecretNamespace, Name: provider.GetSpec().SecretName}
+		key := types.NamespacedName{Namespace: provider.GetSpec().ConfigSecret.Namespace, Name: provider.GetSpec().ConfigSecret.Name}
 
 		if err := c.Get(ctx, key, secret); err != nil {
 			return ctrl.Result{}, fmt.Errorf("failed to get providers secret: %w", err)

@@ -103,7 +103,7 @@ linters-settings:
         - "disableStutteringCheck"
   stylecheck:
     # https://staticcheck.io/docs/options#checks
-    checks: ["all", "-ST1000"]
+    checks: ["all", "-ST1000", "-ST1003", "-ST1016"]
     dot-import-whitelist:
       - "github.com/onsi/gomega"
   importas:
@@ -134,6 +134,8 @@ linters-settings:
         alias: configclient
       # CAPI Operator
       - pkg: sigs.k8s.io/cluster-api-operator/api/v1alpha1
+        alias: operatorv1alpha1
+      - pkg: sigs.k8s.io/cluster-api-operator/api/v1alpha2
         alias: operatorv1
       - pkg: sigs.k8s.io/cluster-api-operator/internal/controller
         alias: providercontroller

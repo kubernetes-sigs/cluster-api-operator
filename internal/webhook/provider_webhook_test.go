@@ -22,7 +22,7 @@ import (
 
 	. "github.com/onsi/gomega"
 
-	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha1"
+	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
 )
 
 func TestSetDefaultProviderSpec(t *testing.T) {
@@ -35,24 +35,32 @@ func TestSetDefaultProviderSpec(t *testing.T) {
 		{
 			name: "shoud default secret namespace if not specified",
 			providerSpec: &operatorv1.ProviderSpec{
-				SecretName: "test-secret",
+				ConfigSecret: &operatorv1.SecretReference{
+					Name: "test-secret",
+				},
 			},
 			namespace: "test-namespace",
 			expectedProviderSpec: &operatorv1.ProviderSpec{
-				SecretName:      "test-secret",
-				SecretNamespace: "test-namespace",
+				ConfigSecret: &operatorv1.SecretReference{
+					Name:      "test-secret",
+					Namespace: "test-namespace",
+				},
 			},
 		},
 		{
 			name: "shoud not default secret namespace if specified",
 			providerSpec: &operatorv1.ProviderSpec{
-				SecretName:      "test-secret",
-				SecretNamespace: "test-namespace-1",
+				ConfigSecret: &operatorv1.SecretReference{
+					Name:      "test-secret",
+					Namespace: "test-namespace-1",
+				},
 			},
 			namespace: "test-namespace-2",
 			expectedProviderSpec: &operatorv1.ProviderSpec{
-				SecretName:      "test-secret",
-				SecretNamespace: "test-namespace-1",
+				ConfigSecret: &operatorv1.SecretReference{
+					Name:      "test-secret",
+					Namespace: "test-namespace-1",
+				},
 			},
 		},
 		{
