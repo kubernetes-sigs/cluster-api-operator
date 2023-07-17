@@ -147,7 +147,7 @@ E2E_OPERATOR_IMAGE ?= $(CONTROLLER_IMG):$(TAG)
 RELEASE_TAG ?= $(shell git describe --abbrev=0 2>/dev/null)
 HELM_CHART_TAG := $(shell echo $(RELEASE_TAG) | cut -c 2-)
 RELEASE_ALIAS_TAG ?= $(PULL_BASE_REF)
-RELEASE_DIR := out
+RELEASE_DIR := $(ROOT)/out
 CHART_DIR := $(RELEASE_DIR)/charts/cluster-api-operator
 CHART_PACKAGE_DIR := $(RELEASE_DIR)/package
 
@@ -416,10 +416,10 @@ chart-manifest-modification: # Set the manifest images to the staging/production
 .PHONY: release-manifests
 release-manifests: $(KUSTOMIZE) $(RELEASE_DIR) ## Builds the manifests to publish with a release
 	$(KUSTOMIZE) build ./config/default > $(RELEASE_DIR)/operator-components.yaml
-
+	
 release-chart: $(HELM) $(KUSTOMIZE) $(RELEASE_DIR) $(CHART_DIR) $(CHART_PACKAGE_DIR) ## Builds the chart to publish with a release
+	cp -rf $(ROOT)/hack/charts/cluster-api-operator/. $(CHART_DIR)
 	$(KUSTOMIZE) build ./config/chart > $(CHART_DIR)/templates/operator-components.yaml
-	cp -rf $(ROOT)/hack/chart/. $(CHART_DIR)
 	./hack/inject-cert-manager-helm.sh $(CERT_MANAGER_VERSION)
 	$(HELM) package $(CHART_DIR) --app-version=$(HELM_CHART_TAG) --version=$(HELM_CHART_TAG) --destination=$(CHART_PACKAGE_DIR)
 
@@ -471,12 +471,14 @@ clean-release: ## Remove the release folder
 .PHONY: test-e2e
 test-e2e: $(KUSTOMIZE)
 	$(MAKE) release-manifests
+	$(MAKE) release-chart
 	$(MAKE) test-e2e-run
 
 .PHONY: test-e2e-run
-test-e2e-run: $(GINKGO) $(ENVSUBST) ## Run e2e tests
+test-e2e-run: $(GINKGO) $(ENVSUBST) $(HELM) ## Run e2e tests
 	E2E_OPERATOR_IMAGE=$(E2E_OPERATOR_IMAGE) E2E_CERT_MANAGER_VERSION=$(E2E_CERT_MANAGER_VERSION) $(ENVSUBST) < $(E2E_CONF_FILE) > $(E2E_CONF_FILE_ENVSUBST) && \
 	$(GINKGO) -v -trace -tags=e2e --junit-report=junit_cluster_api_operator_e2e.xml --output-dir="${JUNIT_REPORT_DIR}" --no-color=$(GINKGO_NOCOLOR) $(GINKGO_ARGS) ./test/e2e -- \
 		-e2e.artifacts-folder="$(ARTIFACTS)" \
-		-e2e.config="$(E2E_CONF_FILE_ENVSUBST)"  -e2e.components=$(ROOT)/$(RELEASE_DIR)/operator-components.yaml \
-		-e2e.skip-resource-cleanup=$(SKIP_CLEANUP) -e2e.use-existing-cluster=$(SKIP_CREATE_MGMT_CLUSTER) $(E2E_ARGS)
+		-e2e.config="$(E2E_CONF_FILE_ENVSUBST)"  -e2e.components=$(RELEASE_DIR)/operator-components.yaml \
+		-e2e.skip-resource-cleanup=$(SKIP_CLEANUP) -e2e.use-existing-cluster=$(SKIP_CREATE_MGMT_CLUSTER) \
+		-e2e.helm-binary-path=$(HELM) -e2e.chart-path=$(CHART_PACKAGE_DIR)/cluster-api-operator-$(HELM_CHART_TAG).tgz $(E2E_ARGS)
