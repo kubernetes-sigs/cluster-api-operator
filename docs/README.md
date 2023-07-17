@@ -84,6 +84,26 @@ helm repo update
 helm install capi-operator capi-operator/cluster-api-operator --create-namespace -n capi-operator-system
 ```
 
+The operator Helm chart supports a "quickstart" option for bootstrapping a management cluster. The user experience is relatively similar to [clusterctl init](https://cluster-api.sigs.k8s.io/clusterctl/commands/init.html?highlight=init#clusterctl-init):
+
+```bash
+helm install capi-operator capi-operator/cluster-api-operator --create-namespace -n capi-operator-system --set infrastructure=docker:v1.4.2  --wait # core Cluster API with kubeadm bootstrap and control plane providers will also be installed 
+```
+
+```bash
+helm install capi-operator capi-operator/cluster-api-operator --create-namespace -n capi-operator-system —set infrastructure=docker,azure  --wait # core Cluster API with kubeadm bootstrap and control plane providers will also be installed 
+```
+
+```bash
+helm install capi-operator capi-operator/cluster-api-operator --create-namespace -n capi-operator-system —set infrastructure="capd-custom-ns:docker:v1.4.2;capz-custom-ns:azure:v1.10.0"  --wait # core Cluster API with kubeadm bootstrap and control plane providers will also be installed 
+```
+
+```bash
+helm install capi-operator capi-operator/cluster-api-operator --create-namespace -n capi-operator-system --set core=cluster-api:v1.4.2 --set controlPlane=kubeadm:v1.4.2 --set bootstrap=kubeadm:v1.4.2  --set infrastructure=docker:v1.4.2  --wait
+```
+
+For more complex operations, please refer to our API documentation.
+
 ⚠️ **Note:** Make sure to review and adjust the RBAC permissions as needed. The operator will create and update CRDs, so appropriate permissions should be granted. We are continuously working to determine the best way to handle this.
 
 ## Configuration
