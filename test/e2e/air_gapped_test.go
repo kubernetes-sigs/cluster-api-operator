@@ -32,10 +32,6 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-const (
-	customManifestsFolder = "resources/"
-)
-
 var _ = Describe("Install Core Provider in an air-gapped environment", func() {
 	It("should successfully create config maps with Core Provider manifests", func() {
 		k8sclient := bootstrapClusterProxy.GetClient()
