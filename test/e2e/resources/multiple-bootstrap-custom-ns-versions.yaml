@@ -1,0 +1,68 @@
+---
+# Source: cluster-api-operator/templates/bootstrap-conditions.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    "helm.sh/hook": "post-install"
+    "helm.sh/hook-weight": "1"
+  name: capi-system
+---
+# Source: cluster-api-operator/templates/bootstrap.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    "helm.sh/hook": "post-install"
+    "helm.sh/hook-weight": "1"
+  name: kubeadm-bootstrap-custom-ns
+---
+# Source: cluster-api-operator/templates/bootstrap.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    "helm.sh/hook": "post-install"
+    "helm.sh/hook-weight": "1"
+  name: rke2-bootstrap-custom-ns
+---
+# Source: cluster-api-operator/templates/bootstrap.yaml
+apiVersion: operator.cluster.x-k8s.io/v1alpha1
+kind: BootstrapProvider
+metadata:
+  name: kubeadm
+  namespace: kubeadm-bootstrap-custom-ns
+  annotations:
+    "helm.sh/hook": "post-install"
+    "helm.sh/hook-weight": "2"
+spec:
+  version: v1.4.2
+  secretName: test-secret-name
+  secretNamespace: test-secret-namespace
+---
+# Source: cluster-api-operator/templates/bootstrap.yaml
+apiVersion: operator.cluster.x-k8s.io/v1alpha1
+kind: BootstrapProvider
+metadata:
+  name: rke2
+  namespace: rke2-bootstrap-custom-ns
+  annotations:
+    "helm.sh/hook": "post-install"
+    "helm.sh/hook-weight": "2"
+spec:
+  version: v0.3.0
+  secretName: test-secret-name
+  secretNamespace: test-secret-namespace
+---
+# Source: cluster-api-operator/templates/bootstrap-conditions.yaml
+apiVersion: operator.cluster.x-k8s.io/v1alpha1
+kind: CoreProvider
+metadata:
+  name: cluster-api
+  namespace: capi-system
+  annotations:
+    "helm.sh/hook": "post-install"
+    "helm.sh/hook-weight": "2"
+spec:
+  secretName: test-secret-name
+  secretNamespace: test-secret-namespace
