@@ -17,8 +17,11 @@ limitations under the License.
 package controller
 
 import (
+	"bytes"
+	"compress/gzip"
 	"context"
 	"fmt"
+	"io"
 	"net/url"
 	"strings"
 
@@ -267,15 +270,50 @@ func (p *phaseReconciler) configmapRepository(ctx context.Context, labelSelector
 
 		mr.WithFile(version, metadataFile, []byte(metadata))
 
-		components, ok := cm.Data[componentsConfigMapKey]
-		if !ok {
-			return nil, fmt.Errorf("ConfigMap %s/%s has no components", cm.Namespace, cm.Name)
+		components, err := getComponentsData(cm)
+		if err != nil {
+			return nil, err
 		}
 
 		mr.WithFile(version, mr.ComponentsPath(), []byte(components))
 	}
 
 	return mr, nil
+}
+
+// getComponentsData returns components data based on if it's compressed or not.
+func getComponentsData(cm corev1.ConfigMap) (string, error) {
+	// Data is not compressed, return it immediately.
+	if cm.GetAnnotations()[compressedAnnotation] != "true" {
+		components, ok := cm.Data[componentsConfigMapKey]
+		if !ok {
+			return "", fmt.Errorf("ConfigMap %s/%s Data has no components", cm.Namespace, cm.Name)
+		}
+
+		return components, nil
+	}
+
+	// Otherwise we have to decompress the data first.
+	compressedComponents, ok := cm.BinaryData[componentsConfigMapKey]
+	if !ok {
+		return "", fmt.Errorf("ConfigMap %s/%s BinaryData has no components", cm.Namespace, cm.Name)
+	}
+
+	zr, err := gzip.NewReader(bytes.NewReader(compressedComponents))
+	if err != nil {
+		return "", err
+	}
+
+	components, err := io.ReadAll(zr)
+	if err != nil {
+		return "", fmt.Errorf("cannot decompress data from ConfigMap %s/%s", cm.Namespace, cm.Name)
+	}
+
+	if err := zr.Close(); err != nil {
+		return "", err
+	}
+
+	return string(components), nil
 }
 
 // validateRepoCAPIVersion checks that the repo is using the correct version.

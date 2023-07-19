@@ -17,6 +17,8 @@ limitations under the License.
 package controller
 
 import (
+	"bytes"
+	"compress/gzip"
 	"context"
 	"fmt"
 
@@ -36,8 +38,12 @@ const (
 	configMapNameLabel    = "provider.cluster.x-k8s.io/name"
 	operatorManagedLabel  = "managed-by.operator.cluster.x-k8s.io"
 
+	compressedAnnotation = "provider.cluster.x-k8s.io/compressed"
+
 	metadataConfigMapKey   = "metadata"
 	componentsConfigMapKey = "components"
+
+	maxConfigMapSize = 1 * 1024 * 1024
 )
 
 // downloadManifests downloads CAPI manifests from a url.
@@ -101,7 +107,9 @@ func (p *phaseReconciler) downloadManifests(ctx context.Context) (reconcile.Resu
 		return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason)
 	}
 
-	if err := p.createManifestsConfigMap(ctx, string(metadataFile), string(componentsFile)); err != nil {
+	withCompression := needToCompress(metadataFile, componentsFile)
+
+	if err := p.createManifestsConfigMap(ctx, metadataFile, componentsFile, withCompression); err != nil {
 		err = fmt.Errorf("failed to create config map for provider %q: %w", p.provider.GetName(), err)
 
 		return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason)
@@ -141,7 +149,7 @@ func (p *phaseReconciler) prepareConfigMapLabels() map[string]string {
 }
 
 // createManifestsConfigMap creates a config map with downloaded manifests.
-func (p *phaseReconciler) createManifestsConfigMap(ctx context.Context, metadata, components string) error {
+func (p *phaseReconciler) createManifestsConfigMap(ctx context.Context, metadata, components []byte, compress bool) error {
 	configMapName := fmt.Sprintf("%s-%s-%s", p.provider.GetType(), p.provider.GetName(), p.provider.GetSpec().Version)
 
 	configMap := &corev1.ConfigMap{
@@ -151,9 +159,32 @@ func (p *phaseReconciler) createManifestsConfigMap(ctx context.Context, metadata
 			Labels:    p.prepareConfigMapLabels(),
 		},
 		Data: map[string]string{
-			metadataConfigMapKey:   metadata,
-			componentsConfigMapKey: components,
+			metadataConfigMapKey: string(metadata),
 		},
+	}
+
+	// Components manifests data can exceed the configmap size limit. In this case we have to compress it.
+	if !compress {
+		configMap.Data[componentsConfigMapKey] = string(components)
+	} else {
+		var componentsBuf bytes.Buffer
+		zw := gzip.NewWriter(&componentsBuf)
+
+		_, err := zw.Write(components)
+		if err != nil {
+			return fmt.Errorf("cannot compress data for provider %s/%s: %w", p.provider.GetNamespace(), p.provider.GetName(), err)
+		}
+
+		if err := zw.Close(); err != nil {
+			return err
+		}
+
+		configMap.BinaryData = map[string][]byte{
+			componentsConfigMapKey: componentsBuf.Bytes(),
+		}
+
+		// Setting the annotation to mark these manifests as compressed.
+		configMap.SetAnnotations(map[string]string{compressedAnnotation: "true"})
 	}
 
 	gvk := p.provider.GetObjectKind().GroupVersionKind()
@@ -172,4 +203,16 @@ func (p *phaseReconciler) createManifestsConfigMap(ctx context.Context, metadata
 	}
 
 	return nil
+}
+
+// needToCompress checks whether the input data exceeds the maximum configmap
+// size limit and returns whether it should be compressed.
+func needToCompress(bs ...[]byte) bool {
+	totalBytes := 0
+
+	for _, b := range bs {
+		totalBytes += len(b)
+	}
+
+	return totalBytes > maxConfigMapSize
 }

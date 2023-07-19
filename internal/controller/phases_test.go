@@ -194,7 +194,7 @@ metadata:
 					},
 				},
 			},
-			wantErr: "ConfigMap ns1/v1.2.3 has no components",
+			wantErr: "ConfigMap ns1/v1.2.3 Data has no components",
 		},
 		{
 			name: "configmap with invalid version in the name",
