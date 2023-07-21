@@ -664,3 +664,42 @@ spec:
     selector:
       matchLabels:
         provider-components: azure
+```
+
+### Situation when manifests do not fit into configmap
+
+There is a limit on the [maximum size](https://kubernetes.io/docs/concepts/configuration/configmap/#motivation) of a configmap - 1MiB. If the manifests do not fit into this size, Kubernetes will generate an error and provider installation fail. To avoid this, you can archive the manifests and put them in the configmap that way.
+
+For example, you have two files: `components.yaml` and `metadata.yaml`. To create a working config map you need:
+
+1. Archive components.yaml using `gzip` cli tool
+
+```sh
+gzip -c components.yaml > components.gz
+```
+
+2. Create a configmap manifest from the archived data
+
+```sh
+kubectl create configmap v1.9.3 --namespace=capz-system --from-file=components=components.gz --from-file=metadata=metadata.yaml --dry-run=client -o yaml > configmap.yaml
+```
+
+3. Edit the file by adding "provider.cluster.x-k8s.io/compressed: true" annotation
+
+```sh
+yq eval -i '.metadata.annotations += {"provider.cluster.x-k8s.io/compressed": "true"}' configmap.yaml
+```
+
+**Note**: without this annotation operator won't be able to determine if the data is compressed or not.
+
+4. Add labels that will be used to match the configmap in `fetchConfig` section of the provider
+
+```sh
+yq eval -i '.metadata.labels += {"my-label": "label-value"}' configmap.yaml
+```
+
+5. Create a configmap in your kubernetes cluster using kubectl
+
+```sh
+kubectl create -f configmap.yaml
+```
