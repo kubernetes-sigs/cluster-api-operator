@@ -21,6 +21,9 @@ package e2e
 
 import (
 	"context"
+	"fmt"
+	"os/exec"
+	"strings"
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -50,6 +53,8 @@ const (
 
 	infraProviderName           = "docker"
 	infraProviderDeploymentName = "capd-controller-manager"
+
+	customManifestsFolder = "resources/"
 )
 
 func waitForDeployment(cl client.Client, ctx context.Context, name string) (bool, error) {
@@ -78,4 +83,39 @@ func waitForObjectToBeDeleted(cl client.Client, ctx context.Context, key client.
 	}
 
 	return false, nil
+}
+
+type helmChartHelper struct {
+	helmBinaryPath string
+	chartPath      string
+}
+
+// dryRunInstallChart performs a dry run install of the helm chart. Helm dry run install returns the rendered manifest
+// with some additional data that can't be parsed as yaml. This function processes the output and returns only the optional resources,
+// marked as post install hooks.
+func (h *helmChartHelper) dryRunInstallChart(values map[string]string) (string, error) {
+	args := []string{"install", "--kubeconfig", helmClusterProxy.GetKubeconfigPath(), "capi-operator", h.chartPath, "--dry-run"}
+	for key, value := range values {
+		args = append(args, "--set")
+		args = append(args, fmt.Sprintf("%s=%s", key, value))
+	}
+
+	cmd := exec.Command(h.helmBinaryPath, args...)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return "", fmt.Errorf("failed to run helm install: %w, output: %s", err, string(out))
+	}
+
+	outString := string(out)
+	startIndex := strings.Index(outString, "HOOKS:")
+	endIndex := strings.Index(outString, "MANIFEST:")
+
+	if startIndex != -1 && endIndex != -1 {
+		res := outString[startIndex+len("HOOKS:") : endIndex]
+		res = strings.TrimPrefix(res, "\n")
+		res = strings.TrimSuffix(res, "\n")
+		return res, nil
+	}
+
+	return "", fmt.Errorf("failed to parse helm output")
 }
