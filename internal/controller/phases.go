@@ -18,7 +18,6 @@ package controller
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/url"
 	"strings"
@@ -380,7 +379,7 @@ func (p *phaseReconciler) install(ctx context.Context) (reconcile.Result, error)
 
 	if err := clusterClient.ProviderComponents().Create(p.components.Objs()); err != nil {
 		reason := "Install failed"
-		if errors.Is(err, wait.ErrWaitTimeout) {
+		if wait.Interrupted(err) {
 			reason = "Timed out waiting for deployment to become ready"
 		}
 
