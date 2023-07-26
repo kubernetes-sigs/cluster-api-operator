@@ -245,6 +245,10 @@ test-junit: $(SETUP_ENVTEST) $(GOTESTSUM) ## Run tests with verbose setting and 
 operator: ## Build operator binary
 	go build -trimpath -ldflags "$(LDFLAGS)" -o $(BIN_DIR)/operator cmd/main.go
 
+.PHONY: plugin
+plugin: ## Build plugin binary
+	go build -trimpath -ldflags "$(LDFLAGS)" -o $(BIN_DIR)/clusterctl-operator cmd/plugin/main.go
+
 ## --------------------------------------
 ## Lint / Verify
 ## --------------------------------------
