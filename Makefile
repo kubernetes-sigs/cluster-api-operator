@@ -374,10 +374,21 @@ set-manifest-pull-policy:
 	$(info Updating kustomize pull policy file for manager resources)
 	sed -i'' -e 's@imagePullPolicy: .*@imagePullPolicy: '"$(PULL_POLICY)"'@' $(TARGET_RESOURCE)
 
+.PHONY: set-manifest-pull-policy-chart
+set-manifest-pull-policy-chart: $(YQ)
+	$(info Updating image pull policy value for helm chart)
+	$(YQ) eval '.image.manager.pullPolicy = "$(PULL_POLICY)"' $(TARGET_RESOURCE) -i
+
 .PHONY: set-manifest-image
 set-manifest-image:
 	$(info Updating kustomize image patch file for manager resource)
 	sed -i'' -e 's@image: .*@image: '"${MANIFEST_IMG}:$(MANIFEST_TAG)"'@' $(TARGET_RESOURCE)
+
+.PHONY: set-manifest-image-chart
+set-manifest-image-chart: $(YQ)
+	$(info Updating image URL and tag values for helm chart)
+	$(YQ) eval '.image.manager.repository = "$(MANIFEST_IMG)"' $(TARGET_RESOURCE) -i
+	$(YQ) eval '.image.manager.tag = "$(MANIFEST_TAG)"' $(TARGET_RESOURCE) -i
 
 ## --------------------------------------
 ## Release
@@ -412,19 +423,20 @@ manifest-modification: # Set the manifest images to the staging/production bucke
 
 .PHONY: chart-manifest-modification
 chart-manifest-modification: # Set the manifest images to the staging/production bucket.
-	$(MAKE) set-manifest-image \
+	$(MAKE) set-manifest-image-chart \
 		MANIFEST_IMG=$(REGISTRY)/$(IMAGE_NAME) MANIFEST_TAG=$(RELEASE_TAG) \
-		TARGET_RESOURCE="./config/chart/manager_image_patch.yaml"
-	$(MAKE) set-manifest-pull-policy PULL_POLICY=IfNotPresent TARGET_RESOURCE="./config/chart/manager_pull_policy.yaml"
+		TARGET_RESOURCE="$(ROOT)/hack/charts/cluster-api-operator/values.yaml"
+	$(MAKE) set-manifest-pull-policy-chart PULL_POLICY=IfNotPresent TARGET_RESOURCE="$(ROOT)/hack/charts/cluster-api-operator/values.yaml"
 
 .PHONY: release-manifests
 release-manifests: $(KUSTOMIZE) $(RELEASE_DIR) ## Builds the manifests to publish with a release
 	$(KUSTOMIZE) build ./config/default > $(RELEASE_DIR)/operator-components.yaml
 	
+.PHONY: release-chart
 release-chart: $(HELM) $(KUSTOMIZE) $(RELEASE_DIR) $(CHART_DIR) $(CHART_PACKAGE_DIR) ## Builds the chart to publish with a release
 	cp -rf $(ROOT)/hack/charts/cluster-api-operator/. $(CHART_DIR)
 	$(KUSTOMIZE) build ./config/chart > $(CHART_DIR)/templates/operator-components.yaml
-	./hack/inject-cert-manager-helm.sh $(CERT_MANAGER_VERSION)
+	$(ROOT)/hack/inject-cert-manager-helm.sh $(CERT_MANAGER_VERSION)
 	$(HELM) package $(CHART_DIR) --app-version=$(HELM_CHART_TAG) --version=$(HELM_CHART_TAG) --destination=$(CHART_PACKAGE_DIR)
 
 .PHONY: release-staging
