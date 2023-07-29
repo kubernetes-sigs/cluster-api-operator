@@ -40,6 +40,8 @@ const (
 )
 
 var _ = Describe("Create and delete a provider with manifests that don't fit the configmap", func() {
+	var ociInfrastructureConfigMap = &corev1.ConfigMap{}
+
 	It("should successfully create a CoreProvider", func() {
 		k8sclient := bootstrapClusterProxy.GetClient()
 		coreProvider := &operatorv1.CoreProvider{
@@ -107,6 +109,110 @@ var _ = Describe("Create and delete a provider with manifests that don't fit the
 				},
 			},
 		}
+
+		Expect(k8sclient.Create(ctx, infraProvider)).To(Succeed())
+
+		By("Waiting for the infrastructure provider to be ready")
+		Eventually(func() bool {
+			infraProvider := &operatorv1.InfrastructureProvider{}
+			key := client.ObjectKey{Namespace: operatorNamespace, Name: ociInfrastructureProviderName}
+			if err := k8sclient.Get(ctx, key, infraProvider); err != nil {
+				return false
+			}
+
+			for _, c := range infraProvider.Status.Conditions {
+				if c.Type == operatorv1.ProviderInstalledCondition && c.Status == corev1.ConditionTrue {
+					return true
+				}
+			}
+			return false
+		}, timeout).Should(Equal(true))
+
+		By("Waiting for status.IntalledVersion to be set")
+		Eventually(func() bool {
+			infraProvider := &operatorv1.InfrastructureProvider{}
+			key := client.ObjectKey{Namespace: operatorNamespace, Name: ociInfrastructureProviderName}
+			if err := k8sclient.Get(ctx, key, infraProvider); err != nil {
+				return false
+			}
+
+			if infraProvider.Status.InstalledVersion != nil && *infraProvider.Status.InstalledVersion == infraProvider.Spec.Version {
+				return true
+			}
+			return false
+		}, timeout).Should(Equal(true))
+
+		By("Ensure that the created config map has correct annotation")
+		cmName := fmt.Sprintf("infrastructure-%s-%s", ociInfrastructureProviderName, ociInfrastructureProviderVersion)
+		key := client.ObjectKey{Namespace: operatorNamespace, Name: cmName}
+
+		// Save config map contents to be used later.
+		Expect(k8sclient.Get(ctx, key, ociInfrastructureConfigMap)).To(Succeed())
+
+		Expect(ociInfrastructureConfigMap.GetAnnotations()[compressedAnnotation]).To(Equal("true"))
+
+		Expect(ociInfrastructureConfigMap.BinaryData[componentsConfigMapKey]).ToNot(BeEmpty())
+
+		By("Waiting for the infrastructure provider deployment to be created")
+		Eventually(func() bool {
+			deployment := &appsv1.Deployment{}
+			key := client.ObjectKey{Namespace: operatorNamespace, Name: ociInfrastructureProviderDeploymentName}
+
+			return k8sclient.Get(ctx, key, deployment) == nil
+		}, timeout).Should(Equal(true))
+
+		Expect(k8sclient.Delete(ctx, infraProvider)).To(Succeed())
+
+		By("Waiting for the infrastructure provider deployment to be deleted")
+		Eventually(func() bool {
+			deployment := &appsv1.Deployment{}
+			key := client.ObjectKey{Namespace: operatorNamespace, Name: ociInfrastructureProviderDeploymentName}
+			isInfraProviderDeleted, err := waitForObjectToBeDeleted(k8sclient, ctx, key, deployment)
+			if err != nil {
+				return false
+			}
+			return isInfraProviderDeleted
+		}, timeout).Should(Equal(true))
+
+		By("Waiting for the configmap to be deleted")
+		Eventually(func() bool {
+			configMap := &corev1.ConfigMap{}
+			key := client.ObjectKey{Namespace: operatorNamespace, Name: cmName}
+			isConfigMapDeleted, err := waitForObjectToBeDeleted(k8sclient, ctx, key, configMap)
+			if err != nil {
+				return false
+			}
+			return isConfigMapDeleted
+		}, timeout).Should(Equal(true))
+	})
+
+	It("should successfully create and delete an InfrastructureProvider for OCI from a pre-created ConfigMap", func() {
+		k8sclient := bootstrapClusterProxy.GetClient()
+		infraProvider := &operatorv1.InfrastructureProvider{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      ociInfrastructureProviderName,
+				Namespace: operatorNamespace,
+			},
+			Spec: operatorv1.InfrastructureProviderSpec{
+				ProviderSpec: operatorv1.ProviderSpec{
+					FetchConfig: &operatorv1.FetchConfiguration{
+						Selector: &metav1.LabelSelector{
+							MatchLabels: map[string]string{
+								"provider.cluster.x-k8s.io/name": "oci",
+								"provider.cluster.x-k8s.io/type": "infrastructure",
+							},
+						},
+					},
+				},
+			},
+		}
+
+		// Re-use configmap created on the previous step.
+		ociInfrastructureConfigMap.ObjectMeta.UID = ""
+		ociInfrastructureConfigMap.ObjectMeta.ResourceVersion = ""
+		ociInfrastructureConfigMap.ObjectMeta.CreationTimestamp = metav1.Time{}
+		ociInfrastructureConfigMap.ObjectMeta.OwnerReferences = nil
+		Expect(k8sclient.Create(ctx, ociInfrastructureConfigMap)).To(Succeed())
 
 		Expect(k8sclient.Create(ctx, infraProvider)).To(Succeed())
 
