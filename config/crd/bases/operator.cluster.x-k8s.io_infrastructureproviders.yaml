@@ -42,6 +42,23 @@ spec:
           spec:
             description: InfrastructureProviderSpec defines the desired state of InfrastructureProvider.
             properties:
+              additionalManifests:
+                description: AdditionalManifests is reference to configmap that contains
+                  additional manifests that will be applied together with the provider
+                  components. The key for storing these manifests has to be `manifests`.
+                  The manifests are applied only once when a certain release is installed/upgraded.
+                  If namespace is not specified, the namespace of the provider will
+                  be used. There is no validation of the yaml content inside the configmap.
+                properties:
+                  name:
+                    description: Name defines the name of the configmap.
+                    type: string
+                  namespace:
+                    description: Namespace defines the namespace of the configmap.
+                    type: string
+                required:
+                - name
+                type: object
               deployment:
                 description: Deployment defines the properties that can be enabled
                   on the deployment for the provider.
