@@ -33,6 +33,7 @@ import (
 
 const (
 	ociInfrastructureProviderName           = "oci"
+	ociInfrastructureProviderCustomName     = "my-oci"
 	ociInfrastructureProviderVersion        = "v0.12.0"
 	ociInfrastructureProviderDeploymentName = "capoci-controller-manager"
 	compressedAnnotation                    = "provider.cluster.x-k8s.io/compressed"
@@ -186,11 +187,11 @@ var _ = Describe("Create and delete a provider with manifests that don't fit the
 		}, timeout).Should(Equal(true))
 	})
 
-	It("should successfully create and delete an InfrastructureProvider for OCI from a pre-created ConfigMap", func() {
+	It("should successfully create and delete an InfrastructureProvider for OCI with custom name from a pre-created ConfigMap", func() {
 		k8sclient := bootstrapClusterProxy.GetClient()
 		infraProvider := &operatorv1.InfrastructureProvider{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      ociInfrastructureProviderName,
+				Name:      ociInfrastructureProviderCustomName,
 				Namespace: operatorNamespace,
 			},
 			Spec: operatorv1.InfrastructureProviderSpec{
@@ -219,7 +220,7 @@ var _ = Describe("Create and delete a provider with manifests that don't fit the
 		By("Waiting for the infrastructure provider to be ready")
 		Eventually(func() bool {
 			infraProvider := &operatorv1.InfrastructureProvider{}
-			key := client.ObjectKey{Namespace: operatorNamespace, Name: ociInfrastructureProviderName}
+			key := client.ObjectKey{Namespace: operatorNamespace, Name: ociInfrastructureProviderCustomName}
 			if err := k8sclient.Get(ctx, key, infraProvider); err != nil {
 				return false
 			}
@@ -235,7 +236,7 @@ var _ = Describe("Create and delete a provider with manifests that don't fit the
 		By("Waiting for status.IntalledVersion to be set")
 		Eventually(func() bool {
 			infraProvider := &operatorv1.InfrastructureProvider{}
-			key := client.ObjectKey{Namespace: operatorNamespace, Name: ociInfrastructureProviderName}
+			key := client.ObjectKey{Namespace: operatorNamespace, Name: ociInfrastructureProviderCustomName}
 			if err := k8sclient.Get(ctx, key, infraProvider); err != nil {
 				return false
 			}
@@ -256,8 +257,6 @@ var _ = Describe("Create and delete a provider with manifests that don't fit the
 
 		Expect(cm.BinaryData[componentsConfigMapKey]).ToNot(BeEmpty())
 
-		Expect(k8sclient.Delete(ctx, infraProvider)).To(Succeed())
-
 		By("Waiting for the infrastructure provider deployment to be created")
 		Eventually(func() bool {
 			deployment := &appsv1.Deployment{}
@@ -265,6 +264,8 @@ var _ = Describe("Create and delete a provider with manifests that don't fit the
 
 			return k8sclient.Get(ctx, key, deployment) == nil
 		}, timeout).Should(Equal(true))
+
+		Expect(k8sclient.Delete(ctx, infraProvider)).To(Succeed())
 
 		By("Waiting for the infrastructure provider deployment to be deleted")
 		Eventually(func() bool {
