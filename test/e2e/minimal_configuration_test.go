@@ -26,6 +26,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha1"
+	"sigs.k8s.io/cluster-api/test/framework"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -72,13 +73,10 @@ data:
 		Expect(k8sclient.Create(ctx, coreProvider)).To(Succeed())
 
 		By("Waiting for the core provider deployment to be ready")
-		Eventually(func() bool {
-			isReady, err := WaitForDeployment(k8sclient, ctx, coreProviderDeploymentName)
-			if err != nil {
-				return false
-			}
-			return isReady
-		}, timeout).Should(Equal(true))
+		framework.WaitForDeploymentsAvailable(ctx, framework.WaitForDeploymentsAvailableInput{
+			Getter:     k8sclient,
+			Deployment: &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: coreProviderDeploymentName, Namespace: operatorNamespace}},
+		}, timeout)
 
 		By("Waiting for core provider to be ready")
 		Eventually(func() bool {
@@ -139,13 +137,10 @@ data:
 		Expect(k8sclient.Create(ctx, bootstrapProvider)).To(Succeed())
 
 		By("Waiting for the bootstrap provider deployment to be ready")
-		Eventually(func() bool {
-			isReady, err := WaitForDeployment(k8sclient, ctx, bootstrapProviderDeploymentName)
-			if err != nil {
-				return false
-			}
-			return isReady
-		}, timeout).Should(Equal(true))
+		framework.WaitForDeploymentsAvailable(ctx, framework.WaitForDeploymentsAvailableInput{
+			Getter:     k8sclient,
+			Deployment: &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: bootstrapProviderDeploymentName, Namespace: operatorNamespace}},
+		}, timeout)
 
 		By("Waiting for bootstrap provider to be ready")
 		Eventually(func() bool {
@@ -206,13 +201,10 @@ data:
 		Expect(k8sclient.Create(ctx, cpProvider)).To(Succeed())
 
 		By("Waiting for the control plane provider deployment to be ready")
-		Eventually(func() bool {
-			isReady, err := WaitForDeployment(k8sclient, ctx, cpProviderDeploymentName)
-			if err != nil {
-				return false
-			}
-			return isReady
-		}, timeout).Should(Equal(true))
+		framework.WaitForDeploymentsAvailable(ctx, framework.WaitForDeploymentsAvailableInput{
+			Getter:     k8sclient,
+			Deployment: &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: cpProviderDeploymentName, Namespace: operatorNamespace}},
+		}, timeout)
 
 		By("Waiting for the control plane provider to be ready")
 		Eventually(func() bool {
@@ -273,13 +265,10 @@ data:
 		Expect(k8sclient.Create(ctx, infraProvider)).To(Succeed())
 
 		By("Waiting for the infrastructure provider deployment to be ready")
-		Eventually(func() bool {
-			isReady, err := WaitForDeployment(k8sclient, ctx, infraProviderDeploymentName)
-			if err != nil {
-				return false
-			}
-			return isReady
-		}, timeout).Should(Equal(true))
+		framework.WaitForDeploymentsAvailable(ctx, framework.WaitForDeploymentsAvailableInput{
+			Getter:     k8sclient,
+			Deployment: &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: infraProviderDeploymentName, Namespace: operatorNamespace}},
+		}, timeout)
 
 		By("Waiting for the infrastructure provider to be ready")
 		Eventually(func() bool {
@@ -336,13 +325,10 @@ data:
 		Expect(k8sclient.Update(ctx, coreProvider)).To(Succeed())
 
 		By("Waiting for the core provider deployment to be ready")
-		Eventually(func() bool {
-			isReady, err := WaitForDeployment(k8sclient, ctx, coreProviderDeploymentName)
-			if err != nil {
-				return false
-			}
-			return isReady
-		}, timeout).Should(Equal(true))
+		framework.WaitForDeploymentsAvailable(ctx, framework.WaitForDeploymentsAvailableInput{
+			Getter:     k8sclient,
+			Deployment: &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: coreProviderDeploymentName, Namespace: operatorNamespace}},
+		}, timeout)
 
 		By("Waiting for core provider to be ready")
 		Eventually(func() bool {
@@ -386,13 +372,10 @@ data:
 		Expect(k8sclient.Update(ctx, coreProvider)).To(Succeed())
 
 		By("Waiting for the core provider deployment to be ready")
-		Eventually(func() bool {
-			isReady, err := WaitForDeployment(k8sclient, ctx, coreProviderDeploymentName)
-			if err != nil {
-				return false
-			}
-			return isReady
-		}, timeout).Should(Equal(true))
+		framework.WaitForDeploymentsAvailable(ctx, framework.WaitForDeploymentsAvailableInput{
+			Getter:     k8sclient,
+			Deployment: &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: coreProviderDeploymentName, Namespace: operatorNamespace}},
+		}, timeout)
 
 		By("Waiting for core provider to be ready")
 		Eventually(func() bool {

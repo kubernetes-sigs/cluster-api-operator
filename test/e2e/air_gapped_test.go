@@ -28,6 +28,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha1"
+	"sigs.k8s.io/cluster-api/test/framework"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 )
@@ -79,13 +80,10 @@ var _ = Describe("Install Core Provider in an air-gapped environment", func() {
 		Expect(k8sclient.Create(ctx, coreProvider)).To(Succeed())
 
 		By("Waiting for the core provider deployment to be ready")
-		Eventually(func() bool {
-			isReady, err := WaitForDeployment(k8sclient, ctx, coreProviderDeploymentName)
-			if err != nil {
-				return false
-			}
-			return isReady
-		}, timeout).Should(Equal(true))
+		framework.WaitForDeploymentsAvailable(ctx, framework.WaitForDeploymentsAvailableInput{
+			Getter:     bootstrapClusterProxy.GetClient(),
+			Deployment: &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: coreProviderDeploymentName, Namespace: operatorNamespace}},
+		}, e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
 		By("Waiting for core provider to be ready")
 		Eventually(func() bool {
@@ -129,13 +127,10 @@ var _ = Describe("Install Core Provider in an air-gapped environment", func() {
 		Expect(k8sclient.Update(ctx, coreProvider)).To(Succeed())
 
 		By("Waiting for the core provider deployment to be ready")
-		Eventually(func() bool {
-			isReady, err := WaitForDeployment(k8sclient, ctx, coreProviderDeploymentName)
-			if err != nil {
-				return false
-			}
-			return isReady
-		}, timeout).Should(Equal(true))
+		framework.WaitForDeploymentsAvailable(ctx, framework.WaitForDeploymentsAvailableInput{
+			Getter:     bootstrapClusterProxy.GetClient(),
+			Deployment: &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: coreProviderDeploymentName, Namespace: operatorNamespace}},
+		}, e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
 		By("Waiting for core provider to be ready")
 		Eventually(func() bool {
@@ -179,13 +174,10 @@ var _ = Describe("Install Core Provider in an air-gapped environment", func() {
 		Expect(k8sclient.Update(ctx, coreProvider)).To(Succeed())
 
 		By("Waiting for the core provider deployment to be ready")
-		Eventually(func() bool {
-			isReady, err := WaitForDeployment(k8sclient, ctx, coreProviderDeploymentName)
-			if err != nil {
-				return false
-			}
-			return isReady
-		}, timeout).Should(Equal(true))
+		framework.WaitForDeploymentsAvailable(ctx, framework.WaitForDeploymentsAvailableInput{
+			Getter:     bootstrapClusterProxy.GetClient(),
+			Deployment: &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: coreProviderDeploymentName, Namespace: operatorNamespace}},
+		}, e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
 		By("Waiting for core provider to be ready")
 		Eventually(func() bool {

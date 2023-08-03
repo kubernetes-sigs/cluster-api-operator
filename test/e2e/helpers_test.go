@@ -26,8 +26,6 @@ import (
 	"strings"
 	"time"
 
-	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -56,22 +54,6 @@ const (
 
 	customManifestsFolder = "resources/"
 )
-
-func WaitForDeployment(cl client.Client, ctx context.Context, name string) (bool, error) {
-	deployment := &appsv1.Deployment{}
-	key := client.ObjectKey{Namespace: operatorNamespace, Name: name}
-	if err := cl.Get(ctx, key, deployment); err != nil {
-		return false, err
-	}
-
-	for _, c := range deployment.Status.Conditions {
-		if c.Type == appsv1.DeploymentAvailable && c.Status == corev1.ConditionTrue {
-			return true, nil
-		}
-	}
-
-	return false, nil
-}
 
 func WaitForObjectToBeDeleted(cl client.Client, ctx context.Context, key client.ObjectKey, obj client.Object) (bool, error) {
 	if err := cl.Get(ctx, key, obj); err != nil {
