@@ -18,7 +18,10 @@ def build_image():
         "OWNERS_ALIASES",
         "PROJECT",
         "SECURITY_CONTACTS"
-        ]
+        ],
+       build_args = {
+        "builder_image": "docker.io/library/golang:1.20.4",
+        }
     )
 
 def deploy():
