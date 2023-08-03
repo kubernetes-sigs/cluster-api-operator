@@ -32,13 +32,40 @@ import (
 var _ = Describe("Create, upgrade, downgrade and delete providers with minimal specified configuration", func() {
 	It("should successfully create a CoreProvider", func() {
 		k8sclient := bootstrapClusterProxy.GetClient()
+
+		additionalManifestsCMName := "additional-manifests"
+		additionalManifests := &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      additionalManifestsCMName,
+				Namespace: operatorNamespace,
+			},
+			Data: map[string]string{
+				"manifests": `
+---				
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-config-map
+  namespace: capi-operator-system
+data: 
+  test: test
+`,
+			},
+		}
+
+		Expect(k8sclient.Create(ctx, additionalManifests)).To(Succeed())
+
 		coreProvider := &operatorv1.CoreProvider{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      coreProviderName,
 				Namespace: operatorNamespace,
 			},
 			Spec: operatorv1.CoreProviderSpec{
-				ProviderSpec: operatorv1.ProviderSpec{},
+				ProviderSpec: operatorv1.ProviderSpec{
+					AdditionalManifestsRef: &operatorv1.ConfigmapReference{
+						Name: additionalManifests.Name,
+					},
+				},
 			},
 		}
 
@@ -78,6 +105,19 @@ var _ = Describe("Create, upgrade, downgrade and delete providers with minimal s
 			}
 
 			if coreProvider.Status.InstalledVersion != nil && *coreProvider.Status.InstalledVersion == coreProvider.Spec.Version {
+				return true
+			}
+			return false
+		}, timeout).Should(Equal(true))
+
+		By("Checking if additional manifests are applied")
+		Eventually(func() bool {
+			cm := &corev1.ConfigMap{}
+			key := client.ObjectKey{Namespace: operatorNamespace, Name: "test-config-map"}
+			if err := k8sclient.Get(ctx, key, cm); err != nil {
+				return false
+			}
+			if cm.Data["test"] == "test" {
 				return true
 			}
 			return false
