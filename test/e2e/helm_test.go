@@ -28,13 +28,13 @@ import (
 
 var _ = Describe("Create a proper set of manifests when using helm charts", func() {
 	It("should not deploy providers when none specified", func() {
-		manifests, err := helmChart.dryRunInstallChart(nil)
+		manifests, err := helmChart.InstallChart(nil)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(manifests).To(BeEmpty())
 	})
 
 	It("should deploy all providers with custom namespace and versions", func() {
-		manifests, err := helmChart.dryRunInstallChart(map[string]string{
+		manifests, err := helmChart.InstallChart(map[string]string{
 			"secretName":      "test-secret-name",
 			"secretNamespace": "test-secret-namespace",
 			"core":            "capi-custom-ns:cluster-api:v1.4.2",
@@ -50,7 +50,7 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 	})
 
 	It("should deploy all providers with custom versions", func() {
-		manifests, err := helmChart.dryRunInstallChart(map[string]string{
+		manifests, err := helmChart.InstallChart(map[string]string{
 			"secretName":      "test-secret-name",
 			"secretNamespace": "test-secret-namespace",
 			"core":            "cluster-api:v1.4.2",
@@ -66,7 +66,7 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 	})
 
 	It("should deploy all providers with latest version", func() {
-		manifests, err := helmChart.dryRunInstallChart(map[string]string{
+		manifests, err := helmChart.InstallChart(map[string]string{
 			"secretName":      "test-secret-name",
 			"secretNamespace": "test-secret-namespace",
 			"core":            "cluster-api",
@@ -82,7 +82,7 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 	})
 
 	It("should deploy core, bootstrap, control plane when only infra is specified", func() {
-		manifests, err := helmChart.dryRunInstallChart(map[string]string{
+		manifests, err := helmChart.InstallChart(map[string]string{
 			"secretName":      "test-secret-name",
 			"secretNamespace": "test-secret-namespace",
 			"infrastructure":  "docker",
@@ -95,7 +95,7 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 	})
 
 	It("should deploy core when only bootstrap is specified", func() {
-		manifests, err := helmChart.dryRunInstallChart(map[string]string{
+		manifests, err := helmChart.InstallChart(map[string]string{
 			"secretName":      "test-secret-name",
 			"secretNamespace": "test-secret-namespace",
 			"bootstrap":       "kubeadm",
@@ -108,7 +108,7 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 	})
 
 	It("should deploy core when only control plane is specified", func() {
-		manifests, err := helmChart.dryRunInstallChart(map[string]string{
+		manifests, err := helmChart.InstallChart(map[string]string{
 			"secretName":      "test-secret-name",
 			"secretNamespace": "test-secret-namespace",
 			"controlPlane":    "kubeadm",
@@ -121,7 +121,7 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 	})
 
 	It("should deploy multiple infra providers with custom namespace and versions", func() {
-		manifests, err := helmChart.dryRunInstallChart(map[string]string{
+		manifests, err := helmChart.InstallChart(map[string]string{
 			"secretName":      "test-secret-name",
 			"secretNamespace": "test-secret-namespace",
 			"infrastructure":  "capd-custom-ns:docker:v1.4.2;capz-custom-ns:azure:v1.10.0",
@@ -134,7 +134,7 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 	})
 
 	It("should deploy multiple control plane providers with custom namespace and versions", func() {
-		manifests, err := helmChart.dryRunInstallChart(map[string]string{
+		manifests, err := helmChart.InstallChart(map[string]string{
 			"secretName":      "test-secret-name",
 			"secretNamespace": "test-secret-namespace",
 			"controlPlane":    "kubeadm-control-plane-custom-ns:kubeadm:v1.4.2;rke2-control-plane-custom-ns:rke2:v0.3.0",
@@ -147,7 +147,7 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 	})
 
 	It("should deploy multiple bootstrap providers with custom namespace and versions", func() {
-		manifests, err := helmChart.dryRunInstallChart(map[string]string{
+		manifests, err := helmChart.InstallChart(map[string]string{
 			"secretName":      "test-secret-name",
 			"secretNamespace": "test-secret-namespace",
 			"bootstrap":       "kubeadm-bootstrap-custom-ns:kubeadm:v1.4.2;rke2-bootstrap-custom-ns:rke2:v0.3.0",

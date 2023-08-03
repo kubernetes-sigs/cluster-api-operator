@@ -80,7 +80,7 @@ var _ = Describe("Install Core Provider in an air-gapped environment", func() {
 
 		By("Waiting for the core provider deployment to be ready")
 		Eventually(func() bool {
-			isReady, err := waitForDeployment(k8sclient, ctx, coreProviderDeploymentName)
+			isReady, err := WaitForDeployment(k8sclient, ctx, coreProviderDeploymentName)
 			if err != nil {
 				return false
 			}
@@ -130,7 +130,7 @@ var _ = Describe("Install Core Provider in an air-gapped environment", func() {
 
 		By("Waiting for the core provider deployment to be ready")
 		Eventually(func() bool {
-			isReady, err := waitForDeployment(k8sclient, ctx, coreProviderDeploymentName)
+			isReady, err := WaitForDeployment(k8sclient, ctx, coreProviderDeploymentName)
 			if err != nil {
 				return false
 			}
@@ -180,7 +180,7 @@ var _ = Describe("Install Core Provider in an air-gapped environment", func() {
 
 		By("Waiting for the core provider deployment to be ready")
 		Eventually(func() bool {
-			isReady, err := waitForDeployment(k8sclient, ctx, coreProviderDeploymentName)
+			isReady, err := WaitForDeployment(k8sclient, ctx, coreProviderDeploymentName)
 			if err != nil {
 				return false
 			}
@@ -236,7 +236,7 @@ var _ = Describe("Install Core Provider in an air-gapped environment", func() {
 		Eventually(func() bool {
 			deployment := &appsv1.Deployment{}
 			key := client.ObjectKey{Namespace: operatorNamespace, Name: coreProviderDeploymentName}
-			isReady, err := waitForObjectToBeDeleted(k8sclient, ctx, key, deployment)
+			isReady, err := WaitForObjectToBeDeleted(k8sclient, ctx, key, deployment)
 			if err != nil {
 				return false
 			}
@@ -246,7 +246,7 @@ var _ = Describe("Install Core Provider in an air-gapped environment", func() {
 		By("Waiting for the core provider object to be deleted")
 		Eventually(func() bool {
 			key := client.ObjectKey{Namespace: operatorNamespace, Name: coreProviderName}
-			isReady, err := waitForObjectToBeDeleted(k8sclient, ctx, key, coreProvider)
+			isReady, err := WaitForObjectToBeDeleted(k8sclient, ctx, key, coreProvider)
 			if err != nil {
 				return false
 			}

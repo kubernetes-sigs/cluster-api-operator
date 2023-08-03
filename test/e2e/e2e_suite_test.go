@@ -34,11 +34,14 @@ import (
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/klog/v2"
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha1"
 	"sigs.k8s.io/cluster-api/test/framework"
 	"sigs.k8s.io/cluster-api/test/framework/bootstrap"
 	"sigs.k8s.io/cluster-api/test/framework/clusterctl"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/yaml"
 )
 
@@ -111,7 +114,7 @@ var (
 	usePRArtifacts bool
 
 	// helmChart is the helm chart helper to be used for the e2e tests.
-	helmChart *helmChartHelper
+	helmChart *HelmChartHelper
 )
 
 func init() {
@@ -130,6 +133,9 @@ func init() {
 
 func TestE2E(t *testing.T) {
 	RegisterFailHandler(Fail)
+
+	ctrl.SetLogger(klog.Background())
+
 	RunSpecs(t, "capi-operator-e2e")
 }
 
@@ -150,9 +156,6 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 	By(fmt.Sprintf("Loading the e2e test configuration from %q", configPath))
 	e2eConfig = loadE2EConfig(configPath)
 
-	By("Initializing a helm chart helper")
-	initHelmChartHelper()
-
 	By(fmt.Sprintf("Creating a clusterctl config into %q", artifactFolder))
 	clusterctlConfigPath = createClusterctlLocalRepository(e2eConfig, filepath.Join(artifactFolder, "repository"))
 
@@ -167,6 +170,9 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 		ManagementClusterName: "helm",
 		Images:                e2eConfig.Images,
 	}, scheme, useExistingCluster, "helm")
+
+	By("Initializing a helm chart helper")
+	initHelmChartHelper()
 
 	By("Initializing the helm cluster")
 	initHelmCluster(helmClusterProxy, e2eConfig)
@@ -193,8 +199,8 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 	helmKubeconfigPath := parts[4]
 
 	e2eConfig = loadE2EConfig(configPath)
-	bootstrapProxy := framework.NewClusterProxy("bootstrap", bootstrapKubeconfigPath, initScheme())
-	helmProxy := framework.NewClusterProxy("helm", helmKubeconfigPath, initScheme())
+	bootstrapProxy := framework.NewClusterProxy("bootstrap", bootstrapKubeconfigPath, initScheme(), framework.WithMachineLogCollector(framework.DockerLogCollector{}))
+	helmProxy := framework.NewClusterProxy("helm", helmKubeconfigPath, initScheme(), framework.WithMachineLogCollector(framework.DockerLogCollector{}))
 
 	bootstrapClusterProxy = bootstrapProxy
 	helmClusterProxy = helmProxy
@@ -248,7 +254,7 @@ func setupCluster(config *clusterctl.E2EConfig, scheme *runtime.Scheme, useExist
 		Expect(kubeconfigPath).To(BeAnExistingFile(), "Failed to get the kubeconfig file for the bootstrap cluster")
 	}
 
-	proxy := framework.NewClusterProxy(clusterProxyName, kubeconfigPath, scheme)
+	proxy := framework.NewClusterProxy(clusterProxyName, kubeconfigPath, scheme, framework.WithMachineLogCollector(framework.DockerLogCollector{}))
 
 	return clusterProvider, proxy
 }
@@ -332,9 +338,12 @@ func ensureCertManager(clusterProxy framework.ClusterProxy, config *clusterctl.E
 }
 
 func initHelmChartHelper() {
-	helmChart = &helmChartHelper{
-		helmBinaryPath: helmBinaryPath,
-		chartPath:      chartPath,
+	helmChart = &HelmChartHelper{
+		BinaryPath: helmBinaryPath,
+		Path:       chartPath,
+		Name:       "capi-operator",
+		Kubeconfig: helmClusterProxy.GetKubeconfigPath(),
+		DryRun:     true,
 	}
 }
 

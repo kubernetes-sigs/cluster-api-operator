@@ -57,7 +57,7 @@ const (
 	customManifestsFolder = "resources/"
 )
 
-func waitForDeployment(cl client.Client, ctx context.Context, name string) (bool, error) {
+func WaitForDeployment(cl client.Client, ctx context.Context, name string) (bool, error) {
 	deployment := &appsv1.Deployment{}
 	key := client.ObjectKey{Namespace: operatorNamespace, Name: name}
 	if err := cl.Get(ctx, key, deployment); err != nil {
@@ -73,7 +73,7 @@ func waitForDeployment(cl client.Client, ctx context.Context, name string) (bool
 	return false, nil
 }
 
-func waitForObjectToBeDeleted(cl client.Client, ctx context.Context, key client.ObjectKey, obj client.Object) (bool, error) {
+func WaitForObjectToBeDeleted(cl client.Client, ctx context.Context, key client.ObjectKey, obj client.Object) (bool, error) {
 	if err := cl.Get(ctx, key, obj); err != nil {
 		if apierrors.IsNotFound(err) {
 			return true, nil
@@ -85,22 +85,36 @@ func waitForObjectToBeDeleted(cl client.Client, ctx context.Context, key client.
 	return false, nil
 }
 
-type helmChartHelper struct {
-	helmBinaryPath string
-	chartPath      string
+type HelmChartHelper struct {
+	BinaryPath      string
+	Path            string
+	Name            string
+	Kubeconfig      string
+	DryRun          bool
+	Wait            bool
+	AdditionalFlags []string
 }
 
-// dryRunInstallChart performs a dry run install of the helm chart. Helm dry run install returns the rendered manifest
+// InstallChart performs an install of the helm chart. Install returns the rendered manifest
 // with some additional data that can't be parsed as yaml. This function processes the output and returns only the optional resources,
 // marked as post install hooks.
-func (h *helmChartHelper) dryRunInstallChart(values map[string]string) (string, error) {
-	args := []string{"install", "--kubeconfig", helmClusterProxy.GetKubeconfigPath(), "capi-operator", h.chartPath, "--dry-run"}
+func (h *HelmChartHelper) InstallChart(values map[string]string) (string, error) {
+	args := []string{"install", "--kubeconfig", h.Kubeconfig, h.Name, h.Path}
+	if h.DryRun {
+		args = append(args, "--dry-run")
+	}
+	if h.Wait {
+		args = append(args, "--wait")
+	}
 	for key, value := range values {
 		args = append(args, "--set")
 		args = append(args, fmt.Sprintf("%s=%s", key, value))
 	}
+	if h.AdditionalFlags != nil {
+		args = append(args, h.AdditionalFlags...)
+	}
 
-	cmd := exec.Command(h.helmBinaryPath, args...)
+	cmd := exec.Command(h.BinaryPath, args...)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return "", fmt.Errorf("failed to run helm install: %w, output: %s", err, string(out))
