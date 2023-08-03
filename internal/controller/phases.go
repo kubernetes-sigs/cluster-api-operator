@@ -155,7 +155,12 @@ func (p *phaseReconciler) load(ctx context.Context) (reconcile.Result, error) {
 		labelSelector = p.provider.GetSpec().FetchConfig.Selector
 	}
 
-	p.repo, err = p.configmapRepository(ctx, labelSelector)
+	additionalManifests, err := p.fetchAddionalManifests(ctx)
+	if err != nil {
+		return reconcile.Result{}, wrapPhaseError(err, "failed to load additional manifests")
+	}
+
+	p.repo, err = p.configmapRepository(ctx, labelSelector, additionalManifests)
 	if err != nil {
 		return reconcile.Result{}, wrapPhaseError(err, "failed to load the repository")
 	}
@@ -228,7 +233,7 @@ func (p *phaseReconciler) secretReader(ctx context.Context) (configclient.Reader
 
 // configmapRepository use clusterctl NewMemoryRepository structure to store the manifests
 // and metadata from a given configmap.
-func (p *phaseReconciler) configmapRepository(ctx context.Context, labelSelector *metav1.LabelSelector) (repository.Repository, error) {
+func (p *phaseReconciler) configmapRepository(ctx context.Context, labelSelector *metav1.LabelSelector, additionalManifests string) (repository.Repository, error) {
 	mr := repository.NewMemoryRepository()
 	mr.WithPaths("", "components.yaml")
 
@@ -275,10 +280,28 @@ func (p *phaseReconciler) configmapRepository(ctx context.Context, labelSelector
 			return nil, err
 		}
 
+		if additionalManifests != "" {
+			components = components + "\n---\n" + additionalManifests
+		}
+
 		mr.WithFile(version, mr.ComponentsPath(), []byte(components))
 	}
 
 	return mr, nil
+}
+
+func (p *phaseReconciler) fetchAddionalManifests(ctx context.Context) (string, error) {
+	cm := &corev1.ConfigMap{}
+
+	if p.provider.GetSpec().AdditionalManifestsRef != nil {
+		key := types.NamespacedName{Namespace: p.provider.GetSpec().AdditionalManifestsRef.Namespace, Name: p.provider.GetSpec().AdditionalManifestsRef.Name}
+
+		if err := p.ctrlClient.Get(ctx, key, cm); err != nil {
+			return "", fmt.Errorf("failed to get ConfigMap %s/%s: %w", key.Namespace, key.Name, err)
+		}
+	}
+
+	return cm.Data[additionalManifestsConfigMapKey], nil
 }
 
 // getComponentsData returns components data based on if it's compressed or not.

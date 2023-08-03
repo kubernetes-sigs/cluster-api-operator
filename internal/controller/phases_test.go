@@ -131,7 +131,7 @@ releaseSeries:
 	contract: v1alpha3`
 
 	components := `
-	apiVersion: v1
+apiVersion: v1
 kind: Namespace
 metadata:
   labels:
@@ -147,12 +147,21 @@ metadata:
     control-plane: controller-manager
   name: capi-webhook-system
 ---`
+
+	additionalManifests := `
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: some-other-namespace
+---
+`
 	tests := []struct {
-		name               string
-		configMaps         []corev1.ConfigMap
-		want               repository.Repository
-		wantErr            string
-		wantDefaultVersion string
+		name                string
+		configMaps          []corev1.ConfigMap
+		additionalManifests string
+		want                repository.Repository
+		wantErr             string
+		wantDefaultVersion  string
 	}{
 		{
 			name:    "missing configmaps",
@@ -335,6 +344,28 @@ metadata:
 			},
 			wantDefaultVersion: "v1.2.3",
 		},
+		{
+			name: "with additional manifests",
+			configMaps: []corev1.ConfigMap{
+				{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "ConfigMap",
+						APIVersion: "v1",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "v1.2.3",
+						Namespace: "ns1",
+						Labels:    map[string]string{"provider-components": "aws"},
+					},
+					Data: map[string]string{
+						"metadata":   metadata,
+						"components": components,
+					},
+				},
+			},
+			additionalManifests: additionalManifests,
+			wantDefaultVersion:  "v1.2.3",
+		},
 	}
 
 	for _, tt := range tests {
@@ -351,14 +382,25 @@ metadata:
 				g.Expect(fakeclient.Create(ctx, &tt.configMaps[i])).To(Succeed())
 			}
 
-			got, err := p.configmapRepository(context.TODO(), p.provider.GetSpec().FetchConfig.Selector)
+			got, err := p.configmapRepository(context.TODO(), p.provider.GetSpec().FetchConfig.Selector, tt.additionalManifests)
 			if len(tt.wantErr) > 0 {
 				g.Expect(err).Should(MatchError(tt.wantErr))
 				return
 			}
 			g.Expect(err).To(Succeed())
-			g.Expect(got.GetFile(got.DefaultVersion(), got.ComponentsPath())).To(Equal([]byte(components)))
-			g.Expect(got.GetFile(got.DefaultVersion(), "metadata.yaml")).To(Equal([]byte(metadata)))
+			gotComponents, err := got.GetFile(got.DefaultVersion(), got.ComponentsPath())
+			g.Expect(err).To(Succeed())
+
+			if tt.additionalManifests != "" {
+				g.Expect(string(gotComponents)).To(Equal(components + "\n---\n" + additionalManifests))
+			} else {
+				g.Expect(string(gotComponents)).To(Equal(components))
+			}
+
+			gotMetadata, err := got.GetFile(got.DefaultVersion(), "metadata.yaml")
+			g.Expect(err).To(Succeed())
+			g.Expect(string(gotMetadata)).To(Equal(metadata))
+
 			g.Expect(got.DefaultVersion()).To(Equal(tt.wantDefaultVersion))
 		})
 	}

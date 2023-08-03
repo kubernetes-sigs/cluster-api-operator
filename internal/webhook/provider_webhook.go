@@ -25,4 +25,8 @@ func setDefaultProviderSpec(providerSpec *operatorv1.ProviderSpec, providerNames
 	if providerSpec.SecretName != "" && providerSpec.SecretNamespace == "" {
 		providerSpec.SecretNamespace = providerNamespace
 	}
+
+	if providerSpec.AdditionalManifestsRef != nil && providerSpec.AdditionalManifestsRef.Namespace == "" {
+		providerSpec.AdditionalManifestsRef.Namespace = providerNamespace
+	}
 }
