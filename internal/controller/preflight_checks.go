@@ -46,6 +46,7 @@ var (
 	capiVersionIncompatibilityMessage            = "CAPI operator is only compatible with %s providers, detected %s for provider %s."
 	invalidGithubTokenMessage                    = "Invalid github token, please check your github token value and its permissions" //nolint:gosec
 	waitingForCoreProviderReadyMessage           = "Waiting for the core provider to be installed."
+	incorrectCoreProviderNameMessage             = "Incorrect CoreProvider name: %s. It should be %s"
 )
 
 // preflightChecks performs preflight checks before installing provider.
@@ -68,6 +69,20 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 			))
 
 			return ctrl.Result{}, fmt.Errorf("version contains invalid value for provider %q", provider.GetName())
+		}
+	}
+
+	// Ensure that the CoreProvider is called "cluster-api".
+	if util.IsCoreProvider(provider) {
+		if provider.GetName() != configclient.ClusterAPIProviderName {
+			conditions.Set(provider, conditions.FalseCondition(
+				operatorv1.PreflightCheckCondition,
+				operatorv1.IncorrectCoreProviderNameReason,
+				clusterv1.ConditionSeverityError,
+				fmt.Sprintf(incorrectCoreProviderNameMessage, provider.GetName(), configclient.ClusterAPIProviderName),
+			))
+
+			return ctrl.Result{}, fmt.Errorf("incorrect CoreProvider name: %s, it should be %s", provider.GetName(), configclient.ClusterAPIProviderName)
 		}
 	}
 

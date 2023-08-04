@@ -75,6 +75,42 @@ func TestPreflightChecks(t *testing.T) {
 			},
 		},
 		{
+			name:          "core provider with incorrect name, preflight check failed",
+			expectedError: true,
+			providers: []genericprovider.GenericProvider{
+				&genericprovider.CoreProviderWrapper{
+					CoreProvider: &operatorv1.CoreProvider{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "my-fancy-cluster-api",
+							Namespace: namespaceName1,
+						},
+						TypeMeta: metav1.TypeMeta{
+							Kind:       "CoreProvider",
+							APIVersion: "operator.cluster.x-k8s.io/v1alpha1",
+						},
+						Spec: operatorv1.CoreProviderSpec{
+							ProviderSpec: operatorv1.ProviderSpec{
+								Version: "v1.0.0",
+								FetchConfig: &operatorv1.FetchConfiguration{
+									URL: "https://example.com",
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedCondition: clusterv1.Condition{
+				Type:     operatorv1.PreflightCheckCondition,
+				Reason:   operatorv1.IncorrectCoreProviderNameReason,
+				Severity: clusterv1.ConditionSeverityError,
+				Message:  "Incorrect CoreProvider name: my-fancy-cluster-api. It should be cluster-api",
+				Status:   corev1.ConditionFalse,
+			},
+			providerList: &genericprovider.CoreProviderListWrapper{
+				CoreProviderList: &operatorv1.CoreProviderList{},
+			},
+		},
+		{
 			name:          "two core providers were created, preflight check failed",
 			expectedError: true,
 			providers: []genericprovider.GenericProvider{
@@ -562,20 +598,20 @@ func TestPreflightChecks(t *testing.T) {
 			},
 		},
 		{
-			name:          "custom Core Provider without fetch config, preflight check failed",
+			name:          "custom Infrastructure Provider without fetch config, preflight check failed",
 			expectedError: true,
 			providers: []genericprovider.GenericProvider{
-				&genericprovider.CoreProviderWrapper{
-					CoreProvider: &operatorv1.CoreProvider{
+				&genericprovider.InfrastructureProviderWrapper{
+					InfrastructureProvider: &operatorv1.InfrastructureProvider{
 						ObjectMeta: metav1.ObjectMeta{
-							Name:      "my-custom-cluster-api",
+							Name:      "my-custom-aws",
 							Namespace: namespaceName1,
 						},
 						TypeMeta: metav1.TypeMeta{
-							Kind:       "CoreProvider",
+							Kind:       "InfrastructureProvider",
 							APIVersion: "operator.cluster.x-k8s.io/v1alpha1",
 						},
-						Spec: operatorv1.CoreProviderSpec{
+						Spec: operatorv1.InfrastructureProviderSpec{
 							ProviderSpec: operatorv1.ProviderSpec{
 								Version: "v1.0.0",
 							},
@@ -595,20 +631,20 @@ func TestPreflightChecks(t *testing.T) {
 			},
 		},
 		{
-			name:          "custom Core Provider with fetch config with empty values, preflight check failed",
+			name:          "custom Infrastructure Provider with fetch config with empty values, preflight check failed",
 			expectedError: true,
 			providers: []genericprovider.GenericProvider{
-				&genericprovider.CoreProviderWrapper{
-					CoreProvider: &operatorv1.CoreProvider{
+				&genericprovider.InfrastructureProviderWrapper{
+					InfrastructureProvider: &operatorv1.InfrastructureProvider{
 						ObjectMeta: metav1.ObjectMeta{
-							Name:      "my-custom-cluster-api",
+							Name:      "my-custom-aws",
 							Namespace: namespaceName1,
 						},
 						TypeMeta: metav1.TypeMeta{
-							Kind:       "CoreProvider",
+							Kind:       "InfrastructureProvider",
 							APIVersion: "operator.cluster.x-k8s.io/v1alpha1",
 						},
-						Spec: operatorv1.CoreProviderSpec{
+						Spec: operatorv1.InfrastructureProviderSpec{
 							ProviderSpec: operatorv1.ProviderSpec{
 								Version: "v1.0.0",
 								FetchConfig: &operatorv1.FetchConfiguration{
