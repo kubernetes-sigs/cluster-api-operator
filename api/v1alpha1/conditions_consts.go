@@ -29,6 +29,9 @@ const (
 	// IncorrectVersionFormatReason documents that the provider version is in the incorrect format.
 	IncorrectVersionFormatReason = "IncorrectVersionFormat"
 
+	// IncorrectCoreProviderNameReason documents that the provider name is incorrect.
+	IncorrectCoreProviderNameReason = "IncorrectCoreProviderNameReason"
+
 	// EmptyVersionReason documents that the provider version is in the incorrect format.
 	EmptyVersionReason = "EmptyVersionReason"
 
