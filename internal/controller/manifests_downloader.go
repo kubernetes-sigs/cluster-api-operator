@@ -50,8 +50,6 @@ const (
 func (p *phaseReconciler) downloadManifests(ctx context.Context) (reconcile.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 
-	log.Info("Downloading provider manifests")
-
 	// Return immediately if a custom config map is used instead of a url.
 	if p.provider.GetSpec().FetchConfig != nil && p.provider.GetSpec().FetchConfig.Selector != nil {
 		log.V(5).Info("Custom config map is used, skip downloading provider manifests")
@@ -74,6 +72,8 @@ func (p *phaseReconciler) downloadManifests(ctx context.Context) (reconcile.Resu
 
 		return reconcile.Result{}, nil
 	}
+
+	log.Info("Downloading provider manifests")
 
 	repo, err := repositoryFactory(p.providerConfig, p.configClient.Variables())
 	if err != nil {

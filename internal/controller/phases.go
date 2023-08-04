@@ -218,9 +218,23 @@ func (p *phaseReconciler) secretReader(ctx context.Context) (configclient.Reader
 	}
 
 	// If provided store fetch config url in memory reader.
-	if p.provider.GetSpec().FetchConfig != nil && p.provider.GetSpec().FetchConfig.URL != "" {
-		log.Info("Custom fetch configuration url was provided")
-		return mr.AddProvider(p.provider.GetName(), util.ClusterctlProviderType(p.provider), p.provider.GetSpec().FetchConfig.URL)
+	if p.provider.GetSpec().FetchConfig != nil {
+		if p.provider.GetSpec().FetchConfig.URL != "" {
+			log.Info("Custom fetch configuration url was provided")
+			return mr.AddProvider(p.provider.GetName(), util.ClusterctlProviderType(p.provider), p.provider.GetSpec().FetchConfig.URL)
+		}
+
+		if p.provider.GetSpec().FetchConfig.Selector != nil {
+			log.Info("Custom fetch configuration config map was provided")
+
+			// To register a new provider from the config map, we need to specify a URL with a valid
+			// format. However, since we're using data from a local config map, URLs are not needed.
+			// As a workaround, we add a fake but well-formatted URL.
+
+			fakeURL := "https://example.com/my-provider"
+
+			return mr.AddProvider(p.provider.GetName(), util.ClusterctlProviderType(p.provider), fakeURL)
+		}
 	}
 
 	return mr, nil
