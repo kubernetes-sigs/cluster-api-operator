@@ -55,6 +55,37 @@ func TestSetDefaultProviderSpec(t *testing.T) {
 				SecretNamespace: "test-namespace-1",
 			},
 		},
+		{
+			name: "shoud default additional manifests namespace if not specified",
+			providerSpec: &operatorv1.ProviderSpec{
+				AdditionalManifestsRef: &operatorv1.ConfigmapReference{
+					Name: "test-configmap",
+				},
+			},
+			namespace: "test-namespace",
+			expectedProviderSpec: &operatorv1.ProviderSpec{
+				AdditionalManifestsRef: &operatorv1.ConfigmapReference{
+					Name:      "test-configmap",
+					Namespace: "test-namespace",
+				},
+			},
+		},
+		{
+			name: "shoud not default additional manifests namespace if not specified",
+			providerSpec: &operatorv1.ProviderSpec{
+				AdditionalManifestsRef: &operatorv1.ConfigmapReference{
+					Name:      "test-configmap",
+					Namespace: "test-namespace-1",
+				},
+			},
+			namespace: "test-namespace-2",
+			expectedProviderSpec: &operatorv1.ProviderSpec{
+				AdditionalManifestsRef: &operatorv1.ConfigmapReference{
+					Name:      "test-configmap",
+					Namespace: "test-namespace-1",
+				},
+			},
+		},
 	}
 
 	for _, tc := range testCases {

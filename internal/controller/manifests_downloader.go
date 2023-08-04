@@ -40,8 +40,9 @@ const (
 
 	compressedAnnotation = "provider.cluster.x-k8s.io/compressed"
 
-	metadataConfigMapKey   = "metadata"
-	componentsConfigMapKey = "components"
+	metadataConfigMapKey            = "metadata"
+	componentsConfigMapKey          = "components"
+	additionalManifestsConfigMapKey = "manifests"
 
 	maxConfigMapSize = 1 * 1024 * 1024
 )

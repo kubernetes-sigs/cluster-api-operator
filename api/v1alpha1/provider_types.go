@@ -63,6 +63,23 @@ type ProviderSpec struct {
 	// https://github.com/kubernetes-sigs/cluster-api-provider-aws/releases.
 	// +optional
 	FetchConfig *FetchConfiguration `json:"fetchConfig,omitempty"`
+
+	// AdditionalManifests is reference to configmap that contains additional manifests that will be applied
+	// together with the provider components. The key for storing these manifests has to be `manifests`.
+	// The manifests are applied only once when a certain release is installed/upgraded. If namespace is not specified, the
+	// namespace of the provider will be used. There is no validation of the yaml content inside the configmap.
+	// +optional
+	AdditionalManifestsRef *ConfigmapReference `json:"additionalManifests,omitempty"`
+}
+
+// ConfigmapReference contains enough information to locate the configmap.
+type ConfigmapReference struct {
+	// Name defines the name of the configmap.
+	Name string `json:"name"`
+
+	// Namespace defines the namespace of the configmap.
+	// +optional
+	Namespace string `json:"namespace,omitempty"`
 }
 
 // ManagerSpec defines the properties that can be enabled on the controller manager for the provider.
