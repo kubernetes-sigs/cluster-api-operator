@@ -38,6 +38,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/klog/v2"
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha1"
+
+	operatorframework "sigs.k8s.io/cluster-api-operator/test/framework"
 	"sigs.k8s.io/cluster-api/test/framework"
 	"sigs.k8s.io/cluster-api/test/framework/bootstrap"
 	"sigs.k8s.io/cluster-api/test/framework/clusterctl"
@@ -114,7 +116,7 @@ var (
 	usePRArtifacts bool
 
 	// helmChart is the helm chart helper to be used for the e2e tests.
-	helmChart *HelmChartHelper
+	helmChart *operatorframework.HelmChart
 )
 
 func init() {
@@ -172,7 +174,7 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 	}, scheme, useExistingCluster, "helm")
 
 	By("Initializing a helm chart helper")
-	initHelmChartHelper()
+	initHelmChart()
 
 	By("Initializing the helm cluster")
 	initHelmCluster(helmClusterProxy, e2eConfig)
@@ -337,8 +339,8 @@ func ensureCertManager(clusterProxy framework.ClusterProxy, config *clusterctl.E
 	}
 }
 
-func initHelmChartHelper() {
-	helmChart = &HelmChartHelper{
+func initHelmChart() {
+	helmChart = &operatorframework.HelmChart{
 		BinaryPath: helmBinaryPath,
 		Path:       chartPath,
 		Name:       "capi-operator",

@@ -29,6 +29,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha1"
 	"sigs.k8s.io/cluster-api/test/framework"
+
+	operatorframework "sigs.k8s.io/cluster-api-operator/test/framework"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -65,7 +67,7 @@ var _ = Describe("Create and delete a provider with manifests that don't fit the
 		}, e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
 		By("Waiting for core provider to be ready")
-		WaitForConditional(ctx, ObjectConditionalInput{
+		operatorframework.WaitForConditional(ctx, operatorframework.ObjectConditionalInput{
 			Reader: k8sclient,
 			Object: coreProvider,
 			Conditional: func() bool {
@@ -76,16 +78,16 @@ var _ = Describe("Create and delete a provider with manifests that don't fit the
 				}
 				return false
 			},
-		}, timeout)
+		}, e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
 		By("Waiting for status.IntalledVersion to be set")
-		WaitForConditional(ctx, ObjectConditionalInput{
+		operatorframework.WaitForConditional(ctx, operatorframework.ObjectConditionalInput{
 			Reader: k8sclient,
 			Object: coreProvider,
 			Conditional: func() bool {
 				return coreProvider.Status.InstalledVersion != nil && *coreProvider.Status.InstalledVersion == coreProvider.Spec.Version
 			},
-		}, timeout)
+		}, e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 	})
 
 	It("should successfully create and delete an InfrastructureProvider for OCI", func() {
@@ -105,7 +107,7 @@ var _ = Describe("Create and delete a provider with manifests that don't fit the
 		Expect(k8sclient.Create(ctx, infraProvider)).To(Succeed())
 
 		By("Waiting for the infrastructure provider to be ready")
-		WaitForConditional(ctx, ObjectConditionalInput{
+		operatorframework.WaitForConditional(ctx, operatorframework.ObjectConditionalInput{
 			Reader: k8sclient,
 			Object: infraProvider,
 			Conditional: func() bool {
@@ -116,16 +118,16 @@ var _ = Describe("Create and delete a provider with manifests that don't fit the
 				}
 				return false
 			},
-		}, timeout)
+		}, e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
 		By("Waiting for status.IntalledVersion to be set")
-		WaitForConditional(ctx, ObjectConditionalInput{
+		operatorframework.WaitForConditional(ctx, operatorframework.ObjectConditionalInput{
 			Reader: k8sclient,
 			Object: infraProvider,
 			Conditional: func() bool {
 				return infraProvider.Status.InstalledVersion != nil && *infraProvider.Status.InstalledVersion == infraProvider.Spec.Version
 			},
-		}, timeout)
+		}, e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
 		By("Ensure that the created config map has correct annotation")
 		cmName := fmt.Sprintf("infrastructure-%s-%s", ociInfrastructureProviderName, ociInfrastructureProviderVersion)
@@ -148,18 +150,18 @@ var _ = Describe("Create and delete a provider with manifests that don't fit the
 		By("Waiting for the infrastructure provider deployment to be created")
 		Eventually(func() bool {
 			return k8sclient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment) == nil
-		}, timeout)
+		}, e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
 		Expect(k8sclient.Delete(ctx, infraProvider)).To(Succeed())
 
 		By("Waiting for the infrastructure provider deployment to be deleted")
-		WaitForDelete(ctx, ObjectGetterInput{
+		operatorframework.WaitForDelete(ctx, operatorframework.ObjectGetterInput{
 			Reader: k8sclient,
 			Object: deployment,
-		}, timeout)
+		}, e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
 		By("Waiting for the configmap to be deleted")
-		WaitForDelete(ctx, ObjectGetterInput{
+		operatorframework.WaitForDelete(ctx, operatorframework.ObjectGetterInput{
 			Reader: k8sclient,
 			Object: &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
@@ -167,7 +169,7 @@ var _ = Describe("Create and delete a provider with manifests that don't fit the
 					Name:      cmName,
 				},
 			},
-		}, timeout)
+		}, e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 	})
 
 	It("should successfully create and delete an InfrastructureProvider for OCI with custom name from a pre-created ConfigMap", func() {
@@ -201,7 +203,7 @@ var _ = Describe("Create and delete a provider with manifests that don't fit the
 		Expect(k8sclient.Create(ctx, infraProvider)).To(Succeed())
 
 		By("Waiting for the infrastructure provider to be ready")
-		WaitForConditional(ctx, ObjectConditionalInput{
+		operatorframework.WaitForConditional(ctx, operatorframework.ObjectConditionalInput{
 			Reader: k8sclient,
 			Object: infraProvider,
 			Conditional: func() bool {
@@ -212,16 +214,16 @@ var _ = Describe("Create and delete a provider with manifests that don't fit the
 				}
 				return false
 			},
-		}, timeout)
+		}, e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
 		By("Waiting for status.IntalledVersion to be set")
-		WaitForConditional(ctx, ObjectConditionalInput{
+		operatorframework.WaitForConditional(ctx, operatorframework.ObjectConditionalInput{
 			Reader: k8sclient,
 			Object: infraProvider,
 			Conditional: func() bool {
 				return infraProvider.Status.InstalledVersion != nil && *infraProvider.Status.InstalledVersion == infraProvider.Spec.Version
 			},
-		}, timeout)
+		}, e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
 		By("Ensure that the created config map has correct annotation")
 		cm := &corev1.ConfigMap{}
@@ -243,15 +245,15 @@ var _ = Describe("Create and delete a provider with manifests that don't fit the
 		By("Waiting for the infrastructure provider deployment to be created")
 		Eventually(func() bool {
 			return k8sclient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment) == nil
-		}, timeout)
+		}, e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
 		Expect(k8sclient.Delete(ctx, infraProvider)).To(Succeed())
 
 		By("Waiting for the infrastructure provider deployment to be deleted")
-		WaitForDelete(ctx, ObjectGetterInput{
+		operatorframework.WaitForDelete(ctx, operatorframework.ObjectGetterInput{
 			Reader: k8sclient,
 			Object: deployment,
-		}, timeout)
+		}, e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 	})
 
 	It("should successfully delete a CoreProvider", func() {
@@ -269,7 +271,7 @@ var _ = Describe("Create and delete a provider with manifests that don't fit the
 		Expect(k8sclient.Delete(ctx, coreProvider)).To(Succeed())
 
 		By("Waiting for the core provider deployment to be deleted")
-		WaitForDelete(ctx, ObjectGetterInput{
+		operatorframework.WaitForDelete(ctx, operatorframework.ObjectGetterInput{
 			Reader: k8sclient,
 			Object: &appsv1.Deployment{
 				ObjectMeta: metav1.ObjectMeta{
@@ -277,12 +279,12 @@ var _ = Describe("Create and delete a provider with manifests that don't fit the
 					Namespace: operatorNamespace,
 				},
 			},
-		}, timeout)
+		}, e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
 		By("Waiting for the core provider object to be deleted")
-		WaitForDelete(ctx, ObjectGetterInput{
+		operatorframework.WaitForDelete(ctx, operatorframework.ObjectGetterInput{
 			Reader: k8sclient,
 			Object: coreProvider,
-		}, timeout)
+		}, e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 	})
 })

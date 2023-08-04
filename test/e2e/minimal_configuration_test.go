@@ -27,6 +27,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha1"
 	"sigs.k8s.io/cluster-api/test/framework"
+
+	operatorframework "sigs.k8s.io/cluster-api-operator/test/framework"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -76,10 +78,10 @@ data:
 		framework.WaitForDeploymentsAvailable(ctx, framework.WaitForDeploymentsAvailableInput{
 			Getter:     k8sclient,
 			Deployment: &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: coreProviderDeploymentName, Namespace: operatorNamespace}},
-		}, timeout)
+		}, e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
 		By("Waiting for core provider to be ready")
-		WaitForConditional(ctx, ObjectConditionalInput{
+		operatorframework.WaitForConditional(ctx, operatorframework.ObjectConditionalInput{
 			Reader: k8sclient,
 			Object: coreProvider,
 			Conditional: func() bool {
@@ -90,16 +92,16 @@ data:
 				}
 				return false
 			},
-		}, timeout)
+		}, e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
 		By("Waiting for status.IntalledVersion to be set")
-		WaitForConditional(ctx, ObjectConditionalInput{
+		operatorframework.WaitForConditional(ctx, operatorframework.ObjectConditionalInput{
 			Reader: k8sclient,
 			Object: coreProvider,
 			Conditional: func() bool {
 				return coreProvider.Status.InstalledVersion != nil && *coreProvider.Status.InstalledVersion == coreProvider.Spec.Version
 			},
-		}, timeout)
+		}, e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
 		By("Checking if additional manifests are applied")
 		cm := &corev1.ConfigMap{
@@ -108,14 +110,14 @@ data:
 				Namespace: operatorNamespace,
 			},
 		}
-		WaitForConditional(ctx, ObjectConditionalInput{
+		operatorframework.WaitForConditional(ctx, operatorframework.ObjectConditionalInput{
 			Reader: k8sclient,
 			Object: cm,
 			Conditional: func() bool {
-				ok, value := cm.Data["test"]
+				value, ok := cm.Data["test"]
 				return ok && value == "test"
 			},
-		}, timeout)
+		}, e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 	})
 
 	It("should successfully create and delete a BootstrapProvider", func() {
@@ -142,10 +144,10 @@ data:
 		framework.WaitForDeploymentsAvailable(ctx, framework.WaitForDeploymentsAvailableInput{
 			Getter:     k8sclient,
 			Deployment: deployment,
-		}, timeout)
+		}, e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
 		By("Waiting for bootstrap provider to be ready")
-		WaitForConditional(ctx, ObjectConditionalInput{
+		operatorframework.WaitForConditional(ctx, operatorframework.ObjectConditionalInput{
 			Reader: k8sclient,
 			Object: bootstrapProvider,
 			Conditional: func() bool {
@@ -156,21 +158,21 @@ data:
 				}
 				return false
 			},
-		}, timeout)
+		}, e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
 		By("Waiting for status.IntalledVersion to be set")
-		WaitForConditional(ctx, ObjectConditionalInput{
+		operatorframework.WaitForConditional(ctx, operatorframework.ObjectConditionalInput{
 			Reader: k8sclient,
 			Object: bootstrapProvider,
 			Conditional: func() bool {
 				return bootstrapProvider.Status.InstalledVersion != nil && *bootstrapProvider.Status.InstalledVersion == bootstrapProvider.Spec.Version
 			},
-		}, timeout)
+		}, e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
 		Expect(k8sclient.Delete(ctx, bootstrapProvider)).To(Succeed())
 
 		By("Waiting for the bootstrap provider deployment to be deleted")
-		WaitForDelete(ctx, ObjectGetterInput{
+		operatorframework.WaitForDelete(ctx, operatorframework.ObjectGetterInput{
 			Reader: k8sclient,
 			Object: deployment,
 		})
@@ -200,10 +202,10 @@ data:
 		framework.WaitForDeploymentsAvailable(ctx, framework.WaitForDeploymentsAvailableInput{
 			Getter:     k8sclient,
 			Deployment: deployment,
-		}, timeout)
+		}, e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
 		By("Waiting for the control plane provider to be ready")
-		WaitForConditional(ctx, ObjectConditionalInput{
+		operatorframework.WaitForConditional(ctx, operatorframework.ObjectConditionalInput{
 			Reader: k8sclient,
 			Object: cpProvider,
 			Conditional: func() bool {
@@ -214,21 +216,21 @@ data:
 				}
 				return false
 			},
-		}, timeout)
+		}, e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
 		By("Waiting for status.IntalledVersion to be set")
-		WaitForConditional(ctx, ObjectConditionalInput{
+		operatorframework.WaitForConditional(ctx, operatorframework.ObjectConditionalInput{
 			Reader: k8sclient,
 			Object: cpProvider,
 			Conditional: func() bool {
 				return cpProvider.Status.InstalledVersion != nil && *cpProvider.Status.InstalledVersion == cpProvider.Spec.Version
 			},
-		}, timeout)
+		}, e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
 		Expect(k8sclient.Delete(ctx, cpProvider)).To(Succeed())
 
 		By("Waiting for the control plane provider deployment to be deleted")
-		WaitForDelete(ctx, ObjectGetterInput{
+		operatorframework.WaitForDelete(ctx, operatorframework.ObjectGetterInput{
 			Reader: k8sclient,
 			Object: deployment,
 		})
@@ -257,10 +259,10 @@ data:
 		framework.WaitForDeploymentsAvailable(ctx, framework.WaitForDeploymentsAvailableInput{
 			Getter:     k8sclient,
 			Deployment: deployment,
-		}, timeout)
+		}, e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
 		By("Waiting for the infrastructure provider to be ready")
-		WaitForConditional(ctx, ObjectConditionalInput{
+		operatorframework.WaitForConditional(ctx, operatorframework.ObjectConditionalInput{
 			Reader: k8sclient,
 			Object: infraProvider,
 			Conditional: func() bool {
@@ -271,21 +273,21 @@ data:
 				}
 				return false
 			},
-		}, timeout)
+		}, e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
 		By("Waiting for status.IntalledVersion to be set")
-		WaitForConditional(ctx, ObjectConditionalInput{
+		operatorframework.WaitForConditional(ctx, operatorframework.ObjectConditionalInput{
 			Reader: k8sclient,
 			Object: infraProvider,
 			Conditional: func() bool {
 				return infraProvider.Status.InstalledVersion != nil && *infraProvider.Status.InstalledVersion == infraProvider.Spec.Version
 			},
-		}, timeout)
+		}, e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
 		Expect(k8sclient.Delete(ctx, infraProvider)).To(Succeed())
 
 		By("Waiting for the infrastructure provider deployment to be deleted")
-		WaitForDelete(ctx, ObjectGetterInput{
+		operatorframework.WaitForDelete(ctx, operatorframework.ObjectGetterInput{
 			Reader: k8sclient,
 			Object: deployment,
 		})
@@ -305,10 +307,10 @@ data:
 		framework.WaitForDeploymentsAvailable(ctx, framework.WaitForDeploymentsAvailableInput{
 			Getter:     k8sclient,
 			Deployment: &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: coreProviderDeploymentName, Namespace: operatorNamespace}},
-		}, timeout)
+		}, e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
 		By("Waiting for core provider to be ready and status.InstalledVersion to be set")
-		WaitForConditional(ctx, ObjectConditionalInput{
+		operatorframework.WaitForConditional(ctx, operatorframework.ObjectConditionalInput{
 			Reader: k8sclient,
 			Object: coreProvider,
 			Conditional: func() bool {
@@ -319,7 +321,7 @@ data:
 				}
 				return false
 			},
-		}, timeout)
+		}, e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 	})
 
 	It("should successfully upgrade a CoreProvider (v1.4.2 -> latest)", func() {
@@ -340,10 +342,10 @@ data:
 		framework.WaitForDeploymentsAvailable(ctx, framework.WaitForDeploymentsAvailableInput{
 			Getter:     k8sclient,
 			Deployment: &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: coreProviderDeploymentName, Namespace: operatorNamespace}},
-		}, timeout)
+		}, e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
 		By("Waiting for core provider to be ready")
-		WaitForConditional(ctx, ObjectConditionalInput{
+		operatorframework.WaitForConditional(ctx, operatorframework.ObjectConditionalInput{
 			Reader: k8sclient,
 			Object: coreProvider,
 			Conditional: func() bool {
@@ -354,16 +356,16 @@ data:
 				}
 				return false
 			},
-		}, timeout)
+		}, e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
 		By("Waiting for the core provide status.InstalledVersion to be set")
-		WaitForConditional(ctx, ObjectConditionalInput{
+		operatorframework.WaitForConditional(ctx, operatorframework.ObjectConditionalInput{
 			Reader: k8sclient,
 			Object: coreProvider,
 			Conditional: func() bool {
 				return coreProvider.Status.InstalledVersion != nil && *coreProvider.Status.InstalledVersion == coreProvider.Spec.Version
 			},
-		}, timeout)
+		}, e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 	})
 
 	It("should successfully delete a CoreProvider", func() {
@@ -387,13 +389,13 @@ data:
 		Expect(k8sclient.Delete(ctx, coreProvider)).To(Succeed())
 
 		By("Waiting for the core provider deployment to be deleted")
-		WaitForDelete(ctx, ObjectGetterInput{
+		operatorframework.WaitForDelete(ctx, operatorframework.ObjectGetterInput{
 			Reader: k8sclient,
 			Object: deployment,
 		})
 
 		By("Waiting for the core provider object to be deleted")
-		WaitForDelete(ctx, ObjectGetterInput{
+		operatorframework.WaitForDelete(ctx, operatorframework.ObjectGetterInput{
 			Reader: k8sclient,
 			Object: coreProvider,
 		})
