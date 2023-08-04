@@ -79,6 +79,26 @@ func WaitForDelete(ctx context.Context, input ObjectGetterInput, intervals ...in
 	}, intervals...).Should(BeTrue(), "Failed to wait until object deletion %s", klog.KObj(input.Object))
 }
 
+type Conditional = func() bool
+
+type ObjectConditionalInput struct {
+	client.Reader
+	client.Object
+	Conditional
+}
+
+// WaitForConditional will wait for conclusive result from specified callback
+func WaitForConditional(ctx context.Context, input ObjectConditionalInput, intervals ...interface{}) {
+	By("Waiting for object to be removed")
+	Eventually(func() bool {
+		if err := input.Get(ctx, client.ObjectKeyFromObject(input.Object), input.Object); err != nil {
+			klog.Infof("Failed to get an object: %+v", err)
+			return false
+		}
+		return input.Conditional()
+	}, intervals...).Should(BeTrue(), "Failed to wait until object condition match %s", klog.KObj(input.Object))
+}
+
 type HelmChartHelper struct {
 	BinaryPath      string
 	Path            string

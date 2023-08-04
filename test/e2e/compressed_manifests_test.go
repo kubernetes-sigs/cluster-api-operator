@@ -65,34 +65,27 @@ var _ = Describe("Create and delete a provider with manifests that don't fit the
 		}, e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
 		By("Waiting for core provider to be ready")
-		Eventually(func() bool {
-			coreProvider := &operatorv1.CoreProvider{}
-			key := client.ObjectKey{Namespace: operatorNamespace, Name: coreProviderName}
-			if err := k8sclient.Get(ctx, key, coreProvider); err != nil {
-				return false
-			}
-
-			for _, c := range coreProvider.Status.Conditions {
-				if c.Type == operatorv1.ProviderInstalledCondition && c.Status == corev1.ConditionTrue {
-					return true
+		WaitForConditional(ctx, ObjectConditionalInput{
+			Reader: k8sclient,
+			Object: coreProvider,
+			Conditional: func() bool {
+				for _, c := range coreProvider.Status.Conditions {
+					if c.Type == operatorv1.ProviderInstalledCondition && c.Status == corev1.ConditionTrue {
+						return true
+					}
 				}
-			}
-			return false
-		}, timeout).Should(Equal(true))
+				return false
+			},
+		}, timeout)
 
 		By("Waiting for status.IntalledVersion to be set")
-		Eventually(func() bool {
-			coreProvider := &operatorv1.CoreProvider{}
-			key := client.ObjectKey{Namespace: operatorNamespace, Name: coreProviderName}
-			if err := k8sclient.Get(ctx, key, coreProvider); err != nil {
-				return false
-			}
-
-			if coreProvider.Status.InstalledVersion != nil && *coreProvider.Status.InstalledVersion == coreProvider.Spec.Version {
-				return true
-			}
-			return false
-		}, timeout).Should(Equal(true))
+		WaitForConditional(ctx, ObjectConditionalInput{
+			Reader: k8sclient,
+			Object: coreProvider,
+			Conditional: func() bool {
+				return coreProvider.Status.InstalledVersion != nil && *coreProvider.Status.InstalledVersion == coreProvider.Spec.Version
+			},
+		}, timeout)
 	})
 
 	It("should successfully create and delete an InfrastructureProvider for OCI", func() {
@@ -112,34 +105,27 @@ var _ = Describe("Create and delete a provider with manifests that don't fit the
 		Expect(k8sclient.Create(ctx, infraProvider)).To(Succeed())
 
 		By("Waiting for the infrastructure provider to be ready")
-		Eventually(func() bool {
-			infraProvider := &operatorv1.InfrastructureProvider{}
-			key := client.ObjectKey{Namespace: operatorNamespace, Name: ociInfrastructureProviderName}
-			if err := k8sclient.Get(ctx, key, infraProvider); err != nil {
-				return false
-			}
-
-			for _, c := range infraProvider.Status.Conditions {
-				if c.Type == operatorv1.ProviderInstalledCondition && c.Status == corev1.ConditionTrue {
-					return true
+		WaitForConditional(ctx, ObjectConditionalInput{
+			Reader: k8sclient,
+			Object: infraProvider,
+			Conditional: func() bool {
+				for _, c := range infraProvider.Status.Conditions {
+					if c.Type == operatorv1.ProviderInstalledCondition && c.Status == corev1.ConditionTrue {
+						return true
+					}
 				}
-			}
-			return false
-		}, timeout).Should(Equal(true))
+				return false
+			},
+		}, timeout)
 
 		By("Waiting for status.IntalledVersion to be set")
-		Eventually(func() bool {
-			infraProvider := &operatorv1.InfrastructureProvider{}
-			key := client.ObjectKey{Namespace: operatorNamespace, Name: ociInfrastructureProviderName}
-			if err := k8sclient.Get(ctx, key, infraProvider); err != nil {
-				return false
-			}
-
-			if infraProvider.Status.InstalledVersion != nil && *infraProvider.Status.InstalledVersion == infraProvider.Spec.Version {
-				return true
-			}
-			return false
-		}, timeout).Should(Equal(true))
+		WaitForConditional(ctx, ObjectConditionalInput{
+			Reader: k8sclient,
+			Object: infraProvider,
+			Conditional: func() bool {
+				return infraProvider.Status.InstalledVersion != nil && *infraProvider.Status.InstalledVersion == infraProvider.Spec.Version
+			},
+		}, timeout)
 
 		By("Ensure that the created config map has correct annotation")
 		cmName := fmt.Sprintf("infrastructure-%s-%s", ociInfrastructureProviderName, ociInfrastructureProviderVersion)
@@ -162,7 +148,7 @@ var _ = Describe("Create and delete a provider with manifests that don't fit the
 		By("Waiting for the infrastructure provider deployment to be created")
 		Eventually(func() bool {
 			return k8sclient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment) == nil
-		}, timeout).Should(Equal(true))
+		}, timeout)
 
 		Expect(k8sclient.Delete(ctx, infraProvider)).To(Succeed())
 
@@ -215,34 +201,27 @@ var _ = Describe("Create and delete a provider with manifests that don't fit the
 		Expect(k8sclient.Create(ctx, infraProvider)).To(Succeed())
 
 		By("Waiting for the infrastructure provider to be ready")
-		Eventually(func() bool {
-			infraProvider := &operatorv1.InfrastructureProvider{}
-			key := client.ObjectKey{Namespace: operatorNamespace, Name: ociInfrastructureProviderCustomName}
-			if err := k8sclient.Get(ctx, key, infraProvider); err != nil {
-				return false
-			}
-
-			for _, c := range infraProvider.Status.Conditions {
-				if c.Type == operatorv1.ProviderInstalledCondition && c.Status == corev1.ConditionTrue {
-					return true
+		WaitForConditional(ctx, ObjectConditionalInput{
+			Reader: k8sclient,
+			Object: infraProvider,
+			Conditional: func() bool {
+				for _, c := range infraProvider.Status.Conditions {
+					if c.Type == operatorv1.ProviderInstalledCondition && c.Status == corev1.ConditionTrue {
+						return true
+					}
 				}
-			}
-			return false
-		}, timeout).Should(Equal(true))
+				return false
+			},
+		}, timeout)
 
 		By("Waiting for status.IntalledVersion to be set")
-		Eventually(func() bool {
-			infraProvider := &operatorv1.InfrastructureProvider{}
-			key := client.ObjectKey{Namespace: operatorNamespace, Name: ociInfrastructureProviderCustomName}
-			if err := k8sclient.Get(ctx, key, infraProvider); err != nil {
-				return false
-			}
-
-			if infraProvider.Status.InstalledVersion != nil && *infraProvider.Status.InstalledVersion == infraProvider.Spec.Version {
-				return true
-			}
-			return false
-		}, timeout).Should(Equal(true))
+		WaitForConditional(ctx, ObjectConditionalInput{
+			Reader: k8sclient,
+			Object: infraProvider,
+			Conditional: func() bool {
+				return infraProvider.Status.InstalledVersion != nil && *infraProvider.Status.InstalledVersion == infraProvider.Spec.Version
+			},
+		}, timeout)
 
 		By("Ensure that the created config map has correct annotation")
 		cm := &corev1.ConfigMap{}
@@ -264,7 +243,7 @@ var _ = Describe("Create and delete a provider with manifests that don't fit the
 		By("Waiting for the infrastructure provider deployment to be created")
 		Eventually(func() bool {
 			return k8sclient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment) == nil
-		}, timeout).Should(Equal(true))
+		}, timeout)
 
 		Expect(k8sclient.Delete(ctx, infraProvider)).To(Succeed())
 

@@ -79,47 +79,43 @@ data:
 		}, timeout)
 
 		By("Waiting for core provider to be ready")
-		Eventually(func() bool {
-			coreProvider := &operatorv1.CoreProvider{}
-			key := client.ObjectKey{Namespace: operatorNamespace, Name: coreProviderName}
-			if err := k8sclient.Get(ctx, key, coreProvider); err != nil {
-				return false
-			}
-
-			for _, c := range coreProvider.Status.Conditions {
-				if c.Type == operatorv1.ProviderInstalledCondition && c.Status == corev1.ConditionTrue {
-					return true
+		WaitForConditional(ctx, ObjectConditionalInput{
+			Reader: k8sclient,
+			Object: coreProvider,
+			Conditional: func() bool {
+				for _, c := range coreProvider.Status.Conditions {
+					if c.Type == operatorv1.ProviderInstalledCondition && c.Status == corev1.ConditionTrue {
+						return true
+					}
 				}
-			}
-			return false
-		}, timeout).Should(Equal(true))
+				return false
+			},
+		}, timeout)
 
 		By("Waiting for status.IntalledVersion to be set")
-		Eventually(func() bool {
-			coreProvider := &operatorv1.CoreProvider{}
-			key := client.ObjectKey{Namespace: operatorNamespace, Name: coreProviderName}
-			if err := k8sclient.Get(ctx, key, coreProvider); err != nil {
-				return false
-			}
-
-			if coreProvider.Status.InstalledVersion != nil && *coreProvider.Status.InstalledVersion == coreProvider.Spec.Version {
-				return true
-			}
-			return false
-		}, timeout).Should(Equal(true))
+		WaitForConditional(ctx, ObjectConditionalInput{
+			Reader: k8sclient,
+			Object: coreProvider,
+			Conditional: func() bool {
+				return coreProvider.Status.InstalledVersion != nil && *coreProvider.Status.InstalledVersion == coreProvider.Spec.Version
+			},
+		}, timeout)
 
 		By("Checking if additional manifests are applied")
-		Eventually(func() bool {
-			cm := &corev1.ConfigMap{}
-			key := client.ObjectKey{Namespace: operatorNamespace, Name: "test-config-map"}
-			if err := k8sclient.Get(ctx, key, cm); err != nil {
-				return false
-			}
-			if cm.Data["test"] == "test" {
-				return true
-			}
-			return false
-		}, timeout).Should(Equal(true))
+		cm := &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-config-map",
+				Namespace: operatorNamespace,
+			},
+		}
+		WaitForConditional(ctx, ObjectConditionalInput{
+			Reader: k8sclient,
+			Object: cm,
+			Conditional: func() bool {
+				ok, value := cm.Data["test"]
+				return ok && value == "test"
+			},
+		}, timeout)
 	})
 
 	It("should successfully create and delete a BootstrapProvider", func() {
@@ -149,34 +145,27 @@ data:
 		}, timeout)
 
 		By("Waiting for bootstrap provider to be ready")
-		Eventually(func() bool {
-			bootstrapProvider := &operatorv1.BootstrapProvider{}
-			key := client.ObjectKey{Namespace: operatorNamespace, Name: bootstrapProviderName}
-			if err := k8sclient.Get(ctx, key, bootstrapProvider); err != nil {
-				return false
-			}
-
-			for _, c := range bootstrapProvider.Status.Conditions {
-				if c.Type == operatorv1.ProviderInstalledCondition && c.Status == corev1.ConditionTrue {
-					return true
+		WaitForConditional(ctx, ObjectConditionalInput{
+			Reader: k8sclient,
+			Object: bootstrapProvider,
+			Conditional: func() bool {
+				for _, c := range bootstrapProvider.Status.Conditions {
+					if c.Type == operatorv1.ProviderInstalledCondition && c.Status == corev1.ConditionTrue {
+						return true
+					}
 				}
-			}
-			return false
-		}, timeout).Should(Equal(true))
+				return false
+			},
+		}, timeout)
 
 		By("Waiting for status.IntalledVersion to be set")
-		Eventually(func() bool {
-			bootstrapProvider := &operatorv1.BootstrapProvider{}
-			key := client.ObjectKey{Namespace: operatorNamespace, Name: bootstrapProviderName}
-			if err := k8sclient.Get(ctx, key, bootstrapProvider); err != nil {
-				return false
-			}
-
-			if bootstrapProvider.Status.InstalledVersion != nil && *bootstrapProvider.Status.InstalledVersion == bootstrapProvider.Spec.Version {
-				return true
-			}
-			return false
-		}, timeout).Should(Equal(true))
+		WaitForConditional(ctx, ObjectConditionalInput{
+			Reader: k8sclient,
+			Object: bootstrapProvider,
+			Conditional: func() bool {
+				return bootstrapProvider.Status.InstalledVersion != nil && *bootstrapProvider.Status.InstalledVersion == bootstrapProvider.Spec.Version
+			},
+		}, timeout)
 
 		Expect(k8sclient.Delete(ctx, bootstrapProvider)).To(Succeed())
 
@@ -214,34 +203,27 @@ data:
 		}, timeout)
 
 		By("Waiting for the control plane provider to be ready")
-		Eventually(func() bool {
-			cpProvider := &operatorv1.ControlPlaneProvider{}
-			key := client.ObjectKey{Namespace: operatorNamespace, Name: cpProviderName}
-			if err := k8sclient.Get(ctx, key, cpProvider); err != nil {
-				return false
-			}
-
-			for _, c := range cpProvider.Status.Conditions {
-				if c.Type == operatorv1.ProviderInstalledCondition && c.Status == corev1.ConditionTrue {
-					return true
+		WaitForConditional(ctx, ObjectConditionalInput{
+			Reader: k8sclient,
+			Object: cpProvider,
+			Conditional: func() bool {
+				for _, c := range cpProvider.Status.Conditions {
+					if c.Type == operatorv1.ProviderInstalledCondition && c.Status == corev1.ConditionTrue {
+						return true
+					}
 				}
-			}
-			return false
-		}, timeout).Should(Equal(true))
+				return false
+			},
+		}, timeout)
 
 		By("Waiting for status.IntalledVersion to be set")
-		Eventually(func() bool {
-			cpProvider := &operatorv1.ControlPlaneProvider{}
-			key := client.ObjectKey{Namespace: operatorNamespace, Name: cpProviderName}
-			if err := k8sclient.Get(ctx, key, cpProvider); err != nil {
-				return false
-			}
-
-			if cpProvider.Status.InstalledVersion != nil && *cpProvider.Status.InstalledVersion == cpProvider.Spec.Version {
-				return true
-			}
-			return false
-		}, timeout).Should(Equal(true))
+		WaitForConditional(ctx, ObjectConditionalInput{
+			Reader: k8sclient,
+			Object: cpProvider,
+			Conditional: func() bool {
+				return cpProvider.Status.InstalledVersion != nil && *cpProvider.Status.InstalledVersion == cpProvider.Spec.Version
+			},
+		}, timeout)
 
 		Expect(k8sclient.Delete(ctx, cpProvider)).To(Succeed())
 
@@ -278,34 +260,27 @@ data:
 		}, timeout)
 
 		By("Waiting for the infrastructure provider to be ready")
-		Eventually(func() bool {
-			infraProvider := &operatorv1.InfrastructureProvider{}
-			key := client.ObjectKey{Namespace: operatorNamespace, Name: infraProviderName}
-			if err := k8sclient.Get(ctx, key, infraProvider); err != nil {
-				return false
-			}
-
-			for _, c := range infraProvider.Status.Conditions {
-				if c.Type == operatorv1.ProviderInstalledCondition && c.Status == corev1.ConditionTrue {
-					return true
+		WaitForConditional(ctx, ObjectConditionalInput{
+			Reader: k8sclient,
+			Object: infraProvider,
+			Conditional: func() bool {
+				for _, c := range infraProvider.Status.Conditions {
+					if c.Type == operatorv1.ProviderInstalledCondition && c.Status == corev1.ConditionTrue {
+						return true
+					}
 				}
-			}
-			return false
-		}, timeout).Should(Equal(true))
+				return false
+			},
+		}, timeout)
 
 		By("Waiting for status.IntalledVersion to be set")
-		Eventually(func() bool {
-			infraProvider := &operatorv1.InfrastructureProvider{}
-			key := client.ObjectKey{Namespace: operatorNamespace, Name: infraProviderName}
-			if err := k8sclient.Get(ctx, key, infraProvider); err != nil {
-				return false
-			}
-
-			if infraProvider.Status.InstalledVersion != nil && *infraProvider.Status.InstalledVersion == infraProvider.Spec.Version {
-				return true
-			}
-			return false
-		}, timeout).Should(Equal(true))
+		WaitForConditional(ctx, ObjectConditionalInput{
+			Reader: k8sclient,
+			Object: infraProvider,
+			Conditional: func() bool {
+				return infraProvider.Status.InstalledVersion != nil && *infraProvider.Status.InstalledVersion == infraProvider.Spec.Version
+			},
+		}, timeout)
 
 		Expect(k8sclient.Delete(ctx, infraProvider)).To(Succeed())
 
@@ -332,42 +307,30 @@ data:
 			Deployment: &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: coreProviderDeploymentName, Namespace: operatorNamespace}},
 		}, timeout)
 
-		By("Waiting for core provider to be ready")
-		Eventually(func() bool {
-			coreProvider := &operatorv1.CoreProvider{}
-			key := client.ObjectKey{Namespace: operatorNamespace, Name: coreProviderName}
-			if err := k8sclient.Get(ctx, key, coreProvider); err != nil {
-				return false
-			}
-
-			for _, c := range coreProvider.Status.Conditions {
-				if c.Type == operatorv1.ProviderInstalledCondition && c.Status == corev1.ConditionTrue {
-					return true
+		By("Waiting for core provider to be ready and status.InstalledVersion to be set")
+		WaitForConditional(ctx, ObjectConditionalInput{
+			Reader: k8sclient,
+			Object: coreProvider,
+			Conditional: func() bool {
+				for _, c := range coreProvider.Status.Conditions {
+					if c.Type == operatorv1.ProviderInstalledCondition && c.Status == corev1.ConditionTrue {
+						return coreProvider.Status.InstalledVersion != nil && *coreProvider.Status.InstalledVersion == previousCAPIVersion
+					}
 				}
-			}
-			return false
-		}, timeout).Should(Equal(true))
-
-		By("Waiting for status.IntalledVersion to be set")
-		Eventually(func() bool {
-			coreProvider := &operatorv1.CoreProvider{}
-			key := client.ObjectKey{Namespace: operatorNamespace, Name: coreProviderName}
-			if err := k8sclient.Get(ctx, key, coreProvider); err != nil {
 				return false
-			}
-
-			if coreProvider.Status.InstalledVersion != nil && *coreProvider.Status.InstalledVersion == previousCAPIVersion {
-				return true
-			}
-			return false
-		}, timeout).Should(Equal(true))
+			},
+		}, timeout)
 	})
 
 	It("should successfully upgrade a CoreProvider (v1.4.2 -> latest)", func() {
 		k8sclient := bootstrapClusterProxy.GetClient()
-		coreProvider := &operatorv1.CoreProvider{}
-		key := client.ObjectKey{Namespace: operatorNamespace, Name: coreProviderName}
-		Expect(k8sclient.Get(ctx, key, coreProvider)).To(Succeed())
+		coreProvider := &operatorv1.CoreProvider{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      coreProviderName,
+				Namespace: operatorNamespace,
+			},
+		}
+		Expect(k8sclient.Get(ctx, client.ObjectKeyFromObject(coreProvider), coreProvider)).To(Succeed())
 
 		coreProvider.Spec.Version = ""
 
@@ -380,34 +343,27 @@ data:
 		}, timeout)
 
 		By("Waiting for core provider to be ready")
-		Eventually(func() bool {
-			coreProvider := &operatorv1.CoreProvider{}
-			key := client.ObjectKey{Namespace: operatorNamespace, Name: coreProviderName}
-			if err := k8sclient.Get(ctx, key, coreProvider); err != nil {
-				return false
-			}
-
-			for _, c := range coreProvider.Status.Conditions {
-				if c.Type == operatorv1.ProviderInstalledCondition && c.Status == corev1.ConditionTrue {
-					return true
+		WaitForConditional(ctx, ObjectConditionalInput{
+			Reader: k8sclient,
+			Object: coreProvider,
+			Conditional: func() bool {
+				for _, c := range coreProvider.Status.Conditions {
+					if c.Type == operatorv1.ProviderInstalledCondition && c.Status == corev1.ConditionTrue {
+						return coreProvider.Status.InstalledVersion != nil && *coreProvider.Status.InstalledVersion == coreProvider.Spec.Version
+					}
 				}
-			}
-			return false
-		}, timeout).Should(Equal(true))
-
-		By("Waiting for status.IntalledVersion to be set")
-		Eventually(func() bool {
-			coreProvider := &operatorv1.CoreProvider{}
-			key := client.ObjectKey{Namespace: operatorNamespace, Name: coreProviderName}
-			if err := k8sclient.Get(ctx, key, coreProvider); err != nil {
 				return false
-			}
+			},
+		}, timeout)
 
-			if coreProvider.Status.InstalledVersion != nil && *coreProvider.Status.InstalledVersion == coreProvider.Spec.Version {
-				return true
-			}
-			return false
-		}, timeout).Should(Equal(true))
+		By("Waiting for the core provide status.InstalledVersion to be set")
+		WaitForConditional(ctx, ObjectConditionalInput{
+			Reader: k8sclient,
+			Object: coreProvider,
+			Conditional: func() bool {
+				return coreProvider.Status.InstalledVersion != nil && *coreProvider.Status.InstalledVersion == coreProvider.Spec.Version
+			},
+		}, timeout)
 	})
 
 	It("should successfully delete a CoreProvider", func() {
