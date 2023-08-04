@@ -133,13 +133,19 @@ data:
 				ProviderSpec: operatorv1.ProviderSpec{},
 			},
 		}
+		deployment := &appsv1.Deployment{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      bootstrapProviderDeploymentName,
+				Namespace: operatorNamespace,
+			},
+		}
 
 		Expect(k8sclient.Create(ctx, bootstrapProvider)).To(Succeed())
 
 		By("Waiting for the bootstrap provider deployment to be ready")
 		framework.WaitForDeploymentsAvailable(ctx, framework.WaitForDeploymentsAvailableInput{
 			Getter:     k8sclient,
-			Deployment: &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: bootstrapProviderDeploymentName, Namespace: operatorNamespace}},
+			Deployment: deployment,
 		}, timeout)
 
 		By("Waiting for bootstrap provider to be ready")
@@ -175,15 +181,10 @@ data:
 		Expect(k8sclient.Delete(ctx, bootstrapProvider)).To(Succeed())
 
 		By("Waiting for the bootstrap provider deployment to be deleted")
-		Eventually(func() bool {
-			deployment := &appsv1.Deployment{}
-			key := client.ObjectKey{Namespace: operatorNamespace, Name: bootstrapProviderDeploymentName}
-			isBootstrapProviderReady, err := WaitForObjectToBeDeleted(k8sclient, ctx, key, deployment)
-			if err != nil {
-				return false
-			}
-			return isBootstrapProviderReady
-		}, timeout).Should(Equal(true))
+		WaitForDelete(ctx, ObjectGetterInput{
+			Reader: k8sclient,
+			Object: deployment,
+		})
 	})
 
 	It("should successfully create and delete a ControlPlaneProvider", func() {
@@ -197,13 +198,19 @@ data:
 				ProviderSpec: operatorv1.ProviderSpec{},
 			},
 		}
+		deployment := &appsv1.Deployment{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      cpProviderDeploymentName,
+				Namespace: operatorNamespace,
+			},
+		}
 
 		Expect(k8sclient.Create(ctx, cpProvider)).To(Succeed())
 
 		By("Waiting for the control plane provider deployment to be ready")
 		framework.WaitForDeploymentsAvailable(ctx, framework.WaitForDeploymentsAvailableInput{
 			Getter:     k8sclient,
-			Deployment: &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: cpProviderDeploymentName, Namespace: operatorNamespace}},
+			Deployment: deployment,
 		}, timeout)
 
 		By("Waiting for the control plane provider to be ready")
@@ -239,15 +246,10 @@ data:
 		Expect(k8sclient.Delete(ctx, cpProvider)).To(Succeed())
 
 		By("Waiting for the control plane provider deployment to be deleted")
-		Eventually(func() bool {
-			deployment := &appsv1.Deployment{}
-			key := client.ObjectKey{Namespace: operatorNamespace, Name: cpProviderDeploymentName}
-			isCPProviderDeleted, err := WaitForObjectToBeDeleted(k8sclient, ctx, key, deployment)
-			if err != nil {
-				return false
-			}
-			return isCPProviderDeleted
-		}, timeout).Should(Equal(true))
+		WaitForDelete(ctx, ObjectGetterInput{
+			Reader: k8sclient,
+			Object: deployment,
+		})
 	})
 
 	It("should successfully create and delete an InfrastructureProvider", func() {
@@ -261,13 +263,18 @@ data:
 				ProviderSpec: operatorv1.ProviderSpec{},
 			},
 		}
-
+		deployment := &appsv1.Deployment{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      infraProviderDeploymentName,
+				Namespace: operatorNamespace,
+			},
+		}
 		Expect(k8sclient.Create(ctx, infraProvider)).To(Succeed())
 
 		By("Waiting for the infrastructure provider deployment to be ready")
 		framework.WaitForDeploymentsAvailable(ctx, framework.WaitForDeploymentsAvailableInput{
 			Getter:     k8sclient,
-			Deployment: &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: infraProviderDeploymentName, Namespace: operatorNamespace}},
+			Deployment: deployment,
 		}, timeout)
 
 		By("Waiting for the infrastructure provider to be ready")
@@ -303,15 +310,10 @@ data:
 		Expect(k8sclient.Delete(ctx, infraProvider)).To(Succeed())
 
 		By("Waiting for the infrastructure provider deployment to be deleted")
-		Eventually(func() bool {
-			deployment := &appsv1.Deployment{}
-			key := client.ObjectKey{Namespace: operatorNamespace, Name: infraProviderDeploymentName}
-			isInfraProviderDeleted, err := WaitForObjectToBeDeleted(k8sclient, ctx, key, deployment)
-			if err != nil {
-				return false
-			}
-			return isInfraProviderDeleted
-		}, timeout).Should(Equal(true))
+		WaitForDelete(ctx, ObjectGetterInput{
+			Reader: k8sclient,
+			Object: deployment,
+		})
 	})
 
 	It("should successfully downgrade a CoreProvider (latest -> v1.4.2)", func() {
@@ -419,28 +421,25 @@ data:
 				ProviderSpec: operatorv1.ProviderSpec{},
 			},
 		}
+		deployment := &appsv1.Deployment{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: operatorNamespace,
+				Name:      coreProviderDeploymentName,
+			},
+		}
 
 		Expect(k8sclient.Delete(ctx, coreProvider)).To(Succeed())
 
 		By("Waiting for the core provider deployment to be deleted")
-		Eventually(func() bool {
-			deployment := &appsv1.Deployment{}
-			key := client.ObjectKey{Namespace: operatorNamespace, Name: coreProviderDeploymentName}
-			isReady, err := WaitForObjectToBeDeleted(k8sclient, ctx, key, deployment)
-			if err != nil {
-				return false
-			}
-			return isReady
-		}, timeout).Should(Equal(true))
+		WaitForDelete(ctx, ObjectGetterInput{
+			Reader: k8sclient,
+			Object: deployment,
+		})
 
 		By("Waiting for the core provider object to be deleted")
-		Eventually(func() bool {
-			key := client.ObjectKey{Namespace: operatorNamespace, Name: coreProviderName}
-			isReady, err := WaitForObjectToBeDeleted(k8sclient, ctx, key, coreProvider)
-			if err != nil {
-				return false
-			}
-			return isReady
-		}, timeout).Should(Equal(true))
+		WaitForDelete(ctx, ObjectGetterInput{
+			Reader: k8sclient,
+			Object: coreProvider,
+		})
 	})
 })

@@ -26,7 +26,11 @@ import (
 	"strings"
 	"time"
 
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -55,16 +59,24 @@ const (
 	customManifestsFolder = "resources/"
 )
 
-func WaitForObjectToBeDeleted(cl client.Client, ctx context.Context, key client.ObjectKey, obj client.Object) (bool, error) {
-	if err := cl.Get(ctx, key, obj); err != nil {
-		if apierrors.IsNotFound(err) {
-			return true, nil
+// ObjectGetterInput is the input for generic object getter methods.
+type ObjectGetterInput struct {
+	client.Reader
+	client.Object
+}
+
+// WaitForDelete will wait for object removal
+func WaitForDelete(ctx context.Context, input ObjectGetterInput, intervals ...interface{}) {
+	By("Waiting for object to be removed")
+	Eventually(func() bool {
+		if err := input.Get(ctx, client.ObjectKeyFromObject(input.Object), input.Object); err != nil {
+			if apierrors.IsNotFound(err) {
+				return true
+			}
+			klog.Infof("Failed to get an object: %+v", err)
 		}
-
-		return false, err
-	}
-
-	return false, nil
+		return false
+	}, intervals...).Should(BeTrue(), "Failed to wait until object deletion %s", klog.KObj(input.Object))
 }
 
 type HelmChartHelper struct {

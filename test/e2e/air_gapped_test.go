@@ -225,25 +225,21 @@ var _ = Describe("Install Core Provider in an air-gapped environment", func() {
 		Expect(k8sclient.Delete(ctx, coreProvider)).To(Succeed())
 
 		By("Waiting for the core provider deployment to be deleted")
-		Eventually(func() bool {
-			deployment := &appsv1.Deployment{}
-			key := client.ObjectKey{Namespace: operatorNamespace, Name: coreProviderDeploymentName}
-			isReady, err := WaitForObjectToBeDeleted(k8sclient, ctx, key, deployment)
-			if err != nil {
-				return false
-			}
-			return isReady
-		}, timeout).Should(Equal(true))
+		WaitForDelete(ctx, ObjectGetterInput{
+			Reader: k8sclient,
+			Object: &appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      coreProviderDeploymentName,
+					Namespace: operatorNamespace,
+				},
+			},
+		}, timeout)
 
 		By("Waiting for the core provider object to be deleted")
-		Eventually(func() bool {
-			key := client.ObjectKey{Namespace: operatorNamespace, Name: coreProviderName}
-			isReady, err := WaitForObjectToBeDeleted(k8sclient, ctx, key, coreProvider)
-			if err != nil {
-				return false
-			}
-			return isReady
-		}, timeout).Should(Equal(true))
+		WaitForDelete(ctx, ObjectGetterInput{
+			Reader: k8sclient,
+			Object: coreProvider,
+		}, timeout)
 	})
 
 	It("should successfully delete config maps with Core Provider manifests", func() {

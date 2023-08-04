@@ -152,37 +152,36 @@ var _ = Describe("Create and delete a provider with manifests that don't fit the
 
 		Expect(ociInfrastructureConfigMap.BinaryData[componentsConfigMapKey]).ToNot(BeEmpty())
 
+		deployment := &appsv1.Deployment{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: operatorNamespace,
+				Name:      ociInfrastructureProviderDeploymentName,
+			},
+		}
+
 		By("Waiting for the infrastructure provider deployment to be created")
 		Eventually(func() bool {
-			deployment := &appsv1.Deployment{}
-			key := client.ObjectKey{Namespace: operatorNamespace, Name: ociInfrastructureProviderDeploymentName}
-
-			return k8sclient.Get(ctx, key, deployment) == nil
+			return k8sclient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment) == nil
 		}, timeout).Should(Equal(true))
 
 		Expect(k8sclient.Delete(ctx, infraProvider)).To(Succeed())
 
 		By("Waiting for the infrastructure provider deployment to be deleted")
-		Eventually(func() bool {
-			deployment := &appsv1.Deployment{}
-			key := client.ObjectKey{Namespace: operatorNamespace, Name: ociInfrastructureProviderDeploymentName}
-			isInfraProviderDeleted, err := WaitForObjectToBeDeleted(k8sclient, ctx, key, deployment)
-			if err != nil {
-				return false
-			}
-			return isInfraProviderDeleted
-		}, timeout).Should(Equal(true))
+		WaitForDelete(ctx, ObjectGetterInput{
+			Reader: k8sclient,
+			Object: deployment,
+		}, timeout)
 
 		By("Waiting for the configmap to be deleted")
-		Eventually(func() bool {
-			configMap := &corev1.ConfigMap{}
-			key := client.ObjectKey{Namespace: operatorNamespace, Name: cmName}
-			isConfigMapDeleted, err := WaitForObjectToBeDeleted(k8sclient, ctx, key, configMap)
-			if err != nil {
-				return false
-			}
-			return isConfigMapDeleted
-		}, timeout).Should(Equal(true))
+		WaitForDelete(ctx, ObjectGetterInput{
+			Reader: k8sclient,
+			Object: &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: operatorNamespace,
+					Name:      cmName,
+				},
+			},
+		}, timeout)
 	})
 
 	It("should successfully create and delete an InfrastructureProvider for OCI with custom name from a pre-created ConfigMap", func() {
@@ -255,26 +254,25 @@ var _ = Describe("Create and delete a provider with manifests that don't fit the
 
 		Expect(cm.BinaryData[componentsConfigMapKey]).ToNot(BeEmpty())
 
+		deployment := &appsv1.Deployment{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: operatorNamespace,
+				Name:      ociInfrastructureProviderDeploymentName,
+			},
+		}
+
 		By("Waiting for the infrastructure provider deployment to be created")
 		Eventually(func() bool {
-			deployment := &appsv1.Deployment{}
-			key := client.ObjectKey{Namespace: operatorNamespace, Name: ociInfrastructureProviderDeploymentName}
-
-			return k8sclient.Get(ctx, key, deployment) == nil
+			return k8sclient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment) == nil
 		}, timeout).Should(Equal(true))
 
 		Expect(k8sclient.Delete(ctx, infraProvider)).To(Succeed())
 
 		By("Waiting for the infrastructure provider deployment to be deleted")
-		Eventually(func() bool {
-			deployment := &appsv1.Deployment{}
-			key := client.ObjectKey{Namespace: operatorNamespace, Name: ociInfrastructureProviderDeploymentName}
-			isInfraProviderDeleted, err := WaitForObjectToBeDeleted(k8sclient, ctx, key, deployment)
-			if err != nil {
-				return false
-			}
-			return isInfraProviderDeleted
-		}, timeout).Should(Equal(true))
+		WaitForDelete(ctx, ObjectGetterInput{
+			Reader: k8sclient,
+			Object: deployment,
+		}, timeout)
 	})
 
 	It("should successfully delete a CoreProvider", func() {
@@ -292,24 +290,20 @@ var _ = Describe("Create and delete a provider with manifests that don't fit the
 		Expect(k8sclient.Delete(ctx, coreProvider)).To(Succeed())
 
 		By("Waiting for the core provider deployment to be deleted")
-		Eventually(func() bool {
-			deployment := &appsv1.Deployment{}
-			key := client.ObjectKey{Namespace: operatorNamespace, Name: coreProviderDeploymentName}
-			isReady, err := WaitForObjectToBeDeleted(k8sclient, ctx, key, deployment)
-			if err != nil {
-				return false
-			}
-			return isReady
-		}, timeout).Should(Equal(true))
+		WaitForDelete(ctx, ObjectGetterInput{
+			Reader: k8sclient,
+			Object: &appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      coreProviderDeploymentName,
+					Namespace: operatorNamespace,
+				},
+			},
+		}, timeout)
 
 		By("Waiting for the core provider object to be deleted")
-		Eventually(func() bool {
-			key := client.ObjectKey{Namespace: operatorNamespace, Name: coreProviderName}
-			isReady, err := WaitForObjectToBeDeleted(k8sclient, ctx, key, coreProvider)
-			if err != nil {
-				return false
-			}
-			return isReady
-		}, timeout).Should(Equal(true))
+		WaitForDelete(ctx, ObjectGetterInput{
+			Reader: k8sclient,
+			Object: coreProvider,
+		}, timeout)
 	})
 })
