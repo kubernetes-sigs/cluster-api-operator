@@ -43,6 +43,7 @@ CURL_RETRIES=3
 
 # Directories
 TOOLS_DIR := $(ROOT)/hack/tools
+TEST_DIR := $(ROOT)/test
 CHART_UPDATE_DIR := $(ROOT)/hack/chart-update
 TOOLS_BIN_DIR := $(TOOLS_DIR)/bin
 JUNIT_REPORT_DIR := $(TOOLS_DIR)/_out
@@ -256,6 +257,7 @@ plugin: ## Build plugin binary
 .PHONY: lint
 lint: $(GOLANGCI_LINT) ## Lint the codebase
 	$(GOLANGCI_LINT) run -v $(GOLANGCI_LINT_EXTRA_ARGS) --timeout=10m
+	cd $(TEST_DIR); $(GOLANGCI_LINT) run --path-prefix $(TEST_DIR) -v $(GOLANGCI_LINT_EXTRA_ARGS) --timeout=10m
 
 .PHONY: lint-fix
 lint-fix: $(GOLANGCI_LINT) ## Lint the codebase and run auto-fixers if supported by the linter
@@ -272,7 +274,7 @@ verify:
 
 .PHONY: verify-modules
 verify-modules: modules
-	@if !(git diff --quiet HEAD -- go.sum go.mod $(TOOLS_DIR)/go.mod $(TOOLS_DIR)/go.sum $(CHART_UPDATE_DIR)/go.mod $(CHART_UPDATE_DIR)/go.sum); then \
+	@if !(git diff --quiet HEAD -- go.sum go.mod $(TOOLS_DIR)/go.mod $(TOOLS_DIR)/go.sum $(CHART_UPDATE_DIR)/go.mod $(CHART_UPDATE_DIR)/go.sum $(TEST_DIR)/go.mod $(TEST_DIR)/go.sum); then \
 		git diff; \
 		echo "go module files are out of date"; exit 1; \
 	fi
@@ -317,6 +319,7 @@ modules: ## Runs go mod to ensure modules are up to date.
 	go mod tidy
 	cd $(TOOLS_DIR); go mod tidy
 	cd $(CHART_UPDATE_DIR); go mod tidy
+	cd $(TEST_DIR); go mod tidy
 
 ## --------------------------------------
 ## Docker

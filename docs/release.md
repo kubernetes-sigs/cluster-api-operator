@@ -10,11 +10,18 @@ git push -u upstream release-0.1
 ```
 
 ```bash
+# Export the tag of the release to be cut, e.g.:
 export RELEASE_TAG=v0.1.1
 
+# Create tags locally
+# Warning: The test tag MUST NOT be an annotated tag.
 git tag -s -a ${RELEASE_TAG} -m ${RELEASE_TAG}
+git tag test/${RELEASE_TAG}
 
+# Push tags
+# Note: `upstream` must be the remote pointing to `github.com/kubernetes-sigs/cluster-api-operator`.
 git push upstream ${RELEASE_TAG}
+git push upstream test/${RELEASE_TAG}
 ```
 
 This will trigger [release github action](https://github.com/kubernetes-sigs/cluster-api-operator/blob/main/.github/workflows/release.yaml) that will
