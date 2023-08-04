@@ -1,12 +1,87 @@
 ---
+# Cert Manager options
+# Full list of supported values is available at https://artifacthub.io/packages/helm/cert-manager/cert-manager
 cert-manager:
   enabled: false
   fullnameOverride: "cert-manager"
   namespace: "cert-manager"
-
+# ---
+# Cluster API provider options
 core: ""
 bootstrap: ""
 controlPlane: ""
 infrastructure: ""
+# ---
+# Common configuration secret options
 secretName: ""
 secretNamespace: ""
+# ---
+# CAPI operator deployment options
+logLevel: 2
+replicaCount: 1
+leaderElection:
+  enabled: true
+image:
+  manager:
+    repository: gcr.io/k8s-staging-capi-operator/cluster-api-operator
+    tag: dev
+    pullPolicy: IfNotPresent
+  kubeRBACProxy:
+    repository: gcr.io/kubebuilder/kube-rbac-proxy
+    tag: v0.14.1
+    pullPolicy: IfNotPresent
+healthAddr: ":8081"
+metricsBindAddr: "127.0.0.1:8080"
+imagePullSecrets:
+  manager: {}
+  kubeRBACProxy: {}
+resources:
+  manager:
+    limits:
+      cpu: 100m
+      memory: 150Mi
+    requests:
+      cpu: 100m
+      memory: 100Mi
+  kubeRBACProxy:
+    limits:
+      cpu: 500m
+      memory: 128Mi
+    requests:
+      cpu: 5m
+      memory: 64Mi
+containerSecurityContext:
+  kubeRBACProxy:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+affinity:
+  nodeAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: kubernetes.io/arch
+              operator: In
+              values:
+                - amd64
+                - arm64
+            - key: kubernetes.io/os
+              operator: In
+              values:
+                - linux
+tolerations:
+  - effect: NoSchedule
+    key: node-role.kubernetes.io/master
+  - effect: NoSchedule
+    key: node-role.kubernetes.io/control-plane
+volumes:
+  - name: cert
+    secret:
+      defaultMode: 420
+      secretName: capi-operator-webhook-service-cert
+volumeMounts:
+  manager:
+    - mountPath: /tmp/k8s-webhook-server/serving-certs
+      name: cert
+      readOnly: true

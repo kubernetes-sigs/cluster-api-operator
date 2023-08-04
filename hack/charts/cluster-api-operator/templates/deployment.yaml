@@ -1,0 +1,159 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ template "capi-operator.fullname" . }}
+  namespace: '{{ .Release.Namespace }}'
+  labels:
+    app: {{ template "capi-operator.name" . }}
+    app.kubernetes.io/name: {{ template "capi-operator.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: "controller"
+    control-plane: controller-manager
+    clusterctl.cluster.x-k8s.io/core: capi-operator
+    {{- with .Values.deploymentLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- with .Values.deploymentAnnotations }}
+  annotations:
+  {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ template "capi-operator.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: "controller"
+      control-plane: controller-manager
+      clusterctl.cluster.x-k8s.io/core: capi-operator
+  {{- with .Values.strategy }}
+  strategy:
+  {{- toYaml . | nindent 4 }}
+  {{- end }}
+  template:
+    metadata:
+      labels:
+        app: {{ template "capi-operator.name" . }}
+        app.kubernetes.io/name: {{ template "capi-operator.name" . }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/component: "controller"
+        control-plane: controller-manager
+        clusterctl.cluster.x-k8s.io/core: capi-operator
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.podAnnotations }}
+      annotations:
+      {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      {{- with .Values.securityContext }}
+      securityContext:
+      {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+      - args:
+        {{- if .Values.logLevel }}
+        - --v={{ .Values.logLevel }}
+        {{- end }}
+        {{- if .Values.healthAddr }}
+        - --health-addr={{ .Values.healthAddr }}
+        {{- end }}
+        {{- if .Values.metricsBindAddr }}
+        - --metrics-bind-addr={{ .Values.metricsBindAddr }}
+        {{- end }}
+        {{- with .Values.leaderElection }}
+        - --leader-elect={{ .enabled }}
+        {{- if .leaseDuration }}
+        - --leader-election-lease-duration={{ .leaseDuration }}
+        {{- end }}
+        {{- if .renewDeadline }}
+        - --leader-election-renew-deadline={{ .renewDeadline }}
+        {{- end }}
+        {{- if .retryPeriod }}
+        - --leader-election-retry-period={{ .retryPeriod }}
+        {{- end }}
+        {{- end }}
+        command:
+        - /manager
+        {{- with .Values.image.manager }}
+        image: "{{- if .registry -}}{{ .registry }}/{{- end -}}{{ .repository }}{{- if (.digest) -}} @{{ .digest }}{{- else -}}:{{ default $.Chart.AppVersion .tag }} {{- end -}}"
+        {{- end }}
+        imagePullPolicy: {{ .Values.image.manager.pullPolicy }}
+        {{- with .Values.imagePullSecrets.manager }}
+        imagePullSecrets:
+        {{- toYaml . | nindent 12 }}
+        {{- end }}
+        name: manager
+        ports:
+        - containerPort: 9443
+          name: webhook-server
+          protocol: TCP
+        {{- with .Values.resources.manager }}
+        resources:
+        {{- toYaml . | nindent 12 }}
+        {{- end }}
+        {{- with .Values.containerSecurityContext.manager }}
+        securityContext:
+        {{- toYaml . | nindent 12 }}
+        {{- end }}
+        {{- with .Values.volumeMounts.manager }}
+        volumeMounts:
+        {{- toYaml . | nindent 12 }}
+        {{- end }}
+      - args:
+        - --secure-listen-address=0.0.0.0:8443
+        - --upstream=http://127.0.0.1:8080/
+        - --logtostderr=true
+        {{- if .Values.logLevel }}
+        - --v={{ .Values.logLevel }}
+        {{- end }}
+        {{- with .Values.image.kubeRBACProxy }}
+        image: "{{- if .registry -}}{{ .registry }}/{{- end -}}{{ .repository }}{{- if (.digest) -}} @{{ .digest }}{{- else -}}:{{ default $.Chart.AppVersion .tag }} {{- end -}}"
+        {{- end }}
+        imagePullPolicy: {{ .Values.image.kubeRBACProxy.pullPolicy }}
+        {{- with .Values.imagePullSecrets.kubeRBACProxy }}
+        imagePullSecrets:
+        {{- toYaml . | nindent 12 }}
+        {{- end }}
+        name: kube-rbac-proxy
+        ports:
+        - containerPort: 8443
+          name: https
+          protocol: TCP
+        {{- with .Values.resources.kubeRBACProxy }}
+        resources:
+        {{- toYaml . | nindent 12 }}
+        {{- end }}
+        {{- with .Values.containerSecurityContext.kubeRBACProxy }}
+        securityContext:
+        {{- toYaml . | nindent 12 }}
+        {{- end }}
+      terminationGracePeriodSeconds: 10
+      {{- with .Values.volumes }}
+      volumes:
+      {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+      {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+      {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+      {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with  .Values.topologySpreadConstraints }}
+      topologySpreadConstraints:
+      {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.podDnsPolicy }}
+      dnsPolicy: {{ . }}
+      {{- end }}
+      {{- with .Values.podDnsConfig }}
+      dnsConfig:
+      {{- toYaml . | nindent 8 }}
+      {{- end }}
