@@ -33,44 +33,81 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// ObjectGetterInput is the input for generic object getter methods.
-type ObjectGetterInput struct {
+type GetterInterface interface {
+	GetReader() client.Reader
+	GetObject() client.Object
+}
+
+type Condition = func() bool
+
+type ConditionalInterface interface {
+	GetterInterface
+	Satifies() bool
+}
+
+type ConditionalInput struct {
 	client.Reader
 	client.Object
+	Condition
+}
+
+func For(object client.Object) *ConditionalInput {
+	return &ConditionalInput{
+		Object: object,
+	}
+}
+
+func (in *ConditionalInput) In(reader client.Reader) *ConditionalInput {
+	in.Reader = reader
+	return in
+}
+
+func (in *ConditionalInput) ToSatisfy(condition Condition) *ConditionalInput {
+	in.Condition = condition
+	return in
+}
+
+func (in ConditionalInput) Satifies() bool {
+	if in.Condition == nil {
+		return true
+	}
+
+	By("Waiting for the object to satisfy condition...")
+	return in.Condition()
+}
+
+func (in ConditionalInput) GetReader() client.Reader {
+	return in.Reader
+}
+
+func (in ConditionalInput) GetObject() client.Object {
+	return in.Object
 }
 
 // WaitForDelete will wait for object removal
-func WaitForDelete(ctx context.Context, input ObjectGetterInput, intervals ...interface{}) {
-	By("Waiting for the object to be removed...")
+func WaitForDelete(ctx context.Context, input GetterInterface, intervals ...interface{}) {
+	By(fmt.Sprintf("Waiting for the %s object to be removed...", client.ObjectKeyFromObject(input.GetObject())))
 	Eventually(func() bool {
-		if err := input.Get(ctx, client.ObjectKeyFromObject(input.Object), input.Object); err != nil {
+		if err := input.GetReader().Get(ctx, client.ObjectKeyFromObject(input.GetObject()), input.GetObject()); err != nil {
 			if apierrors.IsNotFound(err) {
 				return true
 			}
 			klog.Infof("Failed to get an object: %+v", err)
 		}
 		return false
-	}, intervals...).Should(BeTrue(), "Failed to wait until object deletion %s", klog.KObj(input.Object))
+	}, intervals...).Should(BeTrue(), "Failed to wait until object deletion %s", klog.KObj(input.GetObject()))
 }
 
-type Conditional = func() bool
-
-type ObjectConditionalInput struct {
-	client.Reader
-	client.Object
-	Conditional
-}
-
-// WaitForConditional will wait for conclusive result from specified callback
-func WaitForConditional(ctx context.Context, input ObjectConditionalInput, intervals ...interface{}) {
-	By("Waiting for condition...")
+// WaitFor will wait for condition match on existing object
+func WaitFor(ctx context.Context, input ConditionalInterface, intervals ...interface{}) {
 	Eventually(func() bool {
-		if err := input.Get(ctx, client.ObjectKeyFromObject(input.Object), input.Object); err != nil {
+		By(fmt.Sprintf("Waiting for %s...", client.ObjectKeyFromObject(input.GetObject())))
+		if err := input.GetReader().Get(ctx, client.ObjectKeyFromObject(input.GetObject()), input.GetObject()); err != nil {
 			klog.Infof("Failed to get an object: %+v", err)
 			return false
 		}
-		return input.Conditional()
-	}, intervals...).Should(BeTrue(), "Failed to wait until object condition match %s", klog.KObj(input.Object))
+		return input.Satifies()
+	}, intervals...).Should(BeTrue(), "Failed to wait until object condition match %s", klog.KObj(input.GetObject()))
 }
 
 type HelmChart struct {
