@@ -110,6 +110,14 @@ func WaitFor(ctx context.Context, input ConditionalInterface, intervals ...inter
 	}, intervals...).Should(BeTrue(), "Failed to wait until object condition match %s", klog.KObj(input.GetObject()))
 }
 
+type HelmOutput int
+
+const (
+	Manifests HelmOutput = iota
+	Hooks
+	Full
+)
+
 type HelmChart struct {
 	BinaryPath      string
 	Path            string
@@ -118,6 +126,7 @@ type HelmChart struct {
 	DryRun          bool
 	Wait            bool
 	AdditionalFlags []string
+	Output          HelmOutput
 }
 
 // InstallChart performs an install of the helm chart. Install returns the rendered manifest
@@ -139,6 +148,8 @@ func (h *HelmChart) InstallChart(values map[string]string) (string, error) {
 		args = append(args, h.AdditionalFlags...)
 	}
 
+	fullCommand := append([]string{h.BinaryPath}, args...)
+	klog.Infof("Executing: %s", fullCommand, " ")
 	cmd := exec.Command(h.BinaryPath, args...)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
@@ -146,14 +157,27 @@ func (h *HelmChart) InstallChart(values map[string]string) (string, error) {
 	}
 
 	outString := string(out)
-	startIndex := strings.Index(outString, "HOOKS:")
-	endIndex := strings.Index(outString, "MANIFEST:")
+	switch h.Output {
+	case Full:
+		return outString, nil
+	case Hooks:
+		startIndex := strings.Index(outString, "HOOKS:")
+		endIndex := strings.Index(outString, "MANIFEST:")
 
-	if startIndex != -1 && endIndex != -1 {
-		res := outString[startIndex+len("HOOKS:") : endIndex]
-		res = strings.TrimPrefix(res, "\n")
-		res = strings.TrimSuffix(res, "\n")
-		return res, nil
+		if startIndex != -1 && endIndex != -1 {
+			res := outString[startIndex+len("HOOKS:") : endIndex]
+			res = strings.TrimPrefix(res, "\n")
+			res = strings.TrimSuffix(res, "\n")
+			return res, nil
+		}
+	case Manifests:
+		startIndex := strings.Index(outString, "MANIFEST:")
+		if startIndex != -1 {
+			res := outString[startIndex+len("MANIFEST:"):]
+			res = strings.TrimPrefix(res, "\n")
+			res = strings.TrimSuffix(res, "\n")
+			return res, nil
+		}
 	}
 
 	return "", fmt.Errorf("failed to parse helm output")

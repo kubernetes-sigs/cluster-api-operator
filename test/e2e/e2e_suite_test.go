@@ -346,6 +346,7 @@ func initHelmChart() {
 		Name:       "capi-operator",
 		Kubeconfig: helmClusterProxy.GetKubeconfigPath(),
 		DryRun:     true,
+		Output:     operatorframework.Hooks,
 	}
 }
 
