@@ -16,7 +16,7 @@ spec:
       clientConfig:
         caBundle: Cg==
         service:
-          name: webhook-service
+          name: capi-operator-webhook-service
           namespace: 'capi-operator-system'
           path: /convert
       conversionReviewVersions:
@@ -1577,7 +1577,7 @@ spec:
       clientConfig:
         caBundle: Cg==
         service:
-          name: webhook-service
+          name: capi-operator-webhook-service
           namespace: 'capi-operator-system'
           path: /convert
       conversionReviewVersions:
@@ -3140,7 +3140,7 @@ spec:
       clientConfig:
         caBundle: Cg==
         service:
-          name: webhook-service
+          name: capi-operator-webhook-service
           namespace: 'capi-operator-system'
           path: /convert
       conversionReviewVersions:
@@ -4701,7 +4701,7 @@ spec:
       clientConfig:
         caBundle: Cg==
         service:
-          name: webhook-service
+          name: capi-operator-webhook-service
           namespace: 'capi-operator-system'
           path: /convert
       conversionReviewVersions:
