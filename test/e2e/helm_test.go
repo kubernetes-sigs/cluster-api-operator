@@ -20,23 +20,23 @@ limitations under the License.
 package e2e
 
 import (
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
 	"os"
 	"path/filepath"
+
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 	. "sigs.k8s.io/cluster-api-operator/test/framework"
 )
 
 var _ = Describe("Create a proper set of manifests when using helm charts", func() {
 	It("should deploy default manifest set for quick-start process", func() {
 		fullInstallChart := &HelmChart{
-			BinaryPath:      helmChart.BinaryPath,
-			Path:            helmChart.Path,
-			Name:            helmChart.Name,
-			Kubeconfig:      helmChart.Kubeconfig,
-			DryRun:          helmChart.DryRun,
-			Output:          Manifests,
-			AdditionalFlags: []string{"-n=capi-operator-system", "--create-namespace"},
+			BinaryPath: helmChart.BinaryPath,
+			Path:       helmChart.Path,
+			Name:       helmChart.Name,
+			Kubeconfig: helmChart.Kubeconfig,
+			DryRun:     helmChart.DryRun,
+			Output:     Manifests,
 		}
 		fullInstallChart.Output = Manifests
 		manifests, err := fullInstallChart.InstallChart(nil)
