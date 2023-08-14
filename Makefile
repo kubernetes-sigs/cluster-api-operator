@@ -124,6 +124,7 @@ PROD_REGISTRY ?= registry.k8s.io/capi-operator
 
 # Image name
 IMAGE_NAME ?= cluster-api-operator
+PACKAGE_NAME = cluster-api-operator
 CONTROLLER_IMG ?= $(REGISTRY)/$(IMAGE_NAME)
 CONTROLLER_IMG_TAG ?= $(CONTROLLER_IMG)-$(ARCH):$(TAG)
 
@@ -291,9 +292,10 @@ verify-gen: generate
 ## --------------------------------------
 
 .PHONY: generate
-generate: $(CONTROLLER_GEN) ## Generate code
+generate: $(CONTROLLER_GEN) $(HELM) release-chart ## Generate code
 	$(MAKE) generate-manifests
 	$(MAKE) generate-go
+	$(HELM) template capi-operator $(CHART_PACKAGE_DIR)/$(PACKAGE_NAME)-$(HELM_CHART_TAG).tgz > test/e2e/resources/full-chart-install.yaml
 
 .PHONY: generate-go
 generate-go: $(CONTROLLER_GEN) ## Runs Go related generate targets for the operator
@@ -434,7 +436,7 @@ chart-manifest-modification: # Set the manifest images to the staging/production
 .PHONY: release-manifests
 release-manifests: $(KUSTOMIZE) $(RELEASE_DIR) ## Builds the manifests to publish with a release
 	$(KUSTOMIZE) build ./config/default > $(RELEASE_DIR)/operator-components.yaml
-	
+
 .PHONY: release-chart
 release-chart: $(HELM) $(KUSTOMIZE) $(RELEASE_DIR) $(CHART_DIR) $(CHART_PACKAGE_DIR) ## Builds the chart to publish with a release
 	cp -rf $(ROOT)/hack/charts/cluster-api-operator/. $(CHART_DIR)
