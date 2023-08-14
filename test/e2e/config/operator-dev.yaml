@@ -9,4 +9,4 @@ intervals:
   default/wait-controllers: ["3m", "10s"]
 
 variables:
-  CERTMANAGER_URL: https://github.com/cert-manager/cert-manager/releases/download/${E2E_CERT_MANAGER_VERSION}/cert-manager.yaml
+  CERTMANAGER_VERSION: ${E2E_CERT_MANAGER_VERSION}
