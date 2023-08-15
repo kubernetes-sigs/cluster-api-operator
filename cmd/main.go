@@ -26,6 +26,7 @@ import (
 	"github.com/spf13/pflag"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -51,6 +52,7 @@ var (
 
 	// flags.
 	metricsBindAddr             string
+	deletionPropagation         string
 	enableLeaderElection        bool
 	leaderElectionLeaseDuration time.Duration
 	leaderElectionRenewDeadline time.Duration
@@ -111,7 +113,32 @@ func InitFlags(fs *pflag.FlagSet) {
 
 	fs.StringVar(&healthAddr, "health-addr", ":9440",
 		"The address the health endpoint binds to.")
+
+	fs.Var(newDeletionStrategy(&deletionPropagation), "deletion-propagation",
+		"Deletion strategy for the provisioned resources by the operator")
 }
+
+type deletionStrategy metav1.DeletionPropagation
+
+func newDeletionStrategy(val *string) *deletionStrategy {
+	return (*deletionStrategy)(val)
+}
+
+func (s *deletionStrategy) Set(val string) error {
+	switch *s {
+	case deletionStrategy(metav1.DeletePropagationBackground):
+	case deletionStrategy(metav1.DeletePropagationForeground):
+	case deletionStrategy(metav1.DeletePropagationOrphan):
+	default:
+		return fmt.Errorf(`invalid cascade value (%v). Must be "background", "foreground", or "orphan"`, val)
+	}
+
+	return nil
+}
+
+func (s *deletionStrategy) Type() string { return "string" }
+
+func (s *deletionStrategy) String() string { return string(*s) }
 
 func main() {
 	InitFlags(pflag.CommandLine)
@@ -184,6 +211,26 @@ func setupChecks(mgr ctrl.Manager) {
 }
 
 func setupReconcilers(mgr ctrl.Manager) {
+	if err := (&providercontroller.OperatorDeploymentReconciler{
+		Client:    mgr.GetClient(),
+		Finalizer: operatorv1.ProviderFinalizer,
+		LabelSelector: metav1.LabelSelector{
+			MatchLabels: map[string]string{
+				clusterctlv1.ClusterctlCoreLabel: "capi-operator",
+			},
+		},
+		WaitForObjects: []client.ObjectList{
+			&operatorv1.CoreProviderList{},
+			&operatorv1.InfrastructureProviderList{},
+			&operatorv1.BootstrapProviderList{},
+			&operatorv1.ControlPlaneProviderList{},
+		},
+		PropagationPolicy: metav1.DeletionPropagation(deletionPropagation),
+	}).SetupWithManager(mgr, concurrency(concurrencyNumber)); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "Deployment")
+		os.Exit(1)
+	}
+
 	if err := (&providercontroller.GenericProviderReconciler{
 		Provider:     &operatorv1.CoreProvider{},
 		ProviderList: &operatorv1.CoreProviderList{},

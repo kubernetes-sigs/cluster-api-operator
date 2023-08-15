@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	ProviderFinalizer         = "provider.cluster.x-k8s.io"
+	ProviderFinalizer         = "provider.cluster.x-k8s.io/finalizer"
 	ConfigMapVersionLabelName = "provider.cluster.x-k8s.io/version"
 )
 
