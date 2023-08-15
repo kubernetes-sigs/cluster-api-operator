@@ -113,47 +113,103 @@ func WaitFor(ctx context.Context, input ConditionalInterface, intervals ...inter
 type HelmOutput int
 
 const (
-	Manifests HelmOutput = iota
+	Full HelmOutput = iota
+	Manifests
 	Hooks
-	Full
 )
+
+//go:generate go run golang.org/x/tools/cmd/stringer -type=HelmCommand all_type_helpers.go
+type HelmCommand int
+type HelmCommands []HelmCommand
+
+const (
+	Install HelmCommand = iota
+	Uninstall
+	Repo
+	Template
+	Add
+	Update
+	Remove
+)
+
+func (c HelmCommands) Strings() []string {
+	commands := []string{}
+	for _, command := range c {
+		commands = append(commands, strings.ToLower(command.String()))
+	}
+	return commands
+}
+
+// Commands generate a valid list of helm commands from input or defaults to install
+func Commands(commands ...HelmCommand) HelmCommands {
+	return commands
+}
+
+type HelmFlags []string
+
+// Flags returns a list of additional flags for helm chart
+func Flags(flags ...string) HelmFlags {
+	f := HelmFlags{}
+	return *f.Flags(flags...)
+}
+
+// Flags extends existing list with additional flags for helm chart
+func (h *HelmFlags) Flags(flags ...string) *HelmFlags {
+	if flags == nil {
+		return h
+	}
+	for _, flag := range flags {
+		if flag != "" {
+			*h = append(*h, flag)
+		}
+	}
+	return h
+}
+
+func (h *HelmFlags) Set(set bool, flag string) *HelmFlags {
+	if set {
+		h.Flags(flag)
+	}
+	return h
+}
 
 type HelmChart struct {
 	BinaryPath      string
+	Commands        HelmCommands
 	Path            string
 	Name            string
 	Kubeconfig      string
 	DryRun          bool
 	Wait            bool
-	AdditionalFlags []string
+	AdditionalFlags HelmFlags
 	Output          HelmOutput
 }
 
-// InstallChart performs an install of the helm chart. Install returns the rendered manifest
-// with some additional data that can't be parsed as yaml. This function processes the output and returns only the optional resources,
+// Run performs an execution of the helm command. Run returns the output
+// with some additional data that can't be parsed as yaml.
+// This function processes the output and returns only the optional resources,
 // marked as post install hooks.
-func (h *HelmChart) InstallChart(values map[string]string) (string, error) {
-	args := []string{"install", "--kubeconfig", h.Kubeconfig, h.Name, h.Path}
-	if h.DryRun {
-		args = append(args, "--dry-run")
+func (h *HelmChart) Run(values map[string]string) (string, error) {
+	args := Flags()
+	if h.Commands == nil {
+		h.Commands = Commands(Install)
 	}
-	if h.Wait {
-		args = append(args, "--wait")
-	}
+	args.Flags(h.Commands.Strings()...)
+	args.Flags("--kubeconfig", h.Kubeconfig, h.Name, h.Path)
+	args.Set(h.DryRun, "--dry-run")
+	args.Set(h.Wait, "--wait")
 	for key, value := range values {
-		args = append(args, "--set")
-		args = append(args, fmt.Sprintf("%s=%s", key, value))
+		args.Flags("--set", fmt.Sprintf("%s=%s", key, value))
 	}
-	if h.AdditionalFlags != nil {
-		args = append(args, h.AdditionalFlags...)
+	args.Flags(h.AdditionalFlags...)
+	if h.BinaryPath == "" {
+		h.BinaryPath = "helm"
 	}
-
 	fullCommand := append([]string{h.BinaryPath}, args...)
-	klog.Infof("Executing: %s", fullCommand, " ")
-	cmd := exec.Command(h.BinaryPath, args...)
-	out, err := cmd.CombinedOutput()
+	klog.Infof("Executing: %s", fullCommand)
+	out, err := exec.Command(h.BinaryPath, args...).CombinedOutput()
 	if err != nil {
-		return "", fmt.Errorf("failed to run helm install: %w, output: %s", err, string(out))
+		return "", fmt.Errorf("failed to run helm %s: %w, output: %s", strings.Join(h.Commands.Strings(), " "), err, string(out))
 	}
 
 	outString := string(out)

@@ -22,13 +22,10 @@ package e2e
 import (
 	"flag"
 	"fmt"
-	"io"
-	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -39,7 +36,7 @@ import (
 	"k8s.io/klog/v2"
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha1"
 
-	operatorframework "sigs.k8s.io/cluster-api-operator/test/framework"
+	. "sigs.k8s.io/cluster-api-operator/test/framework"
 	"sigs.k8s.io/cluster-api/test/framework"
 	"sigs.k8s.io/cluster-api/test/framework/bootstrap"
 	"sigs.k8s.io/cluster-api/test/framework/clusterctl"
@@ -48,12 +45,9 @@ import (
 )
 
 const (
-	certManagerURL                  = "CERTMANAGER_URL"
-	certManagerNamespace            = "cert-manager"
-	certManagerDeployment           = "cert-manager"
-	certManagerCAInjectorDeployment = "cert-manager-cainjector"
-	certManagerWebhookDeployment    = "cert-manager-webhook"
-	capiOperatorManagerDeployment   = "capi-operator-controller-manager"
+	certManagerVersion            = "CERTMANAGER_VERSION"
+	certManagerNamespace          = "cert-manager"
+	capiOperatorManagerDeployment = "capi-operator-controller-manager"
 )
 
 // Test suite flags.
@@ -116,7 +110,7 @@ var (
 	usePRArtifacts bool
 
 	// helmChart is the helm chart helper to be used for the e2e tests.
-	helmChart *operatorframework.HelmChart
+	helmChart *HelmChart
 )
 
 func init() {
@@ -302,51 +296,50 @@ func initHelmCluster(clusterProxy framework.ClusterProxy, config *clusterctl.E2E
 
 func ensureCertManager(clusterProxy framework.ClusterProxy, config *clusterctl.E2EConfig) {
 	By("Deploying cert-manager")
-	Expect(config.Variables).To(HaveKey(certManagerURL), "Missing %s variable in the config", certManagerURL)
-	certManagerComponentsUrl := config.GetVariable(certManagerURL)
-
-	var netClient = &http.Client{
-		Timeout: time.Second * 10,
+	addCertChart := &HelmChart{
+		BinaryPath:      helmBinaryPath,
+		Name:            "jetstack",
+		Path:            "https://charts.jetstack.io/",
+		Kubeconfig:      clusterProxy.GetKubeconfigPath(),
+		Commands:        Commands(Repo, Add),
+		AdditionalFlags: Flags("--force-update"),
 	}
+	_, err := addCertChart.Run(nil)
+	Expect(err).ToNot(HaveOccurred())
 
-	certManagerResponse, err := netClient.Get(certManagerComponentsUrl)
-	Expect(err).ToNot(HaveOccurred(), "Failed to download cert-manager components from %s", certManagerComponentsUrl)
-	defer certManagerResponse.Body.Close()
-
-	rawCertManagerResponse, err := io.ReadAll(certManagerResponse.Body)
-	Expect(err).ToNot(HaveOccurred(), "Failed to read the cert-manager components file")
-
-	Expect(clusterProxy.Apply(ctx, rawCertManagerResponse)).To(Succeed(), "Failed to apply cert-manager components to the cluster")
-
-	By("Waiting for cert manager to be available")
-	certManagerDeployments := []*appsv1.Deployment{
-		{
-			ObjectMeta: metav1.ObjectMeta{Name: certManagerDeployment, Namespace: certManagerNamespace},
-		},
-		{
-			ObjectMeta: metav1.ObjectMeta{Name: certManagerCAInjectorDeployment, Namespace: certManagerNamespace},
-		},
-		{
-			ObjectMeta: metav1.ObjectMeta{Name: certManagerWebhookDeployment, Namespace: certManagerNamespace},
-		},
+	repoUpdate := &HelmChart{
+		BinaryPath: helmBinaryPath,
+		Kubeconfig: clusterProxy.GetKubeconfigPath(),
+		Commands:   Commands(Repo, Update),
 	}
+	_, err = repoUpdate.Run(nil)
+	Expect(err).ToNot(HaveOccurred())
 
-	for _, deployment := range certManagerDeployments {
-		framework.WaitForDeploymentsAvailable(ctx, framework.WaitForDeploymentsAvailableInput{
-			Getter:     clusterProxy.GetClient(),
-			Deployment: deployment,
-		}, config.GetIntervals(clusterProxy.GetName(), "wait-controllers")...)
+	certChart := &HelmChart{
+		BinaryPath: helmBinaryPath,
+		Path:       "jetstack/cert-manager",
+		Name:       "cert-manager",
+		Kubeconfig: clusterProxy.GetKubeconfigPath(),
+		Wait:       true,
+		AdditionalFlags: Flags(
+			"--create-namespace",
+			"-n", certManagerNamespace,
+			"--version", config.GetVariable(certManagerVersion),
+		),
 	}
+	_, err = certChart.Run(map[string]string{
+		"installCRDs": "true",
+	})
 }
 
 func initHelmChart() {
-	helmChart = &operatorframework.HelmChart{
+	helmChart = &HelmChart{
 		BinaryPath: helmBinaryPath,
 		Path:       chartPath,
 		Name:       "capi-operator",
 		Kubeconfig: helmClusterProxy.GetKubeconfigPath(),
 		DryRun:     true,
-		Output:     operatorframework.Hooks,
+		Output:     Hooks,
 	}
 }
 
