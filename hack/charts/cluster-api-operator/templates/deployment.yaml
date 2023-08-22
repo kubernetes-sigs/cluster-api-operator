@@ -51,6 +51,10 @@ spec:
       securityContext:
       {{- toYaml . | nindent 8 }}
       {{- end }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+      {{- toYaml . | nindent 8 }}
+      {{- end }}
       containers:
       - args:
         {{- if .Values.logLevel }}
@@ -80,10 +84,6 @@ spec:
         image: "{{- if .registry -}}{{ .registry }}/{{- end -}}{{ .repository }}{{- if (.digest) -}} @{{ .digest }}{{- else -}}:{{ default $.Chart.AppVersion .tag }} {{- end -}}"
         {{- end }}
         imagePullPolicy: {{ .Values.image.manager.pullPolicy }}
-        {{- with .Values.imagePullSecrets.manager }}
-        imagePullSecrets:
-        {{- toYaml . | nindent 12 }}
-        {{- end }}
         name: manager
         ports:
         - containerPort: 9443
@@ -112,10 +112,6 @@ spec:
         image: "{{- if .registry -}}{{ .registry }}/{{- end -}}{{ .repository }}{{- if (.digest) -}} @{{ .digest }}{{- else -}}:{{ default $.Chart.AppVersion .tag }} {{- end -}}"
         {{- end }}
         imagePullPolicy: {{ .Values.image.kubeRBACProxy.pullPolicy }}
-        {{- with .Values.imagePullSecrets.kubeRBACProxy }}
-        imagePullSecrets:
-        {{- toYaml . | nindent 12 }}
-        {{- end }}
         name: kube-rbac-proxy
         ports:
         - containerPort: 8443
