@@ -183,7 +183,7 @@ You can utilize any existing namespace for providers in your Kubernetes operator
 *Example:*
 
 ```yaml
-apiVersion: operator.cluster.x-k8s.io/v1alpha1
+apiVersion: operator.cluster.x-k8s.io/v1alpha2
 kind: CoreProvider
 metadata:
   name: cluster-api
@@ -222,7 +222,8 @@ metadata:
  namespace: capz-system
 spec:
  version: v1.9.3
- secretName: azure-variables
+ configSecret:
+   name: azure-variables
 ```
 
 ### Deleting providers
@@ -300,8 +301,7 @@ The following sections provide details about `ProviderSpec` and `ProviderStatus`
    - Version (string): provider version (e.g., "v0.1.0")
    - Manager (optional ManagerSpec): controller manager properties for the provider
    - Deployment (optional DeploymentSpec): deployment properties for the provider
-   - SecretName (optional string): name of the secret that contains provider credentials
-   - SecretNamespace (optional string): namespace of the secret that contains provider credentials
+   - ConfigSecret (optional SecretReference): reference to the config secret
    - FetchConfig (optional FetchConfiguration): how the operator will fetch components and metadata
 
    YAML example:
@@ -313,7 +313,8 @@ The following sections provide details about `ProviderSpec` and `ProviderStatus`
       maxConcurrentReconciles: 5
     deployment:
       replicas: 1
-    secretName: "provider-secret"
+    configSecret:
+      name: "provider-secret"
     fetchConfig:
       url: "https://github.com/owner/repo/releases"
    ...
@@ -371,10 +372,7 @@ The following sections provide details about `ProviderSpec` and `ProviderStatus`
                  - "true"
        containers:
          - name: "containerA"
-           image:
-             repository: "example.com/repo"
-             name: "image-name"
-             tag: "v1.0.0"
+           imageURL: "example.com/repo/image-name:v1.0.0"
            args:
              exampleArg: "value"
     ...
@@ -382,7 +380,7 @@ The following sections provide details about `ProviderSpec` and `ProviderStatus`
 
 4. `ContainerSpec`: container properties for the provider, consisting of:
    - Name (string): container name
-   - Image (optional ImageMeta): container image metadata
+   - ImageURL (optional string): container image URL
    - Args (optional map[string]string): extra provider specific flags
    - Env (optional []corev1.EnvVar): environment variables
    - Resources (optional corev1.ResourceRequirements): compute resources
@@ -395,10 +393,7 @@ The following sections provide details about `ProviderSpec` and `ProviderStatus`
      deployment:
        containers:
          - name: "example-container"
-           image:
-             repository: "example.com/repo"
-             name: "image-name"
-             tag: "v1.0.0"
+           imageURL: "example.com/repo/image-name:v1.0.0"
            args:
              exampleArg: "value"
            env:
@@ -416,12 +411,7 @@ The following sections provide details about `ProviderSpec` and `ProviderStatus`
    ...
    ```
 
-5. `ImageMeta`: container image customization, consisting of:
-   - Repository (optional string): image registry (e.g., "example.com/repo")
-   - Name (optional string): image name (e.g., "provider-image")
-   - Tag (optional string): image tag (e.g., "v1.0.0")
-
-6. `FetchConfiguration`: components and metadata fetch options, consisting of:
+5. `FetchConfiguration`: components and metadata fetch options, consisting of:
    - URL (optional string): URL for remote Github repository releases (e.g., "https://github.com/owner/repo/releases")
    - Selector (optional metav1.LabelSelector): label selector to use for fetching provider components and metadata from ConfigMaps stored in the cluster
 
@@ -435,6 +425,21 @@ The following sections provide details about `ProviderSpec` and `ProviderStatus`
          matchLabels:
    ...
    ```
+
+6. `SecretReference`: pointer to a secret object, consisting of:
+  - Name (string): name of the secret
+  - Namespace (optional string): namespace of the secret, defaults to the provider object namespace
+   
+  YAML example:
+  ```yaml
+  ...
+  spec:
+    configSecret:
+      name: capa-secret
+      namespace: capa-system
+  ...
+  ```
+
 ## Provider Status
 
 `ProviderStatus`: observed state of the Provider, consisting of:
@@ -472,14 +477,15 @@ type: Opaque
 data:
  AWS_B64ENCODED_CREDENTIALS: ...
 ---
-apiVersion: operator.cluster.x-k8s.io/v1alpha1
+apiVersion: operator.cluster.x-k8s.io/v1alpha2
 kind: InfrastructureProvider
 metadata:
  name: aws
  namespace: capa-system
 spec:
  version: v2.1.4
- secretName: aws-variables
+ configSecret:
+   name: aws-variables
  manager:
    # These top level controller manager flags, supported by all the providers.
    # These flags come with sensible defaults, thus requiring no or minimal
@@ -503,35 +509,34 @@ spec:
 
 ```yaml
 ---
-apiVersion: operator.cluster.x-k8s.io/v1alpha1
+apiVersion: operator.cluster.x-k8s.io/v1alpha2
 kind: InfrastructureProvider
 metadata:
  name: aws
  namespace: capa-system
 spec:
  version: v2.1.4
- secretName: aws-variables
+ configSecret:
+   name: aws-variables
  deployment:
    containers:
    - name: manager
-     image:
-       repository: "gcr.io/myregistry"
-       name: "capa-controller"
-       tag: "v2.1.4-foo"
+     imageURL: "gcr.io/myregistry/capa-controller:v2.1.4-foo"
 ```
 
 3. As an admin, I want to change the resource limits for the manager pod in my control plane provider deployment.
 
 ```yaml
 ---
-apiVersion: operator.cluster.x-k8s.io/v1alpha1
+apiVersion: operator.cluster.x-k8s.io/v1alpha2
 kind: ControlPlaneProvider
 metadata:
  name: kubeadm
  namespace: capi-kubeadm-control-plane-system
 spec:
  version: v1.4.3
- secretName: capi-variables
+ configSecret: 
+   name: capi-variables
  deployment:
    containers:
    - name: manager
@@ -548,14 +553,15 @@ spec:
 
 ```yaml
 ---
-apiVersion: operator.cluster.x-k8s.io/v1alpha1
+apiVersion: operator.cluster.x-k8s.io/v1alpha2
 kind: InfrastructureProvider
 metadata:
  name: myazure
  namespace: capz-system
 spec:
  version: v1.9.3
- secretName: azure-variables
+ configSecret:
+   name: azure-variables
  fetchConfig:
    url: https://github.com/myorg/awesome-azure-provider/releases
 
@@ -567,14 +573,15 @@ See more examples in the [air-gapped environment section](#air-gapped-environmen
 
 ```yaml
 ---
-apiVersion: operator.cluster.x-k8s.io/v1alpha1
+apiVersion: operator.cluster.x-k8s.io/v1alpha2
 kind: InfrastructureProvider
 metadata:
  name: vsphere
  namespace: capv-system
 spec:
  version: v1.6.1
- secretName: vsphere-variables
+ configSecret:
+   name: vsphere-variables
 ```
 
 # Cluster API Provider Lifecycle
@@ -667,14 +674,15 @@ data:
   metadata: |
     # Metadata information goes here
 ---
-apiVersion: operator.cluster.x-k8s.io/v1alpha1
+apiVersion: operator.cluster.x-k8s.io/v1alpha2
 kind: InfrastructureProvider
 metadata:
   name: azure
   namespace: capz-system
 spec:
   version: v1.9.3
-  secretName: azure-variables
+  configSecret:
+    name: azure-variables
   fetchConfig:
     selector:
       matchLabels:
@@ -736,12 +744,12 @@ data:
   manifests: |
     # Additional manifests go here
 ---
-apiVersion: operator.cluster.x-k8s.io/v1alpha1
+apiVersion: operator.cluster.x-k8s.io/v1alpha2
 kind: CoreProvider
 metadata:
   name: cluster-api
   namespace: capi-system
 spec:
   additionalManifests:
-      name: additional-manifests
+    name: additional-manifests
 ```
