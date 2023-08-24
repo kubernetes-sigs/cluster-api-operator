@@ -34,7 +34,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
-	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha1"
+	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
 	"sigs.k8s.io/cluster-api-operator/internal/controller/genericprovider"
 	"sigs.k8s.io/cluster-api-operator/util"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
@@ -207,9 +207,9 @@ func (p *phaseReconciler) secretReader(ctx context.Context) (configclient.Reader
 	}
 
 	// Fetch configuration variables from the secret. See API field docs for more info.
-	if p.provider.GetSpec().SecretName != "" {
+	if p.provider.GetSpec().ConfigSecret != nil {
 		secret := &corev1.Secret{}
-		key := types.NamespacedName{Namespace: p.provider.GetSpec().SecretNamespace, Name: p.provider.GetSpec().SecretName}
+		key := types.NamespacedName{Namespace: p.provider.GetSpec().ConfigSecret.Namespace, Name: p.provider.GetSpec().ConfigSecret.Name}
 
 		if err := p.ctrlClient.Get(ctx, key, secret); err != nil {
 			return nil, err

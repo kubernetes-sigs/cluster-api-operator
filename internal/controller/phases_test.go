@@ -28,7 +28,7 @@ import (
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/repository"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha1"
+	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
 	"sigs.k8s.io/cluster-api-operator/internal/controller/genericprovider"
 )
 
@@ -55,8 +55,10 @@ func TestSecretReader(t *testing.T) {
 				},
 				Spec: operatorv1.CoreProviderSpec{
 					ProviderSpec: operatorv1.ProviderSpec{
-						SecretName:      secretName,
-						SecretNamespace: secretNamespace,
+						ConfigSecret: &operatorv1.SecretReference{
+							Name:      secretName,
+							Namespace: secretNamespace,
+						},
 						FetchConfig: &operatorv1.FetchConfiguration{
 							URL: "https://example.com",
 						},

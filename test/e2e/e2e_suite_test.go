@@ -34,7 +34,8 @@ import (
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/klog/v2"
-	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha1"
+	operatorv1alpha1 "sigs.k8s.io/cluster-api-operator/api/v1alpha1"
+	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
 
 	. "sigs.k8s.io/cluster-api-operator/test/framework"
 	"sigs.k8s.io/cluster-api/test/framework"
@@ -206,6 +207,7 @@ func initScheme() *runtime.Scheme {
 	scheme := runtime.NewScheme()
 	framework.TryAddDefaultSchemes(scheme)
 	Expect(operatorv1.AddToScheme(scheme)).To(Succeed())
+	Expect(operatorv1alpha1.AddToScheme(scheme)).To(Succeed())
 	return scheme
 }
 

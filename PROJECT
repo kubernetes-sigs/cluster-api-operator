@@ -41,4 +41,37 @@ resources:
   kind: InfrastructureProvider
   path: sigs.k8s.io/cluster-api-operator/api/v1alpha1
   version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: cluster.x-k8s.io
+  group: operator
+  kind: CoreProvider
+  path: sigs.k8s.io/cluster-api-operator/api/v1alpha2
+  version: v1alpha2
+- api:
+    crdVersion: v1
+    namespaced: true
+  domain: cluster.x-k8s.io
+  group: operator
+  kind: BootstrapProvider
+  path: sigs.k8s.io/cluster-api-operator/api/v1alpha2
+  version: v1alpha2
+- api:
+    crdVersion: v1
+    namespaced: true
+  domain: cluster.x-k8s.io
+  group: operator
+  kind: ControlPlaneProvider
+  path: sigs.k8s.io/cluster-api-operator/api/v1alpha2
+  version: v1alpha2
+- api:
+    crdVersion: v1
+    namespaced: true
+  domain: cluster.x-k8s.io
+  group: operator
+  kind: InfrastructureProvider
+  path: sigs.k8s.io/cluster-api-operator/api/v1alpha2
+  version: v1alpha2
 version: "3"

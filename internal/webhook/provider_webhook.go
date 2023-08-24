@@ -17,13 +17,13 @@ limitations under the License.
 package webhook
 
 import (
-	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha1"
+	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
 )
 
 // setDefaultProviderSpec sets the default values for the provider spec.
 func setDefaultProviderSpec(providerSpec *operatorv1.ProviderSpec, providerNamespace string) {
-	if providerSpec.SecretName != "" && providerSpec.SecretNamespace == "" {
-		providerSpec.SecretNamespace = providerNamespace
+	if providerSpec.ConfigSecret != nil && providerSpec.ConfigSecret.Namespace == "" {
+		providerSpec.ConfigSecret.Namespace = providerNamespace
 	}
 
 	if providerSpec.AdditionalManifestsRef != nil && providerSpec.AdditionalManifestsRef.Namespace == "" {

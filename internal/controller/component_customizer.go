@@ -29,7 +29,7 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	configv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	"k8s.io/utils/pointer"
-	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha1"
+	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
 	"sigs.k8s.io/cluster-api-operator/internal/controller/genericprovider"
 	"sigs.k8s.io/cluster-api/util"
 )
@@ -257,8 +257,8 @@ func customizeContainer(cSpec operatorv1.ContainerSpec, d *appsv1.Deployment) {
 				c.Resources = *cSpec.Resources
 			}
 
-			if cSpec.Image != nil && cSpec.Image.Name != "" && cSpec.Image.Repository != "" {
-				c.Image = imageMetaToURL(cSpec.Image)
+			if cSpec.ImageURL != nil {
+				c.Image = *cSpec.ImageURL
 			}
 
 			if cSpec.Command != nil {
@@ -294,16 +294,6 @@ func removeEnv(envs []corev1.EnvVar, name string) []corev1.EnvVar {
 	}
 
 	return envs
-}
-
-// imageMetaToURL translate container image meta to URL.
-func imageMetaToURL(im *operatorv1.ImageMeta) string {
-	tag := "latest"
-	if im.Tag != "" {
-		tag = im.Tag
-	}
-
-	return strings.Join([]string{im.Repository, im.Name}, "/") + ":" + tag
 }
 
 // leaderElectionArgs set leader election flags.
