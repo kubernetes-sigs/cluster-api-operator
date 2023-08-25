@@ -13,8 +13,7 @@ controlPlane: ""
 infrastructure: ""
 # ---
 # Common configuration secret options
-secretName: ""
-secretNamespace: ""
+configSecret: {}
 # ---
 # CAPI operator deployment options
 logLevel: 2
