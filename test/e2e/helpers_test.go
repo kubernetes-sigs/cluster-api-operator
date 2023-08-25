@@ -44,5 +44,8 @@ const (
 	infraProviderName           = "docker"
 	infraProviderDeploymentName = "capd-controller-manager"
 
+	addonProviderName           = "helm"
+	addonProviderDeploymentName = "caaph-controller-manager"
+
 	customManifestsFolder = "resources/"
 )

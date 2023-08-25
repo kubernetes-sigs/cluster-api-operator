@@ -210,6 +210,41 @@ data:
 			e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 	})
 
+	It("should successfully create and delete an AddonProvider", func() {
+		bootstrapCluster := bootstrapClusterProxy.GetClient()
+		addonProvider := &operatorv1.AddonProvider{ObjectMeta: metav1.ObjectMeta{
+			Name:      addonProviderName,
+			Namespace: operatorNamespace,
+		}}
+		deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{
+			Name:      addonProviderDeploymentName,
+			Namespace: operatorNamespace,
+		}}
+		Expect(bootstrapCluster.Create(ctx, addonProvider)).To(Succeed())
+
+		By("Waiting for the addon provider deployment to be ready")
+		framework.WaitForDeploymentsAvailable(ctx, framework.WaitForDeploymentsAvailableInput{
+			Getter:     bootstrapCluster,
+			Deployment: deployment,
+		}, e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
+
+		By("Waiting for the addon provider to be ready")
+		WaitFor(ctx, For(addonProvider).In(bootstrapCluster).ToSatisfy(
+			HaveStatusCondition(&addonProvider.Status.Conditions, operatorv1.ProviderInstalledCondition)),
+			e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
+
+		By("Waiting for status.IntalledVersion to be set")
+		WaitFor(ctx, For(addonProvider).In(bootstrapCluster).ToSatisfy(func() bool {
+			return ptr.Equal(addonProvider.Status.InstalledVersion, &addonProvider.Spec.Version)
+		}), e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
+
+		Expect(bootstrapCluster.Delete(ctx, addonProvider)).To(Succeed())
+
+		By("Waiting for the addon provider deployment to be deleted")
+		WaitForDelete(ctx, For(deployment).In(bootstrapCluster),
+			e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
+	})
+
 	It("should successfully downgrade a CoreProvider (latest -> v1.4.2)", func() {
 		bootstrapCluster := bootstrapClusterProxy.GetClient()
 		coreProvider := &operatorv1.CoreProvider{}
