@@ -27,7 +27,7 @@ metadata:
   name: rke2-control-plane-custom-ns
 ---
 # Source: cluster-api-operator/templates/control-plane.yaml
-apiVersion: operator.cluster.x-k8s.io/v1alpha1
+apiVersion: operator.cluster.x-k8s.io/v1alpha2
 kind: ControlPlaneProvider
 metadata:
   name: kubeadm
@@ -37,11 +37,12 @@ metadata:
     "helm.sh/hook-weight": "2"
 spec:
   version: v1.4.2
-  secretName: test-secret-name
-  secretNamespace: test-secret-namespace
+  configSecret:
+    name: test-secret-name
+    namespace: test-secret-namespace
 ---
 # Source: cluster-api-operator/templates/control-plane.yaml
-apiVersion: operator.cluster.x-k8s.io/v1alpha1
+apiVersion: operator.cluster.x-k8s.io/v1alpha2
 kind: ControlPlaneProvider
 metadata:
   name: rke2
@@ -51,11 +52,12 @@ metadata:
     "helm.sh/hook-weight": "2"
 spec:
   version: v0.3.0
-  secretName: test-secret-name
-  secretNamespace: test-secret-namespace
+  configSecret:
+    name: test-secret-name
+    namespace: test-secret-namespace
 ---
 # Source: cluster-api-operator/templates/control-plane-conditions.yaml
-apiVersion: operator.cluster.x-k8s.io/v1alpha1
+apiVersion: operator.cluster.x-k8s.io/v1alpha2
 kind: CoreProvider
 metadata:
   name: cluster-api
@@ -64,5 +66,6 @@ metadata:
     "helm.sh/hook": "post-install"
     "helm.sh/hook-weight": "2"
 spec:
-  secretName: test-secret-name
-  secretNamespace: test-secret-namespace
+  configSecret:
+    name: test-secret-name
+    namespace: test-secret-namespace
