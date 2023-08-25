@@ -223,6 +223,16 @@ func setupReconcilers(mgr ctrl.Manager) {
 		setupLog.Error(err, "unable to create controller", "controller", "ControlPlaneProvider")
 		os.Exit(1)
 	}
+
+	if err := (&providercontroller.GenericProviderReconciler{
+		Provider:     &operatorv1.AddonProvider{},
+		ProviderList: &operatorv1.AddonProviderList{},
+		Client:       mgr.GetClient(),
+		Config:       mgr.GetConfig(),
+	}).SetupWithManager(mgr, concurrency(concurrencyNumber)); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "AddonProvider")
+		os.Exit(1)
+	}
 }
 
 func setupWebhooks(mgr ctrl.Manager) {
@@ -243,6 +253,11 @@ func setupWebhooks(mgr ctrl.Manager) {
 
 	if err := (&webhook.InfrastructureProviderWebhook{}).SetupWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "InfrastructureProvider")
+		os.Exit(1)
+	}
+
+	if err := (&webhook.AddonProviderWebhook{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "AddonProvider")
 		os.Exit(1)
 	}
 }
