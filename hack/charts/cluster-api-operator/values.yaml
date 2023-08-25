@@ -11,6 +11,7 @@ core: ""
 bootstrap: ""
 controlPlane: ""
 infrastructure: ""
+addon: ""
 # ---
 # Common configuration secret options
 configSecret: {}
