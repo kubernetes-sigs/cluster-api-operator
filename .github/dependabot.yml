@@ -31,3 +31,66 @@ updates:
       prefix: ":seedling:"
     labels:
       - "ok-to-test"
+
+  # Test Go module
+  - package-ecosystem: "gomod"
+    directory: "/test"
+    schedule:
+      interval: "weekly"
+    ignore:
+      # Ignore Cluster-API as its upgraded manually.
+      - dependency-name: "sigs.k8s.io/cluster-api"
+      - dependency-name: "sigs.k8s.io/cluster-api/test"
+      # Ignore controller-runtime as its upgraded manually.
+      - dependency-name: "sigs.k8s.io/controller-runtime"
+      # Ignore k8s and its transitives modules as they are upgraded manually
+      # together with controller-runtime.
+      - dependency-name: "k8s.io/*"
+      - dependency-name: "go.etcd.io/*"
+      - dependency-name: "google.golang.org/grpc"
+    commit-message:
+      prefix: ":seedling:"
+    labels:
+      - "ok-to-test"
+
+  # Hack/tools Go module
+  - package-ecosystem: "gomod"
+    directory: "/hack/tools"
+    schedule:
+      interval: "weekly"
+    ignore:
+      # Ignore Cluster-API as its upgraded manually.
+      - dependency-name: "sigs.k8s.io/cluster-api"
+      - dependency-name: "sigs.k8s.io/cluster-api/test"
+      # Ignore controller-runtime as its upgraded manually.
+      - dependency-name: "sigs.k8s.io/controller-runtime"
+      # Ignore k8s and its transitives modules as they are upgraded manually
+      # together with controller-runtime.
+      - dependency-name: "k8s.io/*"
+      - dependency-name: "go.etcd.io/*"
+      - dependency-name: "google.golang.org/grpc"
+    commit-message:
+      prefix: ":seedling:"
+    labels:
+      - "ok-to-test"
+
+  # Hack/chart-update Go module
+  - package-ecosystem: "gomod"
+    directory: "/hack/chart-update"
+    schedule:
+      interval: "weekly"
+    ignore:
+      # Ignore Cluster-API as its upgraded manually.
+      - dependency-name: "sigs.k8s.io/cluster-api"
+      - dependency-name: "sigs.k8s.io/cluster-api/test"
+      # Ignore controller-runtime as its upgraded manually.
+      - dependency-name: "sigs.k8s.io/controller-runtime"
+      # Ignore k8s and its transitives modules as they are upgraded manually
+      # together with controller-runtime.
+      - dependency-name: "k8s.io/*"
+      - dependency-name: "go.etcd.io/*"
+      - dependency-name: "google.golang.org/grpc"
+    commit-message:
+      prefix: ":seedling:"
+    labels:
+      - "ok-to-test"
