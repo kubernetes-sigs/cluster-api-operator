@@ -5,7 +5,7 @@ go 1.20
 replace sigs.k8s.io/cluster-api-operator => ../
 
 require (
-	github.com/onsi/ginkgo/v2 v2.11.0
+	github.com/onsi/ginkgo/v2 v2.12.0
 	github.com/onsi/gomega v1.27.10
 	golang.org/x/tools v0.12.0
 	k8s.io/api v0.27.4
