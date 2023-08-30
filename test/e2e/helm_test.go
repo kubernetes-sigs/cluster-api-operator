@@ -53,12 +53,12 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 
 	It("should deploy all providers with custom namespace and versions", func() {
 		manifests, err := helmChart.Run(map[string]string{
-			"secretName":      "test-secret-name",
-			"secretNamespace": "test-secret-namespace",
-			"core":            "capi-custom-ns:cluster-api:v1.4.2",
-			"controlPlane":    "kubeadm-control-plane-custom-ns:kubeadm:v1.4.2",
-			"bootstrap":       "kubeadm-bootstrap-custom-ns:kubeadm:v1.4.2",
-			"infrastructure":  "capd-custom-ns:docker:v1.4.2",
+			"configSecret.name":      "test-secret-name",
+			"configSecret.namespace": "test-secret-namespace",
+			"core":                   "capi-custom-ns:cluster-api:v1.4.2",
+			"controlPlane":           "kubeadm-control-plane-custom-ns:kubeadm:v1.4.2",
+			"bootstrap":              "kubeadm-bootstrap-custom-ns:kubeadm:v1.4.2",
+			"infrastructure":         "capd-custom-ns:docker:v1.4.2",
 		})
 		Expect(err).ToNot(HaveOccurred())
 		Expect(manifests).ToNot(BeEmpty())
@@ -69,12 +69,12 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 
 	It("should deploy all providers with custom versions", func() {
 		manifests, err := helmChart.Run(map[string]string{
-			"secretName":      "test-secret-name",
-			"secretNamespace": "test-secret-namespace",
-			"core":            "cluster-api:v1.4.2",
-			"controlPlane":    "kubeadm:v1.4.2",
-			"bootstrap":       "kubeadm:v1.4.2",
-			"infrastructure":  "docker:v1.4.2",
+			"configSecret.name":      "test-secret-name",
+			"configSecret.namespace": "test-secret-namespace",
+			"core":                   "cluster-api:v1.4.2",
+			"controlPlane":           "kubeadm:v1.4.2",
+			"bootstrap":              "kubeadm:v1.4.2",
+			"infrastructure":         "docker:v1.4.2",
 		})
 		Expect(err).ToNot(HaveOccurred())
 		Expect(manifests).ToNot(BeEmpty())
@@ -85,12 +85,12 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 
 	It("should deploy all providers with latest version", func() {
 		manifests, err := helmChart.Run(map[string]string{
-			"secretName":      "test-secret-name",
-			"secretNamespace": "test-secret-namespace",
-			"core":            "cluster-api",
-			"controlPlane":    "kubeadm",
-			"bootstrap":       "kubeadm",
-			"infrastructure":  "docker",
+			"configSecret.name":      "test-secret-name",
+			"configSecret.namespace": "test-secret-namespace",
+			"core":                   "cluster-api",
+			"controlPlane":           "kubeadm",
+			"bootstrap":              "kubeadm",
+			"infrastructure":         "docker",
 		})
 		Expect(err).ToNot(HaveOccurred())
 		Expect(manifests).ToNot(BeEmpty())
@@ -101,9 +101,9 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 
 	It("should deploy core, bootstrap, control plane when only infra is specified", func() {
 		manifests, err := helmChart.Run(map[string]string{
-			"secretName":      "test-secret-name",
-			"secretNamespace": "test-secret-namespace",
-			"infrastructure":  "docker",
+			"configSecret.name":      "test-secret-name",
+			"configSecret.namespace": "test-secret-namespace",
+			"infrastructure":         "docker",
 		})
 		Expect(err).ToNot(HaveOccurred())
 		Expect(manifests).ToNot(BeEmpty())
@@ -114,9 +114,9 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 
 	It("should deploy core when only bootstrap is specified", func() {
 		manifests, err := helmChart.Run(map[string]string{
-			"secretName":      "test-secret-name",
-			"secretNamespace": "test-secret-namespace",
-			"bootstrap":       "kubeadm",
+			"configSecret.name":      "test-secret-name",
+			"configSecret.namespace": "test-secret-namespace",
+			"bootstrap":              "kubeadm",
 		})
 		Expect(err).ToNot(HaveOccurred())
 		Expect(manifests).ToNot(BeEmpty())
@@ -127,9 +127,9 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 
 	It("should deploy core when only control plane is specified", func() {
 		manifests, err := helmChart.Run(map[string]string{
-			"secretName":      "test-secret-name",
-			"secretNamespace": "test-secret-namespace",
-			"controlPlane":    "kubeadm",
+			"configSecret.name":      "test-secret-name",
+			"configSecret.namespace": "test-secret-namespace",
+			"controlPlane":           "kubeadm",
 		})
 		Expect(err).ToNot(HaveOccurred())
 		Expect(manifests).ToNot(BeEmpty())
@@ -140,9 +140,9 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 
 	It("should deploy multiple infra providers with custom namespace and versions", func() {
 		manifests, err := helmChart.Run(map[string]string{
-			"secretName":      "test-secret-name",
-			"secretNamespace": "test-secret-namespace",
-			"infrastructure":  "capd-custom-ns:docker:v1.4.2;capz-custom-ns:azure:v1.10.0",
+			"configSecret.name":      "test-secret-name",
+			"configSecret.namespace": "test-secret-namespace",
+			"infrastructure":         "capd-custom-ns:docker:v1.4.2;capz-custom-ns:azure:v1.10.0",
 		})
 		Expect(err).ToNot(HaveOccurred())
 		Expect(manifests).ToNot(BeEmpty())
@@ -153,9 +153,9 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 
 	It("should deploy multiple control plane providers with custom namespace and versions", func() {
 		manifests, err := helmChart.Run(map[string]string{
-			"secretName":      "test-secret-name",
-			"secretNamespace": "test-secret-namespace",
-			"controlPlane":    "kubeadm-control-plane-custom-ns:kubeadm:v1.4.2;rke2-control-plane-custom-ns:rke2:v0.3.0",
+			"configSecret.name":      "test-secret-name",
+			"configSecret.namespace": "test-secret-namespace",
+			"controlPlane":           "kubeadm-control-plane-custom-ns:kubeadm:v1.4.2;rke2-control-plane-custom-ns:rke2:v0.3.0",
 		})
 		Expect(err).ToNot(HaveOccurred())
 		Expect(manifests).ToNot(BeEmpty())
@@ -166,9 +166,9 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 
 	It("should deploy multiple bootstrap providers with custom namespace and versions", func() {
 		manifests, err := helmChart.Run(map[string]string{
-			"secretName":      "test-secret-name",
-			"secretNamespace": "test-secret-namespace",
-			"bootstrap":       "kubeadm-bootstrap-custom-ns:kubeadm:v1.4.2;rke2-bootstrap-custom-ns:rke2:v0.3.0",
+			"configSecret.name":      "test-secret-name",
+			"configSecret.namespace": "test-secret-namespace",
+			"bootstrap":              "kubeadm-bootstrap-custom-ns:kubeadm:v1.4.2;rke2-bootstrap-custom-ns:rke2:v0.3.0",
 		})
 		Expect(err).ToNot(HaveOccurred())
 		Expect(manifests).ToNot(BeEmpty())

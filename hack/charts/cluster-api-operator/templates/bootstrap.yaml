@@ -30,7 +30,7 @@ metadata:
     "helm.sh/hook-weight": "1"
   name: {{ $bootstrapNamespace }}
 ---
-apiVersion: operator.cluster.x-k8s.io/v1alpha1
+apiVersion: operator.cluster.x-k8s.io/v1alpha2
 kind: BootstrapProvider
 metadata:
   name: {{ $bootstrapName }}
@@ -38,17 +38,18 @@ metadata:
   annotations:
     "helm.sh/hook": "post-install"
     "helm.sh/hook-weight": "2"
-{{- if or $bootstrapVersion $.Values.secretName }}
+{{- if or $bootstrapVersion $.Values.configSecret.name }}
 spec:
 {{- end}}
 {{- if $bootstrapVersion }}
   version: {{ $bootstrapVersion }}
 {{- end }}
-{{- if $.Values.secretName }}
-  secretName: {{ $.Values.secretName }}
-{{- end }}
-{{- if $.Values.secretNamespace }}
-  secretNamespace: {{ $.Values.secretNamespace }}
+{{- if $.Values.configSecret.name }}
+  configSecret:
+    name: {{ $.Values.configSecret.name }}
+    {{- if $.Values.configSecret.namespace }}
+    namespace: {{ $.Values.configSecret.namespace }}
+    {{- end }}
 {{- end }}
 {{- end }}
 {{- end }}

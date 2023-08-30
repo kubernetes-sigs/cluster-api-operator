@@ -18,7 +18,7 @@ metadata:
   name: kubeadm-control-plane-system
 ---
 # Source: cluster-api-operator/templates/control-plane.yaml
-apiVersion: operator.cluster.x-k8s.io/v1alpha1
+apiVersion: operator.cluster.x-k8s.io/v1alpha2
 kind: ControlPlaneProvider
 metadata:
   name: kubeadm
@@ -27,11 +27,12 @@ metadata:
     "helm.sh/hook": "post-install"
     "helm.sh/hook-weight": "2"
 spec:
-  secretName: test-secret-name
-  secretNamespace: test-secret-namespace
+  configSecret:
+    name: test-secret-name
+    namespace: test-secret-namespace
 ---
 # Source: cluster-api-operator/templates/control-plane-conditions.yaml
-apiVersion: operator.cluster.x-k8s.io/v1alpha1
+apiVersion: operator.cluster.x-k8s.io/v1alpha2
 kind: CoreProvider
 metadata:
   name: cluster-api
@@ -40,5 +41,6 @@ metadata:
     "helm.sh/hook": "post-install"
     "helm.sh/hook-weight": "2"
 spec:
-  secretName: test-secret-name
-  secretNamespace: test-secret-namespace
+  configSecret:
+    name: test-secret-name
+    namespace: test-secret-namespace
