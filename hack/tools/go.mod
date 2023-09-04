@@ -6,7 +6,7 @@ require (
 	github.com/drone/envsubst/v2 v2.0.0-20210730161058-179042472c46
 	github.com/joelanford/go-apidiff v0.1.0
 	github.com/onsi/ginkgo/v2 v2.12.0
-	gotest.tools/gotestsum v1.6.4
+	gotest.tools/gotestsum v1.10.1
 	sigs.k8s.io/cluster-api/hack/tools v0.0.0-20230809141950-03ab8cd50a41
 	sigs.k8s.io/controller-runtime/tools/setup-envtest v0.0.0-20211110210527-619e6b92dab9
 	sigs.k8s.io/controller-tools v0.13.0
@@ -30,7 +30,6 @@ require (
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 // indirect
-	github.com/jonboulle/clockwork v0.2.2 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/kevinburke/ssh_config v1.1.0 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
