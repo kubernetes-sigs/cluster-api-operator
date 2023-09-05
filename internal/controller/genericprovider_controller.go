@@ -242,6 +242,8 @@ func (r *GenericProviderReconciler) newGenericProvider() (genericprovider.Generi
 		return &genericprovider.ControlPlaneProviderWrapper{ControlPlaneProvider: &operatorv1.ControlPlaneProvider{}}, nil
 	case *operatorv1.InfrastructureProvider:
 		return &genericprovider.InfrastructureProviderWrapper{InfrastructureProvider: &operatorv1.InfrastructureProvider{}}, nil
+	case *operatorv1.AddonProvider:
+		return &genericprovider.AddonProviderWrapper{AddonProvider: &operatorv1.AddonProvider{}}, nil
 	default:
 		providerKind := reflect.Indirect(reflect.ValueOf(r.Provider)).Type().Name()
 		failedToCastInterfaceErr := fmt.Errorf("failed to cast interface for type: %s", providerKind)
@@ -260,6 +262,8 @@ func (r *GenericProviderReconciler) newGenericProviderList() (genericprovider.Ge
 		return &genericprovider.ControlPlaneProviderListWrapper{ControlPlaneProviderList: &operatorv1.ControlPlaneProviderList{}}, nil
 	case *operatorv1.InfrastructureProviderList:
 		return &genericprovider.InfrastructureProviderListWrapper{InfrastructureProviderList: &operatorv1.InfrastructureProviderList{}}, nil
+	case *operatorv1.AddonProviderList:
+		return &genericprovider.AddonProviderListWrapper{AddonProviderList: &operatorv1.AddonProviderList{}}, nil
 	default:
 		providerKind := reflect.Indirect(reflect.ValueOf(r.ProviderList)).Type().Name()
 		failedToCastInterfaceErr := fmt.Errorf("failed to cast interface for type: %s", providerKind)

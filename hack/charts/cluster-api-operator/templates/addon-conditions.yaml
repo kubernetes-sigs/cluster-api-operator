@@ -1,0 +1,29 @@
+{{- if .Values.addon }}
+# Deploy core components if not specified
+{{- if not .Values.core }}
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    "helm.sh/hook": "post-install"
+    "helm.sh/hook-weight": "1"
+  name: capi-system
+---
+apiVersion: operator.cluster.x-k8s.io/v1alpha2
+kind: CoreProvider
+metadata:
+  name: cluster-api
+  namespace: capi-system
+  annotations:
+    "helm.sh/hook": "post-install"
+    "helm.sh/hook-weight": "2"
+{{- if .Values.secretName }}
+spec:
+  secretName: {{ .Values.secretName }}
+{{- if .Values.secretNamespace }}
+  secretNamespace: {{ .Values.secretNamespace }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
