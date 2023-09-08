@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/spf13/pflag"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -130,7 +131,11 @@ func (s *deletionStrategy) Set(val string) error {
 	case deletionStrategy(metav1.DeletePropagationForeground):
 	case deletionStrategy(metav1.DeletePropagationOrphan):
 	default:
-		return fmt.Errorf(`invalid cascade value (%v). Must be "background", "foreground", or "orphan"`, val)
+		return fmt.Errorf(`invalid cascade value (%v). Must be "%s", "%s", or "%s"`,
+			val,
+			metav1.DeletePropagationBackground,
+			metav1.DeletePropagationForeground,
+			metav1.DeletePropagationOrphan)
 	}
 
 	return nil
@@ -211,9 +216,11 @@ func setupChecks(mgr ctrl.Manager) {
 }
 
 func setupReconcilers(mgr ctrl.Manager) {
-	if err := (&providercontroller.OperatorDeploymentReconciler{
-		Client:    mgr.GetClient(),
-		Finalizer: operatorv1.ProviderFinalizer,
+	if err := (&providercontroller.OwnershipReconciler{
+		Client:      mgr.GetClient(),
+		OwnerClient: mgr.GetClient(),
+		Finalizer:   operatorv1.ProviderFinalizer,
+		OwnerObject: &appsv1.Deployment{},
 		LabelSelector: metav1.LabelSelector{
 			MatchLabels: map[string]string{
 				clusterctlv1.ClusterctlCoreLabel: "capi-operator",
@@ -224,6 +231,7 @@ func setupReconcilers(mgr ctrl.Manager) {
 			&operatorv1.InfrastructureProviderList{},
 			&operatorv1.BootstrapProviderList{},
 			&operatorv1.ControlPlaneProviderList{},
+			&operatorv1.AddonProviderList{},
 		},
 		PropagationPolicy: metav1.DeletionPropagation(deletionPropagation),
 	}).SetupWithManager(mgr, concurrency(concurrencyNumber)); err != nil {
