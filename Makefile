@@ -476,7 +476,7 @@ release-chart: $(HELM) $(KUSTOMIZE) $(RELEASE_DIR) $(CHART_DIR) $(CHART_PACKAGE_
 	cp -rf $(ROOT)/hack/charts/cluster-api-operator/. $(CHART_DIR)
 	$(KUSTOMIZE) build ./config/chart > $(CHART_DIR)/templates/operator-components.yaml
 	$(ROOT)/hack/inject-cert-manager-helm.sh $(CERT_MANAGER_VERSION)
-	$(HELM) package $(CHART_DIR) --app-version=$(HELM_CHART_TAG) --version=$(HELM_CHART_TAG) --destination=$(CHART_PACKAGE_DIR)
+	$(HELM) package -u $(CHART_DIR) --app-version=$(HELM_CHART_TAG) --version=$(HELM_CHART_TAG) --destination=$(CHART_PACKAGE_DIR)
 
 .PHONY: release-staging
 release-staging: ## Builds and push container images and manifests to the staging bucket.

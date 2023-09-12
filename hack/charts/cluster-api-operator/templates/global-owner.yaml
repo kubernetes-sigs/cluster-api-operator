@@ -1,0 +1,24 @@
+{{- if index .Values "global-owner" "enabled" }}
+apiVersion: globalowner.metacontroller.io/v1alpha1
+kind: GlobalOwner
+metadata:
+  name: capi-owner
+  annotations:
+    "helm.sh/hook": "post-install,pre-delete"
+    "helm.sh/hook-weight": "2"
+spec:
+  selector:
+    matchExpressions:
+    - {key: skipAdoption, operator: DoesNotExist}
+  childResources:
+  - apiVersion: operator.cluster.x-k8s.io/v1alpha2
+    resource: addonproviders
+  - apiVersion: operator.cluster.x-k8s.io/v1alpha2
+    resource: bootstrapproviders
+  - apiVersion: operator.cluster.x-k8s.io/v1alpha2
+    resource: controlplaneproviders
+  - apiVersion: operator.cluster.x-k8s.io/v1alpha2
+    resource: coreproviders
+  - apiVersion: operator.cluster.x-k8s.io/v1alpha2
+    resource: infrastructureproviders
+{{- end }}

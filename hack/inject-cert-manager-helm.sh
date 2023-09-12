@@ -52,10 +52,10 @@ fi
 # Update cert-manager dependency version in Chart.yaml
 if [[ "$OSTYPE" == "darwin"* ]]; then
     # macOS
-    sed -i "" "/dependencies:/,/alias: cert-manager/ s/\(^ *version: *\).*\$/\1$VERSION/" "$CHART_FILE"
+    sed -i "" "/dependencies:/,/alias: cert-manager/ s/\(^ *version: *\)\"0.0.0\".*\$/\1$VERSION/" "$CHART_FILE"
 else
     # Linux
-    sed -i "/dependencies:/,/alias: cert-manager/ s/\(^ *version: *\).*\$/\1$VERSION/" "$CHART_FILE"
+    sed -i "/dependencies:/,/alias: cert-manager/ s/\(^ *version: *\)\"0.0.0\".*\$/\1$VERSION/" "$CHART_FILE"
 fi
 
 # Fetch dependencies with Helm

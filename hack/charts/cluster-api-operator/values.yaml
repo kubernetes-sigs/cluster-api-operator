@@ -6,6 +6,10 @@ cert-manager:
   fullnameOverride: "cert-manager"
   namespace: "cert-manager"
 # ---
+# Global Owner options
+global-owner:
+  enabled: true
+# ---
 # Cluster API provider options
 core: ""
 bootstrap: ""

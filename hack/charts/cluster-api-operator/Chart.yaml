@@ -9,3 +9,7 @@ dependencies:
     version: "0.0.0"
     repository: https://charts.jetstack.io
     condition: cert-manager.enabled
+  - name: global-owner
+    version: "v0.2.2"
+    repository: oci://ghcr.io/danil-grigorev
+    condition: global-owner.enabled
