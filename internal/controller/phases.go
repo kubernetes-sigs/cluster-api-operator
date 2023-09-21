@@ -548,7 +548,7 @@ func repositoryFactory(providerConfig configclient.Provider, configVariablesClie
 	}
 
 	// if the url is a GitLab repository
-	if strings.HasPrefix(rURL.Host, gitlabHostPrefix) && strings.HasPrefix(rURL.RawPath, gitlabPackagesAPIPrefix) {
+	if strings.HasPrefix(rURL.Host, gitlabHostPrefix) && strings.HasPrefix(rURL.Path, gitlabPackagesAPIPrefix) {
 		repo, err := repository.NewGitLabRepository(providerConfig, configVariablesClient)
 		if err != nil {
 			return nil, fmt.Errorf("error creating the GitLab repository client: %w", err)
