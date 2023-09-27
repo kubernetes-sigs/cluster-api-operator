@@ -43,6 +43,7 @@ import (
 	operatorv1alpha1 "sigs.k8s.io/cluster-api-operator/api/v1alpha1"
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
 	providercontroller "sigs.k8s.io/cluster-api-operator/internal/controller"
+	healtchcheckcontroller "sigs.k8s.io/cluster-api-operator/internal/controller/healthcheck"
 )
 
 var (
@@ -231,6 +232,13 @@ func setupReconcilers(mgr ctrl.Manager) {
 		Config:       mgr.GetConfig(),
 	}).SetupWithManager(mgr, concurrency(concurrencyNumber)); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "AddonProvider")
+		os.Exit(1)
+	}
+
+	if err := (&healtchcheckcontroller.ProviderHealthCheckReconciler{
+		Client: mgr.GetClient(),
+	}).SetupWithManager(mgr, concurrency(concurrencyNumber)); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "Healthcheck")
 		os.Exit(1)
 	}
 }
