@@ -29,7 +29,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/onsi/ginkgo/v2"
 	admissionv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -58,8 +57,6 @@ func init() {
 	logger := klogr.New()
 	// Additionally force all of the controllers to use the Ginkgo logger.
 	ctrl.SetLogger(logger)
-	// Add logger for ginkgo.
-	klog.SetOutput(ginkgo.GinkgoWriter)
 
 	// Calculate the scheme.
 	utilruntime.Must(apiextensionsv1.AddToScheme(scheme.Scheme))

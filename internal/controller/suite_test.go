@@ -22,8 +22,6 @@ import (
 	"testing"
 	"time"
 
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 
@@ -39,12 +37,6 @@ var (
 	env *envtest.Environment
 	ctx = ctrl.SetupSignalHandler()
 )
-
-func TestAPIs(t *testing.T) {
-	RegisterFailHandler(Fail)
-
-	RunSpecs(t, "Operator Controller Suite")
-}
 
 func TestMain(m *testing.M) {
 	fmt.Println("Creating new test environment")
