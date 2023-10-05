@@ -9,7 +9,7 @@ require (
 	github.com/onsi/gomega v1.28.0
 	golang.org/x/tools v0.13.0
 	k8s.io/api v0.27.5
-	k8s.io/apimachinery v0.27.5
+	k8s.io/apimachinery v0.27.6
 	k8s.io/klog/v2 v2.90.1
 	k8s.io/utils v0.0.0-20230726121419-3b25d923346b
 	sigs.k8s.io/cluster-api v1.5.2
