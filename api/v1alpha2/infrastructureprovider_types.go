@@ -53,7 +53,3 @@ type InfrastructureProviderList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []InfrastructureProvider `json:"items"`
 }
-
-func init() {
-	SchemeBuilder.Register(&InfrastructureProvider{}, &InfrastructureProviderList{})
-}
