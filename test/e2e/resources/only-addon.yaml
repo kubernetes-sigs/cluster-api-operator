@@ -1,12 +1,12 @@
 ---
-# Source: cluster-api-operator/templates/control-plane.yaml
+# Source: cluster-api-operator/templates/addon.yaml
 apiVersion: v1
 kind: Namespace
 metadata:
   annotations:
     "helm.sh/hook": "post-install"
     "helm.sh/hook-weight": "1"
-  name: kubeadm-control-plane-system
+  name: helm-addon-system
 ---
 # Source: cluster-api-operator/templates/core-conditions.yaml
 apiVersion: v1
@@ -17,19 +17,15 @@ metadata:
     "helm.sh/hook-weight": "1"
   name: capi-system
 ---
-# Source: cluster-api-operator/templates/control-plane.yaml
+# Source: cluster-api-operator/templates/addon.yaml
 apiVersion: operator.cluster.x-k8s.io/v1alpha2
-kind: ControlPlaneProvider
+kind: AddonProvider
 metadata:
-  name: kubeadm
-  namespace: kubeadm-control-plane-system
+  name: helm
+  namespace: helm-addon-system
   annotations:
     "helm.sh/hook": "post-install"
     "helm.sh/hook-weight": "2"
-spec:
-  configSecret:
-    name: test-secret-name
-    namespace: test-secret-namespace
 ---
 # Source: cluster-api-operator/templates/core-conditions.yaml
 apiVersion: operator.cluster.x-k8s.io/v1alpha2

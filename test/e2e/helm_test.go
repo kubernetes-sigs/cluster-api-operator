@@ -59,6 +59,7 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 			"controlPlane":           "kubeadm-control-plane-custom-ns:kubeadm:v1.4.2",
 			"bootstrap":              "kubeadm-bootstrap-custom-ns:kubeadm:v1.4.2",
 			"infrastructure":         "capd-custom-ns:docker:v1.4.2",
+			"addon":                  "helm-custom-ns:helm:v0.1.0-alpha.9",
 		})
 		Expect(err).ToNot(HaveOccurred())
 		Expect(manifests).ToNot(BeEmpty())
@@ -75,6 +76,7 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 			"controlPlane":           "kubeadm:v1.4.2",
 			"bootstrap":              "kubeadm:v1.4.2",
 			"infrastructure":         "docker:v1.4.2",
+			"addon":                  "helm:v0.1.0-alpha.9",
 		})
 		Expect(err).ToNot(HaveOccurred())
 		Expect(manifests).ToNot(BeEmpty())
@@ -91,6 +93,7 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 			"controlPlane":           "kubeadm",
 			"bootstrap":              "kubeadm",
 			"infrastructure":         "docker",
+			"addon":                  "helm",
 		})
 		Expect(err).ToNot(HaveOccurred())
 		Expect(manifests).ToNot(BeEmpty())
@@ -173,6 +176,33 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 		Expect(err).ToNot(HaveOccurred())
 		Expect(manifests).ToNot(BeEmpty())
 		expectedManifests, err := os.ReadFile(filepath.Join(customManifestsFolder, "multiple-bootstrap-custom-ns-versions.yaml"))
+		Expect(err).ToNot(HaveOccurred())
+		Expect(manifests).To(Equal(string(expectedManifests)))
+	})
+
+	It("should deploy core when only addon is specified", func() {
+		manifests, err := helmChart.Run(map[string]string{
+			"configSecret.name":      "test-secret-name",
+			"configSecret.namespace": "test-secret-namespace",
+			"addon":                  "helm",
+		})
+		Expect(err).ToNot(HaveOccurred())
+		Expect(manifests).ToNot(BeEmpty())
+		expectedManifests, err := os.ReadFile(filepath.Join(customManifestsFolder, "only-addon.yaml"))
+		Expect(err).ToNot(HaveOccurred())
+		Expect(manifests).To(Equal(string(expectedManifests)))
+	})
+
+	It("should deploy core, bootstrap, control plane when only infra and addon is specified", func() {
+		manifests, err := helmChart.Run(map[string]string{
+			"configSecret.name":      "test-secret-name",
+			"configSecret.namespace": "test-secret-namespace",
+			"infrastructure":         "docker",
+			"addon":                  "helm",
+		})
+		Expect(err).ToNot(HaveOccurred())
+		Expect(manifests).ToNot(BeEmpty())
+		expectedManifests, err := os.ReadFile(filepath.Join(customManifestsFolder, "only-infra-and-addon.yaml"))
 		Expect(err).ToNot(HaveOccurred())
 		Expect(manifests).To(Equal(string(expectedManifests)))
 	})

@@ -1,13 +1,4 @@
 ---
-# Source: cluster-api-operator/templates/control-plane-conditions.yaml
-apiVersion: v1
-kind: Namespace
-metadata:
-  annotations:
-    "helm.sh/hook": "post-install"
-    "helm.sh/hook-weight": "1"
-  name: capi-system
----
 # Source: cluster-api-operator/templates/control-plane.yaml
 apiVersion: v1
 kind: Namespace
@@ -25,6 +16,15 @@ metadata:
     "helm.sh/hook": "post-install"
     "helm.sh/hook-weight": "1"
   name: rke2-control-plane-custom-ns
+---
+# Source: cluster-api-operator/templates/core-conditions.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    "helm.sh/hook": "post-install"
+    "helm.sh/hook-weight": "1"
+  name: capi-system
 ---
 # Source: cluster-api-operator/templates/control-plane.yaml
 apiVersion: operator.cluster.x-k8s.io/v1alpha2
@@ -56,7 +56,7 @@ spec:
     name: test-secret-name
     namespace: test-secret-namespace
 ---
-# Source: cluster-api-operator/templates/control-plane-conditions.yaml
+# Source: cluster-api-operator/templates/core-conditions.yaml
 apiVersion: operator.cluster.x-k8s.io/v1alpha2
 kind: CoreProvider
 metadata:
