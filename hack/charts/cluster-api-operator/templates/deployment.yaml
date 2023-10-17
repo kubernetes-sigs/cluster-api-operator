@@ -69,13 +69,13 @@ spec:
         {{- with .Values.leaderElection }}
         - --leader-elect={{ .enabled }}
         {{- if .leaseDuration }}
-        - --leader-election-lease-duration={{ .leaseDuration }}
+        - --leader-elect-lease-duration={{ .leaseDuration }}
         {{- end }}
         {{- if .renewDeadline }}
-        - --leader-election-renew-deadline={{ .renewDeadline }}
+        - --leader-elect-renew-deadline={{ .renewDeadline }}
         {{- end }}
         {{- if .retryPeriod }}
-        - --leader-election-retry-period={{ .retryPeriod }}
+        - --leader-elect-retry-period={{ .retryPeriod }}
         {{- end }}
         {{- end }}
         command:
