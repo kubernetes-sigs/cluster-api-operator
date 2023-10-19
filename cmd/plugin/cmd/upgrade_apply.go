@@ -24,18 +24,18 @@ import (
 )
 
 type upgradeApplyOptions struct {
-	kubeconfig                string
-	kubeconfigContext         string
-	contract                  string
-	coreProvider              string
-	bootstrapProviders        []string
-	controlPlaneProviders     []string
-	infrastructureProviders   []string
-	ipamProviders             []string
-	runtimeExtensionProviders []string
-	addonProviders            []string
-	waitProviders             bool
-	waitProviderTimeout       int
+	kubeconfig              string
+	kubeconfigContext       string
+	contract                string
+	coreProvider            string
+	bootstrapProviders      []string
+	controlPlaneProviders   []string
+	infrastructureProviders []string
+	// ipamProviders             []string
+	// runtimeExtensionProviders []string
+	addonProviders      []string
+	waitProviders       bool
+	waitProviderTimeout int
 }
 
 var upgradeApplyOpts = &upgradeApplyOptions{}
@@ -80,10 +80,10 @@ func init() {
 		"Bootstrap providers instance and versions (e.g. kubeadm:v1.1.5) to upgrade to. This flag can be used as alternative to --contract.")
 	upgradeApplyCmd.Flags().StringSliceVarP(&upgradeApplyOpts.controlPlaneProviders, "control-plane", "c", nil,
 		"ControlPlane providers instance and versions (e.g. kubeadm:v1.1.5) to upgrade to. This flag can be used as alternative to --contract.")
-	upgradeApplyCmd.Flags().StringSliceVar(&upgradeApplyOpts.ipamProviders, "ipam", nil,
-		"IPAM providers and versions (e.g. infoblox:v0.0.1) to upgrade to. This flag can be used as alternative to --contract.")
-	upgradeApplyCmd.Flags().StringSliceVar(&upgradeApplyOpts.runtimeExtensionProviders, "runtime-extension", nil,
-		"Runtime extension providers and versions (e.g. test:v0.0.1) to upgrade to. This flag can be used as alternative to --contract.")
+	// upgradeApplyCmd.Flags().StringSliceVar(&upgradeApplyOpts.ipamProviders, "ipam", nil,
+	//	"IPAM providers and versions (e.g. infoblox:v0.0.1) to upgrade to. This flag can be used as alternative to --contract.")
+	// upgradeApplyCmd.Flags().StringSliceVar(&upgradeApplyOpts.runtimeExtensionProviders, "runtime-extension", nil,
+	//	"Runtime extension providers and versions (e.g. test:v0.0.1) to upgrade to. This flag can be used as alternative to --contract.")
 	upgradeApplyCmd.Flags().StringSliceVar(&upgradeApplyOpts.addonProviders, "addon", nil,
 		"Add-on providers and versions (e.g. helm:v0.1.0) to upgrade to. This flag can be used as alternative to --contract.")
 	upgradeApplyCmd.Flags().BoolVar(&upgradeApplyOpts.waitProviders, "wait-providers", false,
@@ -99,8 +99,8 @@ func runUpgradeApply() error {
 		(len(upgradeApplyOpts.bootstrapProviders) > 0) ||
 		(len(upgradeApplyOpts.controlPlaneProviders) > 0) ||
 		(len(upgradeApplyOpts.infrastructureProviders) > 0) ||
-		(len(upgradeApplyOpts.ipamProviders) > 0) ||
-		(len(upgradeApplyOpts.runtimeExtensionProviders) > 0) ||
+		// (len(upgradeApplyOpts.ipamProviders) > 0) ||
+		// (len(upgradeApplyOpts.runtimeExtensionProviders) > 0) ||
 		(len(upgradeApplyOpts.addonProviders) > 0)
 
 	if upgradeApplyOpts.contract == "" && !hasProviderNames {

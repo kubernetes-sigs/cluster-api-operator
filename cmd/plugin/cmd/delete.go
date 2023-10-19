@@ -24,18 +24,18 @@ import (
 )
 
 type deleteOptions struct {
-	kubeconfig                string
-	kubeconfigContext         string
-	coreProvider              string
-	bootstrapProviders        []string
-	controlPlaneProviders     []string
-	infrastructureProviders   []string
-	ipamProviders             []string
-	runtimeExtensionProviders []string
-	addonProviders            []string
-	includeNamespace          bool
-	includeCRDs               bool
-	deleteAll                 bool
+	kubeconfig              string
+	kubeconfigContext       string
+	coreProvider            string
+	bootstrapProviders      []string
+	controlPlaneProviders   []string
+	infrastructureProviders []string
+	// ipamProviders             []string
+	// runtimeExtensionProviders []string
+	addonProviders   []string
+	includeNamespace bool
+	includeCRDs      bool
+	deleteAll        bool
 }
 
 var deleteOpts = &deleteOptions{}
@@ -106,10 +106,10 @@ func init() {
 		"Bootstrap providers and versions (e.g. kubeadm:v1.1.5) to delete from the management cluster")
 	deleteCmd.Flags().StringSliceVarP(&deleteOpts.controlPlaneProviders, "control-plane", "c", nil,
 		"ControlPlane providers and versions (e.g. kubeadm:v1.1.5) to delete from the management cluster")
-	deleteCmd.Flags().StringSliceVar(&deleteOpts.ipamProviders, "ipam", nil,
-		"IPAM providers and versions (e.g. infoblox:v0.0.1) to delete from the management cluster")
-	deleteCmd.Flags().StringSliceVar(&deleteOpts.runtimeExtensionProviders, "runtime-extension", nil,
-		"Runtime extension providers and versions (e.g. test:v0.0.1) to delete from the management cluster")
+	// deleteCmd.Flags().StringSliceVar(&deleteOpts.ipamProviders, "ipam", nil,
+	//	"IPAM providers and versions (e.g. infoblox:v0.0.1) to delete from the management cluster")
+	// deleteCmd.Flags().StringSliceVar(&deleteOpts.runtimeExtensionProviders, "runtime-extension", nil,
+	//	"Runtime extension providers and versions (e.g. test:v0.0.1) to delete from the management cluster")
 	deleteCmd.Flags().StringSliceVar(&deleteOpts.addonProviders, "addon", nil,
 		"Add-on providers and versions (e.g. helm:v0.1.0) to delete from the management cluster")
 
@@ -126,8 +126,8 @@ func runDelete() error {
 		(len(deleteOpts.bootstrapProviders) > 0) ||
 		(len(deleteOpts.controlPlaneProviders) > 0) ||
 		(len(deleteOpts.infrastructureProviders) > 0) ||
-		(len(deleteOpts.ipamProviders) > 0) ||
-		(len(deleteOpts.runtimeExtensionProviders) > 0) ||
+		// (len(deleteOpts.ipamProviders) > 0) ||
+		// (len(deleteOpts.runtimeExtensionProviders) > 0) ||
 		(len(deleteOpts.addonProviders) > 0)
 
 	if deleteOpts.deleteAll && hasProviderNames {
