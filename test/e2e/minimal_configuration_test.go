@@ -212,10 +212,17 @@ data:
 
 	It("should successfully create and delete an AddonProvider", func() {
 		bootstrapCluster := bootstrapClusterProxy.GetClient()
-		addonProvider := &operatorv1.AddonProvider{ObjectMeta: metav1.ObjectMeta{
-			Name:      addonProviderName,
-			Namespace: operatorNamespace,
-		}}
+		addonProvider := &operatorv1.AddonProvider{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      addonProviderName,
+				Namespace: operatorNamespace,
+			},
+			Spec: operatorv1.AddonProviderSpec{
+				ProviderSpec: operatorv1.ProviderSpec{
+					Version: "v0.1.0-alpha.10", // Remove to use latest when helm provider is stabilized
+				},
+			},
+		}
 		deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{
 			Name:      addonProviderDeploymentName,
 			Namespace: operatorNamespace,
