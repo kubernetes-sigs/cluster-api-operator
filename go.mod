@@ -6,10 +6,10 @@ replace sigs.k8s.io/cluster-api => sigs.k8s.io/cluster-api v1.5.1
 
 require (
 	github.com/MakeNowJust/heredoc v1.0.0
-	github.com/google/go-cmp v0.5.9
+	github.com/google/go-cmp v0.6.0
 	github.com/google/go-github/v52 v52.0.0
 	github.com/google/gofuzz v1.2.0
-	github.com/onsi/gomega v1.28.0
+	github.com/onsi/gomega v1.29.0
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/pflag v1.0.5
