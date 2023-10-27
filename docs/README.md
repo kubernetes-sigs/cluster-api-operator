@@ -152,6 +152,8 @@ spec:
         - --metrics-bind-addr=:8080
         - --leader-elect
         - --leader-elect-retry-period=5s
+        - "--diagnostics-address=${CAPI_OPERATOR_DIAGNOSTICS_ADDRESS:=:8443}"
+        - "--insecure-diagnostics=${CAPI_OPERATOR_INSECURE_DIAGNOSTICS:=false}"
         - --v=5
         env:...
 ```

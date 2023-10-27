@@ -66,6 +66,12 @@ spec:
         {{- if .Values.metricsBindAddr }}
         - --metrics-bind-addr={{ .Values.metricsBindAddr }}
         {{- end }}
+        {{- if .Values.diagnosticsAddress }}
+        - --diagnostics-address={{ .Values.diagnosticsAddress }}
+        {{- end }}
+        {{- if .Values.insecureDiagnostics }}
+        - --insecure-diagnostics={{ .Values.insecureDiagnostics }}
+        {{- end }}
         {{- with .Values.leaderElection }}
         - --leader-elect={{ .enabled }}
         {{- if .leaseDuration }}

@@ -48,8 +48,8 @@ func (k *controllerProxy) GetContexts(prefix string) ([]string, error) { return 
 func (k *controllerProxy) CheckClusterAvailable() error                { return nil }
 
 // GetResourceNames returns the list of resource names which begin with prefix.
-func (k *controllerProxy) GetResourceNames(groupVersion, kind string, options []client.ListOption, prefix string) ([]string, error) {
-	objList, err := listObjByGVK(k.ctrlClient, groupVersion, kind, options)
+func (k *controllerProxy) GetResourceNames(ctx context.Context, groupVersion, kind string, options []client.ListOption, prefix string) ([]string, error) {
+	objList, err := listObjByGVK(ctx, k.ctrlClient, groupVersion, kind, options)
 	if err != nil {
 		return nil, err
 	}
@@ -68,7 +68,7 @@ func (k *controllerProxy) GetResourceNames(groupVersion, kind string, options []
 }
 
 // ListResources lists namespaced and cluster-wide resources for a component matching the labels.
-func (k *controllerProxy) ListResources(labels map[string]string, namespaces ...string) ([]unstructured.Unstructured, error) {
+func (k *controllerProxy) ListResources(ctx context.Context, labels map[string]string, namespaces ...string) ([]unstructured.Unstructured, error) {
 	resourceList := []*metav1.APIResourceList{
 		{
 			GroupVersion: "v1",
@@ -117,7 +117,7 @@ func (k *controllerProxy) ListResources(labels map[string]string, namespaces ...
 		for _, resourceKind := range resourceGroup.APIResources {
 			if resourceKind.Namespaced {
 				for _, namespace := range namespaces {
-					objList, err := listObjByGVK(k.ctrlClient, resourceGroup.GroupVersion, resourceKind.Kind, []client.ListOption{client.MatchingLabels(labels), client.InNamespace(namespace)})
+					objList, err := listObjByGVK(ctx, k.ctrlClient, resourceGroup.GroupVersion, resourceKind.Kind, []client.ListOption{client.MatchingLabels(labels), client.InNamespace(namespace)})
 					if err != nil {
 						return nil, err
 					}
@@ -127,7 +127,7 @@ func (k *controllerProxy) ListResources(labels map[string]string, namespaces ...
 					ret = append(ret, objList.Items...)
 				}
 			} else {
-				objList, err := listObjByGVK(k.ctrlClient, resourceGroup.GroupVersion, resourceKind.Kind, []client.ListOption{client.MatchingLabels(labels)})
+				objList, err := listObjByGVK(ctx, k.ctrlClient, resourceGroup.GroupVersion, resourceKind.Kind, []client.ListOption{client.MatchingLabels(labels)})
 				if err != nil {
 					return nil, err
 				}
@@ -140,8 +140,7 @@ func (k *controllerProxy) ListResources(labels map[string]string, namespaces ...
 	return ret, nil
 }
 
-func listObjByGVK(c client.Client, groupVersion, kind string, options []client.ListOption) (*unstructured.UnstructuredList, error) {
-	ctx := context.TODO()
+func listObjByGVK(ctx context.Context, c client.Client, groupVersion, kind string, options []client.ListOption) (*unstructured.UnstructuredList, error) {
 	objList := new(unstructured.UnstructuredList)
 	objList.SetAPIVersion(groupVersion)
 	objList.SetKind(kind)

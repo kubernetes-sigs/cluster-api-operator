@@ -53,3 +53,7 @@ type AddonProviderList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []AddonProvider `json:"items"`
 }
+
+func init() {
+	objectTypes = append(objectTypes, &AddonProvider{}, &AddonProviderList{})
+}

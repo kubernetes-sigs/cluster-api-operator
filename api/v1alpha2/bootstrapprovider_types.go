@@ -53,3 +53,7 @@ type BootstrapProviderList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []BootstrapProvider `json:"items"`
 }
+
+func init() {
+	objectTypes = append(objectTypes, &BootstrapProvider{}, &BootstrapProviderList{})
+}

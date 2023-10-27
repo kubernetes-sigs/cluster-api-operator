@@ -87,7 +87,7 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 	}
 
 	// Check that if a predefined provider is being installed, and if it's not - ensure that FetchConfig is specified.
-	isPredefinedProvider, err := isPredefinedProvider(provider.GetName(), util.ClusterctlProviderType(provider))
+	isPredefinedProvider, err := isPredefinedProvider(ctx, provider.GetName(), util.ClusterctlProviderType(provider))
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to generate a list of predefined providers: %w", err)
 	}
@@ -229,9 +229,9 @@ func coreProviderIsReady(ctx context.Context, c client.Client) (bool, error) {
 // isPredefinedProvider checks if a given provider is known for Cluster API.
 // The list of known providers can be found here:
 // https://github.com/kubernetes-sigs/cluster-api/blob/main/cmd/clusterctl/client/config/providers_client.go
-func isPredefinedProvider(providerName string, providerType clusterctlv1.ProviderType) (bool, error) {
+func isPredefinedProvider(ctx context.Context, providerName string, providerType clusterctlv1.ProviderType) (bool, error) {
 	// Initialize a client that contains predefined providers only.
-	configClient, err := configclient.New("")
+	configClient, err := configclient.New(ctx, "")
 	if err != nil {
 		return false, err
 	}

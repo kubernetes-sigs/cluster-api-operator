@@ -18,8 +18,16 @@ spec:
       containers:
       - command:
         - /manager
+        args:
+          - "--leader-elect"
+          - "--diagnostics-address=${CAPI_OPERATOR_DIAGNOSTICS_ADDRESS:=:8443}"
+          - "--insecure-diagnostics=${CAPI_OPERATOR_INSECURE_DIAGNOSTICS:=false}"
         image: controller:latest
         name: manager
+        ports:
+          - containerPort: 8443
+            name: metrics
+            protocol: TCP
         resources:
           limits:
             cpu: 100m

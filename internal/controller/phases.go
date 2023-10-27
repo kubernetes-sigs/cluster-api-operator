@@ -121,7 +121,7 @@ func (p *phaseReconciler) initializePhaseReconciler(ctx context.Context) (reconc
 	}
 
 	// Initialize a client for interacting with the clusterctl configuration.
-	p.configClient, err = configclient.New("", configclient.InjectReader(reader))
+	p.configClient, err = configclient.New(ctx, "", configclient.InjectReader(reader))
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -167,7 +167,7 @@ func (p *phaseReconciler) load(ctx context.Context) (reconcile.Result, error) {
 
 	if spec.Version == "" {
 		// User didn't set the version, so we need to find the latest one from the matching config maps.
-		repoVersions, err := p.repo.GetVersions()
+		repoVersions, err := p.repo.GetVersions(ctx)
 		if err != nil {
 			return reconcile.Result{}, wrapPhaseError(err, fmt.Sprintf("failed to get a list of available versions for provider %q", p.provider.GetName()))
 		}
@@ -188,7 +188,7 @@ func (p *phaseReconciler) load(ctx context.Context) (reconcile.Result, error) {
 		Version:             spec.Version,
 	}
 
-	if err := p.validateRepoCAPIVersion(); err != nil {
+	if err := p.validateRepoCAPIVersion(ctx); err != nil {
 		return reconcile.Result{}, wrapPhaseError(err, operatorv1.CAPIVersionIncompatibilityReason)
 	}
 
@@ -202,7 +202,7 @@ func (p *phaseReconciler) secretReader(ctx context.Context) (configclient.Reader
 
 	mr := configclient.NewMemoryReader()
 
-	if err := mr.Init(""); err != nil {
+	if err := mr.Init(ctx, ""); err != nil {
 		return nil, err
 	}
 
@@ -354,10 +354,10 @@ func getComponentsData(cm corev1.ConfigMap) (string, error) {
 }
 
 // validateRepoCAPIVersion checks that the repo is using the correct version.
-func (p *phaseReconciler) validateRepoCAPIVersion() error {
+func (p *phaseReconciler) validateRepoCAPIVersion(ctx context.Context) error {
 	name := p.provider.GetName()
 
-	file, err := p.repo.GetFile(p.options.Version, metadataFile)
+	file, err := p.repo.GetFile(ctx, p.options.Version, metadataFile)
 	if err != nil {
 		return fmt.Errorf("failed to read %q from the repository for provider %q: %w", metadataFile, name, err)
 	}
@@ -396,7 +396,7 @@ func (p *phaseReconciler) fetch(ctx context.Context) (reconcile.Result, error) {
 	log.Info("Fetching provider")
 
 	// Fetch the provider components yaml file from the provided repository GitHub/GitLab/ConfigMap.
-	componentsFile, err := p.repo.GetFile(p.options.Version, p.repo.ComponentsPath())
+	componentsFile, err := p.repo.GetFile(ctx, p.options.Version, p.repo.ComponentsPath())
 	if err != nil {
 		err = fmt.Errorf("failed to read %q from provider's repository %q: %w", p.repo.ComponentsPath(), p.providerConfig.ManifestLabel(), err)
 
@@ -456,7 +456,7 @@ func (p *phaseReconciler) install(ctx context.Context) (reconcile.Result, error)
 
 	log.Info("Installing provider")
 
-	if err := clusterClient.ProviderComponents().Create(p.components.Objs()); err != nil {
+	if err := clusterClient.ProviderComponents().Create(ctx, p.components.Objs()); err != nil {
 		reason := "Install failed"
 		if wait.Interrupted(err) {
 			reason = "Timed out waiting for deployment to become ready"
@@ -495,7 +495,7 @@ func (p *phaseReconciler) delete(ctx context.Context) (reconcile.Result, error) 
 		p.clusterctlProvider.Version = p.options.Version
 	}
 
-	err := clusterClient.ProviderComponents().Delete(cluster.DeleteOptions{
+	err := clusterClient.ProviderComponents().Delete(ctx, cluster.DeleteOptions{
 		Provider:         *p.clusterctlProvider,
 		IncludeNamespace: false,
 		IncludeCRDs:      false,
@@ -530,7 +530,7 @@ func (p *phaseReconciler) newClusterClient() cluster.Client {
 
 // repositoryFactory returns the repository implementation corresponding to the provider URL.
 // inspired by https://github.com/kubernetes-sigs/cluster-api/blob/124d9be7035e492f027cdc7a701b6b179451190a/cmd/clusterctl/client/repository/client.go#L170
-func repositoryFactory(providerConfig configclient.Provider, configVariablesClient configclient.VariablesClient) (repository.Repository, error) {
+func repositoryFactory(ctx context.Context, providerConfig configclient.Provider, configVariablesClient configclient.VariablesClient) (repository.Repository, error) {
 	// parse the repository url
 	rURL, err := url.Parse(providerConfig.URL())
 	if err != nil {
@@ -543,7 +543,7 @@ func repositoryFactory(providerConfig configclient.Provider, configVariablesClie
 
 	// if the url is a GitHub repository
 	if rURL.Host == githubDomain {
-		repo, err := repository.NewGitHubRepository(providerConfig, configVariablesClient)
+		repo, err := repository.NewGitHubRepository(ctx, providerConfig, configVariablesClient)
 		if err != nil {
 			return nil, fmt.Errorf("error creating the GitHub repository client: %w", err)
 		}

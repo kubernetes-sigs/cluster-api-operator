@@ -53,3 +53,7 @@ type CoreProviderList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []CoreProvider `json:"items"`
 }
+
+func init() {
+	objectTypes = append(objectTypes, &CoreProvider{}, &CoreProviderList{})
+}

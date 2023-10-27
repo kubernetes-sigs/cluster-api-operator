@@ -19,8 +19,8 @@ package main
 import (
 	"flag"
 	"fmt"
-	"net/http"
 	"os"
+	goruntime "runtime"
 	"time"
 
 	"github.com/spf13/pflag"
@@ -34,11 +34,14 @@ import (
 	"sigs.k8s.io/cluster-api-operator/internal/webhook"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	clusterctlv1 "sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3"
+	"sigs.k8s.io/cluster-api/util/flags"
 	"sigs.k8s.io/cluster-api/version"
 	ctrl "sigs.k8s.io/controller-runtime"
+	cache "sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
+	ctrlwebhook "sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	operatorv1alpha1 "sigs.k8s.io/cluster-api-operator/api/v1alpha1"
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
@@ -51,18 +54,20 @@ var (
 	setupLog = ctrl.Log.WithName("setup")
 
 	// flags.
-	metricsBindAddr             string
 	enableLeaderElection        bool
 	leaderElectionLeaseDuration time.Duration
 	leaderElectionRenewDeadline time.Duration
 	leaderElectionRetryPeriod   time.Duration
 	watchFilterValue            string
+	watchNamespace              string
 	profilerAddress             string
+	enableContentionProfiling   bool
 	concurrencyNumber           int
 	syncPeriod                  time.Duration
 	webhookPort                 int
 	webhookCertDir              string
 	healthAddr                  string
+	diagnosticsOptions          = flags.DiagnosticsOptions{}
 )
 
 func init() {
@@ -78,9 +83,6 @@ func init() {
 
 // InitFlags initializes the flags.
 func InitFlags(fs *pflag.FlagSet) {
-	fs.StringVar(&metricsBindAddr, "metrics-bind-addr", "localhost:8080",
-		"The address the metric endpoint binds to.")
-
 	fs.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. Enabling this will ensure there is only one active controller manager.")
 
@@ -96,8 +98,14 @@ func InitFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&watchFilterValue, "watch-filter", "",
 		fmt.Sprintf("Label value that the controller watches to reconcile cluster-api objects. Label key is always %s. If unspecified, the controller watches for all cluster-api objects.", clusterv1.WatchLabel))
 
+	fs.StringVar(&watchNamespace, "namespace", "",
+		"Namespace that the controller watches to reconcile cluster-api objects. If unspecified, the controller watches for cluster-api objects across all namespaces.")
+
 	fs.StringVar(&profilerAddress, "profiler-address", "",
 		"Bind address to expose the pprof profiler (e.g. localhost:6060)")
+
+	fs.BoolVar(&enableContentionProfiling, "contention-profiling", false,
+		"Enable block profiling")
 
 	fs.IntVar(&concurrencyNumber, "concurrency", 1,
 		"Number of core resources to process simultaneously")
@@ -112,6 +120,8 @@ func InitFlags(fs *pflag.FlagSet) {
 
 	fs.StringVar(&healthAddr, "health-addr", ":9440",
 		"The address the health endpoint binds to.")
+
+	flags.AddDiagnosticsOptions(fs, &diagnosticsOptions)
 }
 
 func main() {
@@ -120,37 +130,52 @@ func main() {
 	pflag.Parse()
 
 	ctrl.SetLogger(klogr.New())
+	restConfig := ctrl.GetConfigOrDie()
 
-	if profilerAddress != "" {
-		klog.Infof("Profiler listening for requests at %s", profilerAddress)
+	diagnosticsOpts := flags.GetDiagnosticsOptions(diagnosticsOptions)
 
-		go func() {
-			server := &http.Server{
-				Addr:              profilerAddress,
-				ReadHeaderTimeout: 3 * time.Second,
-			}
-
-			klog.Info(server.ListenAndServe())
-		}()
+	var watchNamespaces map[string]cache.Config
+	if watchNamespace != "" {
+		watchNamespaces = map[string]cache.Config{
+			watchNamespace: {},
+		}
 	}
 
-	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
-		Scheme:             scheme,
-		MetricsBindAddress: metricsBindAddr,
-		LeaderElection:     enableLeaderElection,
-		LeaderElectionID:   "controller-leader-election-capi-operator",
-		LeaseDuration:      &leaderElectionLeaseDuration,
-		RenewDeadline:      &leaderElectionRenewDeadline,
-		RetryPeriod:        &leaderElectionRetryPeriod,
-		SyncPeriod:         &syncPeriod,
-		ClientDisableCacheFor: []client.Object{
-			&corev1.ConfigMap{},
-			&corev1.Secret{},
-		},
-		Port:                   webhookPort,
-		CertDir:                webhookCertDir,
+	if enableContentionProfiling {
+		goruntime.SetBlockProfileRate(1)
+	}
+
+	ctrlOptions := ctrl.Options{
+		Scheme:                 scheme,
+		LeaderElection:         enableLeaderElection,
+		LeaderElectionID:       "controller-leader-election-capi-operator",
+		LeaseDuration:          &leaderElectionLeaseDuration,
+		RenewDeadline:          &leaderElectionRenewDeadline,
+		RetryPeriod:            &leaderElectionRetryPeriod,
 		HealthProbeBindAddress: healthAddr,
-	})
+		PprofBindAddress:       profilerAddress,
+		Metrics:                diagnosticsOpts,
+		Cache: cache.Options{
+			DefaultNamespaces: watchNamespaces,
+			SyncPeriod:        &syncPeriod,
+		},
+		Client: client.Options{
+			Cache: &client.CacheOptions{
+				DisableFor: []client.Object{
+					&corev1.ConfigMap{},
+					&corev1.Secret{},
+				},
+			},
+		},
+		WebhookServer: ctrlwebhook.NewServer(
+			ctrlwebhook.Options{
+				Port:    webhookPort,
+				CertDir: webhookCertDir,
+			},
+		),
+	}
+
+	mgr, err := ctrl.NewManager(restConfig, ctrlOptions)
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)

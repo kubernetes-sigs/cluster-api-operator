@@ -390,7 +390,7 @@ metadata:
 				return
 			}
 			g.Expect(err).To(Succeed())
-			gotComponents, err := got.GetFile(got.DefaultVersion(), got.ComponentsPath())
+			gotComponents, err := got.GetFile(ctx, got.DefaultVersion(), got.ComponentsPath())
 			g.Expect(err).To(Succeed())
 
 			if tt.additionalManifests != "" {
@@ -399,7 +399,7 @@ metadata:
 				g.Expect(string(gotComponents)).To(Equal(components))
 			}
 
-			gotMetadata, err := got.GetFile(got.DefaultVersion(), "metadata.yaml")
+			gotMetadata, err := got.GetFile(ctx, got.DefaultVersion(), "metadata.yaml")
 			g.Expect(err).To(Succeed())
 			g.Expect(string(gotMetadata)).To(Equal(metadata))
 
@@ -445,7 +445,7 @@ func TestRepositoryFactory(t *testing.T) {
 
 			mr := configclient.NewMemoryReader()
 
-			g.Expect(mr.Init("")).To(Succeed())
+			g.Expect(mr.Init(ctx, "")).To(Succeed())
 
 			var configClient configclient.Client
 
@@ -460,10 +460,10 @@ func TestRepositoryFactory(t *testing.T) {
 				reader, err := mr.AddProvider(providerName, providerType, tc.fetchURL)
 				g.Expect(err).ToNot(HaveOccurred())
 
-				configClient, err = configclient.New("", configclient.InjectReader(reader))
+				configClient, err = configclient.New(ctx, "", configclient.InjectReader(reader))
 				g.Expect(err).ToNot(HaveOccurred())
 			} else {
-				configClient, err = configclient.New("")
+				configClient, err = configclient.New(ctx, "")
 				g.Expect(err).ToNot(HaveOccurred())
 			}
 
@@ -472,7 +472,7 @@ func TestRepositoryFactory(t *testing.T) {
 			providerConfig, err := configClient.Providers().Get(providerName, providerType)
 			g.Expect(err).ToNot(HaveOccurred())
 
-			repo, err := repositoryFactory(providerConfig, configClient.Variables())
+			repo, err := repositoryFactory(ctx, providerConfig, configClient.Variables())
 			if tc.expectedError {
 				g.Expect(err).To(HaveOccurred())
 
@@ -481,7 +481,7 @@ func TestRepositoryFactory(t *testing.T) {
 				g.Expect(err).ToNot(HaveOccurred())
 			}
 
-			g.Expect(repo.GetVersions()).To(ContainElement("v1.4.1"))
+			g.Expect(repo.GetVersions(ctx)).To(ContainElement("v1.4.1"))
 		})
 	}
 }

@@ -86,7 +86,7 @@ GOTESTSUM_VER := v1.6.4
 GOTESTSUM_BIN := gotestsum
 GOTESTSUM := $(TOOLS_BIN_DIR)/$(GOTESTSUM_BIN)-$(GOTESTSUM_VER)
 
-GINKGO_VER := v2.12.0
+GINKGO_VER := v2.13.1
 GINKGO_BIN := ginkgo
 GINKGO := $(TOOLS_BIN_DIR)/$(GINKGO_BIN)-$(GINKGO_VER)
 
@@ -331,6 +331,7 @@ generate-go: $(CONTROLLER_GEN) ## Runs Go related generate targets for the opera
 .PHONY: generate-manifests
 generate-manifests: $(CONTROLLER_GEN) ## Generate manifests for the operator e.g. CRD, RBAC etc.
 	$(CONTROLLER_GEN) \
+		paths=./cmd \
 		paths=./api/... \
 		paths=./internal/controller/... \
 		paths=./internal/webhook/... \
