@@ -6,6 +6,7 @@ replace sigs.k8s.io/cluster-api => sigs.k8s.io/cluster-api v1.5.1
 
 require (
 	github.com/MakeNowJust/heredoc v1.0.0
+	github.com/evanphx/json-patch/v5 v5.6.0
 	github.com/google/go-cmp v0.6.0
 	github.com/google/go-github/v52 v52.0.0
 	github.com/google/gofuzz v1.2.0
@@ -23,6 +24,7 @@ require (
 	k8s.io/utils v0.0.0-20230209194617-a36077c30491
 	sigs.k8s.io/cluster-api v1.5.1
 	sigs.k8s.io/controller-runtime v0.15.2
+	sigs.k8s.io/yaml v1.3.0
 )
 
 require (
@@ -45,7 +47,6 @@ require (
 	github.com/drone/envsubst/v2 v2.0.0-20210730161058-179042472c46 // indirect
 	github.com/emicklei/go-restful/v3 v3.10.2 // indirect
 	github.com/evanphx/json-patch v5.6.0+incompatible // indirect
-	github.com/evanphx/json-patch/v5 v5.6.0 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/go-logr/logr v1.2.4 // indirect
 	github.com/go-openapi/jsonpointer v0.19.6 // indirect
@@ -109,5 +110,4 @@ require (
 	k8s.io/kube-openapi v0.0.0-20230501164219-8b0f38b5fd1f // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
-	sigs.k8s.io/yaml v1.3.0 // indirect
 )
