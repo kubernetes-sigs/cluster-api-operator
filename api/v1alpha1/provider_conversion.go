@@ -21,6 +21,7 @@ import (
 
 	apimachineryconversion "k8s.io/apimachinery/pkg/conversion"
 	"k8s.io/utils/pointer"
+	utilconversion "sigs.k8s.io/cluster-api/util/conversion"
 	ctrlconfigv1 "sigs.k8s.io/controller-runtime/pkg/config/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/conversion"
 
@@ -34,7 +35,19 @@ func (src *BootstrapProvider) ConvertTo(dstRaw conversion.Hub) error {
 		panic("expected to get an of object of type v1alpha2.BootstrapProvider")
 	}
 
-	return Convert_v1alpha1_BootstrapProvider_To_v1alpha2_BootstrapProvider(src, dst, nil)
+	if err := Convert_v1alpha1_BootstrapProvider_To_v1alpha2_BootstrapProvider(src, dst, nil); err != nil {
+		return err
+	}
+
+	// Manually restore data.
+	restored := &operatorv1.BootstrapProvider{}
+	if ok, err := utilconversion.UnmarshalData(src, restored); err != nil || !ok {
+		return err
+	}
+
+	dst.Spec.ManifestPatches = restored.Spec.ManifestPatches
+
+	return nil
 }
 
 // ConvertFrom converts from the BootstrapProvider version (v1alpha2) to this version.
@@ -44,7 +57,16 @@ func (dst *BootstrapProvider) ConvertFrom(srcRaw conversion.Hub) error {
 		panic("expected to get an of object of type v1alpha2.BootstrapProvider")
 	}
 
-	return Convert_v1alpha2_BootstrapProvider_To_v1alpha1_BootstrapProvider(src, dst, nil)
+	if err := Convert_v1alpha2_BootstrapProvider_To_v1alpha1_BootstrapProvider(src, dst, nil); err != nil {
+		return err
+	}
+
+	// Preserve Hub data on down-conversion.
+	if err := utilconversion.MarshalData(src, dst); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // ConvertTo converts this BootstrapProviderList to the Hub version (v1alpha2).
@@ -74,7 +96,19 @@ func (src *ControlPlaneProvider) ConvertTo(dstRaw conversion.Hub) error {
 		panic("expected to get an of object of type v1alpha2.ControlPlaneProvider")
 	}
 
-	return Convert_v1alpha1_ControlPlaneProvider_To_v1alpha2_ControlPlaneProvider(src, dst, nil)
+	if err := Convert_v1alpha1_ControlPlaneProvider_To_v1alpha2_ControlPlaneProvider(src, dst, nil); err != nil {
+		return err
+	}
+
+	// Manually restore data.
+	restored := &operatorv1.ControlPlaneProvider{}
+	if ok, err := utilconversion.UnmarshalData(src, restored); err != nil || !ok {
+		return err
+	}
+
+	dst.Spec.ManifestPatches = restored.Spec.ManifestPatches
+
+	return nil
 }
 
 // ConvertFrom converts from the ControlPlaneProvider version (v1alpha2) to this version.
@@ -84,7 +118,16 @@ func (dst *ControlPlaneProvider) ConvertFrom(srcRaw conversion.Hub) error {
 		panic("expected to get an of object of type v1alpha2.ControlPlaneProvider")
 	}
 
-	return Convert_v1alpha2_ControlPlaneProvider_To_v1alpha1_ControlPlaneProvider(src, dst, nil)
+	if err := Convert_v1alpha2_ControlPlaneProvider_To_v1alpha1_ControlPlaneProvider(src, dst, nil); err != nil {
+		return err
+	}
+
+	// Preserve Hub data on down-conversion.
+	if err := utilconversion.MarshalData(src, dst); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // ConvertTo converts this ControlPlaneProviderList to the Hub version (v1alpha2).
@@ -114,7 +157,19 @@ func (src *CoreProvider) ConvertTo(dstRaw conversion.Hub) error {
 		panic("expected to get an of object of type v1alpha2.CoreProvider")
 	}
 
-	return Convert_v1alpha1_CoreProvider_To_v1alpha2_CoreProvider(src, dst, nil)
+	if err := Convert_v1alpha1_CoreProvider_To_v1alpha2_CoreProvider(src, dst, nil); err != nil {
+		return err
+	}
+
+	// Manually restore data.
+	restored := &operatorv1.CoreProvider{}
+	if ok, err := utilconversion.UnmarshalData(src, restored); err != nil || !ok {
+		return err
+	}
+
+	dst.Spec.ManifestPatches = restored.Spec.ManifestPatches
+
+	return nil
 }
 
 // ConvertFrom converts from the CoreProvider version (v1alpha2) to this version.
@@ -124,7 +179,16 @@ func (dst *CoreProvider) ConvertFrom(srcRaw conversion.Hub) error {
 		panic("expected to get an of object of type v1alpha2.CoreProvider")
 	}
 
-	return Convert_v1alpha2_CoreProvider_To_v1alpha1_CoreProvider(src, dst, nil)
+	if err := Convert_v1alpha2_CoreProvider_To_v1alpha1_CoreProvider(src, dst, nil); err != nil {
+		return err
+	}
+
+	// Preserve Hub data on down-conversion.
+	if err := utilconversion.MarshalData(src, dst); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // ConvertTo converts this CoreProviderList to the Hub version (v1alpha2).
@@ -154,7 +218,19 @@ func (src *InfrastructureProvider) ConvertTo(dstRaw conversion.Hub) error {
 		panic("expected to get an of object of type v1alpha2.InfrastructureProvider")
 	}
 
-	return Convert_v1alpha1_InfrastructureProvider_To_v1alpha2_InfrastructureProvider(src, dst, nil)
+	if err := Convert_v1alpha1_InfrastructureProvider_To_v1alpha2_InfrastructureProvider(src, dst, nil); err != nil {
+		return err
+	}
+
+	// Manually restore data.
+	restored := &operatorv1.InfrastructureProvider{}
+	if ok, err := utilconversion.UnmarshalData(src, restored); err != nil || !ok {
+		return err
+	}
+
+	dst.Spec.ManifestPatches = restored.Spec.ManifestPatches
+
+	return nil
 }
 
 // ConvertFrom converts from the InfrastructureProvider version (v1alpha2) to this version.
@@ -164,7 +240,16 @@ func (dst *InfrastructureProvider) ConvertFrom(srcRaw conversion.Hub) error {
 		panic("expected to get an of object of type v1alpha2.InfrastructureProvider")
 	}
 
-	return Convert_v1alpha2_InfrastructureProvider_To_v1alpha1_InfrastructureProvider(src, dst, nil)
+	if err := Convert_v1alpha2_InfrastructureProvider_To_v1alpha1_InfrastructureProvider(src, dst, nil); err != nil {
+		return err
+	}
+
+	// Preserve Hub data on down-conversion.
+	if err := utilconversion.MarshalData(src, dst); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // ConvertTo converts this InfrastructureProviderList to the Hub version (v1alpha2).

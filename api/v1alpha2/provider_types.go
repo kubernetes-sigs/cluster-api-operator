@@ -65,6 +65,14 @@ type ProviderSpec struct {
 	// namespace of the provider will be used. There is no validation of the yaml content inside the configmap.
 	// +optional
 	AdditionalManifestsRef *ConfigmapReference `json:"additionalManifests,omitempty"`
+
+	// ManifestPatches are applied to rendered provider manifests to customize the
+	// provider manifests. Patches are applied in the order they are specified.
+	// The `kind` field must match the target object, and
+	// if `apiVersion` is specified it will only be applied to matching objects.
+	// This should be an inline yaml blob-string https://datatracker.ietf.org/doc/html/rfc7396
+	// +optional
+	ManifestPatches []string `json:"manifestPatches,omitempty"`
 }
 
 // ConfigmapReference contains enough information to locate the configmap.

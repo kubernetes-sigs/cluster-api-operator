@@ -69,6 +69,11 @@ data:
 					AdditionalManifestsRef: &operatorv1.ConfigmapReference{
 						Name: additionalManifests.Name,
 					},
+					ManifestPatches: []string{`apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    test-label: test-value`},
 				},
 			},
 		}
@@ -83,6 +88,15 @@ data:
 			Deployment: &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: coreProviderDeploymentName, Namespace: operatorNamespace}},
 		}, e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
+		By("Checking for deployment to have additional labels")
+		deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: coreProviderDeploymentName, Namespace: operatorNamespace}}
+		WaitFor(ctx, For(deployment).In(bootstrapCluster).ToSatisfy(func() bool {
+			if v, ok := deployment.Labels["test-label"]; ok {
+				return v == "test-value"
+			}
+			return false
+		}), e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
+
 		By("Waiting for core provider to be ready")
 		WaitFor(ctx, For(coreProvider).In(bootstrapCluster).ToSatisfy(
 			HaveStatusCondition(&coreProvider.Status.Conditions, operatorv1.ProviderInstalledCondition)),
@@ -94,10 +108,11 @@ data:
 		}), e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
 		By("Checking if additional manifests are applied")
-		cm := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-config-map",
-			Namespace: operatorNamespace,
-		}}
+		cm := &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-config-map",
+				Namespace: operatorNamespace,
+			}}
 		WaitFor(ctx, For(cm).In(bootstrapCluster).ToSatisfy(func() bool {
 			value, ok := cm.Data["test"]
 			return ok && value == "test"

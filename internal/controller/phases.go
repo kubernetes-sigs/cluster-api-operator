@@ -419,8 +419,12 @@ func (p *phaseReconciler) fetch(ctx context.Context) (reconcile.Result, error) {
 
 	// ProviderSpec provides fields for customizing the provider deployment options.
 	// We can use clusterctl library to apply this customizations.
-	err = repository.AlterComponents(p.components, customizeObjectsFn(p.provider))
-	if err != nil {
+	if err := repository.AlterComponents(p.components, customizeObjectsFn(p.provider)); err != nil {
+		return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason)
+	}
+
+	// Apply patches to the provider components if specified.
+	if err := repository.AlterComponents(p.components, applyPatches(ctx, p.provider)); err != nil {
 		return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason)
 	}
 

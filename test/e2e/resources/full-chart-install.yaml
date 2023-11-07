@@ -1482,6 +1482,15 @@ spec:
                         type: integer
                     type: object
                 type: object
+              manifestPatches:
+                description: ManifestPatches are applied to rendered provider manifests
+                  to customize the provider manifests. Patches are applied in the
+                  order they are specified. The `kind` field must match the target
+                  object, and if `apiVersion` is specified it will only be applied
+                  to matching objects. This should be an inline yaml blob-string https://datatracker.ietf.org/doc/html/rfc7396
+                items:
+                  type: string
+                type: array
               version:
                 description: Version indicates the provider version.
                 type: string
@@ -4566,6 +4575,15 @@ spec:
                         type: integer
                     type: object
                 type: object
+              manifestPatches:
+                description: ManifestPatches are applied to rendered provider manifests
+                  to customize the provider manifests. Patches are applied in the
+                  order they are specified. The `kind` field must match the target
+                  object, and if `apiVersion` is specified it will only be applied
+                  to matching objects. This should be an inline yaml blob-string https://datatracker.ietf.org/doc/html/rfc7396
+                items:
+                  type: string
+                type: array
               version:
                 description: Version indicates the provider version.
                 type: string
@@ -7653,6 +7671,15 @@ spec:
                         type: integer
                     type: object
                 type: object
+              manifestPatches:
+                description: ManifestPatches are applied to rendered provider manifests
+                  to customize the provider manifests. Patches are applied in the
+                  order they are specified. The `kind` field must match the target
+                  object, and if `apiVersion` is specified it will only be applied
+                  to matching objects. This should be an inline yaml blob-string https://datatracker.ietf.org/doc/html/rfc7396
+                items:
+                  type: string
+                type: array
               version:
                 description: Version indicates the provider version.
                 type: string
@@ -10738,6 +10765,15 @@ spec:
                         type: integer
                     type: object
                 type: object
+              manifestPatches:
+                description: ManifestPatches are applied to rendered provider manifests
+                  to customize the provider manifests. Patches are applied in the
+                  order they are specified. The `kind` field must match the target
+                  object, and if `apiVersion` is specified it will only be applied
+                  to matching objects. This should be an inline yaml blob-string https://datatracker.ietf.org/doc/html/rfc7396
+                items:
+                  type: string
+                type: array
               version:
                 description: Version indicates the provider version.
                 type: string
@@ -13825,6 +13861,15 @@ spec:
                         type: integer
                     type: object
                 type: object
+              manifestPatches:
+                description: ManifestPatches are applied to rendered provider manifests
+                  to customize the provider manifests. Patches are applied in the
+                  order they are specified. The `kind` field must match the target
+                  object, and if `apiVersion` is specified it will only be applied
+                  to matching objects. This should be an inline yaml blob-string https://datatracker.ietf.org/doc/html/rfc7396
+                items:
+                  type: string
+                type: array
               version:
                 description: Version indicates the provider version.
                 type: string
