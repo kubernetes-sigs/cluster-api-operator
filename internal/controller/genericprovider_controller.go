@@ -155,11 +155,7 @@ func patchProvider(ctx context.Context, provider genericprovider.GenericProvider
 		operatorv1.ProviderInstalledCondition,
 	}
 
-	conditions.SetSummary(provider, conditions.WithConditions(conds...))
-
-	options = append(options,
-		patch.WithOwnedConditions{Conditions: append(conds, clusterv1.ReadyCondition)},
-	)
+	options = append(options, patch.WithOwnedConditions{Conditions: conds})
 
 	return patchHelper.Patch(ctx, provider.GetObject(), options...)
 }
