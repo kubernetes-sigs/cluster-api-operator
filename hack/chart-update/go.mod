@@ -4,7 +4,7 @@ go 1.20
 
 require (
 	github.com/google/go-github/v50 v50.2.0
-	helm.sh/helm/v3 v3.13.1
+	helm.sh/helm/v3 v3.13.2
 	k8s.io/helm v2.17.0+incompatible
 )
 
