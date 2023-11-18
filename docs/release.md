@@ -45,11 +45,11 @@ docker pull registry.k8s.io/capi-operator/cluster-api-operator:${RELEASE_TAG}
 
 4. Publish the release on Github.
 
-5. After release was published, switch back to main branch and update index.yaml. It's the source for operator helm chart repository.
+5. After release was published, switch back to main branch and update index.yaml and clusterctl-operator.yaml. It's the source for operator helm chart repository and local krew plugin manifest index.
 
 ```bash
 git checkout main
-make update-helm-repo
+make update-helm-plugin-repo
 ```
 
 6. Create a PR with the changes.
