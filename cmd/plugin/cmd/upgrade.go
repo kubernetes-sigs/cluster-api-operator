@@ -17,18 +17,45 @@ limitations under the License.
 package cmd
 
 import (
+	"sort"
+
 	"github.com/spf13/cobra"
 )
 
 var upgradeCmd = &cobra.Command{
-	Use:   "upgrade",
-	Short: "Upgrade core and provider components in a management cluster using the Cluster API Operator.",
-	Args:  cobra.NoArgs,
+	Use:     "upgrade",
+	GroupID: groupManagement,
+	Short:   "Upgrade core and provider components in a management cluster",
+	Args:    cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return cmd.Help()
 	},
 }
 
 func init() {
+	upgradeCmd.AddCommand(upgradePlanCmd)
+	upgradeCmd.AddCommand(upgradeApplyCmd)
 	RootCmd.AddCommand(upgradeCmd)
+}
+
+func sortUpgradeItems(plan upgradePlan) {
+	sort.Slice(plan.Providers, func(i, j int) bool {
+		return plan.Providers[i].GetType() < plan.Providers[j].GetType() ||
+			(plan.Providers[i].GetType() == plan.Providers[j].GetType() && plan.Providers[i].GetName() < plan.Providers[j].GetName()) ||
+			(plan.Providers[i].GetType() == plan.Providers[j].GetType() && plan.Providers[i].GetName() == plan.Providers[j].GetName() && plan.Providers[i].GetNamespace() < plan.Providers[j].GetNamespace())
+	})
+}
+
+func sortUpgradePlans(upgradePlans []upgradePlan) {
+	sort.Slice(upgradePlans, func(i, j int) bool {
+		return upgradePlans[i].Contract < upgradePlans[j].Contract
+	})
+}
+
+func prettifyTargetVersion(version string) string {
+	if version == "" {
+		return "Already up to date"
+	}
+
+	return version
 }

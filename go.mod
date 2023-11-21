@@ -7,11 +7,11 @@ replace sigs.k8s.io/cluster-api => sigs.k8s.io/cluster-api v1.5.1
 require (
 	github.com/MakeNowJust/heredoc v1.0.0
 	github.com/evanphx/json-patch/v5 v5.6.0
+	github.com/go-errors/errors v1.4.2
 	github.com/google/go-cmp v0.6.0
 	github.com/google/go-github/v52 v52.0.0
 	github.com/google/gofuzz v1.2.0
 	github.com/onsi/gomega v1.29.0
-	github.com/pkg/errors v0.9.1
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/pflag v1.0.5
 	golang.org/x/oauth2 v0.11.0
@@ -78,6 +78,7 @@ require (
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.8 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
 	github.com/prometheus/client_golang v1.16.0 // indirect
 	github.com/prometheus/client_model v0.4.0 // indirect
 	github.com/prometheus/common v0.42.0 // indirect

@@ -17,48 +17,47 @@ limitations under the License.
 package cmd
 
 import (
+	"errors"
 	"flag"
-	"fmt"
 	"os"
-	"strconv"
 	"strings"
 
 	"github.com/MakeNowJust/heredoc"
-	"github.com/pkg/errors"
+	goerrors "github.com/go-errors/errors"
 	"github.com/spf13/cobra"
-
-	configclient "sigs.k8s.io/cluster-api/cmd/clusterctl/client/config"
-	logf "sigs.k8s.io/cluster-api/cmd/clusterctl/log"
 )
 
-type stackTracer interface {
-	StackTrace() errors.StackTrace
-}
-
-var (
-	cfgFile   string
-	verbosity *int
+const (
+	groupDebug      = "group-debug"
+	groupManagement = "group-management"
+	groupOther      = "group-other"
 )
 
-// RootCmd is operator root CLI command.
+var verbosity *int
+
+// RootCmd is capioperator root CLI command.
 var RootCmd = &cobra.Command{
-	Use:   "operator",
-	Short: "clusterctl plugin for leveraging Cluster API Operator.",
+	Use:          "capioperator",
+	SilenceUsage: true,
+	Short:        "capioperator controls the lifecycle of a Cluster API management cluster",
 	Long: LongDesc(`
-		Use this clusterctl plugin to bootstrap a management cluster for Cluster API with the Cluster API Operator.`),
+		Get started with Cluster API using capioperator to create a management cluster,
+		install providers, and create templates for your workload cluster.`),
+	PersistentPostRunE: func(cmd *cobra.Command, args []string) error {
+		return nil
+	},
 }
 
 // Execute executes the root command.
 func Execute() {
 	if err := RootCmd.Execute(); err != nil {
 		if verbosity != nil && *verbosity >= 5 {
-			if err, ok := err.(stackTracer); ok { //nolint:errorlint
-				for _, f := range err.StackTrace() {
-					fmt.Fprintf(os.Stderr, "%+s:%d\n", f, f)
-				}
+			var stackErr *goerrors.Error
+			if errors.As(err, &stackErr) {
+				stackErr.ErrorStack()
 			}
 		}
-
+		// TODO: print cmd help if validation error
 		os.Exit(1)
 	}
 }
@@ -66,34 +65,26 @@ func Execute() {
 func init() {
 	flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
 
-	verbosity = flag.CommandLine.Int("v", 0, "Set the log level verbosity. This overrides the CLUSTERCTL_LOG_LEVEL environment variable.")
+	verbosity = flag.CommandLine.Int("v", 0, "Set the log level verbosity. This overrides the CAPIOPERATOR_LOG_LEVEL environment variable.")
 
 	RootCmd.PersistentFlags().AddGoFlagSet(flag.CommandLine)
-	RootCmd.PersistentFlags().StringVar(&cfgFile, "config", "",
-		"Path to clusterctl configuration (default is `$XDG_CONFIG_HOME/cluster-api/clusterctl.yaml`) or to a remote location (i.e. https://example.com/clusterctl.yaml)")
 
-	cobra.OnInitialize(initConfig)
-}
+	RootCmd.AddGroup(
+		&cobra.Group{
+			ID:    groupManagement,
+			Title: "Cluster Management Commands:",
+		},
+		&cobra.Group{
+			ID:    groupDebug,
+			Title: "Troubleshooting and Debugging Commands:",
+		},
+		&cobra.Group{
+			ID:    groupOther,
+			Title: "Other Commands:",
+		})
 
-func initConfig() {
-	// check if the CLUSTERCTL_LOG_LEVEL was set via env var or in the config file
-	if *verbosity == 0 { //nolint:nestif
-		configClient, err := configclient.New(cfgFile)
-		if err == nil {
-			v, err := configClient.Variables().Get("CLUSTERCTL_LOG_LEVEL")
-			if err == nil && v != "" {
-				verbosityFromEnv, err := strconv.Atoi(v)
-				if err != nil {
-					fmt.Fprintf(os.Stderr, "Failed to convert CLUSTERCTL_LOG_LEVEL string to an int. err=%s\n", err.Error())
-					os.Exit(1)
-				}
-
-				verbosity = &verbosityFromEnv
-			}
-		}
-	}
-
-	logf.SetLogger(logf.NewLogger(logf.WithThreshold(verbosity)))
+	RootCmd.SetHelpCommandGroupID(groupOther)
+	RootCmd.SetCompletionCommandGroupID(groupOther)
 }
 
 const indentation = `  `
@@ -122,11 +113,13 @@ type normalizer struct {
 
 func (s normalizer) heredoc() normalizer {
 	s.string = heredoc.Doc(s.string)
+
 	return s
 }
 
 func (s normalizer) trim() normalizer {
 	s.string = strings.TrimSpace(s.string)
+
 	return s
 }
 
