@@ -23,9 +23,6 @@ const (
 	// if some preflight check has failed.
 	preflightFailedRequeueAfter = 30 * time.Second
 
-	httpsScheme             = "https"
-	githubDomain            = "github.com"
-	gitlabHostPrefix        = "gitlab."
-	gitlabPackagesAPIPrefix = "/api/v4/projects/"
-	configPath              = "/config/clusterctl.yaml"
+	// configPath is the path to the clusterctl config file.
+	configPath = "/config/clusterctl.yaml"
 )
