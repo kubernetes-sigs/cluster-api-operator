@@ -22,8 +22,12 @@ import (
 	"os"
 	"strings"
 
+	logf "sigs.k8s.io/cluster-api/cmd/clusterctl/log"
+	ctrl "sigs.k8s.io/controller-runtime"
+
 	"github.com/MakeNowJust/heredoc"
 	goerrors "github.com/go-errors/errors"
+	"github.com/go-logr/logr"
 	"github.com/spf13/cobra"
 )
 
@@ -31,9 +35,12 @@ const (
 	groupDebug      = "group-debug"
 	groupManagement = "group-management"
 	groupOther      = "group-other"
+	latestVersion   = "latest"
 )
 
 var verbosity *int
+
+var log logr.Logger
 
 // RootCmd is capioperator root CLI command.
 var RootCmd = &cobra.Command{
@@ -66,6 +73,10 @@ func init() {
 	flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
 
 	verbosity = flag.CommandLine.Int("v", 0, "Set the log level verbosity. This overrides the CAPIOPERATOR_LOG_LEVEL environment variable.")
+
+	log = logf.NewLogger(logf.WithThreshold(verbosity))
+	logf.SetLogger(log)
+	ctrl.SetLogger(log)
 
 	RootCmd.PersistentFlags().AddGoFlagSet(flag.CommandLine)
 

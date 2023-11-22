@@ -103,6 +103,8 @@ func New(uncachedObjs ...client.Object) *Environment {
 	root := path.Join(path.Dir(filename), "..", "..")
 	crdPaths := []string{
 		filepath.Join(root, "config", "crd", "bases"),
+		// cert-manager CRDs are stored there.
+		filepath.Join(root, "test", "testdata"),
 	}
 
 	if capiPath := getFilePathToClusterctlCRDs(root); capiPath != "" {
