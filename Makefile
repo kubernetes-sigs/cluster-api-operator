@@ -494,8 +494,9 @@ release-alias-tag: # Adds the tag to the last build tag.
 upload-staging-artifacts: ## Upload release artifacts to the staging bucket
 	gsutil cp $(RELEASE_DIR)/* gs://$(STAGING_BUCKET)/components/$(RELEASE_ALIAS_TAG)/
 
-.PHONY: update-helm-repo
-update-helm-repo:
+.PHONY: update-helm-plugin-repo
+update-helm-plugin-repo:
+	./hack/update-plugin-yaml.sh $(RELEASE_TAG)
 	./hack/update-helm-repo.sh $(RELEASE_TAG)
 
 .PHONY: promote-images
