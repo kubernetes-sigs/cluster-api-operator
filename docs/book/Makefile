@@ -13,6 +13,7 @@
 # limitations under the License.
 
 # Directories.
+ROOT_DIR := $(realpath ../..)
 TOOLS_DIR := $(realpath ../../hack/tools)
 TOOLS_BIN_DIR := $(TOOLS_DIR)/bin
 BIN_DIR := bin
@@ -32,3 +33,4 @@ serve: $(MDBOOK)
 .PHONY: build
 build: $(MDBOOK)
 	$(MDBOOK) build
+	cp $(ROOT_DIR)/index.yaml book
