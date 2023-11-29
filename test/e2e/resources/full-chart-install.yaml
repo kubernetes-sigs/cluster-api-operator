@@ -13961,40 +13961,6 @@ rules:
 ---
 # Source: cluster-api-operator/templates/operator-components.yaml
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  labels:
-    clusterctl.cluster.x-k8s.io/core: capi-operator
-  name: capi-operator-metrics-reader
-rules:
-- nonResourceURLs:
-  - /metrics
-  verbs:
-  - get
----
-# Source: cluster-api-operator/templates/operator-components.yaml
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  labels:
-    clusterctl.cluster.x-k8s.io/core: capi-operator
-  name: capi-operator-proxy-role
-rules:
-- apiGroups:
-  - authentication.k8s.io
-  resources:
-  - tokenreviews
-  verbs:
-  - create
-- apiGroups:
-  - authorization.k8s.io
-  resources:
-  - subjectaccessreviews
-  verbs:
-  - create
----
-# Source: cluster-api-operator/templates/operator-components.yaml
-apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   labels:
@@ -14004,22 +13970,6 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
   name: capi-operator-manager-role
-subjects:
-- kind: ServiceAccount
-  name: default
-  namespace: 'default'
----
-# Source: cluster-api-operator/templates/operator-components.yaml
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  labels:
-    clusterctl.cluster.x-k8s.io/core: capi-operator
-  name: capi-operator-proxy-rolebinding
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: capi-operator-proxy-role
 subjects:
 - kind: ServiceAccount
   name: default
@@ -14089,24 +14039,6 @@ subjects:
 - kind: ServiceAccount
   name: default
   namespace: 'default'
----
-# Source: cluster-api-operator/templates/operator-components.yaml
-apiVersion: v1
-kind: Service
-metadata:
-  labels:
-    clusterctl.cluster.x-k8s.io/core: capi-operator
-    control-plane: controller-manager
-  name: capi-operator-controller-manager-metrics-service
-  namespace: 'default'
-spec:
-  ports:
-  - name: https
-    port: 8443
-    targetPort: https
-  selector:
-    clusterctl.cluster.x-k8s.io/core: capi-operator
-    control-plane: controller-manager
 ---
 # Source: cluster-api-operator/templates/operator-components.yaml
 apiVersion: v1
