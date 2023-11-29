@@ -20,8 +20,6 @@ spec:
         - /manager
         args:
           - "--leader-elect"
-          - "--diagnostics-address=${CAPI_OPERATOR_DIAGNOSTICS_ADDRESS:=:8443}"
-          - "--insecure-diagnostics=${CAPI_OPERATOR_INSECURE_DIAGNOSTICS:=false}"
         image: controller:latest
         name: manager
         ports:
