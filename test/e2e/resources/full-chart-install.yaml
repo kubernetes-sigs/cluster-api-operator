@@ -13961,40 +13961,6 @@ rules:
 ---
 # Source: cluster-api-operator/templates/operator-components.yaml
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  labels:
-    clusterctl.cluster.x-k8s.io/core: capi-operator
-  name: capi-operator-metrics-reader
-rules:
-- nonResourceURLs:
-  - /metrics
-  verbs:
-  - get
----
-# Source: cluster-api-operator/templates/operator-components.yaml
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  labels:
-    clusterctl.cluster.x-k8s.io/core: capi-operator
-  name: capi-operator-proxy-role
-rules:
-- apiGroups:
-  - authentication.k8s.io
-  resources:
-  - tokenreviews
-  verbs:
-  - create
-- apiGroups:
-  - authorization.k8s.io
-  resources:
-  - subjectaccessreviews
-  verbs:
-  - create
----
-# Source: cluster-api-operator/templates/operator-components.yaml
-apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   labels:
@@ -14004,22 +13970,6 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
   name: capi-operator-manager-role
-subjects:
-- kind: ServiceAccount
-  name: default
-  namespace: 'default'
----
-# Source: cluster-api-operator/templates/operator-components.yaml
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  labels:
-    clusterctl.cluster.x-k8s.io/core: capi-operator
-  name: capi-operator-proxy-rolebinding
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: capi-operator-proxy-role
 subjects:
 - kind: ServiceAccount
   name: default
@@ -14096,24 +14046,6 @@ kind: Service
 metadata:
   labels:
     clusterctl.cluster.x-k8s.io/core: capi-operator
-    control-plane: controller-manager
-  name: capi-operator-controller-manager-metrics-service
-  namespace: 'default'
-spec:
-  ports:
-  - name: https
-    port: 8443
-    targetPort: https
-  selector:
-    clusterctl.cluster.x-k8s.io/core: capi-operator
-    control-plane: controller-manager
----
-# Source: cluster-api-operator/templates/operator-components.yaml
-apiVersion: v1
-kind: Service
-metadata:
-  labels:
-    clusterctl.cluster.x-k8s.io/core: capi-operator
   name: capi-operator-webhook-service
   namespace: 'default'
 spec:
@@ -14182,30 +14114,6 @@ spec:
             - mountPath: /tmp/k8s-webhook-server/serving-certs
               name: cert
               readOnly: true
-      - args:
-        - --secure-listen-address=0.0.0.0:8443
-        - --upstream=http://127.0.0.1:8080/
-        - --logtostderr=true
-        - --v=2
-        image: "gcr.io/kubebuilder/kube-rbac-proxy:v0.14.1"
-        imagePullPolicy: IfNotPresent
-        name: kube-rbac-proxy
-        ports:
-        - containerPort: 8443
-          name: https
-          protocol: TCP
-        resources:
-            limits:
-              cpu: 500m
-              memory: 128Mi
-            requests:
-              cpu: 5m
-              memory: 64Mi
-        securityContext:
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop:
-              - ALL
       terminationGracePeriodSeconds: 10
       volumes:
         - name: cert

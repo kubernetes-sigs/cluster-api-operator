@@ -101,30 +101,6 @@ spec:
         volumeMounts:
         {{- toYaml . | nindent 12 }}
         {{- end }}
-      - args:
-        - --secure-listen-address=0.0.0.0:8443
-        - --upstream=http://127.0.0.1:8080/
-        - --logtostderr=true
-        {{- if .Values.logLevel }}
-        - --v={{ .Values.logLevel }}
-        {{- end }}
-        {{- with .Values.image.kubeRBACProxy }}
-        image: "{{- if .registry -}}{{ .registry }}/{{- end -}}{{ .repository }}{{- if (.digest) -}} @{{ .digest }}{{- else -}}:{{ default $.Chart.AppVersion .tag }} {{- end -}}"
-        {{- end }}
-        imagePullPolicy: {{ .Values.image.kubeRBACProxy.pullPolicy }}
-        name: kube-rbac-proxy
-        ports:
-        - containerPort: 8443
-          name: https
-          protocol: TCP
-        {{- with .Values.resources.kubeRBACProxy }}
-        resources:
-        {{- toYaml . | nindent 12 }}
-        {{- end }}
-        {{- with .Values.containerSecurityContext.kubeRBACProxy }}
-        securityContext:
-        {{- toYaml . | nindent 12 }}
-        {{- end }}
       terminationGracePeriodSeconds: 10
       {{- with .Values.volumes }}
       volumes:
