@@ -118,7 +118,7 @@ const (
 	Hooks
 )
 
-//go:generate go run golang.org/x/tools/cmd/stringer -type=HelmCommand all_type_helpers.go
+//go:generate go run golang.org/x/tools/cmd/stringer -type=HelmCommand -output=zz_helmcommand.go all_type_helpers.go
 type HelmCommand int
 type HelmCommands []HelmCommand
 
