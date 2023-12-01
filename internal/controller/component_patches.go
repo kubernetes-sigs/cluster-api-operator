@@ -20,12 +20,13 @@ import (
 	"context"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"sigs.k8s.io/cluster-api-operator/internal/controller/genericprovider"
+
+	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
 	"sigs.k8s.io/cluster-api-operator/internal/patch"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
-func applyPatches(ctx context.Context, provider genericprovider.GenericProvider) func(objs []unstructured.Unstructured) ([]unstructured.Unstructured, error) {
+func applyPatches(ctx context.Context, provider operatorv1.GenericProvider) func(objs []unstructured.Unstructured) ([]unstructured.Unstructured, error) {
 	log := ctrl.LoggerFrom(ctx)
 
 	return func(objs []unstructured.Unstructured) ([]unstructured.Unstructured, error) {

@@ -23,13 +23,13 @@ import (
 )
 
 func IsCoreProvider(p genericprovider.GenericProvider) bool {
-	_, ok := p.GetObject().(*operatorv1.CoreProvider)
+	_, ok := p.(*operatorv1.CoreProvider)
 	return ok
 }
 
 // ClusterctlProviderType returns the provider type from the genericProvider.
-func ClusterctlProviderType(genericProvider genericprovider.GenericProvider) clusterctlv1.ProviderType {
-	switch genericProvider.GetObject().(type) {
+func ClusterctlProviderType(genericProvider operatorv1.GenericProvider) clusterctlv1.ProviderType {
+	switch genericProvider.(type) {
 	case *operatorv1.CoreProvider:
 		return clusterctlv1.CoreProviderType
 	case *operatorv1.ControlPlaneProvider:

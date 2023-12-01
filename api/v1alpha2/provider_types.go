@@ -148,7 +148,7 @@ type DeploymentSpec struct {
 
 	// List of containers specified in the Deployment
 	// +optional
-	Containers []ContainerSpec `json:"containers"`
+	Containers []ContainerSpec `json:"containers,omitempty"`
 
 	// If specified, the pod's service account
 	// +optional

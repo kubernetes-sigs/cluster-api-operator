@@ -143,7 +143,7 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 		}
 	}
 
-	if err := c.List(ctx, providerList.GetObject()); err != nil {
+	if err := c.List(ctx, providerList); err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to list providers: %w", err)
 	}
 

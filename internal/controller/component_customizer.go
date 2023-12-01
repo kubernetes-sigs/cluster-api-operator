@@ -30,7 +30,6 @@ import (
 	configv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	"k8s.io/utils/pointer"
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
-	"sigs.k8s.io/cluster-api-operator/internal/controller/genericprovider"
 	"sigs.k8s.io/cluster-api/util"
 )
 
@@ -44,7 +43,7 @@ const (
 var bool2Str = map[bool]string{true: "true", false: "false"}
 
 // customizeObjectsFn apply provider specific customization to a list of manifests.
-func customizeObjectsFn(provider genericprovider.GenericProvider) func(objs []unstructured.Unstructured) ([]unstructured.Unstructured, error) {
+func customizeObjectsFn(provider operatorv1.GenericProvider) func(objs []unstructured.Unstructured) ([]unstructured.Unstructured, error) {
 	return func(objs []unstructured.Unstructured) ([]unstructured.Unstructured, error) {
 		results := []unstructured.Unstructured{}
 
