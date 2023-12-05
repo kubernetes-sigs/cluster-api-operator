@@ -76,7 +76,7 @@ func (p *phaseReconciler) downloadManifests(ctx context.Context) (reconcile.Resu
 
 	log.Info("Downloading provider manifests")
 
-	repo, err := repositoryFactory(p.providerConfig, p.configClient.Variables())
+	repo, err := repositoryFactory(ctx, p.providerConfig, p.configClient.Variables())
 	if err != nil {
 		err = fmt.Errorf("failed to create repo from provider url for provider %q: %w", p.provider.GetName(), err)
 
@@ -94,14 +94,14 @@ func (p *phaseReconciler) downloadManifests(ctx context.Context) (reconcile.Resu
 	}
 
 	// Fetch the provider metadata and components yaml files from the provided repository GitHub/GitLab.
-	metadataFile, err := repo.GetFile(spec.Version, metadataFile)
+	metadataFile, err := repo.GetFile(ctx, spec.Version, metadataFile)
 	if err != nil {
 		err = fmt.Errorf("failed to read %q from the repository for provider %q: %w", metadataFile, p.provider.GetName(), err)
 
 		return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason)
 	}
 
-	componentsFile, err := repo.GetFile(spec.Version, repo.ComponentsPath())
+	componentsFile, err := repo.GetFile(ctx, spec.Version, repo.ComponentsPath())
 	if err != nil {
 		err = fmt.Errorf("failed to read %q from the repository for provider %q: %w", componentsFile, p.provider.GetName(), err)
 

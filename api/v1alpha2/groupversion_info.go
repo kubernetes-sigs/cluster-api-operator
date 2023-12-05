@@ -34,18 +34,13 @@ var (
 
 	// AddToScheme adds the types in this group-version to the given scheme.
 	AddToScheme = SchemeBuilder.AddToScheme
+
+	objectTypes = []runtime.Object{}
 )
 
 // Adds the list of known types to api.Scheme.
 func addKnownTypes(scheme *runtime.Scheme) error {
-	scheme.AddKnownTypes(GroupVersion,
-		&CoreProvider{}, &CoreProviderList{},
-		&BootstrapProvider{}, &BootstrapProviderList{},
-		&ControlPlaneProvider{}, &ControlPlaneProviderList{},
-		&InfrastructureProvider{}, &InfrastructureProviderList{},
-		&AddonProvider{}, &AddonProviderList{},
-	)
-
+	scheme.AddKnownTypes(GroupVersion, objectTypes...)
 	metav1.AddToGroupVersion(scheme, GroupVersion)
 
 	return nil

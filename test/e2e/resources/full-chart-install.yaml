@@ -13947,7 +13947,6 @@ spec:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  creationTimestamp: null
   labels:
     clusterctl.cluster.x-k8s.io/core: capi-operator
   name: capi-operator-manager-role
@@ -14093,6 +14092,7 @@ spec:
         - --v=2
         - --health-addr=:8081
         - --metrics-bind-addr=127.0.0.1:8080
+        - --diagnostics-address=8443
         - --leader-elect=true
         command:
         - /manager

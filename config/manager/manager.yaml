@@ -18,8 +18,14 @@ spec:
       containers:
       - command:
         - /manager
+        args:
+          - "--leader-elect"
         image: controller:latest
         name: manager
+        ports:
+          - containerPort: 8443
+            name: metrics
+            protocol: TCP
         resources:
           limits:
             cpu: 100m
