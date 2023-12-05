@@ -15,7 +15,7 @@ updates:
   - package-ecosystem: "gomod"
     directory: "/"
     schedule:
-      interval: "weekly"
+      interval: "monthly"
     groups:
       ## group all dependencies with a k8s.io prefix into a single PR.
       kubernetes:
@@ -49,69 +49,7 @@ updates:
   - package-ecosystem: "gomod"
     directory: "/test"
     schedule:
-      interval: "weekly"
-    ## group all dependencies with a k8s.io prefix into a single PR.
-    groups:
-      kubernetes:
-        patterns: [ "k8s.io/*" ]
-    ignore:
-      # Ignore Cluster-API as its upgraded manually.
-      - dependency-name: "sigs.k8s.io/cluster-api"
-        update-types: [ "version-update:semver-major", "version-update:semver-minor" ]
-      - dependency-name: "sigs.k8s.io/cluster-api/test"
-        update-types: [ "version-update:semver-major", "version-update:semver-minor" ]
-      # Ignore controller-runtime as its upgraded manually.
-      - dependency-name: "sigs.k8s.io/controller-runtime"
-        update-types: [ "version-update:semver-major", "version-update:semver-minor" ]
-      # Ignore k8s and its transitives modules as they are upgraded manually
-      # together with controller-runtime.
-      - dependency-name: "k8s.io/*"
-        update-types: [ "version-update:semver-major", "version-update:semver-minor" ]
-      - dependency-name: "go.etcd.io/*"
-        update-types: [ "version-update:semver-major", "version-update:semver-minor" ]
-      - dependency-name: "google.golang.org/grpc"
-        update-types: [ "version-update:semver-major", "version-update:semver-minor" ]
-    commit-message:
-      prefix: ":seedling:"
-    labels:
-      - "ok-to-test"
-
-  # Hack/tools Go module
-  - package-ecosystem: "gomod"
-    directory: "/hack/tools"
-    schedule:
-      interval: "weekly"
-    ## group all dependencies with a k8s.io prefix into a single PR.
-    groups:
-      kubernetes:
-        patterns: [ "k8s.io/*" ]
-    ignore:
-      # Ignore Cluster-API as its upgraded manually.
-      - dependency-name: "sigs.k8s.io/cluster-api"
-        update-types: [ "version-update:semver-major", "version-update:semver-minor" ]
-      - dependency-name: "sigs.k8s.io/cluster-api/test"
-        update-types: [ "version-update:semver-major", "version-update:semver-minor" ]
-      # Ignore controller-runtime as its upgraded manually.
-      - dependency-name: "sigs.k8s.io/controller-runtime"
-        update-types: [ "version-update:semver-major", "version-update:semver-minor" ]
-      # Ignore k8s and its transitives modules as they are upgraded manually
-      # together with controller-runtime.
-      - dependency-name: "k8s.io/*"
-        update-types: [ "version-update:semver-major", "version-update:semver-minor" ]
-      - dependency-name: "go.etcd.io/*"
-        update-types: [ "version-update:semver-major", "version-update:semver-minor" ]
-      - dependency-name: "google.golang.org/grpc"
-        update-types: [ "version-update:semver-major", "version-update:semver-minor" ]
-    commit-message:
-      prefix: ":seedling:"
-    labels:
-      - "ok-to-test"
-
-  # Hack/chart-update Go module
-  - package-ecosystem: "gomod"
-    directory: "/hack/chart-update"
-    schedule:
-      interval: "weekly"
+      interval: "monthly"
     ## group all dependencies with a k8s.io prefix into a single PR.
     groups:
       kubernetes:
