@@ -42,6 +42,12 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 )
 
+const (
+	// We have to specify a version here, because if we set "latest", clusterctl libs will try to fetch metadata.yaml file for the latest
+	// release and fail since CAPI operator doesn't provide this file.
+	capiOperatorManifestsURL = "https://github.com/kubernetes-sigs/cluster-api-operator/releases/v0.1.0/operator-components.yaml"
+)
+
 var capiOperatorLabels = map[string]string{
 	"clusterctl.cluster.x-k8s.io/core": "capi-operator",
 	"control-plane":                    "controller-manager",
