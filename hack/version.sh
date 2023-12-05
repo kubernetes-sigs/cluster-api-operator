@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Copyright 2022 The Kubernetes Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,6 +17,10 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
+if [[ "${TRACE-0}" == "1" ]]; then
+    set -o xtrace
+fi
+
 version::get_version_vars() {
     GIT_COMMIT="$(git rev-parse HEAD^{commit})"
 
@@ -27,8 +31,8 @@ version::get_version_vars() {
     fi
 
     # stolen from k8s.io/hack/lib/version.sh
-    # Use git describe to find the version based on tags.
-    if GIT_VERSION=$(git describe --tags --abbrev=14 2>/dev/null); then
+    # Use git describe to find the version based on annotated tags.
+    if [[ -n ${GIT_VERSION-} ]] || GIT_VERSION=$(git describe --abbrev=14 --match "v[0-9]*" 2>/dev/null); then
         # This translates the "git describe" to an actual semver.org
         # compatible semantic version that looks something like this:
         #   v1.1.0-alpha.0.6+84c76d1142ea4d
@@ -68,7 +72,7 @@ version::get_version_vars() {
     fi
 
     GIT_RELEASE_TAG=$(git describe --abbrev=0 --tags)
-    GIT_RELEASE_COMMIT=$(git rev-list -n 1  ${GIT_RELEASE_TAG})
+    GIT_RELEASE_COMMIT=$(git rev-list -n 1  "${GIT_RELEASE_TAG}")
 }
 
 # stolen from k8s.io/hack/lib/version.sh and modified
@@ -93,6 +97,8 @@ version::ldflags() {
     add_ldflag "gitVersion" "${GIT_VERSION}"
     add_ldflag "gitReleaseCommit" "${GIT_RELEASE_COMMIT}"
 
-  # The -ldflags parameter takes a single string, so join the output.
-  echo "${ldflags[*]-}"
+    # The -ldflags parameter takes a single string, so join the output.
+    echo "${ldflags[*]-}"
 }
+
+version::ldflags

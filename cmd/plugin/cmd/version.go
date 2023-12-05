@@ -24,7 +24,7 @@ import (
 	"github.com/spf13/cobra"
 	"sigs.k8s.io/yaml"
 
-	"sigs.k8s.io/cluster-api/version"
+	"sigs.k8s.io/cluster-api-operator/version"
 )
 
 // Version provides the version information of CAPI operator.
