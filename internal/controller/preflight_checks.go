@@ -19,6 +19,7 @@ package controller
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/google/go-github/v52/github"
 	"golang.org/x/oauth2"
@@ -230,8 +231,15 @@ func coreProviderIsReady(ctx context.Context, c client.Client) (bool, error) {
 // The list of known providers can be found here:
 // https://github.com/kubernetes-sigs/cluster-api/blob/main/cmd/clusterctl/client/config/providers_client.go
 func isPredefinedProvider(ctx context.Context, providerName string, providerType clusterctlv1.ProviderType) (bool, error) {
+	path := configPath
+	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+		path = ""
+	} else if err != nil {
+		return false, err
+	}
+
 	// Initialize a client that contains predefined providers only.
-	configClient, err := configclient.New(ctx, "")
+	configClient, err := configclient.New(ctx, path)
 	if err != nil {
 		return false, err
 	}

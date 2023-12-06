@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"io"
 	"net/url"
+	"os"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
@@ -114,16 +115,33 @@ func (p *phaseReconciler) preflightChecks(ctx context.Context) (reconcile.Result
 
 // initializePhaseReconciler initializes phase reconciler.
 func (p *phaseReconciler) initializePhaseReconciler(ctx context.Context) (reconcile.Result, error) {
-	// Load provider's secret and config url.
-	reader, err := p.secretReader(ctx)
-	if err != nil {
-		return reconcile.Result{}, wrapPhaseError(err, "failed to load the secret reader")
+	path := configPath
+	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+		path = ""
+	} else if err != nil {
+		return reconcile.Result{}, err
 	}
 
 	// Initialize a client for interacting with the clusterctl configuration.
-	p.configClient, err = configclient.New(ctx, "", configclient.InjectReader(reader))
+	initConfig, err := configclient.New(ctx, path)
 	if err != nil {
 		return reconcile.Result{}, err
+	}
+
+	providers, err := initConfig.Providers().List()
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	reader, err := p.secretReader(ctx, providers...)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	// Load provider's secret and config url.
+	p.configClient, err = configclient.New(ctx, "", configclient.InjectReader(reader))
+	if err != nil {
+		return reconcile.Result{}, wrapPhaseError(err, "failed to load the secret reader")
 	}
 
 	// Get returns the configuration for the provider with a given name/type.
@@ -197,7 +215,7 @@ func (p *phaseReconciler) load(ctx context.Context) (reconcile.Result, error) {
 
 // secretReader use clusterctl MemoryReader structure to store the configuration variables
 // that are obtained from a secret and try to set fetch url config.
-func (p *phaseReconciler) secretReader(ctx context.Context) (configclient.Reader, error) {
+func (p *phaseReconciler) secretReader(ctx context.Context, providers ...configclient.Provider) (configclient.Reader, error) {
 	log := ctrl.LoggerFrom(ctx)
 
 	mr := configclient.NewMemoryReader()
@@ -220,6 +238,12 @@ func (p *phaseReconciler) secretReader(ctx context.Context) (configclient.Reader
 		}
 	} else {
 		log.Info("No configuration secret was specified")
+	}
+
+	for _, provider := range providers {
+		if _, err := mr.AddProvider(provider.Name(), provider.Type(), provider.URL()); err != nil {
+			return nil, err
+		}
 	}
 
 	// If provided store fetch config url in memory reader.

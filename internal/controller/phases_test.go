@@ -72,6 +72,8 @@ func TestSecretReader(t *testing.T) {
 	testValue1 := "test-value1"
 	testKey2 := "test-key2"
 	testValue2 := "test-value2"
+	testKey3 := "test-key3"
+	testValue3 := "test-value3"
 
 	g.Expect(fakeclient.Create(ctx, &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
@@ -84,7 +86,7 @@ func TestSecretReader(t *testing.T) {
 		},
 	})).To(Succeed())
 
-	configreader, err := p.secretReader(context.TODO())
+	configreader, err := p.secretReader(context.TODO(), configclient.NewProvider(testKey3, testValue3, clusterctlv1.CoreProviderType))
 	g.Expect(err).ToNot(HaveOccurred())
 
 	expectedValue1, err := configreader.Get(testKey1)
@@ -97,7 +99,13 @@ func TestSecretReader(t *testing.T) {
 
 	exptectedProviderData, err := configreader.Get("providers")
 	g.Expect(err).ToNot(HaveOccurred())
-	g.Expect(exptectedProviderData).To(Equal("- name: cluster-api\n  type: CoreProvider\n  url: https://example.com\n"))
+	g.Expect(exptectedProviderData).To(Equal(`- name: test-key3
+  type: CoreProvider
+  url: test-value3
+- name: cluster-api
+  type: CoreProvider
+  url: https://example.com
+`))
 }
 
 func TestConfigmapRepository(t *testing.T) {
