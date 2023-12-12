@@ -2,7 +2,7 @@ module sigs.k8s.io/cluster-api-operator
 
 go 1.20
 
-replace sigs.k8s.io/cluster-api => sigs.k8s.io/cluster-api v1.6.0-rc.1
+replace sigs.k8s.io/cluster-api => sigs.k8s.io/cluster-api v1.6.0
 
 require (
 	github.com/MakeNowJust/heredoc v1.0.0
@@ -22,7 +22,7 @@ require (
 	k8s.io/component-base v0.28.4
 	k8s.io/klog/v2 v2.100.1
 	k8s.io/utils v0.0.0-20230406110748-d93618cff8a2
-	sigs.k8s.io/cluster-api v1.6.0-rc.1
+	sigs.k8s.io/cluster-api v1.6.0
 	sigs.k8s.io/controller-runtime v0.16.3
 	sigs.k8s.io/yaml v1.4.0
 )
