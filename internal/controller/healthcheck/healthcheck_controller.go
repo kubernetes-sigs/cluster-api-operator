@@ -18,18 +18,23 @@ package healthcheck
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	kerrors "k8s.io/apimachinery/pkg/util/errors"
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/patch"
 	ctrl "sigs.k8s.io/controller-runtime"
+
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -38,22 +43,76 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
+func init() {
+	var err error
+	deploymentPredicate, err = predicate.LabelSelectorPredicate(metav1.LabelSelector{
+		MatchExpressions: []metav1.LabelSelectorRequirement{{
+			Key:      providerLabelKey,
+			Operator: metav1.LabelSelectorOpExists,
+		}},
+	})
+	utilruntime.Must(err)
+}
+
+const providerLabelKey = "cluster.x-k8s.io/provider"
+
+var deploymentPredicate predicate.Predicate
+
 type ProviderHealthCheckReconciler struct {
 	Client client.Client
 }
 
-const (
-	providerLabelKey = "cluster.x-k8s.io/provider"
-)
+type GenericProviderHealthCheckReconciler struct {
+	Client      client.Client
+	Provider    operatorv1.GenericProvider
+	providerGVK schema.GroupVersionKind
+}
 
 func (r *ProviderHealthCheckReconciler) SetupWithManager(mgr ctrl.Manager, options controller.Options) error {
+	return kerrors.NewAggregate([]error{
+		(&GenericProviderHealthCheckReconciler{
+			Client:   mgr.GetClient(),
+			Provider: &operatorv1.CoreProvider{},
+		}).SetupWithManager(mgr, options),
+		(&GenericProviderHealthCheckReconciler{
+			Client:   mgr.GetClient(),
+			Provider: &operatorv1.InfrastructureProvider{},
+		}).SetupWithManager(mgr, options),
+		(&GenericProviderHealthCheckReconciler{
+			Client:   mgr.GetClient(),
+			Provider: &operatorv1.BootstrapProvider{},
+		}).SetupWithManager(mgr, options),
+		(&GenericProviderHealthCheckReconciler{
+			Client:   mgr.GetClient(),
+			Provider: &operatorv1.ControlPlaneProvider{},
+		}).SetupWithManager(mgr, options),
+		(&GenericProviderHealthCheckReconciler{
+			Client:   mgr.GetClient(),
+			Provider: &operatorv1.AddonProvider{},
+		}).SetupWithManager(mgr, options),
+		(&GenericProviderHealthCheckReconciler{
+			Client:   mgr.GetClient(),
+			Provider: &operatorv1.IPAMProvider{},
+		}).SetupWithManager(mgr, options),
+	})
+}
+
+func (r *GenericProviderHealthCheckReconciler) SetupWithManager(mgr ctrl.Manager, options controller.Options) error {
+	kinds, _, err := r.Client.Scheme().ObjectKinds(r.Provider)
+	if err != nil {
+		return err
+	}
+
+	r.providerGVK = kinds[0]
+
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&appsv1.Deployment{}, builder.WithPredicates(providerDeploymentPredicates())).
+		For(&appsv1.Deployment{}, builder.WithPredicates(r.providerDeploymentPredicates())).
+		WithEventFilter(deploymentPredicate).
 		WithOptions(options).
 		Complete(r)
 }
 
-func (r *ProviderHealthCheckReconciler) Reconcile(ctx context.Context, req reconcile.Request) (_ reconcile.Result, reterr error) {
+func (r *GenericProviderHealthCheckReconciler) Reconcile(ctx context.Context, req reconcile.Request) (_ reconcile.Result, reterr error) {
 	log := ctrl.LoggerFrom(ctx)
 
 	log.Info("Checking provider health")
@@ -67,19 +126,15 @@ func (r *ProviderHealthCheckReconciler) Reconcile(ctx context.Context, req recon
 		return result, err
 	}
 
-	// There should be just one owner reference - to a Provider resource.
-	if len(deployment.GetOwnerReferences()) != 1 {
-		return result, fmt.Errorf("incorrect number of owner references for provider deployment %s", req.NamespacedName)
+	// There should be one owner pointing to the Provider resource.
+	if err := r.Client.Get(ctx, r.getProviderKey(deployment), r.Provider); err != nil {
+		// Error reading the object - requeue the request.
+		return result, err
 	}
-
-	deploymentOwner := deployment.GetOwnerReferences()[0]
 
 	deploymentAvailableCondition := getDeploymentCondition(deployment.Status, appsv1.DeploymentAvailable)
 
-	typedProvider, err := r.getGenericProvider(ctx, deploymentOwner.Kind, deploymentOwner.Name, req.Namespace)
-	if err != nil {
-		return result, err
-	}
+	typedProvider := r.Provider
 
 	// Stop earlier if this provider is not fully installed yet.
 	if !conditions.IsTrue(typedProvider, operatorv1.ProviderInstalledCondition) {
@@ -122,52 +177,20 @@ func (r *ProviderHealthCheckReconciler) Reconcile(ctx context.Context, req recon
 	return result, patchHelper.Patch(ctx, typedProvider, options)
 }
 
-func (r *ProviderHealthCheckReconciler) getGenericProvider(ctx context.Context, providerKind, providerName, providerNamespace string) (operatorv1.GenericProvider, error) {
-	switch providerKind {
-	case "CoreProvider":
-		provider := &operatorv1.CoreProvider{}
-		if err := r.Client.Get(ctx, types.NamespacedName{Name: providerName, Namespace: providerNamespace}, provider); err != nil {
-			return nil, err
+func (r *GenericProviderHealthCheckReconciler) getProviderName(deploy client.Object) string {
+	for _, owner := range deploy.GetOwnerReferences() {
+		if owner.Kind == r.providerGVK.Kind {
+			return owner.Name
 		}
+	}
 
-		return provider, nil
-	case "BootstrapProvider":
-		provider := &operatorv1.BootstrapProvider{}
-		if err := r.Client.Get(ctx, types.NamespacedName{Name: providerName, Namespace: providerNamespace}, provider); err != nil {
-			return nil, err
-		}
+	return ""
+}
 
-		return provider, nil
-	case "ControlPlaneProvider":
-		provider := &operatorv1.ControlPlaneProvider{}
-		if err := r.Client.Get(ctx, types.NamespacedName{Name: providerName, Namespace: providerNamespace}, provider); err != nil {
-			return nil, err
-		}
-
-		return provider, nil
-	case "InfrastructureProvider":
-		provider := &operatorv1.InfrastructureProvider{}
-		if err := r.Client.Get(ctx, types.NamespacedName{Name: providerName, Namespace: providerNamespace}, provider); err != nil {
-			return nil, err
-		}
-
-		return provider, nil
-	case "AddonProvider":
-		provider := &operatorv1.AddonProvider{}
-		if err := r.Client.Get(ctx, types.NamespacedName{Name: providerName, Namespace: providerNamespace}, provider); err != nil {
-			return nil, err
-		}
-
-		return provider, nil
-	case "IPAMProvider":
-		provider := &operatorv1.IPAMProvider{}
-		if err := r.Client.Get(ctx, types.NamespacedName{Name: providerName, Namespace: providerNamespace}, provider); err != nil {
-			return nil, err
-		}
-
-		return provider, nil
-	default:
-		return nil, fmt.Errorf("failed to cast interface for type: %s", providerKind)
+func (r *GenericProviderHealthCheckReconciler) getProviderKey(deploy client.Object) types.NamespacedName {
+	return types.NamespacedName{
+		Namespace: deploy.GetNamespace(),
+		Name:      r.getProviderName(deploy),
 	}
 }
 
@@ -183,16 +206,14 @@ func getDeploymentCondition(status appsv1.DeploymentStatus, condType appsv1.Depl
 	return nil
 }
 
-func providerDeploymentPredicates() predicate.Funcs {
+func (r *GenericProviderHealthCheckReconciler) providerDeploymentPredicates() predicate.Funcs {
 	isProviderDeployment := func(obj runtime.Object) bool {
-		clusterOperator, ok := obj.(*appsv1.Deployment)
+		deployment, ok := obj.(*appsv1.Deployment)
 		if !ok {
 			panic("expected to get an of object of type appsv1.Deployment")
 		}
 
-		_, found := clusterOperator.GetLabels()[providerLabelKey]
-
-		return found
+		return r.getProviderName(deployment) != ""
 	}
 
 	return predicate.Funcs{
