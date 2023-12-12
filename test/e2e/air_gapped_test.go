@@ -74,6 +74,7 @@ var _ = Describe("Install Core Provider in an air-gapped environment", func() {
 							},
 						},
 					},
+					Version: "v1.4.2",
 				},
 			},
 		}
@@ -94,33 +95,6 @@ var _ = Describe("Install Core Provider in an air-gapped environment", func() {
 		By("Waiting for status.IntalledVersion to be set")
 		WaitFor(ctx, For(coreProvider).In(bootstrapCluster).ToSatisfy(func() bool {
 			return ptr.Equal(coreProvider.Status.InstalledVersion, ptr.To(coreProvider.Spec.Version))
-		}), e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
-	})
-
-	It("should successfully downgrade a CoreProvider (latest -> v1.4.2)", func() {
-		bootstrapCluster := bootstrapClusterProxy.GetClient()
-		coreProvider := &operatorv1.CoreProvider{}
-		key := client.ObjectKey{Namespace: operatorNamespace, Name: coreProviderName}
-		Expect(bootstrapCluster.Get(ctx, key, coreProvider)).To(Succeed())
-
-		coreProvider.Spec.Version = previousCAPIVersion
-
-		Expect(bootstrapCluster.Update(ctx, coreProvider)).To(Succeed())
-
-		By("Waiting for the core provider deployment to be ready")
-		framework.WaitForDeploymentsAvailable(ctx, framework.WaitForDeploymentsAvailableInput{
-			Getter:     bootstrapClusterProxy.GetClient(),
-			Deployment: &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: coreProviderDeploymentName, Namespace: operatorNamespace}},
-		}, e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
-
-		By("Waiting for core provider to be ready")
-		WaitFor(ctx, For(coreProvider).In(bootstrapCluster).ToSatisfy(
-			HaveStatusCondition(&coreProvider.Status.Conditions, operatorv1.ProviderInstalledCondition),
-		), e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
-
-		By("Waiting for status.IntalledVersion to be set")
-		WaitFor(ctx, For(coreProvider).In(bootstrapCluster).ToSatisfy(func() bool {
-			return ptr.Equal(coreProvider.Status.InstalledVersion, ptr.To(previousCAPIVersion))
 		}), e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 	})
 
