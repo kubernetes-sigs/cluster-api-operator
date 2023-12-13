@@ -57,7 +57,12 @@ func customizeObjectsFn(provider operatorv1.GenericProvider) func(objs []unstruc
 
 			if o.GetNamespace() != "" {
 				// only set the ownership on namespaced objects.
-				o.SetOwnerReferences(util.EnsureOwnerRef(provider.GetOwnerReferences(),
+				ownerReferences := o.GetOwnerReferences()
+				if ownerReferences == nil {
+					ownerReferences = []metav1.OwnerReference{}
+				}
+
+				o.SetOwnerReferences(util.EnsureOwnerRef(ownerReferences,
 					metav1.OwnerReference{
 						APIVersion: operatorv1.GroupVersion.String(),
 						Kind:       provider.GetObjectKind().GroupVersionKind().Kind,
