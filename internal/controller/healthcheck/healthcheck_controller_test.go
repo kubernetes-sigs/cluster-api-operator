@@ -28,7 +28,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
-	"sigs.k8s.io/cluster-api-operator/internal/controller/genericprovider"
 )
 
 const (
@@ -73,7 +72,7 @@ spec:
 	testCurrentVersion = "v0.4.2"
 )
 
-func insertDummyConfig(provider genericprovider.GenericProvider) {
+func insertDummyConfig(provider operatorv1.GenericProvider) {
 	spec := provider.GetSpec()
 	spec.FetchConfig = &operatorv1.FetchConfiguration{
 		Selector: &metav1.LabelSelector{
@@ -122,15 +121,13 @@ func TestReconcilerReadyConditions(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			g := NewWithT(t)
 
-			provider := &genericprovider.CoreProviderWrapper{
-				CoreProvider: &operatorv1.CoreProvider{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "cluster-api",
-					},
-					Spec: operatorv1.CoreProviderSpec{
-						ProviderSpec: operatorv1.ProviderSpec{
-							Version: testCurrentVersion,
-						},
+			provider := &operatorv1.CoreProvider{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "cluster-api",
+				},
+				Spec: operatorv1.CoreProviderSpec{
+					ProviderSpec: operatorv1.ProviderSpec{
+						Version: testCurrentVersion,
 					},
 				},
 			}
@@ -142,7 +139,7 @@ func TestReconcilerReadyConditions(t *testing.T) {
 			insertDummyConfig(provider)
 			provider.SetNamespace(namespace)
 
-			g.Expect(env.CreateAndWait(ctx, provider.GetObject())).To(Succeed())
+			g.Expect(env.CreateAndWait(ctx, provider)).To(Succeed())
 
 			g.Eventually(func() bool {
 				deployment := &appsv1.Deployment{}
@@ -169,7 +166,7 @@ func TestReconcilerReadyConditions(t *testing.T) {
 			}, timeout).Should(BeTrue())
 
 			g.Eventually(func() bool {
-				if err := env.Get(ctx, client.ObjectKeyFromObject(provider.GetObject()), provider.GetObject()); err != nil {
+				if err := env.Get(ctx, client.ObjectKeyFromObject(provider), provider); err != nil {
 					return false
 				}
 
@@ -185,7 +182,7 @@ func TestReconcilerReadyConditions(t *testing.T) {
 				return false
 			}, timeout).Should(BeTrue())
 
-			objs := []client.Object{provider.GetObject()}
+			objs := []client.Object{provider}
 
 			objs = append(objs, &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{

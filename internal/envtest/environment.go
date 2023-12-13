@@ -109,6 +109,10 @@ func New(uncachedObjs ...client.Object) *Environment {
 		crdPaths = append(crdPaths, capiPath)
 	}
 
+	if err := operatorv1.AddToScheme(scheme.Scheme); err != nil {
+		klog.Fatalf("Failed to set scheme for manager: %v", err)
+	}
+
 	// Create the test environment.
 	env := &envtest.Environment{
 		Scheme:                scheme.Scheme,

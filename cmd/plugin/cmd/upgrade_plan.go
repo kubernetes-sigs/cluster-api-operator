@@ -26,7 +26,7 @@ import (
 	"github.com/spf13/cobra"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 
-	"sigs.k8s.io/cluster-api-operator/internal/controller/genericprovider"
+	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
 )
 
 type upgradePlanOptions struct {
@@ -50,7 +50,7 @@ type upgradePlan struct {
 
 // upgradeItem defines a possible upgrade target for a provider in the management cluster.
 type upgradeItem struct {
-	genericprovider.GenericProvider
+	operatorv1.GenericProvider
 	NextVersion string
 }
 

@@ -504,9 +504,9 @@ func (p *phaseReconciler) delete(ctx context.Context) (reconcile.Result, error) 
 	return reconcile.Result{}, wrapPhaseError(err, operatorv1.OldComponentsDeletionErrorReason)
 }
 
-func clusterctlProviderName(provider genericprovider.GenericProvider) client.ObjectKey {
+func clusterctlProviderName(provider operatorv1.GenericProvider) client.ObjectKey {
 	prefix := ""
-	switch provider.GetObject().(type) {
+	switch provider.(type) {
 	case *operatorv1.BootstrapProvider:
 		prefix = "bootstrap-"
 	case *operatorv1.ControlPlaneProvider:

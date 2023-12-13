@@ -26,7 +26,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
-	"sigs.k8s.io/cluster-api-operator/internal/controller/genericprovider"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/patch"
@@ -94,7 +93,7 @@ func (r *ProviderHealthCheckReconciler) Reconcile(ctx context.Context, req recon
 	}
 
 	// Initialize the patch helper
-	patchHelper, err := patch.NewHelper(typedProvider.GetObject(), r.Client)
+	patchHelper, err := patch.NewHelper(typedProvider, r.Client)
 	if err != nil {
 		return result, err
 	}
@@ -120,10 +119,10 @@ func (r *ProviderHealthCheckReconciler) Reconcile(ctx context.Context, req recon
 
 	options := patch.WithOwnedConditions{Conditions: []clusterv1.ConditionType{clusterv1.ReadyCondition}}
 
-	return result, patchHelper.Patch(ctx, typedProvider.GetObject(), options)
+	return result, patchHelper.Patch(ctx, typedProvider, options)
 }
 
-func (r *ProviderHealthCheckReconciler) getGenericProvider(ctx context.Context, providerKind, providerName, providerNamespace string) (genericprovider.GenericProvider, error) {
+func (r *ProviderHealthCheckReconciler) getGenericProvider(ctx context.Context, providerKind, providerName, providerNamespace string) (operatorv1.GenericProvider, error) {
 	switch providerKind {
 	case "CoreProvider":
 		provider := &operatorv1.CoreProvider{}
@@ -131,35 +130,35 @@ func (r *ProviderHealthCheckReconciler) getGenericProvider(ctx context.Context, 
 			return nil, err
 		}
 
-		return &genericprovider.CoreProviderWrapper{CoreProvider: provider}, nil
+		return provider, nil
 	case "BootstrapProvider":
 		provider := &operatorv1.BootstrapProvider{}
 		if err := r.Client.Get(ctx, types.NamespacedName{Name: providerName, Namespace: providerNamespace}, provider); err != nil {
 			return nil, err
 		}
 
-		return &genericprovider.BootstrapProviderWrapper{BootstrapProvider: provider}, nil
+		return provider, nil
 	case "ControlPlaneProvider":
 		provider := &operatorv1.ControlPlaneProvider{}
 		if err := r.Client.Get(ctx, types.NamespacedName{Name: providerName, Namespace: providerNamespace}, provider); err != nil {
 			return nil, err
 		}
 
-		return &genericprovider.ControlPlaneProviderWrapper{ControlPlaneProvider: provider}, nil
+		return provider, nil
 	case "InfrastructureProvider":
 		provider := &operatorv1.InfrastructureProvider{}
 		if err := r.Client.Get(ctx, types.NamespacedName{Name: providerName, Namespace: providerNamespace}, provider); err != nil {
 			return nil, err
 		}
 
-		return &genericprovider.InfrastructureProviderWrapper{InfrastructureProvider: provider}, nil
+		return provider, nil
 	case "AddonProvider":
 		provider := &operatorv1.AddonProvider{}
 		if err := r.Client.Get(ctx, types.NamespacedName{Name: providerName, Namespace: providerNamespace}, provider); err != nil {
 			return nil, err
 		}
 
-		return &genericprovider.AddonProviderWrapper{AddonProvider: provider}, nil
+		return provider, nil
 	default:
 		return nil, fmt.Errorf("failed to cast interface for type: %s", providerKind)
 	}

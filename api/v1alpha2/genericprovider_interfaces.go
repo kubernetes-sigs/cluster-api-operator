@@ -14,19 +14,27 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package genericprovider
+package v1alpha2
 
 import (
-	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/cluster-api/util/conditions"
 )
 
+// GenericProvider interface describes operations applicable to the provider type.
+//
+// +kubebuilder:object:generate=false
 type GenericProvider interface {
-	client.Object
-	operatorv1.GenericProvider
+	conditions.Setter
+	GetSpec() ProviderSpec
+	SetSpec(in ProviderSpec)
+	GetStatus() ProviderStatus
+	SetStatus(in ProviderStatus)
+	GetType() string
 }
 
+// GenericProviderList interface describes operations applicable to the provider list type.
+//
+// +kubebuilder:object:generate=false
 type GenericProviderList interface {
-	client.ObjectList
-	operatorv1.GenericProviderList
+	GetItems() []GenericProvider
 }

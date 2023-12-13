@@ -25,7 +25,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
-	"sigs.k8s.io/cluster-api-operator/internal/controller/genericprovider"
 )
 
 func TestManifestsDownloader(t *testing.T) {
@@ -39,16 +38,14 @@ func TestManifestsDownloader(t *testing.T) {
 
 	p := &phaseReconciler{
 		ctrlClient: fakeclient,
-		provider: &genericprovider.CoreProviderWrapper{
-			CoreProvider: &operatorv1.CoreProvider{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "cluster-api",
-					Namespace: namespace,
-				},
-				Spec: operatorv1.CoreProviderSpec{
-					ProviderSpec: operatorv1.ProviderSpec{
-						Version: "v1.4.3",
-					},
+		provider: &operatorv1.CoreProvider{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "cluster-api",
+				Namespace: namespace,
+			},
+			Spec: operatorv1.CoreProviderSpec{
+				ProviderSpec: operatorv1.ProviderSpec{
+					Version: "v1.4.3",
 				},
 			},
 		},

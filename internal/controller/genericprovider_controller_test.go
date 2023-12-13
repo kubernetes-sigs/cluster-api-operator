@@ -17,7 +17,6 @@ limitations under the License.
 package controller
 
 import (
-	"reflect"
 	"testing"
 
 	. "github.com/onsi/gomega"
@@ -114,15 +113,13 @@ func TestReconcilerPreflightConditions(t *testing.T) {
 			name:      "preflight conditions for CoreProvider",
 			namespace: "test-core-provider",
 			providers: []genericprovider.GenericProvider{
-				&genericprovider.CoreProviderWrapper{
-					CoreProvider: &operatorv1.CoreProvider{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: "cluster-api",
-						},
-						Spec: operatorv1.CoreProviderSpec{
-							ProviderSpec: operatorv1.ProviderSpec{
-								Version: testCurrentVersion,
-							},
+				&operatorv1.CoreProvider{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "cluster-api",
+					},
+					Spec: operatorv1.CoreProviderSpec{
+						ProviderSpec: operatorv1.ProviderSpec{
+							Version: testCurrentVersion,
 						},
 					},
 				},
@@ -132,37 +129,33 @@ func TestReconcilerPreflightConditions(t *testing.T) {
 			name:      "preflight conditions for ControlPlaneProvider",
 			namespace: "test-cp-provider",
 			providers: []genericprovider.GenericProvider{
-				&genericprovider.CoreProviderWrapper{
-					CoreProvider: &operatorv1.CoreProvider{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: "cluster-api",
+				&operatorv1.CoreProvider{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "cluster-api",
+					},
+					Spec: operatorv1.CoreProviderSpec{
+						ProviderSpec: operatorv1.ProviderSpec{
+							Version: testCurrentVersion,
 						},
-						Spec: operatorv1.CoreProviderSpec{
-							ProviderSpec: operatorv1.ProviderSpec{
-								Version: testCurrentVersion,
-							},
-						},
-						Status: operatorv1.CoreProviderStatus{
-							ProviderStatus: operatorv1.ProviderStatus{
-								Conditions: []clusterv1.Condition{
-									{
-										Type:   clusterv1.ReadyCondition,
-										Status: corev1.ConditionTrue,
-									},
+					},
+					Status: operatorv1.CoreProviderStatus{
+						ProviderStatus: operatorv1.ProviderStatus{
+							Conditions: []clusterv1.Condition{
+								{
+									Type:   clusterv1.ReadyCondition,
+									Status: corev1.ConditionTrue,
 								},
 							},
 						},
 					},
 				},
-				&genericprovider.ControlPlaneProviderWrapper{
-					ControlPlaneProvider: &operatorv1.ControlPlaneProvider{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: "kubeadm",
-						},
-						Spec: operatorv1.ControlPlaneProviderSpec{
-							ProviderSpec: operatorv1.ProviderSpec{
-								Version: testCurrentVersion,
-							},
+				&operatorv1.ControlPlaneProvider{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "kubeadm",
+					},
+					Spec: operatorv1.ControlPlaneProviderSpec{
+						ProviderSpec: operatorv1.ProviderSpec{
+							Version: testCurrentVersion,
 						},
 					},
 				},
@@ -183,12 +176,12 @@ func TestReconcilerPreflightConditions(t *testing.T) {
 				insertDummyConfig(p)
 				p.SetNamespace(tc.namespace)
 				t.Log("creating test provider", p.GetName())
-				g.Expect(env.CreateAndWait(ctx, p.GetObject())).To(Succeed())
+				g.Expect(env.CreateAndWait(ctx, p)).To(Succeed())
 			}
 
 			g.Eventually(func() bool {
 				for _, p := range tc.providers {
-					if err := env.Get(ctx, client.ObjectKeyFromObject(p.GetObject()), p.GetObject()); err != nil {
+					if err := env.Get(ctx, client.ObjectKeyFromObject(p), p); err != nil {
 						return false
 					}
 
@@ -207,7 +200,7 @@ func TestReconcilerPreflightConditions(t *testing.T) {
 
 			objs := []client.Object{}
 			for _, p := range tc.providers {
-				objs = append(objs, p.GetObject())
+				objs = append(objs, p)
 			}
 
 			objs = append(objs, &corev1.ConfigMap{
@@ -245,15 +238,13 @@ func TestUpgradeDowngradeProvider(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			g := NewWithT(t)
 
-			provider := &genericprovider.CoreProviderWrapper{
-				CoreProvider: &operatorv1.CoreProvider{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "cluster-api",
-					},
-					Spec: operatorv1.CoreProviderSpec{
-						ProviderSpec: operatorv1.ProviderSpec{
-							Version: testCurrentVersion,
-						},
+			provider := &operatorv1.CoreProvider{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "cluster-api",
+				},
+				Spec: operatorv1.CoreProviderSpec{
+					ProviderSpec: operatorv1.ProviderSpec{
+						Version: testCurrentVersion,
 					},
 				},
 			}
@@ -268,10 +259,10 @@ func TestUpgradeDowngradeProvider(t *testing.T) {
 			insertDummyConfig(provider)
 			provider.SetNamespace(namespace)
 			t.Log("creating test provider", provider.GetName())
-			g.Expect(env.CreateAndWait(ctx, provider.GetObject())).To(Succeed())
+			g.Expect(env.CreateAndWait(ctx, provider)).To(Succeed())
 
 			g.Eventually(func() bool {
-				if err := env.Get(ctx, client.ObjectKeyFromObject(provider.GetObject()), provider.GetObject()); err != nil {
+				if err := env.Get(ctx, client.ObjectKeyFromObject(provider), provider); err != nil {
 					return false
 				}
 
@@ -309,10 +300,10 @@ func TestUpgradeDowngradeProvider(t *testing.T) {
 			labels["provider-version"] = tc.newVersion
 			provider.SetLabels(labels)
 
-			g.Expect(env.Client.Update(ctx, provider.GetObject())).To(Succeed())
+			g.Expect(env.Client.Update(ctx, provider)).To(Succeed())
 
 			g.Eventually(func() bool {
-				if err := env.Get(ctx, client.ObjectKeyFromObject(provider.GetObject()), provider.GetObject()); err != nil {
+				if err := env.Get(ctx, client.ObjectKeyFromObject(provider), provider); err != nil {
 					return false
 				}
 
@@ -337,7 +328,7 @@ func TestUpgradeDowngradeProvider(t *testing.T) {
 			}, timeout).Should(BeEquivalentTo(true))
 
 			// Clean up
-			objs := []client.Object{provider.GetObject()}
+			objs := []client.Object{provider}
 			objs = append(objs, &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      testCurrentVersion,
@@ -353,112 +344,6 @@ func TestUpgradeDowngradeProvider(t *testing.T) {
 			})
 
 			g.Expect(env.CleanupAndWait(ctx, objs...)).To(Succeed())
-		})
-	}
-}
-
-func TestNewGenericProvider(t *testing.T) {
-	testCases := []struct {
-		name         string
-		provider     client.Object
-		expectError  bool
-		expectedType genericprovider.GenericProvider
-	}{
-		{
-			name:         "create new generic provider from core provider",
-			provider:     &operatorv1.CoreProvider{},
-			expectedType: &genericprovider.CoreProviderWrapper{},
-		},
-		{
-			name:         "create new generic provider from bootstrap provider",
-			provider:     &operatorv1.BootstrapProvider{},
-			expectedType: &genericprovider.BootstrapProviderWrapper{},
-		},
-		{
-			name:         "create new generic provider from control plane provider",
-			provider:     &operatorv1.ControlPlaneProvider{},
-			expectedType: &genericprovider.ControlPlaneProviderWrapper{},
-		},
-		{
-			name:         "create new generic provider from infrastructure plane provider",
-			provider:     &operatorv1.InfrastructureProvider{},
-			expectedType: &genericprovider.InfrastructureProviderWrapper{},
-		},
-		{
-			name:        "fail to create new generic provider",
-			provider:    &corev1.Pod{},
-			expectError: true,
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			g := NewWithT(t)
-			r := GenericProviderReconciler{
-				Provider: tc.provider,
-			}
-
-			genericProvider, err := r.newGenericProvider()
-			if tc.expectError {
-				g.Expect(err).To(HaveOccurred())
-			} else {
-				g.Expect(err).ToNot(HaveOccurred())
-				g.Expect(reflect.TypeOf(genericProvider)).To(Equal(reflect.TypeOf(tc.expectedType)))
-				g.Expect(genericProvider.GetObject()).ToNot(BeIdenticalTo(tc.provider))
-			}
-		})
-	}
-}
-
-func TestNewGenericProviderList(t *testing.T) {
-	testCases := []struct {
-		name         string
-		providerList client.ObjectList
-		expectError  bool
-		expectedType genericprovider.GenericProviderList
-	}{
-		{
-			name:         "create new generic provider from core provider",
-			providerList: &operatorv1.CoreProviderList{},
-			expectedType: &genericprovider.CoreProviderListWrapper{},
-		},
-		{
-			name:         "create new generic provider from bootstrap provider",
-			providerList: &operatorv1.BootstrapProviderList{},
-			expectedType: &genericprovider.BootstrapProviderListWrapper{},
-		},
-		{
-			name:         "create new generic provider from control plane provider",
-			providerList: &operatorv1.ControlPlaneProviderList{},
-			expectedType: &genericprovider.ControlPlaneProviderListWrapper{},
-		},
-		{
-			name:         "create new generic provider from infrastructure plane provider",
-			providerList: &operatorv1.InfrastructureProviderList{},
-			expectedType: &genericprovider.InfrastructureProviderListWrapper{},
-		},
-		{
-			name:         "fail to create new generic provider",
-			providerList: &corev1.PodList{},
-			expectError:  true,
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			g := NewWithT(t)
-			r := GenericProviderReconciler{
-				ProviderList: tc.providerList,
-			}
-
-			genericProviderList, err := r.newGenericProviderList()
-			if tc.expectError {
-				g.Expect(err).To(HaveOccurred())
-			} else {
-				g.Expect(err).ToNot(HaveOccurred())
-				g.Expect(reflect.TypeOf(genericProviderList)).To(Equal(reflect.TypeOf(tc.expectedType)))
-				g.Expect(genericProviderList.GetObject()).ToNot(BeIdenticalTo(tc.providerList))
-			}
 		})
 	}
 }
@@ -558,42 +443,48 @@ func TestProviderSpecChanges(t *testing.T) {
 			updatedSpecHash, err := calculateHash(tc.updatedSpec)
 			g.Expect(err).ToNot(HaveOccurred())
 
-			provider := &genericprovider.CoreProviderWrapper{
-				CoreProvider: &operatorv1.CoreProvider{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "cluster-api",
-					},
-					Spec: operatorv1.CoreProviderSpec{
-						ProviderSpec: tc.spec,
-					},
+			provider := &operatorv1.CoreProvider{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "cluster-api",
+				},
+				Spec: operatorv1.CoreProviderSpec{
+					ProviderSpec: tc.spec,
 				},
 			}
 
 			namespace := "test-provider-spec-changes"
 
-			t.Log("Ensure namespace exists", namespace)
-			g.Expect(env.EnsureNamespaceExists(ctx, namespace)).To(Succeed())
+			ns, err := env.CreateNamespace(ctx, namespace)
+			t.Log("Ensure namespace exists", ns.Name)
+			g.Expect(err).ToNot(HaveOccurred())
 
-			g.Expect(env.CreateAndWait(ctx, dummyConfigMap(namespace, testCurrentVersion))).To(Succeed())
+			g.Expect(env.CreateAndWait(ctx, dummyConfigMap(ns.Name, testCurrentVersion))).To(Succeed())
 
-			provider.SetNamespace(namespace)
+			provider.SetNamespace(ns.Name)
 			t.Log("creating test provider", provider.GetName())
-			g.Expect(env.CreateAndWait(ctx, provider.GetObject())).To(Succeed())
+			g.Expect(env.CreateAndWait(ctx, provider.DeepCopy())).To(Succeed())
 
 			g.Eventually(generateExpectedResultChecker(provider, specHash, corev1.ConditionTrue), timeout).Should(BeEquivalentTo(true))
 
-			// Change provider spec
-			provider.SetSpec(tc.updatedSpec)
+			g.Eventually(func() error {
+				if err := env.Client.Get(ctx, client.ObjectKeyFromObject(provider), provider); err != nil {
+					return err
+				}
 
-			// Set a label to ensure that provider was changed
-			labels := provider.GetLabels()
-			if labels == nil {
-				labels = map[string]string{}
-			}
-			labels["my-label"] = "some-value"
-			provider.SetLabels(labels)
+				// Change provider spec
+				provider.SetSpec(tc.updatedSpec)
 
-			g.Expect(env.Client.Update(ctx, provider.GetObject())).To(Succeed())
+				// Set a label to ensure that provider was changed
+				labels := provider.GetLabels()
+				if labels == nil {
+					labels = map[string]string{}
+				}
+				labels["my-label"] = "some-value"
+				provider.SetLabels(labels)
+				provider.SetManagedFields(nil)
+
+				return env.Client.Update(ctx, provider)
+			}).Should(Succeed())
 
 			if !tc.expectError {
 				g.Eventually(generateExpectedResultChecker(provider, updatedSpecHash, corev1.ConditionTrue), timeout).Should(BeEquivalentTo(true))
@@ -602,22 +493,14 @@ func TestProviderSpecChanges(t *testing.T) {
 			}
 
 			// Clean up
-			objs := []client.Object{provider.GetObject()}
-			objs = append(objs, &corev1.ConfigMap{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      testCurrentVersion,
-					Namespace: namespace,
-				},
-			})
-
-			g.Expect(env.CleanupAndWait(ctx, objs...)).To(Succeed())
+			g.Expect(env.Cleanup(ctx, provider, ns)).To(Succeed())
 		})
 	}
 }
 
-func generateExpectedResultChecker(provider *genericprovider.CoreProviderWrapper, specHash string, condStatus corev1.ConditionStatus) func() bool {
+func generateExpectedResultChecker(provider genericprovider.GenericProvider, specHash string, condStatus corev1.ConditionStatus) func() bool {
 	return func() bool {
-		if err := env.Get(ctx, client.ObjectKeyFromObject(provider.GetObject()), provider.GetObject()); err != nil {
+		if err := env.Get(ctx, client.ObjectKeyFromObject(provider), provider); err != nil {
 			return false
 		}
 
