@@ -242,7 +242,7 @@ kubectl delete infrastructureprovider azure
 
 ## Overview
 
-The Cluster API Operator introduces new API types: `CoreProvider`, `BootstrapProvider`, `ControlPlaneProvider`, and `InfrastructureProvider`. These four provider types share common Spec and Status types, `ProviderSpec` and `ProviderStatus`, respectively.
+The Cluster API Operator introduces new API types: `CoreProvider`, `BootstrapProvider`, `ControlPlaneProvider`, `InfrastructureProvider`, and `AddonProvider`. These five provider types share common Spec and Status types, `ProviderSpec` and `ProviderStatus`, respectively.
 
 The CRDs are scoped to be namespaced, allowing RBAC restrictions to be enforced if needed. This scoping also enables the installation of multiple versions of controllers (grouped within namespaces) in the same management cluster. 
 
@@ -296,7 +296,18 @@ type InfrastructureProvider struct {
 }
 ```
 
-The following sections provide details about `ProviderSpec` and `ProviderStatus`, which are shared among all the provider types: Core, Bootstrap, ControlPlane, and Infrastructure.
+*AddonProvider*
+```golang
+type AddonProvider struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+
+	Spec   AddonProviderSpec   `json:"spec,omitempty"`
+	Status AddonProviderStatus `json:"status,omitempty"`
+}
+```
+
+The following sections provide details about `ProviderSpec` and `ProviderStatus`, which are shared among all the provider types.
 
 ## Provider Spec
 
