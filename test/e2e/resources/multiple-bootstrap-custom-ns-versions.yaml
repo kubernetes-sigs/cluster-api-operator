@@ -36,7 +36,7 @@ metadata:
     "helm.sh/hook": "post-install"
     "helm.sh/hook-weight": "2"
 spec:
-  version: v1.4.2
+  version: v1.5.4
   configSecret:
     name: test-secret-name
     namespace: test-secret-namespace

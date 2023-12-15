@@ -55,10 +55,10 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 		manifests, err := helmChart.Run(map[string]string{
 			"configSecret.name":      "test-secret-name",
 			"configSecret.namespace": "test-secret-namespace",
-			"core":                   "capi-custom-ns:cluster-api:v1.4.2",
-			"controlPlane":           "kubeadm-control-plane-custom-ns:kubeadm:v1.4.2",
-			"bootstrap":              "kubeadm-bootstrap-custom-ns:kubeadm:v1.4.2",
-			"infrastructure":         "capd-custom-ns:docker:v1.4.2",
+			"core":                   "capi-custom-ns:cluster-api:v1.5.4",
+			"controlPlane":           "kubeadm-control-plane-custom-ns:kubeadm:v1.5.4",
+			"bootstrap":              "kubeadm-bootstrap-custom-ns:kubeadm:v1.5.4",
+			"infrastructure":         "capd-custom-ns:docker:v1.5.4",
 			"addon":                  "helm-custom-ns:helm:v0.1.0-alpha.9",
 		})
 		Expect(err).ToNot(HaveOccurred())
@@ -72,10 +72,10 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 		manifests, err := helmChart.Run(map[string]string{
 			"configSecret.name":      "test-secret-name",
 			"configSecret.namespace": "test-secret-namespace",
-			"core":                   "cluster-api:v1.4.2",
-			"controlPlane":           "kubeadm:v1.4.2",
-			"bootstrap":              "kubeadm:v1.4.2",
-			"infrastructure":         "docker:v1.4.2",
+			"core":                   "cluster-api:v1.5.4",
+			"controlPlane":           "kubeadm:v1.5.4",
+			"bootstrap":              "kubeadm:v1.5.4",
+			"infrastructure":         "docker:v1.5.4",
 			"addon":                  "helm:v0.1.0-alpha.9",
 		})
 		Expect(err).ToNot(HaveOccurred())
@@ -145,7 +145,7 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 		manifests, err := helmChart.Run(map[string]string{
 			"configSecret.name":      "test-secret-name",
 			"configSecret.namespace": "test-secret-namespace",
-			"infrastructure":         "capd-custom-ns:docker:v1.4.2;capz-custom-ns:azure:v1.10.0",
+			"infrastructure":         "capd-custom-ns:docker:v1.5.4;capz-custom-ns:azure:v1.10.0",
 		})
 		Expect(err).ToNot(HaveOccurred())
 		Expect(manifests).ToNot(BeEmpty())
@@ -158,7 +158,7 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 		manifests, err := helmChart.Run(map[string]string{
 			"configSecret.name":      "test-secret-name",
 			"configSecret.namespace": "test-secret-namespace",
-			"controlPlane":           "kubeadm-control-plane-custom-ns:kubeadm:v1.4.2;rke2-control-plane-custom-ns:rke2:v0.3.0",
+			"controlPlane":           "kubeadm-control-plane-custom-ns:kubeadm:v1.5.4;rke2-control-plane-custom-ns:rke2:v0.3.0",
 		})
 		Expect(err).ToNot(HaveOccurred())
 		Expect(manifests).ToNot(BeEmpty())
@@ -171,7 +171,7 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 		manifests, err := helmChart.Run(map[string]string{
 			"configSecret.name":      "test-secret-name",
 			"configSecret.namespace": "test-secret-namespace",
-			"bootstrap":              "kubeadm-bootstrap-custom-ns:kubeadm:v1.4.2;rke2-bootstrap-custom-ns:rke2:v0.3.0",
+			"bootstrap":              "kubeadm-bootstrap-custom-ns:kubeadm:v1.5.4;rke2-bootstrap-custom-ns:rke2:v0.3.0",
 		})
 		Expect(err).ToNot(HaveOccurred())
 		Expect(manifests).ToNot(BeEmpty())
