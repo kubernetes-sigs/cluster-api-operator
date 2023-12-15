@@ -30,8 +30,10 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/klog/v2"
 	operatorv1alpha1 "sigs.k8s.io/cluster-api-operator/api/v1alpha1"
@@ -42,6 +44,7 @@ import (
 	"sigs.k8s.io/cluster-api/test/framework/bootstrap"
 	"sigs.k8s.io/cluster-api/test/framework/clusterctl"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 )
 
@@ -332,6 +335,25 @@ func ensureCertManager(clusterProxy framework.ClusterProxy, config *clusterctl.E
 	_, err = certChart.Run(map[string]string{
 		"installCRDs": "true",
 	})
+}
+
+func deleteClusterAPICRDs(clusterProxy framework.ClusterProxy) {
+	// To get all Cluster API CRDs we need filter them by labels:
+	//   cluster.x-k8s.io/provider: cluster-api
+	//   clusterctl.cluster.x-k8s.io: ""
+	crds := &apiextensionsv1.CustomResourceDefinitionList{}
+	Expect(clusterProxy.GetClient().List(ctx, crds, &client.ListOptions{
+		LabelSelector: labels.SelectorFromSet(
+			map[string]string{
+				"cluster.x-k8s.io/provider":   "cluster-api",
+				"clusterctl.cluster.x-k8s.io": "",
+			},
+		),
+	})).To(Succeed())
+
+	for _, crd := range crds.Items {
+		Expect(clusterProxy.GetClient().Delete(ctx, &crd)).To(Succeed())
+	}
 }
 
 func initHelmChart() {
