@@ -37,6 +37,9 @@ import (
 
 var _ = Describe("Install Core Provider in an air-gapped environment", func() {
 	It("should successfully create config maps with Core Provider manifests", func() {
+		// Ensure that there are no Cluster API installed
+		deleteClusterAPICRDs(bootstrapClusterProxy)
+
 		bootstrapCluster := bootstrapClusterProxy.GetClient()
 		configMaps := []corev1.ConfigMap{}
 
