@@ -14,7 +14,7 @@ data:
     metadata:
       annotations:
         cert-manager.io/inject-ca-from: capi-system/capi-serving-cert
-        controller-gen.kubebuilder.io/version: v0.11.4
+        controller-gen.kubebuilder.io/version: v0.12.0
       labels:
         cluster.x-k8s.io/provider: cluster-api
       name: clusterclasses.cluster.x-k8s.io
@@ -612,6 +612,22 @@ data:
                               More info: http://kubernetes.io/docs/user-guide/labels'
                             type: object
                         type: object
+                      namingStrategy:
+                        description: NamingStrategy allows changing the naming pattern
+                          used when creating the control plane provider object.
+                        properties:
+                          template:
+                            description: 'Template defines the template to use for generating
+                              the name of the ControlPlane object. If not defined, it
+                              will fallback to `{{ .cluster.name }}-{{ .random }}`. If
+                              the templated string exceeds 63 characters, it will be trimmed
+                              to 58 characters and will get concatenated with a random
+                              suffix of length 5. The templating mechanism provides the
+                              following arguments: * `.cluster.name`: The name of the
+                              cluster object. * `.random`: A random alphanumeric string,
+                              without vowels, of length 5.'
+                            type: string
+                        type: object
                       nodeDeletionTimeout:
                         description: 'NodeDeletionTimeout defines how long the controller
                           will attempt to delete the Node that the Machine hosts after
@@ -1181,6 +1197,25 @@ data:
                                 using this MachineDeploymentClass.'
                               format: int32
                               type: integer
+                            namingStrategy:
+                              description: NamingStrategy allows changing the naming pattern
+                                used when creating the MachineDeployment.
+                              properties:
+                                template:
+                                  description: 'Template defines the template to use for
+                                    generating the name of the MachineDeployment object.
+                                    If not defined, it will fallback to `{{ .cluster.name
+                                    }}-{{ .machineDeployment.topologyName }}-{{ .random
+                                    }}`. If the templated string exceeds 63 characters,
+                                    it will be trimmed to 58 characters and will get concatenated
+                                    with a random suffix of length 5. The templating mechanism
+                                    provides the following arguments: * `.cluster.name`:
+                                    The name of the cluster object. * `.random`: A random
+                                    alphanumeric string, without vowels, of length 5.
+                                    * `.machineDeployment.topologyName`: The name of the
+                                    MachineDeployment topology (Cluster.spec.topology.workers.machineDeployments[].name).'
+                                  type: string
+                              type: object
                             nodeDeletionTimeout:
                               description: 'NodeDeletionTimeout defines how long the controller
                                 will attempt to delete the Node that the Machine hosts
@@ -1676,7 +1711,7 @@ data:
     metadata:
       annotations:
         cert-manager.io/inject-ca-from: capi-system/capi-serving-cert
-        controller-gen.kubebuilder.io/version: v0.11.4
+        controller-gen.kubebuilder.io/version: v0.12.0
       labels:
         cluster.x-k8s.io/provider: cluster-api
       name: clusterresourcesetbindings.addons.cluster.x-k8s.io
@@ -1784,7 +1819,7 @@ data:
                     type: array
                 type: object
             type: object
-        served: true
+        served: false
         storage: false
         subresources:
           status: {}
@@ -1976,7 +2011,7 @@ data:
     metadata:
       annotations:
         cert-manager.io/inject-ca-from: capi-system/capi-serving-cert
-        controller-gen.kubebuilder.io/version: v0.11.4
+        controller-gen.kubebuilder.io/version: v0.12.0
       labels:
         cluster.x-k8s.io/provider: cluster-api
       name: clusterresourcesets.addons.cluster.x-k8s.io
@@ -2157,7 +2192,7 @@ data:
                     type: integer
                 type: object
             type: object
-        served: true
+        served: false
         storage: false
         subresources:
           status: {}
@@ -2496,7 +2531,7 @@ data:
     metadata:
       annotations:
         cert-manager.io/inject-ca-from: capi-system/capi-serving-cert
-        controller-gen.kubebuilder.io/version: v0.11.4
+        controller-gen.kubebuilder.io/version: v0.12.0
       labels:
         cluster.x-k8s.io/provider: cluster-api
       name: clusters.cluster.x-k8s.io
@@ -2779,7 +2814,7 @@ data:
                     type: string
                 type: object
             type: object
-        served: true
+        served: false
         storage: false
         subresources:
           status: {}
@@ -3515,10 +3550,10 @@ data:
                             type: integer
                         type: object
                       rolloutAfter:
-                        description: 'RolloutAfter performs a rollout of the entire cluster
+                        description: "RolloutAfter performs a rollout of the entire cluster
                           one component at a time, control plane first and then machine
-                          deployments. Deprecated: This field has no function and is going
-                          to be removed in the next apiVersion.'
+                          deployments. \n Deprecated: This field has no function and is
+                          going to be removed in the next apiVersion."
                         format: date-time
                         type: string
                       variables:
@@ -4004,7 +4039,7 @@ data:
     kind: CustomResourceDefinition
     metadata:
       annotations:
-        controller-gen.kubebuilder.io/version: v0.11.4
+        controller-gen.kubebuilder.io/version: v0.12.0
       labels:
         cluster.x-k8s.io/provider: cluster-api
       name: extensionconfigs.runtime.cluster.x-k8s.io
@@ -4255,7 +4290,7 @@ data:
     kind: CustomResourceDefinition
     metadata:
       annotations:
-        controller-gen.kubebuilder.io/version: v0.11.4
+        controller-gen.kubebuilder.io/version: v0.12.0
       labels:
         cluster.x-k8s.io/provider: cluster-api
       name: ipaddressclaims.ipam.cluster.x-k8s.io
@@ -4391,7 +4426,7 @@ data:
     kind: CustomResourceDefinition
     metadata:
       annotations:
-        controller-gen.kubebuilder.io/version: v0.11.4
+        controller-gen.kubebuilder.io/version: v0.12.0
       labels:
         cluster.x-k8s.io/provider: cluster-api
       name: ipaddresses.ipam.cluster.x-k8s.io
@@ -4495,7 +4530,7 @@ data:
     metadata:
       annotations:
         cert-manager.io/inject-ca-from: capi-system/capi-serving-cert
-        controller-gen.kubebuilder.io/version: v0.11.4
+        controller-gen.kubebuilder.io/version: v0.12.0
       labels:
         cluster.x-k8s.io/provider: cluster-api
       name: machinedeployments.cluster.x-k8s.io
@@ -4796,10 +4831,10 @@ data:
                                   description: 'Kind of the referent. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
                                   type: string
                                 name:
-                                  description: 'Name of the referent. More info: http://kubernetes.io/docs/user-guide/identifiers#names'
+                                  description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names#names'
                                   type: string
                                 uid:
-                                  description: 'UID of the referent. More info: http://kubernetes.io/docs/user-guide/identifiers#uids'
+                                  description: 'UID of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names#uids'
                                   type: string
                               required:
                               - apiVersion
@@ -5009,7 +5044,7 @@ data:
                     type: integer
                 type: object
             type: object
-        served: true
+        served: false
         storage: false
         subresources:
           scale:
@@ -5545,9 +5580,10 @@ data:
                     minLength: 1
                     type: string
                   minReadySeconds:
-                    description: Minimum number of seconds for which a newly created machine
-                      should be ready. Defaults to 0 (machine will be considered available
-                      as soon as it is ready)
+                    description: MinReadySeconds is the minimum number of seconds for
+                      which a Node for a newly created machine should be ready before
+                      considering the replica available. Defaults to 0 (machine will be
+                      considered available as soon as the Node is ready)
                     format: int32
                     type: integer
                   paused:
@@ -5990,7 +6026,7 @@ data:
     metadata:
       annotations:
         cert-manager.io/inject-ca-from: capi-system/capi-serving-cert
-        controller-gen.kubebuilder.io/version: v0.11.4
+        controller-gen.kubebuilder.io/version: v0.12.0
       labels:
         cluster.x-k8s.io/provider: cluster-api
       name: machinehealthchecks.cluster.x-k8s.io
@@ -6269,7 +6305,7 @@ data:
                     type: array
                 type: object
             type: object
-        served: true
+        served: false
         storage: false
         subresources:
           status: {}
@@ -6823,7 +6859,7 @@ data:
     metadata:
       annotations:
         cert-manager.io/inject-ca-from: capi-system/capi-serving-cert
-        controller-gen.kubebuilder.io/version: v0.11.4
+        controller-gen.kubebuilder.io/version: v0.12.0
       labels:
         cluster.x-k8s.io/provider: cluster-api
       name: machinepools.cluster.x-k8s.io
@@ -7065,10 +7101,10 @@ data:
                                   description: 'Kind of the referent. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
                                   type: string
                                 name:
-                                  description: 'Name of the referent. More info: http://kubernetes.io/docs/user-guide/identifiers#names'
+                                  description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names#names'
                                   type: string
                                 uid:
-                                  description: 'UID of the referent. More info: http://kubernetes.io/docs/user-guide/identifiers#uids'
+                                  description: 'UID of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names#uids'
                                   type: string
                               required:
                               - apiVersion
@@ -7393,7 +7429,7 @@ data:
                     type: integer
                 type: object
             type: object
-        served: true
+        served: false
         storage: false
         subresources:
           scale:
@@ -7868,9 +7904,10 @@ data:
                       type: string
                     type: array
                   minReadySeconds:
-                    description: Minimum number of seconds for which a newly created machine
-                      instances should be ready. Defaults to 0 (machine instance will
-                      be considered available as soon as it is ready)
+                    description: 'Minimum number of seconds for which a newly created
+                      machine instances should be ready. Defaults to 0 (machine instance
+                      will be considered available as soon as it is ready) NOTE: No logic
+                      is implemented for this field and it currently has no behaviour.'
                     format: int32
                     type: integer
                   providerIDList:
@@ -8244,7 +8281,7 @@ data:
     metadata:
       annotations:
         cert-manager.io/inject-ca-from: capi-system/capi-serving-cert
-        controller-gen.kubebuilder.io/version: v0.11.4
+        controller-gen.kubebuilder.io/version: v0.12.0
       labels:
         cluster.x-k8s.io/provider: cluster-api
       name: machines.cluster.x-k8s.io
@@ -8609,7 +8646,7 @@ data:
                     type: string
                 type: object
             type: object
-        served: true
+        served: false
         storage: false
         subresources:
           status: {}
@@ -9420,7 +9457,7 @@ data:
     metadata:
       annotations:
         cert-manager.io/inject-ca-from: capi-system/capi-serving-cert
-        controller-gen.kubebuilder.io/version: v0.11.4
+        controller-gen.kubebuilder.io/version: v0.12.0
       labels:
         cluster.x-k8s.io/provider: cluster-api
       name: machinesets.cluster.x-k8s.io
@@ -9659,10 +9696,10 @@ data:
                                   description: 'Kind of the referent. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
                                   type: string
                                 name:
-                                  description: 'Name of the referent. More info: http://kubernetes.io/docs/user-guide/identifiers#names'
+                                  description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names#names'
                                   type: string
                                 uid:
-                                  description: 'UID of the referent. More info: http://kubernetes.io/docs/user-guide/identifiers#uids'
+                                  description: 'UID of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names#uids'
                                   type: string
                               required:
                               - apiVersion
@@ -9880,7 +9917,7 @@ data:
                     type: string
                 type: object
             type: object
-        served: true
+        served: false
         storage: false
         subresources:
           scale:
@@ -10351,8 +10388,9 @@ data:
                     type: string
                   minReadySeconds:
                     description: MinReadySeconds is the minimum number of seconds for
-                      which a newly created machine should be ready. Defaults to 0 (machine
-                      will be considered available as soon as it is ready)
+                      which a Node for a newly created machine should be ready before
+                      considering the replica available. Defaults to 0 (machine will be
+                      considered available as soon as the Node is ready)
                     format: int32
                     type: integer
                   replicas:
@@ -11143,7 +11181,7 @@ data:
           - args:
             - --leader-elect
             - --metrics-bind-addr=localhost:8080
-            - --feature-gates=MachinePool=${EXP_MACHINE_POOL:=false},ClusterResourceSet=${EXP_CLUSTER_RESOURCE_SET:=false},ClusterTopology=${CLUSTER_TOPOLOGY:=false},RuntimeSDK=${EXP_RUNTIME_SDK:=false},LazyRestmapper=${EXP_LAZY_RESTMAPPER:=false}
+            - --feature-gates=MachinePool=${EXP_MACHINE_POOL:=false},ClusterResourceSet=${EXP_CLUSTER_RESOURCE_SET:=false},ClusterTopology=${CLUSTER_TOPOLOGY:=false},RuntimeSDK=${EXP_RUNTIME_SDK:=false},MachineSetPreflightChecks=${EXP_MACHINE_SET_PREFLIGHT_CHECKS:=false}
             command:
             - /manager
             env:
@@ -11159,7 +11197,7 @@ data:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.uid
-            image: registry.k8s.io/cluster-api/cluster-api-controller:v1.4.3
+            image: registry.k8s.io/cluster-api/cluster-api-controller:v1.5.4
             imagePullPolicy: IfNotPresent
             livenessProbe:
               httpGet:
@@ -11729,6 +11767,9 @@ data:
     kind: Metadata
     releaseSeries:
       - major: 1
+        minor: 5
+        contract: v1beta1
+      - major: 1
         minor: 4
         contract: v1beta1
       - major: 1
@@ -11754,6 +11795,6 @@ metadata:
   labels:
     provider.cluster.x-k8s.io/name: cluster-api
     provider.cluster.x-k8s.io/type: core
-    provider.cluster.x-k8s.io/version: v1.4.3
-  name: core-cluster-api-v1.4.3
+    provider.cluster.x-k8s.io/version: v1.5.4
+  name: core-cluster-api-v1.5.4
   namespace: capi-operator-system

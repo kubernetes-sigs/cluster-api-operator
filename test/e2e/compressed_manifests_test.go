@@ -27,7 +27,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	operatorv1alpha1 "sigs.k8s.io/cluster-api-operator/api/v1alpha1"
+	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
 	"sigs.k8s.io/cluster-api/test/framework"
 
 	"k8s.io/utils/ptr"
@@ -49,10 +49,12 @@ var _ = Describe("Create and delete a provider with manifests that don't fit the
 
 	It("should successfully create a CoreProvider", func() {
 		bootstrapCluster := bootstrapClusterProxy.GetClient()
-		coreProvider := &operatorv1alpha1.CoreProvider{ObjectMeta: metav1.ObjectMeta{
-			Name:      coreProviderName,
-			Namespace: operatorNamespace,
-		}}
+		coreProvider := &operatorv1.CoreProvider{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      coreProviderName,
+				Namespace: operatorNamespace,
+			},
+		}
 		Expect(bootstrapCluster.Create(ctx, coreProvider)).To(Succeed())
 
 		By("Waiting for the core provider deployment to be ready")
@@ -63,7 +65,7 @@ var _ = Describe("Create and delete a provider with manifests that don't fit the
 
 		By("Waiting for core provider to be ready")
 		WaitFor(ctx, For(coreProvider).In(bootstrapCluster).ToSatisfy(
-			HaveStatusCondition(&coreProvider.Status.Conditions, operatorv1alpha1.ProviderInstalledCondition),
+			HaveStatusCondition(&coreProvider.Status.Conditions, operatorv1.ProviderInstalledCondition),
 		), e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
 		By("Waiting for status.IntalledVersion to be set")
@@ -74,13 +76,13 @@ var _ = Describe("Create and delete a provider with manifests that don't fit the
 
 	It("should successfully create and delete an InfrastructureProvider for OCI", func() {
 		bootstrapCluster := bootstrapClusterProxy.GetClient()
-		infraProvider := &operatorv1alpha1.InfrastructureProvider{
+		infraProvider := &operatorv1.InfrastructureProvider{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      ociInfrastructureProviderName,
 				Namespace: operatorNamespace,
 			},
-			Spec: operatorv1alpha1.InfrastructureProviderSpec{
-				ProviderSpec: operatorv1alpha1.ProviderSpec{
+			Spec: operatorv1.InfrastructureProviderSpec{
+				ProviderSpec: operatorv1.ProviderSpec{
 					Version: ociInfrastructureProviderVersion,
 				},
 			},
@@ -90,7 +92,7 @@ var _ = Describe("Create and delete a provider with manifests that don't fit the
 
 		By("Waiting for the infrastructure provider to be ready")
 		WaitFor(ctx, For(infraProvider).In(bootstrapCluster).ToSatisfy(
-			HaveStatusCondition(&infraProvider.Status.Conditions, operatorv1alpha1.ProviderInstalledCondition),
+			HaveStatusCondition(&infraProvider.Status.Conditions, operatorv1.ProviderInstalledCondition),
 		), e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
 		By("Waiting for status.IntalledVersion to be set")
@@ -134,14 +136,14 @@ var _ = Describe("Create and delete a provider with manifests that don't fit the
 
 	It("should successfully create and delete an InfrastructureProvider for OCI with custom name from a pre-created ConfigMap", func() {
 		bootstrapCluster := bootstrapClusterProxy.GetClient()
-		infraProvider := &operatorv1alpha1.InfrastructureProvider{
+		infraProvider := &operatorv1.InfrastructureProvider{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      ociInfrastructureProviderCustomName,
 				Namespace: operatorNamespace,
 			},
-			Spec: operatorv1alpha1.InfrastructureProviderSpec{
-				ProviderSpec: operatorv1alpha1.ProviderSpec{
-					FetchConfig: &operatorv1alpha1.FetchConfiguration{
+			Spec: operatorv1.InfrastructureProviderSpec{
+				ProviderSpec: operatorv1.ProviderSpec{
+					FetchConfig: &operatorv1.FetchConfiguration{
 						Selector: &metav1.LabelSelector{
 							MatchLabels: map[string]string{
 								"provider.cluster.x-k8s.io/name": "oci",
@@ -163,7 +165,7 @@ var _ = Describe("Create and delete a provider with manifests that don't fit the
 
 		By("Waiting for the infrastructure provider to be ready")
 		WaitFor(ctx, For(infraProvider).In(bootstrapCluster).ToSatisfy(
-			HaveStatusCondition(&infraProvider.Status.Conditions, operatorv1alpha1.ProviderInstalledCondition)),
+			HaveStatusCondition(&infraProvider.Status.Conditions, operatorv1.ProviderInstalledCondition)),
 			e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
 		By("Waiting for status.IntalledVersion to be set")
@@ -199,7 +201,7 @@ var _ = Describe("Create and delete a provider with manifests that don't fit the
 
 	It("should successfully delete a CoreProvider", func() {
 		bootstrapCluster := bootstrapClusterProxy.GetClient()
-		coreProvider := &operatorv1alpha1.CoreProvider{ObjectMeta: metav1.ObjectMeta{
+		coreProvider := &operatorv1.CoreProvider{ObjectMeta: metav1.ObjectMeta{
 			Name:      coreProviderName,
 			Namespace: operatorNamespace,
 		}}
