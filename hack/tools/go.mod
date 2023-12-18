@@ -5,7 +5,7 @@ go 1.20
 require (
 	github.com/drone/envsubst/v2 v2.0.0-20210730161058-179042472c46
 	github.com/joelanford/go-apidiff v0.7.0
-	github.com/onsi/ginkgo/v2 v2.13.1
+	github.com/onsi/ginkgo/v2 v2.13.2
 	gotest.tools/gotestsum v1.11.0
 	sigs.k8s.io/cluster-api/hack/tools v0.0.0-20230809141950-03ab8cd50a41
 	sigs.k8s.io/controller-runtime/tools/setup-envtest v0.0.0-20211110210527-619e6b92dab9
