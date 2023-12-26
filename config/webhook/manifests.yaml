@@ -114,6 +114,28 @@ webhooks:
     resources:
     - infrastructureproviders
   sideEffects: None
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /mutate-operator-cluster-x-k8s-io-v1alpha2-ipamprovider
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  name: vipamprovider.kb.io
+  rules:
+  - apiGroups:
+    - operator.cluster.x-k8s.io
+    apiVersions:
+    - v1alpha2
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - ipamproviders
+  sideEffects: None
 ---
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
@@ -229,4 +251,26 @@ webhooks:
     - UPDATE
     resources:
     - infrastructureproviders
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /validate-operator-cluster-x-k8s-io-v1alpha2-ipamprovider
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  name: vipamprovider.kb.io
+  rules:
+  - apiGroups:
+    - operator.cluster.x-k8s.io
+    apiVersions:
+    - v1alpha2
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - ipamproviders
   sideEffects: None
