@@ -267,6 +267,50 @@ metadata:
 			e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 	})
 
+	It("should successfully create and delete an IPAMProvider", func() {
+		bootstrapCluster := bootstrapClusterProxy.GetClient()
+		ipamProvider := &operatorv1.IPAMProvider{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      ipamProviderName,
+				Namespace: operatorNamespace,
+			},
+			Spec: operatorv1.IPAMProviderSpec{
+				ProviderSpec: operatorv1.ProviderSpec{
+					FetchConfig: &operatorv1.FetchConfiguration{
+						URL: ipamProviderURL,
+					},
+				},
+			},
+		}
+		deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{
+			Name:      ipamProviderDeploymentName,
+			Namespace: operatorNamespace,
+		}}
+		Expect(bootstrapCluster.Create(ctx, ipamProvider)).To(Succeed())
+
+		By("Waiting for the ipam provider deployment to be ready")
+		framework.WaitForDeploymentsAvailable(ctx, framework.WaitForDeploymentsAvailableInput{
+			Getter:     bootstrapCluster,
+			Deployment: deployment,
+		}, e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
+
+		By("Waiting for the ipam provider to be ready")
+		WaitFor(ctx, For(ipamProvider).In(bootstrapCluster).ToSatisfy(
+			HaveStatusCondition(&ipamProvider.Status.Conditions, operatorv1.ProviderInstalledCondition)),
+			e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
+
+		By("Waiting for status.IntalledVersion to be set")
+		WaitFor(ctx, For(ipamProvider).In(bootstrapCluster).ToSatisfy(func() bool {
+			return ptr.Equal(ipamProvider.Status.InstalledVersion, &ipamProvider.Spec.Version)
+		}), e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
+
+		Expect(bootstrapCluster.Delete(ctx, ipamProvider)).To(Succeed())
+
+		By("Waiting for the ipam provider deployment to be deleted")
+		WaitForDelete(ctx, For(deployment).In(bootstrapCluster),
+			e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
+	})
+
 	It("should successfully upgrade a CoreProvider (v1.5.4 -> latest)", func() {
 		bootstrapCluster := bootstrapClusterProxy.GetClient()
 		coreProvider := &operatorv1.CoreProvider{ObjectMeta: metav1.ObjectMeta{

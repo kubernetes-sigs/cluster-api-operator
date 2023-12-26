@@ -47,5 +47,9 @@ const (
 	addonProviderName           = "helm"
 	addonProviderDeploymentName = "caaph-controller-manager"
 
+	ipamProviderName           = "in-cluster"
+	ipamProviderURL            = "https://github.com/kubernetes-sigs/cluster-api-ipam-provider-in-cluster/releases/latest/ipam-components.yaml"
+	ipamProviderDeploymentName = "caip-in-cluster-controller-manager"
+
 	customManifestsFolder = "resources/"
 )
