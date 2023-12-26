@@ -40,6 +40,8 @@ func ClusterctlProviderType(genericProvider operatorv1.GenericProvider) clusterc
 		return clusterctlv1.BootstrapProviderType
 	case *operatorv1.AddonProvider:
 		return clusterctlv1.AddonProviderType
+	case *operatorv1.IPAMProvider:
+		return clusterctlv1.IPAMProviderType
 	}
 
 	return clusterctlv1.ProviderTypeUnknown

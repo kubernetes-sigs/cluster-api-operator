@@ -260,6 +260,16 @@ func setupReconcilers(mgr ctrl.Manager) {
 		os.Exit(1)
 	}
 
+	if err := (&providercontroller.GenericProviderReconciler{
+		Provider:     &operatorv1.IPAMProvider{},
+		ProviderList: &operatorv1.IPAMProviderList{},
+		Client:       mgr.GetClient(),
+		Config:       mgr.GetConfig(),
+	}).SetupWithManager(mgr, concurrency(concurrencyNumber)); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "IPAMProvider")
+		os.Exit(1)
+	}
+
 	if err := (&healtchcheckcontroller.ProviderHealthCheckReconciler{
 		Client: mgr.GetClient(),
 	}).SetupWithManager(mgr, concurrency(concurrencyNumber)); err != nil {
@@ -291,6 +301,11 @@ func setupWebhooks(mgr ctrl.Manager) {
 
 	if err := (&webhook.AddonProviderWebhook{}).SetupWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "AddonProvider")
+		os.Exit(1)
+	}
+
+	if err := (&webhook.IPAMProviderWebhook{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "IPAMProvider")
 		os.Exit(1)
 	}
 }
