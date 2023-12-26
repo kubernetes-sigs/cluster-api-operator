@@ -31,7 +31,7 @@ type upgradeApplyOptions struct {
 	bootstrapProviders      []string
 	controlPlaneProviders   []string
 	infrastructureProviders []string
-	// ipamProviders             []string
+	ipamProviders           []string
 	// runtimeExtensionProviders []string
 	addonProviders      []string
 	waitProviders       bool
@@ -80,8 +80,8 @@ func init() {
 		"Bootstrap providers instance and versions (e.g. kubeadm:v1.1.5) to upgrade to. This flag can be used as alternative to --contract.")
 	upgradeApplyCmd.Flags().StringSliceVarP(&upgradeApplyOpts.controlPlaneProviders, "control-plane", "c", nil,
 		"ControlPlane providers instance and versions (e.g. kubeadm:v1.1.5) to upgrade to. This flag can be used as alternative to --contract.")
-	// upgradeApplyCmd.Flags().StringSliceVar(&upgradeApplyOpts.ipamProviders, "ipam", nil,
-	//	"IPAM providers and versions (e.g. infoblox:v0.0.1) to upgrade to. This flag can be used as alternative to --contract.")
+	upgradeApplyCmd.Flags().StringSliceVar(&upgradeApplyOpts.ipamProviders, "ipam", nil,
+		"IPAM providers and versions (e.g. infoblox:v0.0.1) to upgrade to. This flag can be used as alternative to --contract.")
 	// upgradeApplyCmd.Flags().StringSliceVar(&upgradeApplyOpts.runtimeExtensionProviders, "runtime-extension", nil,
 	//	"Runtime extension providers and versions (e.g. test:v0.0.1) to upgrade to. This flag can be used as alternative to --contract.")
 	upgradeApplyCmd.Flags().StringSliceVar(&upgradeApplyOpts.addonProviders, "addon", nil,
