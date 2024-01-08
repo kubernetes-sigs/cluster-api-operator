@@ -140,7 +140,7 @@ CONTROLLER_IMG_TAG ?= $(CONTROLLER_IMG)-$(ARCH):$(TAG)
 LDFLAGS := $(shell $(ROOT)/hack/version.sh)
 
 # Default cert-manager version
-CERT_MANAGER_VERSION ?= v1.12.2
+CERT_MANAGER_VERSION ?= v1.13.2
 
 # E2E configuration
 GINKGO_NOCOLOR ?= false
