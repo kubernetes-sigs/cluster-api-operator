@@ -30,7 +30,7 @@ type deleteOptions struct {
 	bootstrapProviders      []string
 	controlPlaneProviders   []string
 	infrastructureProviders []string
-	// ipamProviders             []string
+	ipamProviders           []string
 	// runtimeExtensionProviders []string
 	addonProviders   []string
 	includeNamespace bool
@@ -106,8 +106,8 @@ func init() {
 		"Bootstrap providers and versions (e.g. kubeadm:v1.1.5) to delete from the management cluster")
 	deleteCmd.Flags().StringSliceVarP(&deleteOpts.controlPlaneProviders, "control-plane", "c", nil,
 		"ControlPlane providers and versions (e.g. kubeadm:v1.1.5) to delete from the management cluster")
-	// deleteCmd.Flags().StringSliceVar(&deleteOpts.ipamProviders, "ipam", nil,
-	//	"IPAM providers and versions (e.g. infoblox:v0.0.1) to delete from the management cluster")
+	deleteCmd.Flags().StringSliceVar(&deleteOpts.ipamProviders, "ipam", nil,
+		"IPAM providers and versions (e.g. infoblox:v0.0.1) to delete from the management cluster")
 	// deleteCmd.Flags().StringSliceVar(&deleteOpts.runtimeExtensionProviders, "runtime-extension", nil,
 	//	"Runtime extension providers and versions (e.g. test:v0.0.1) to delete from the management cluster")
 	deleteCmd.Flags().StringSliceVar(&deleteOpts.addonProviders, "addon", nil,

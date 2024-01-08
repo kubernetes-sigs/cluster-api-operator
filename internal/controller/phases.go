@@ -515,6 +515,8 @@ func clusterctlProviderName(provider operatorv1.GenericProvider) client.ObjectKe
 		prefix = "infrastructure-"
 	case *operatorv1.AddonProvider:
 		prefix = "addon-"
+	case *operatorv1.IPAMProvider:
+		prefix = "ipam-"
 	}
 
 	return client.ObjectKey{Name: prefix + provider.GetName(), Namespace: provider.GetNamespace()}

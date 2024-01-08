@@ -159,6 +159,13 @@ func (r *ProviderHealthCheckReconciler) getGenericProvider(ctx context.Context, 
 		}
 
 		return provider, nil
+	case "IPAMProvider":
+		provider := &operatorv1.IPAMProvider{}
+		if err := r.Client.Get(ctx, types.NamespacedName{Name: providerName, Namespace: providerNamespace}, provider); err != nil {
+			return nil, err
+		}
+
+		return provider, nil
 	default:
 		return nil, fmt.Errorf("failed to cast interface for type: %s", providerKind)
 	}
