@@ -14,29 +14,29 @@ spec:
         os: darwin
         arch: amd64
     {{addURIAndSha "https://github.com/kubernetes-sigs/cluster-api-operator/releases/download/{{ .TagName }}/clusterctl-operator_{{ .TagName }}_darwin_amd64.tar.gz" .TagName }}
-    bin: clusterctl-operator
+    bin: bin/clusterctl-operator
   - selector:
       matchLabels:
         os: darwin
         arch: arm64
     {{addURIAndSha "https://github.com/kubernetes-sigs/cluster-api-operator/releases/download/{{ .TagName }}/clusterctl-operator_{{ .TagName }}_darwin_arm64.tar.gz" .TagName }}
-    bin: clusterctl-operator
+    bin: bin/clusterctl-operator
   - selector:
       matchLabels:
         os: linux
         arch: amd64
     {{addURIAndSha "https://github.com/kubernetes-sigs/cluster-api-operator/releases/download/{{ .TagName }}/clusterctl-operator_{{ .TagName }}_linux_amd64.tar.gz" .TagName }}
-    bin: clusterctl-operator
+    bin: bin/clusterctl-operator
   - selector:
       matchLabels:
         os: linux
         arch: arm64
     {{addURIAndSha "https://github.com/kubernetes-sigs/cluster-api-operator/releases/download/{{ .TagName }}/clusterctl-operator_{{ .TagName }}_linux_arm64.tar.gz" .TagName }}
-    bin: clusterctl-operator
+    bin: bin/clusterctl-operator
   - selector:
       matchLabels:
         os: windows
         arch: amd64
     {{addURIAndSha "https://github.com/kubernetes-sigs/cluster-api-operator/releases/download/{{ .TagName }}/clusterctl-operator_{{ .TagName }}_windows_amd64.tar.gz" .TagName }}
-    bin: clusterctl-operator.exe
+    bin: bin/clusterctl-operator.exe
 

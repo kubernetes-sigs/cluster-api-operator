@@ -15,34 +15,34 @@ spec:
         arch: amd64
     uri: https://github.com/kubernetes-sigs/cluster-api-operator/releases/download/v0.8.0/clusterctl-operator_v0.8.0_darwin_amd64.tar.gz
     sha256: 98c1a85ff35cc0df1208c30fa2059cbc5a881d58ca13a4af5ca7f49e25fcb121
-    bin: clusterctl-operator
+    bin: bin/clusterctl-operator
   - selector:
       matchLabels:
         os: darwin
         arch: arm64
     uri: https://github.com/kubernetes-sigs/cluster-api-operator/releases/download/v0.8.0/clusterctl-operator_v0.8.0_darwin_arm64.tar.gz
     sha256: 93e7f0e3a0fbd30f132b167eff8f4b5f30e2a0dcc4efdd638eeeb98cb2eb6038
-    bin: clusterctl-operator
+    bin: bin/clusterctl-operator
   - selector:
       matchLabels:
         os: linux
         arch: amd64
     uri: https://github.com/kubernetes-sigs/cluster-api-operator/releases/download/v0.8.0/clusterctl-operator_v0.8.0_linux_amd64.tar.gz
     sha256: fe78cc5f7ca675b5d865e5fcea0176152e93044b40677814911e7d5546af227f
-    bin: clusterctl-operator
+    bin: bin/clusterctl-operator
   - selector:
       matchLabels:
         os: linux
         arch: arm64
     uri: https://github.com/kubernetes-sigs/cluster-api-operator/releases/download/v0.8.0/clusterctl-operator_v0.8.0_linux_arm64.tar.gz
     sha256: 47e6fb9d9490baf4fe05506f3ba5c7c0905c34813e949a24484885771c36c66c
-    bin: clusterctl-operator
+    bin: bin/clusterctl-operator
   - selector:
       matchLabels:
         os: windows
         arch: amd64
     uri: https://github.com/kubernetes-sigs/cluster-api-operator/releases/download/v0.8.0/clusterctl-operator_v0.8.0_windows_amd64.tar.gz
     sha256: 96e1a0bba6ccc61a7de15ec8c1c0a39c87510ed8a33c093c20e11923258f8668
-    bin: clusterctl-operator.exe
+    bin: bin/clusterctl-operator.exe
 
 
