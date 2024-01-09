@@ -27,4 +27,5 @@ const (
 	githubDomain            = "github.com"
 	gitlabHostPrefix        = "gitlab."
 	gitlabPackagesAPIPrefix = "/api/v4/projects/"
+	configPath              = "/config/clusterctl.yaml"
 )
