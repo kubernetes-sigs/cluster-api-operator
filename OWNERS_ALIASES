@@ -14,6 +14,7 @@ aliases:
   # active folks who can be contacted to perform admin-related
   # tasks on the repo, or otherwise approve any PRS.
   cluster-api-operator-admins:
+  - Danil-Grigorev
   - JoelSpeed
   - Fedosin
   - alexander-demicev
@@ -22,6 +23,7 @@ aliases:
 
   # non-admin folks who have write-access and can approve any PRs in the repo
   cluster-api-operator-maintainers:
+  - Danil-Grigorev
   - JoelSpeed
   - Fedosin
   - alexander-demicev
