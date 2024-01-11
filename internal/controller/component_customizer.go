@@ -29,8 +29,10 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	configv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	"k8s.io/utils/pointer"
-	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util"
+
+	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
 )
 
 const (
@@ -95,6 +97,11 @@ func customizeObjectsFn(provider operatorv1.GenericProvider) func(objs []unstruc
 
 // customizeDeployment customize provider deployment base on provider spec input.
 func customizeDeployment(pSpec operatorv1.ProviderSpec, d *appsv1.Deployment) error {
+	// Ensure that we customize a manager deployment. It must contain "cluster.x-k8s.io/provider" label.
+	if _, ok := d.GetLabels()[clusterv1.ProviderNameLabel]; !ok {
+		return nil
+	}
+
 	// Customize deployment spec first.
 	if pSpec.Deployment != nil {
 		customizeDeploymentSpec(pSpec, d)
