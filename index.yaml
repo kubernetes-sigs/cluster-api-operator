@@ -2,6 +2,21 @@ apiVersion: v1
 entries:
   cluster-api-operator:
   - apiVersion: v2
+    appVersion: 0.8.1
+    created: "2024-01-16T15:24:33.300805+01:00"
+    dependencies:
+    - condition: cert-manager.enabled
+      name: cert-manager
+      repository: https://charts.jetstack.io
+      version: v1.13.2
+    description: Cluster API Operator
+    digest: ae05ef3369efdf0e296aaa149545614a0caf25c9a7eb52deb1c8a6118e7692bd
+    name: cluster-api-operator
+    type: application
+    urls:
+    - https://github.com/kubernetes-sigs/cluster-api-operator/releases/download/v0.8.1/cluster-api-operator-0.8.1.tgz
+    version: 0.8.1
+  - apiVersion: v2
     appVersion: 0.8.0
     created: "2024-01-09T18:52:03.216917+01:00"
     dependencies:
@@ -106,4 +121,4 @@ entries:
     urls:
     - https://github.com/kubernetes-sigs/cluster-api-operator/releases/download/v0.2.0/cluster-api-operator-0.2.0.tgz
     version: 0.2.0
-generated: "2024-01-09T18:52:03.216932+01:00"
+generated: "2024-01-16T15:24:33.300838+01:00"
