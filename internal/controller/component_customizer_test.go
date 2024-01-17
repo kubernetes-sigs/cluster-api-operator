@@ -29,7 +29,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	configv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	"k8s.io/utils/pointer"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
 )
@@ -41,9 +40,6 @@ func TestCustomizeDeployment(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "manager",
 			Namespace: metav1.NamespaceSystem,
-			Labels: map[string]string{
-				clusterv1.ProviderNameLabel: "infra-provider",
-			},
 		},
 		Spec: appsv1.DeploymentSpec{
 			Template: corev1.PodTemplateSpec{
@@ -87,7 +83,6 @@ func TestCustomizeDeployment(t *testing.T) {
 		inputDeploymentSpec    *operatorv1.DeploymentSpec
 		inputManagerSpec       *operatorv1.ManagerSpec
 		expectedDeploymentSpec func(*appsv1.DeploymentSpec) (*appsv1.DeploymentSpec, bool)
-		noDeployementLabels    bool
 	}{
 		{
 			name:                "empty",
@@ -554,16 +549,6 @@ func TestCustomizeDeployment(t *testing.T) {
 
 				return expectedDS, reflect.DeepEqual(inputDS.Template.Spec.Containers[0], expectedDS.Template.Spec.Containers[0])
 			},
-		},
-		{
-			name: "no provider label on the deployment",
-			inputDeploymentSpec: &operatorv1.DeploymentSpec{
-				NodeSelector: map[string]string{"a": "b"},
-			},
-			expectedDeploymentSpec: func(inputDS *appsv1.DeploymentSpec) (*appsv1.DeploymentSpec, bool) {
-				return &managerDepl.Spec, true
-			},
-			noDeployementLabels: true,
 		},
 	}
 
