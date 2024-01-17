@@ -26,7 +26,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/client-go/kubernetes/scheme"
 	configv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	"k8s.io/utils/pointer"
 
@@ -564,6 +566,100 @@ func TestCustomizeDeployment(t *testing.T) {
 
 			if ds, expected := tc.expectedDeploymentSpec(&deployment.Spec); !expected {
 				t.Error(cmp.Diff(ds, deployment.Spec))
+			}
+		})
+	}
+}
+
+func TestCustomizeMultipleDeployment(t *testing.T) {
+	tests := []struct {
+		name                     string
+		nonManagerDeploymentName string
+	}{
+		{
+			name:                     "name without suffix and prefix",
+			nonManagerDeploymentName: "non-manager",
+		},
+		{
+			name:                     "name with prefix",
+			nonManagerDeploymentName: "ca-non-manager",
+		},
+		{
+			name:                     "name with suffix",
+			nonManagerDeploymentName: "non-manager-controller-manager",
+		},
+		{
+			name:                     "empty name",
+			nonManagerDeploymentName: "",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			managerDepl := &appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "cap-controller-manager",
+					Namespace: metav1.NamespaceSystem,
+				},
+				Spec: appsv1.DeploymentSpec{
+					Replicas: pointer.Int32(3),
+				},
+			}
+
+			nonManagerDepl := managerDepl.DeepCopy()
+			nonManagerDepl.Name = tc.nonManagerDeploymentName
+
+			var managerDeplRaw, nonManagerDeplRaw unstructured.Unstructured
+
+			if err := scheme.Scheme.Convert(managerDepl, &managerDeplRaw, nil); err != nil {
+				t.Error(err)
+			}
+
+			if err := scheme.Scheme.Convert(nonManagerDepl, &nonManagerDeplRaw, nil); err != nil {
+				t.Error(err)
+			}
+
+			objs := []unstructured.Unstructured{managerDeplRaw, nonManagerDeplRaw}
+
+			// We want to customize the manager deployment and leave the non-manager deployment alone.
+			// Replicas number will be set to 10 for the manager deployment and 3 for the non-manager deployment.
+			provider := operatorv1.CoreProvider{
+				Spec: operatorv1.CoreProviderSpec{
+					ProviderSpec: operatorv1.ProviderSpec{
+						Deployment: &operatorv1.DeploymentSpec{
+							Replicas: pointer.Int(10),
+						},
+					},
+				},
+			}
+
+			customizationFunc := customizeObjectsFn(&provider)
+
+			objs, err := customizationFunc(objs)
+			if err != nil {
+				t.Error(err)
+			}
+
+			if len(objs) != 2 {
+				t.Errorf("expected 2 objects, got %d", len(objs))
+			}
+
+			if err := scheme.Scheme.Convert(&objs[0], managerDepl, nil); err != nil {
+				t.Error(err)
+			}
+
+			if err := scheme.Scheme.Convert(&objs[1], nonManagerDepl, nil); err != nil {
+				t.Error(err)
+			}
+
+			// manager deployment should have been customized
+			if *managerDepl.Spec.Replicas != 10 {
+				t.Errorf("expected 10 replicas, got %d", *managerDepl.Spec.Replicas)
+			}
+
+			// non-manager deployment should not have been customized
+			if *nonManagerDepl.Spec.Replicas != 3 {
+				t.Errorf("expected 3 replicas, got %d", *nonManagerDepl.Spec.Replicas)
 			}
 		})
 	}

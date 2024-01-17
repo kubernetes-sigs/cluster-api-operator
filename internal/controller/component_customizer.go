@@ -47,6 +47,8 @@ func customizeObjectsFn(provider operatorv1.GenericProvider) func(objs []unstruc
 	return func(objs []unstructured.Unstructured) ([]unstructured.Unstructured, error) {
 		results := []unstructured.Unstructured{}
 
+		isMultipleDeployments := isMultipleDeployments(objs)
+
 		for i := range objs {
 			o := objs[i]
 
@@ -72,6 +74,18 @@ func customizeObjectsFn(provider operatorv1.GenericProvider) func(objs []unstruc
 			}
 
 			if o.GetKind() == deploymentKind {
+				// We need to skip the deployment customization if there are several deployments available
+				// and the deployment name doesn't follow "ca*-controller-manager" pattern.
+				// Currently it is applicable only for CAPZ manifests, which contain 2 deployments:
+				// capz-controller-manager and azureserviceoperator-controller-manager
+				// This is a temporary fix until CAPI provides a contract to distinguish provider deployments.
+				// TODO: replace this check and just compare labels when CAPI provides the contract for that.
+				if isMultipleDeployments && !isProviderManagerDeploymentName(o.GetName()) {
+					results = append(results, o)
+
+					continue
+				}
+
 				d := &appsv1.Deployment{}
 				if err := scheme.Scheme.Convert(&o, d, nil); err != nil {
 					return nil, err
@@ -329,4 +343,24 @@ func leaderElectionArgs(lec *configv1alpha1.LeaderElectionConfiguration, args []
 	}
 
 	return args
+}
+
+// isMultipleDeployments check if there are multiple deployments in the manifests.
+func isMultipleDeployments(objs []unstructured.Unstructured) bool {
+	var numberOfDeployments int
+
+	for i := range objs {
+		o := objs[i]
+
+		if o.GetKind() == deploymentKind {
+			numberOfDeployments++
+		}
+	}
+
+	return numberOfDeployments > 1
+}
+
+// isProviderManagerDeploymentName checks that the provided follows the provider manager deployment name pattern: "ca*-controller-manager".
+func isProviderManagerDeploymentName(name string) bool {
+	return strings.HasPrefix(name, "ca") && strings.HasSuffix(name, "-controller-manager")
 }
