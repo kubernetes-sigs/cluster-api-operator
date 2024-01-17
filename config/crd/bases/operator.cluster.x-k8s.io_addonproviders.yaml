@@ -11,6 +11,8 @@ spec:
     kind: AddonProvider
     listKind: AddonProviderList
     plural: addonproviders
+    shortNames:
+    - caap
     singular: addonprovider
   scope: Namespaced
   versions:

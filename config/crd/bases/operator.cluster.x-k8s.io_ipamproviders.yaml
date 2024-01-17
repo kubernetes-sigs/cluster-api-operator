@@ -11,6 +11,8 @@ spec:
     kind: IPAMProvider
     listKind: IPAMProviderList
     plural: ipamproviders
+    shortNames:
+    - caipamp
     singular: ipamprovider
   scope: Namespaced
   versions:

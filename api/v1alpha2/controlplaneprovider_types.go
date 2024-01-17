@@ -31,6 +31,7 @@ type ControlPlaneProviderStatus struct {
 }
 
 // +kubebuilder:object:root=true
+// +kubebuilder:resource:path=controlplaneproviders,shortName=cacpp,scope=Namespaced
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="InstalledVersion",type="string",JSONPath=".status.installedVersion"
 // +kubebuilder:printcolumn:name="Ready",type="string",JSONPath=".status.conditions[?(@.type=='Ready')].status"

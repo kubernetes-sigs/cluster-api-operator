@@ -11,6 +11,8 @@ spec:
     kind: CoreProvider
     listKind: CoreProviderList
     plural: coreproviders
+    shortNames:
+    - cacp
     singular: coreprovider
   scope: Namespaced
   versions:
