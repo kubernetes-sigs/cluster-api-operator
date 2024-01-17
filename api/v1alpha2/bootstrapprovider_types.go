@@ -56,5 +56,6 @@ type BootstrapProviderList struct {
 }
 
 func init() {
-	objectTypes = append(objectTypes, &BootstrapProvider{}, &BootstrapProviderList{})
+	ProviderLists = append(ProviderLists, &BootstrapProviderList{})
+	Providers = append(Providers, &BootstrapProvider{})
 }
