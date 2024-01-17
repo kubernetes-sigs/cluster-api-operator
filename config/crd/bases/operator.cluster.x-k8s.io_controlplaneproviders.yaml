@@ -11,6 +11,8 @@ spec:
     kind: ControlPlaneProvider
     listKind: ControlPlaneProviderList
     plural: controlplaneproviders
+    shortNames:
+    - cacpp
     singular: controlplaneprovider
   scope: Namespaced
   versions:

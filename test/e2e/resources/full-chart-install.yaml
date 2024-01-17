@@ -27,6 +27,8 @@ spec:
     kind: AddonProvider
     listKind: AddonProviderList
     plural: addonproviders
+    shortNames:
+    - caap
     singular: addonprovider
   scope: Namespaced
   versions:
@@ -1591,6 +1593,8 @@ spec:
     kind: BootstrapProvider
     listKind: BootstrapProviderList
     plural: bootstrapproviders
+    shortNames:
+    - cabp
     singular: bootstrapprovider
   scope: Namespaced
   versions:
@@ -4684,6 +4688,8 @@ spec:
     kind: ControlPlaneProvider
     listKind: ControlPlaneProviderList
     plural: controlplaneproviders
+    shortNames:
+    - cacpp
     singular: controlplaneprovider
   scope: Namespaced
   versions:
@@ -7781,6 +7787,8 @@ spec:
     kind: CoreProvider
     listKind: CoreProviderList
     plural: coreproviders
+    shortNames:
+    - cacp
     singular: coreprovider
   scope: Namespaced
   versions:
@@ -10874,6 +10882,8 @@ spec:
     kind: InfrastructureProvider
     listKind: InfrastructureProviderList
     plural: infrastructureproviders
+    shortNames:
+    - caip
     singular: infrastructureprovider
   scope: Namespaced
   versions:
@@ -13971,6 +13981,8 @@ spec:
     kind: IPAMProvider
     listKind: IPAMProviderList
     plural: ipamproviders
+    shortNames:
+    - caipamp
     singular: ipamprovider
   scope: Namespaced
   versions:

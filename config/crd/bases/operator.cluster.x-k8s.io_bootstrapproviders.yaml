@@ -11,6 +11,8 @@ spec:
     kind: BootstrapProvider
     listKind: BootstrapProviderList
     plural: bootstrapproviders
+    shortNames:
+    - cabp
     singular: bootstrapprovider
   scope: Namespaced
   versions:
