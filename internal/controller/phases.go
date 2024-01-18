@@ -25,6 +25,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -458,7 +459,7 @@ func (p *phaseReconciler) fetch(ctx context.Context) (reconcile.Result, error) {
 }
 
 // preInstall ensure all the clusterctl CRDs are available before installing the provider,
-// and delete existing components if required for upgrade.
+// and update existing components if required.
 func (p *phaseReconciler) preInstall(ctx context.Context) (reconcile.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 
@@ -467,9 +468,23 @@ func (p *phaseReconciler) preInstall(ctx context.Context) (reconcile.Result, err
 		return reconcile.Result{}, nil
 	}
 
-	log.Info("Changes detected, deleting existing components")
+	if *p.provider.GetStatus().InstalledVersion == p.provider.GetSpec().Version {
+		return reconcile.Result{}, nil
+	}
 
-	return p.delete(ctx)
+	log.Info("Version changes detected, updating existing components")
+
+	if err := p.newClusterClient().ProviderUpgrader().ApplyCustomPlan(ctx, cluster.UpgradeOptions{
+		WaitProviders:       true,
+		WaitProviderTimeout: 5 * time.Minute,
+	}, cluster.UpgradeItem{
+		NextVersion: p.provider.GetSpec().Version,
+		Provider:    getProvider(p.provider, p.options.Version),
+	}); err != nil {
+		return reconcile.Result{}, err
+	}
+
+	return reconcile.Result{}, nil
 }
 
 // install installs the provider components using clusterctl library.
@@ -501,6 +516,22 @@ func (p *phaseReconciler) install(ctx context.Context) (reconcile.Result, error)
 	return reconcile.Result{}, nil
 }
 
+func getProvider(provider operatorv1.GenericProvider, defaultVersion string) clusterctlv1.Provider {
+	clusterctlProvider := &clusterctlv1.Provider{}
+	clusterctlProvider.Name = clusterctlProviderName(provider).Name
+	clusterctlProvider.Namespace = provider.GetNamespace()
+	clusterctlProvider.Type = string(util.ClusterctlProviderType(provider))
+	clusterctlProvider.ProviderName = provider.GetName()
+
+	if provider.GetStatus().InstalledVersion != nil {
+		clusterctlProvider.Version = *provider.GetStatus().InstalledVersion
+	} else {
+		clusterctlProvider.Version = defaultVersion
+	}
+
+	return *clusterctlProvider
+}
+
 // delete deletes the provider components using clusterctl library.
 func (p *phaseReconciler) delete(ctx context.Context) (reconcile.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
@@ -508,19 +539,8 @@ func (p *phaseReconciler) delete(ctx context.Context) (reconcile.Result, error) 
 
 	clusterClient := p.newClusterClient()
 
-	p.clusterctlProvider.Name = clusterctlProviderName(p.provider).Name
-	p.clusterctlProvider.Namespace = p.provider.GetNamespace()
-	p.clusterctlProvider.Type = string(util.ClusterctlProviderType(p.provider))
-	p.clusterctlProvider.ProviderName = p.provider.GetName()
-
-	if p.provider.GetStatus().InstalledVersion != nil {
-		p.clusterctlProvider.Version = *p.provider.GetStatus().InstalledVersion
-	} else {
-		p.clusterctlProvider.Version = p.options.Version
-	}
-
 	err := clusterClient.ProviderComponents().Delete(ctx, cluster.DeleteOptions{
-		Provider:         *p.clusterctlProvider,
+		Provider:         getProvider(p.provider, p.options.Version),
 		IncludeNamespace: false,
 		IncludeCRDs:      false,
 	})
@@ -549,7 +569,7 @@ func clusterctlProviderName(provider operatorv1.GenericProvider) client.ObjectKe
 // newClusterClient returns a clusterctl client for interacting with management cluster.
 func (p *phaseReconciler) newClusterClient() cluster.Client {
 	return cluster.New(cluster.Kubeconfig{}, p.configClient, cluster.InjectProxy(&controllerProxy{
-		ctrlClient: p.ctrlClient,
+		ctrlClient: clientProxy{p.ctrlClient},
 		ctrlConfig: p.ctrlConfig,
 	}))
 }
