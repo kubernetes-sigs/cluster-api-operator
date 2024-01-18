@@ -31,11 +31,14 @@ type BootstrapProviderStatus struct {
 }
 
 // +kubebuilder:object:root=true
+// +kubebuilder:deprecatedversion
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="InstalledVersion",type="string",JSONPath=".status.installedVersion"
 // +kubebuilder:printcolumn:name="Ready",type="string",JSONPath=".status.conditions[?(@.type=='Ready')].status"
 
 // BootstrapProvider is the Schema for the bootstrapproviders API.
+//
+// Deprecated: This type will be removed in one of the next releases.
 type BootstrapProvider struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -47,6 +50,8 @@ type BootstrapProvider struct {
 // +kubebuilder:object:root=true
 
 // BootstrapProviderList contains a list of BootstrapProvider.
+//
+// Deprecated: This type will be removed in one of the next releases.
 type BootstrapProviderList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`

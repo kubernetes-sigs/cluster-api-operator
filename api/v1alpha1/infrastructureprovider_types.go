@@ -31,11 +31,14 @@ type InfrastructureProviderStatus struct {
 }
 
 // +kubebuilder:object:root=true
+// +kubebuilder:deprecatedversion
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="InstalledVersion",type="string",JSONPath=".status.installedVersion"
 // +kubebuilder:printcolumn:name="Ready",type="string",JSONPath=".status.conditions[?(@.type=='Ready')].status"
 
 // InfrastructureProvider is the Schema for the infrastructureproviders API.
+//
+// Deprecated: This type will be removed in one of the next releases.
 type InfrastructureProvider struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -47,6 +50,8 @@ type InfrastructureProvider struct {
 // +kubebuilder:object:root=true
 
 // InfrastructureProviderList contains a list of InfrastructureProvider.
+//
+// Deprecated: This type will be removed in one of the next releases.
 type InfrastructureProviderList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`

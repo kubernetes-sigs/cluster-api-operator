@@ -31,11 +31,14 @@ type CoreProviderStatus struct {
 }
 
 // +kubebuilder:object:root=true
+// +kubebuilder:deprecatedversion
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="InstalledVersion",type="string",JSONPath=".status.installedVersion"
 // +kubebuilder:printcolumn:name="Ready",type="string",JSONPath=".status.conditions[?(@.type=='Ready')].status"
 
 // CoreProvider is the Schema for the coreproviders API.
+//
+// Deprecated: This type will be removed in one of the next releases.
 type CoreProvider struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -47,6 +50,8 @@ type CoreProvider struct {
 // +kubebuilder:object:root=true
 
 // CoreProviderList contains a list of CoreProvider.
+//
+// Deprecated: This type will be removed in one of the next releases.
 type CoreProviderList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
