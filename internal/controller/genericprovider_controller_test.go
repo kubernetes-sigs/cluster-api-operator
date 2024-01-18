@@ -18,8 +18,10 @@ package controller
 
 import (
 	"testing"
+	"time"
 
 	. "github.com/onsi/gomega"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -39,7 +41,7 @@ apiVersion: clusterctl.cluster.x-k8s.io/v1alpha3
 releaseSeries:
   - major: 0
     minor: 4
-    contract: v1alpha4
+    contract: v1beta1
 `
 	testComponents = `
 apiVersion: apps/v1
@@ -215,22 +217,47 @@ func TestReconcilerPreflightConditions(t *testing.T) {
 	}
 }
 
-func TestUpgradeDowngradeProvider(t *testing.T) {
+func TestAirGappedUpgradeDowngradeProvider(t *testing.T) {
+	currentVersion := "v999.9.2"
+	futureMetadata := `
+apiVersion: clusterctl.cluster.x-k8s.io/v1alpha3
+releaseSeries:
+  - major: 999
+    minor: 9
+    contract: v1beta1
+`
+
+	dummyFutureConfigMap := func(ns, name string) *corev1.ConfigMap {
+		return &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: ns,
+				Labels: map[string]string{
+					"test": "dummy-config",
+				},
+			},
+			Data: map[string]string{
+				"metadata":   futureMetadata,
+				"components": testComponents,
+			},
+		}
+	}
+
 	testCases := []struct {
 		name       string
 		newVersion string
 	}{
 		{
 			name:       "same provider version",
-			newVersion: "v0.4.2",
+			newVersion: "v999.9.2",
 		},
 		{
 			name:       "upgrade provider version",
-			newVersion: "v0.4.3",
+			newVersion: "v999.9.3",
 		},
 		{
 			name:       "downgrade provider version",
-			newVersion: "v0.4.1",
+			newVersion: "v999.9.1",
 		},
 	}
 
@@ -244,7 +271,7 @@ func TestUpgradeDowngradeProvider(t *testing.T) {
 				},
 				Spec: operatorv1.CoreProviderSpec{
 					ProviderSpec: operatorv1.ProviderSpec{
-						Version: testCurrentVersion,
+						Version: currentVersion,
 					},
 				},
 			}
@@ -254,7 +281,7 @@ func TestUpgradeDowngradeProvider(t *testing.T) {
 			t.Log("Ensure namespace exists", namespace)
 			g.Expect(env.EnsureNamespaceExists(ctx, namespace)).To(Succeed())
 
-			g.Expect(env.CreateAndWait(ctx, dummyConfigMap(namespace, testCurrentVersion))).To(Succeed())
+			g.Expect(env.CreateAndWait(ctx, dummyFutureConfigMap(namespace, currentVersion))).To(Succeed())
 
 			insertDummyConfig(provider)
 			provider.SetNamespace(namespace)
@@ -266,7 +293,7 @@ func TestUpgradeDowngradeProvider(t *testing.T) {
 					return false
 				}
 
-				if provider.GetStatus().InstalledVersion == nil || *provider.GetStatus().InstalledVersion != testCurrentVersion {
+				if provider.GetStatus().InstalledVersion == nil || *provider.GetStatus().InstalledVersion != currentVersion {
 					return false
 				}
 
@@ -283,13 +310,16 @@ func TestUpgradeDowngradeProvider(t *testing.T) {
 			}, timeout).Should(BeEquivalentTo(true))
 
 			// creating another configmap with another version
-			if tc.newVersion != testCurrentVersion {
-				g.Expect(env.CreateAndWait(ctx, dummyConfigMap(namespace, tc.newVersion))).To(Succeed())
+			if tc.newVersion != currentVersion {
+				g.Expect(env.CreateAndWait(ctx, dummyFutureConfigMap(namespace, tc.newVersion))).To(Succeed())
 			}
 
 			// Change provider version
 			providerSpec := provider.GetSpec()
 			providerSpec.Version = tc.newVersion
+			providerSpec.Deployment = &operatorv1.DeploymentSpec{
+				Replicas: pointer.Int(2),
+			}
 			provider.SetSpec(providerSpec)
 
 			// Set label (needed to start a reconciliation of the provider)
@@ -315,23 +345,68 @@ func TestUpgradeDowngradeProvider(t *testing.T) {
 					return false
 				}
 
+				allFound := false
 				for _, cond := range provider.GetStatus().Conditions {
 					if cond.Type == operatorv1.PreflightCheckCondition {
 						t.Log(t.Name(), provider.GetName(), cond)
 						if cond.Status == corev1.ConditionTrue {
-							return true
+							allFound = true
+							break
 						}
 					}
 				}
 
-				return false
+				if !allFound {
+					return false
+				}
+
+				allFound = tc.newVersion == currentVersion
+				for _, cond := range provider.GetStatus().Conditions {
+					if cond.Type == operatorv1.ProviderUpgradedCondition {
+						t.Log(t.Name(), provider.GetName(), cond)
+						if cond.Status == corev1.ConditionTrue {
+							allFound = tc.newVersion != currentVersion
+							break
+						}
+					}
+				}
+
+				if !allFound {
+					return false
+				}
+
+				// Ensure customization occurred
+				dep := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{
+					Namespace: provider.Namespace,
+					Name:      "capd-controller-manager",
+				}}
+				if err := env.Get(ctx, client.ObjectKeyFromObject(dep), dep); err != nil {
+					return false
+				}
+
+				return dep.Spec.Replicas != nil && *dep.Spec.Replicas == 2
 			}, timeout).Should(BeEquivalentTo(true))
+
+			g.Consistently(func() bool {
+				allSet := tc.newVersion == currentVersion
+				for _, cond := range provider.GetStatus().Conditions {
+					if cond.Type == operatorv1.ProviderUpgradedCondition {
+						t.Log(t.Name(), provider.GetName(), cond)
+						if cond.Status == corev1.ConditionTrue {
+							allSet = tc.newVersion != currentVersion
+							break
+						}
+					}
+				}
+
+				return allSet
+			}, 2*time.Second).Should(BeTrue())
 
 			// Clean up
 			objs := []client.Object{provider}
 			objs = append(objs, &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      testCurrentVersion,
+					Name:      currentVersion,
 					Namespace: namespace,
 				},
 			})

@@ -157,8 +157,9 @@ func (r *GenericProviderReconciler) reconcile(ctx context.Context, provider gene
 		reconciler.downloadManifests,
 		reconciler.load,
 		reconciler.fetch,
-		reconciler.preInstall,
+		reconciler.upgrade,
 		reconciler.install,
+		reconciler.reportStatus,
 	}
 
 	res := reconcile.Result{}

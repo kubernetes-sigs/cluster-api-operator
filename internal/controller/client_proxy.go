@@ -32,6 +32,7 @@ import (
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
 	clusterctlv1 "sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3"
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/cluster"
+	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/repository"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -217,4 +218,26 @@ func listObjByGVK(ctx context.Context, c client.Client, groupVersion, kind strin
 	}
 
 	return objList, nil
+}
+
+type repositoryProxy struct {
+	repository.Client
+
+	components repository.Components
+}
+
+type repositoryClient struct {
+	components repository.Components
+}
+
+func (r repositoryClient) Raw(ctx context.Context, options repository.ComponentsOptions) ([]byte, error) {
+	return nil, nil
+}
+
+func (r repositoryClient) Get(ctx context.Context, options repository.ComponentsOptions) (repository.Components, error) {
+	return r.components, nil
+}
+
+func (r repositoryProxy) Components() repository.ComponentsClient {
+	return repositoryClient{r.components}
 }
