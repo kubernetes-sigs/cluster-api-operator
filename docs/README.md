@@ -387,7 +387,7 @@ The following sections provide details about `ProviderSpec` and `ProviderStatus`
                  - "true"
        containers:
          - name: "containerA"
-           imageURL: "example.com/repo/image-name:v1.0.0"
+           imageUrl: "example.com/repo/image-name:v1.0.0"
            args:
              exampleArg: "value"
     ...
@@ -408,7 +408,7 @@ The following sections provide details about `ProviderSpec` and `ProviderStatus`
      deployment:
        containers:
          - name: "example-container"
-           imageURL: "example.com/repo/image-name:v1.0.0"
+           imageUrl: "example.com/repo/image-name:v1.0.0"
            args:
              exampleArg: "value"
            env:
@@ -536,7 +536,7 @@ spec:
  deployment:
    containers:
    - name: manager
-     imageURL: "gcr.io/myregistry/capa-controller:v2.1.4-foo"
+     imageUrl: "gcr.io/myregistry/capa-controller:v2.1.4-foo"
 ```
 
 3. As an admin, I want to change the resource limits for the manager pod in my control plane provider deployment.
