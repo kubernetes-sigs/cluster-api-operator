@@ -6,6 +6,16 @@ builds:
 - id: "clusterctl-operator"
   main: ./cmd/plugin
   binary: bin/clusterctl-operator
+  env:
+    - CGO_ENABLED=0
+  ldflags:
+  - -s -w 
+  - -X 'sigs.k8s.io/cluster-api-operator/version.gitMajor={{.Major}}'
+  - -X 'sigs.k8s.io/cluster-api-operator/version.gitMinor={{.Minor}}'
+  - -X 'sigs.k8s.io/cluster-api-operator/version.gitVersion={{.Version}}'
+  - -X 'sigs.k8s.io/cluster-api-operator/version.gitCommit={{.Commit}}'
+  - -X 'sigs.k8s.io/cluster-api-operator/version.gitTreeState={{ if .IsGitDirty }}dirty{{ else }}clean{{ end }}'
+  - -X 'sigs.k8s.io/cluster-api-operator/version.buildDate={{.Date}}'
   goos:
   - linux
   - darwin
