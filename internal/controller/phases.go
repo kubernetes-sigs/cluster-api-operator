@@ -82,14 +82,14 @@ func (p *PhaseError) Error() string {
 	return p.Err.Error()
 }
 
-func wrapPhaseError(err error, reason string) error {
+func wrapPhaseError(err error, reason string, condition clusterv1.ConditionType) error {
 	if err == nil {
 		return nil
 	}
 
 	return &PhaseError{
 		Err:      err,
-		Type:     operatorv1.ProviderInstalledCondition,
+		Type:     condition,
 		Reason:   reason,
 		Severity: clusterv1.ConditionSeverityWarning,
 	}
@@ -139,14 +139,14 @@ func (p *phaseReconciler) initializePhaseReconciler(ctx context.Context) (reconc
 	// Load provider's secret and config url.
 	p.configClient, err = configclient.New(ctx, "", configclient.InjectReader(reader))
 	if err != nil {
-		return reconcile.Result{}, wrapPhaseError(err, "failed to load the secret reader")
+		return reconcile.Result{}, wrapPhaseError(err, "failed to load the secret reader", operatorv1.ProviderInstalledCondition)
 	}
 
 	// Get returns the configuration for the provider with a given name/type.
 	// This is done using clusterctl internal API types.
 	p.providerConfig, err = p.configClient.Providers().Get(p.provider.GetName(), util.ClusterctlProviderType(p.provider))
 	if err != nil {
-		return reconcile.Result{}, wrapPhaseError(err, operatorv1.UnknownProviderReason)
+		return reconcile.Result{}, wrapPhaseError(err, operatorv1.UnknownProviderReason, operatorv1.ProviderInstalledCondition)
 	}
 
 	return reconcile.Result{}, nil
@@ -173,24 +173,24 @@ func (p *phaseReconciler) load(ctx context.Context) (reconcile.Result, error) {
 
 	additionalManifests, err := p.fetchAddionalManifests(ctx)
 	if err != nil {
-		return reconcile.Result{}, wrapPhaseError(err, "failed to load additional manifests")
+		return reconcile.Result{}, wrapPhaseError(err, "failed to load additional manifests", operatorv1.ProviderInstalledCondition)
 	}
 
 	p.repo, err = p.configmapRepository(ctx, labelSelector, additionalManifests)
 	if err != nil {
-		return reconcile.Result{}, wrapPhaseError(err, "failed to load the repository")
+		return reconcile.Result{}, wrapPhaseError(err, "failed to load the repository", operatorv1.ProviderInstalledCondition)
 	}
 
 	if spec.Version == "" {
 		// User didn't set the version, so we need to find the latest one from the matching config maps.
 		repoVersions, err := p.repo.GetVersions(ctx)
 		if err != nil {
-			return reconcile.Result{}, wrapPhaseError(err, fmt.Sprintf("failed to get a list of available versions for provider %q", p.provider.GetName()))
+			return reconcile.Result{}, wrapPhaseError(err, fmt.Sprintf("failed to get a list of available versions for provider %q", p.provider.GetName()), operatorv1.ProviderInstalledCondition)
 		}
 
 		spec.Version, err = getLatestVersion(repoVersions)
 		if err != nil {
-			return reconcile.Result{}, wrapPhaseError(err, fmt.Sprintf("failed to get the latest version for provider %q", p.provider.GetName()))
+			return reconcile.Result{}, wrapPhaseError(err, fmt.Sprintf("failed to get the latest version for provider %q", p.provider.GetName()), operatorv1.ProviderInstalledCondition)
 		}
 
 		// Add latest version to the provider spec.
@@ -205,7 +205,7 @@ func (p *phaseReconciler) load(ctx context.Context) (reconcile.Result, error) {
 	}
 
 	if err := p.validateRepoCAPIVersion(ctx); err != nil {
-		return reconcile.Result{}, wrapPhaseError(err, operatorv1.CAPIVersionIncompatibilityReason)
+		return reconcile.Result{}, wrapPhaseError(err, operatorv1.CAPIVersionIncompatibilityReason, operatorv1.ProviderInstalledCondition)
 	}
 
 	return reconcile.Result{}, nil
@@ -422,7 +422,7 @@ func (p *phaseReconciler) fetch(ctx context.Context) (reconcile.Result, error) {
 	if err != nil {
 		err = fmt.Errorf("failed to read %q from provider's repository %q: %w", p.repo.ComponentsPath(), p.providerConfig.ManifestLabel(), err)
 
-		return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason)
+		return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.ProviderInstalledCondition)
 	}
 
 	// Generate a set of new objects using the clusterctl library. NewComponents() will do the yaml processing,
@@ -436,18 +436,18 @@ func (p *phaseReconciler) fetch(ctx context.Context) (reconcile.Result, error) {
 		Options:      p.options,
 	})
 	if err != nil {
-		return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason)
+		return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.ProviderInstalledCondition)
 	}
 
 	// ProviderSpec provides fields for customizing the provider deployment options.
 	// We can use clusterctl library to apply this customizations.
 	if err := repository.AlterComponents(p.components, customizeObjectsFn(p.provider)); err != nil {
-		return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason)
+		return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.ProviderInstalledCondition)
 	}
 
 	// Apply patches to the provider components if specified.
 	if err := repository.AlterComponents(p.components, applyPatches(ctx, p.provider)); err != nil {
-		return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason)
+		return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.ProviderInstalledCondition)
 	}
 
 	conditions.Set(p.provider, conditions.TrueCondition(operatorv1.ProviderInstalledCondition))
@@ -455,9 +455,9 @@ func (p *phaseReconciler) fetch(ctx context.Context) (reconcile.Result, error) {
 	return reconcile.Result{}, nil
 }
 
-// preInstall ensure all the clusterctl CRDs are available before installing the provider,
-// and delete existing components if required for upgrade.
-func (p *phaseReconciler) preInstall(ctx context.Context) (reconcile.Result, error) {
+// upgrade ensure all the clusterctl CRDs are available before installing the provider,
+// and update existing components if required.
+func (p *phaseReconciler) upgrade(ctx context.Context) (reconcile.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 
 	// Nothing to do if it's a fresh installation.
@@ -465,14 +465,34 @@ func (p *phaseReconciler) preInstall(ctx context.Context) (reconcile.Result, err
 		return reconcile.Result{}, nil
 	}
 
-	log.Info("Changes detected, deleting existing components")
+	// Provider needs to be re-installed
+	if *p.provider.GetStatus().InstalledVersion == p.provider.GetSpec().Version {
+		return reconcile.Result{}, nil
+	}
 
-	return p.delete(ctx)
+	log.Info("Version changes detected, updating existing components")
+
+	if err := p.newClusterClient().ProviderUpgrader().ApplyCustomPlan(ctx, cluster.UpgradeOptions{}, cluster.UpgradeItem{
+		NextVersion: p.provider.GetSpec().Version,
+		Provider:    getProvider(p.provider, p.options.Version),
+	}); err != nil {
+		return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsUpgradeErrorReason, operatorv1.ProviderUpgradedCondition)
+	}
+
+	log.Info("Provider successfully upgraded")
+	conditions.Set(p.provider, conditions.TrueCondition(operatorv1.ProviderUpgradedCondition))
+
+	return reconcile.Result{}, nil
 }
 
 // install installs the provider components using clusterctl library.
 func (p *phaseReconciler) install(ctx context.Context) (reconcile.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
+
+	// Provider was upgraded, nothing to do
+	if p.provider.GetStatus().InstalledVersion != nil && *p.provider.GetStatus().InstalledVersion != p.provider.GetSpec().Version {
+		return reconcile.Result{}, nil
+	}
 
 	clusterClient := p.newClusterClient()
 
@@ -484,19 +504,39 @@ func (p *phaseReconciler) install(ctx context.Context) (reconcile.Result, error)
 			reason = "Timed out waiting for deployment to become ready"
 		}
 
-		return reconcile.Result{}, wrapPhaseError(err, reason)
+		return reconcile.Result{}, wrapPhaseError(err, reason, operatorv1.ProviderInstalledCondition)
 	}
 
+	log.Info("Provider successfully installed")
+	conditions.Set(p.provider, conditions.TrueCondition(operatorv1.ProviderInstalledCondition))
+
+	return reconcile.Result{}, nil
+}
+
+func (p *phaseReconciler) reportStatus(ctx context.Context) (reconcile.Result, error) {
 	status := p.provider.GetStatus()
 	status.Contract = &p.contract
 	installedVersion := p.components.Version()
 	status.InstalledVersion = &installedVersion
 	p.provider.SetStatus(status)
 
-	log.Info("Provider successfully installed")
-	conditions.Set(p.provider, conditions.TrueCondition(operatorv1.ProviderInstalledCondition))
-
 	return reconcile.Result{}, nil
+}
+
+func getProvider(provider operatorv1.GenericProvider, defaultVersion string) clusterctlv1.Provider {
+	clusterctlProvider := &clusterctlv1.Provider{}
+	clusterctlProvider.Name = clusterctlProviderName(provider).Name
+	clusterctlProvider.Namespace = provider.GetNamespace()
+	clusterctlProvider.Type = string(util.ClusterctlProviderType(provider))
+	clusterctlProvider.ProviderName = provider.GetName()
+
+	if provider.GetStatus().InstalledVersion != nil {
+		clusterctlProvider.Version = *provider.GetStatus().InstalledVersion
+	} else {
+		clusterctlProvider.Version = defaultVersion
+	}
+
+	return *clusterctlProvider
 }
 
 // delete deletes the provider components using clusterctl library.
@@ -506,24 +546,13 @@ func (p *phaseReconciler) delete(ctx context.Context) (reconcile.Result, error) 
 
 	clusterClient := p.newClusterClient()
 
-	p.clusterctlProvider.Name = clusterctlProviderName(p.provider).Name
-	p.clusterctlProvider.Namespace = p.provider.GetNamespace()
-	p.clusterctlProvider.Type = string(util.ClusterctlProviderType(p.provider))
-	p.clusterctlProvider.ProviderName = p.provider.GetName()
-
-	if p.provider.GetStatus().InstalledVersion != nil {
-		p.clusterctlProvider.Version = *p.provider.GetStatus().InstalledVersion
-	} else {
-		p.clusterctlProvider.Version = p.options.Version
-	}
-
 	err := clusterClient.ProviderComponents().Delete(ctx, cluster.DeleteOptions{
-		Provider:         *p.clusterctlProvider,
+		Provider:         getProvider(p.provider, p.options.Version),
 		IncludeNamespace: false,
 		IncludeCRDs:      false,
 	})
 
-	return reconcile.Result{}, wrapPhaseError(err, operatorv1.OldComponentsDeletionErrorReason)
+	return reconcile.Result{}, wrapPhaseError(err, operatorv1.OldComponentsDeletionErrorReason, operatorv1.ProviderInstalledCondition)
 }
 
 func clusterctlProviderName(provider operatorv1.GenericProvider) client.ObjectKey {
@@ -544,19 +573,28 @@ func clusterctlProviderName(provider operatorv1.GenericProvider) client.ObjectKe
 	return client.ObjectKey{Name: prefix + provider.GetName(), Namespace: provider.GetNamespace()}
 }
 
+func (p *phaseReconciler) repositoryProxy(ctx context.Context, provider configclient.Provider, configClient configclient.Client, options ...repository.Option) (repository.Client, error) {
+	cl, err := repository.New(ctx, provider, configClient, append([]repository.Option{repository.InjectRepository(p.repo)}, options...)...)
+	if err != nil {
+		return nil, err
+	}
+
+	return repositoryProxy{Client: cl, components: p.components}, nil
+}
+
 // newClusterClient returns a clusterctl client for interacting with management cluster.
 func (p *phaseReconciler) newClusterClient() cluster.Client {
 	return cluster.New(cluster.Kubeconfig{}, p.configClient, cluster.InjectProxy(&controllerProxy{
-		ctrlClient: p.ctrlClient,
+		ctrlClient: clientProxy{p.ctrlClient},
 		ctrlConfig: p.ctrlConfig,
-	}))
+	}), cluster.InjectRepositoryFactory(p.repositoryProxy))
 }
 
 func getLatestVersion(repoVersions []string) (string, error) {
 	if len(repoVersions) == 0 {
 		err := fmt.Errorf("no versions available")
 
-		return "", wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason)
+		return "", wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.ProviderInstalledCondition)
 	}
 
 	// Initialize latest version with the first element value.
@@ -565,7 +603,7 @@ func getLatestVersion(repoVersions []string) (string, error) {
 	for _, versionString := range repoVersions {
 		parsedVersion, err := versionutil.ParseSemantic(versionString)
 		if err != nil {
-			return "", wrapPhaseError(err, fmt.Sprintf("cannot parse version string: %s", versionString))
+			return "", wrapPhaseError(err, fmt.Sprintf("cannot parse version string: %s", versionString), operatorv1.ProviderInstalledCondition)
 		}
 
 		if latestVersion.LessThan(parsedVersion) {

@@ -24,17 +24,83 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
+
+	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
+	clusterctlv1 "sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3"
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/cluster"
+	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/repository"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
+
+// clientProxy implements the Proxy interface from the clusterctl. It is used to
+// interact with the management cluster.
+type clientProxy struct {
+	client.Client
+}
+
+func (c clientProxy) List(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
+	switch l := list.(type) {
+	case *clusterctlv1.ProviderList:
+		return listProviders(ctx, c.Client, l)
+	default:
+		return c.Client.List(ctx, l, opts...)
+	}
+}
+
+func (c clientProxy) Get(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+	switch o := obj.(type) {
+	case *clusterctlv1.Provider:
+		return nil
+	default:
+		return c.Client.Get(ctx, key, o, opts...)
+	}
+}
+
+func (c clientProxy) Patch(ctx context.Context, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
+	switch o := obj.(type) {
+	case *clusterctlv1.Provider:
+		return nil
+	default:
+		return c.Client.Patch(ctx, o, patch, opts...)
+	}
+}
+
+func listProviders(ctx context.Context, cl client.Client, list *clusterctlv1.ProviderList) error {
+	providers := []operatorv1.GenericProviderList{
+		&operatorv1.CoreProviderList{},
+		&operatorv1.InfrastructureProviderList{},
+		&operatorv1.BootstrapProviderList{},
+		&operatorv1.ControlPlaneProviderList{},
+		&operatorv1.AddonProviderList{},
+		&operatorv1.IPAMProviderList{},
+	}
+
+	for _, group := range providers {
+		g, ok := group.(client.ObjectList)
+		if !ok {
+			continue
+		}
+
+		if err := cl.List(ctx, g); err != nil {
+			return err
+		}
+
+		for _, p := range group.GetItems() {
+			list.Items = append(list.Items, getProvider(p, ""))
+		}
+	}
+
+	return nil
+}
 
 // controllerProxy implements the Proxy interface from the clusterctl. It is used to
 // interact with the management cluster.
 type controllerProxy struct {
-	ctrlClient client.Client
+	ctrlClient clientProxy
 	ctrlConfig *rest.Config
 }
 
@@ -152,4 +218,26 @@ func listObjByGVK(ctx context.Context, c client.Client, groupVersion, kind strin
 	}
 
 	return objList, nil
+}
+
+type repositoryProxy struct {
+	repository.Client
+
+	components repository.Components
+}
+
+type repositoryClient struct {
+	components repository.Components
+}
+
+func (r repositoryClient) Raw(ctx context.Context, options repository.ComponentsOptions) ([]byte, error) {
+	return nil, nil
+}
+
+func (r repositoryClient) Get(ctx context.Context, options repository.ComponentsOptions) (repository.Components, error) {
+	return r.components, nil
+}
+
+func (r repositoryProxy) Components() repository.ComponentsClient {
+	return repositoryClient{r.components}
 }

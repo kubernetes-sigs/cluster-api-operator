@@ -47,6 +47,9 @@ const (
 	// ComponentsFetchErrorReason documents that an error occurred fetching the components.
 	ComponentsFetchErrorReason = "ComponentsFetchError"
 
+	// ComponentsUpgradeErrorReason documents that an error occurred while upgrading the components.
+	ComponentsUpgradeErrorReason = "ComponentsUpgradeError"
+
 	// OldComponentsDeletionErrorReason documents that an error occurred deleting the old components prior to upgrading.
 	OldComponentsDeletionErrorReason = "OldComponentsDeletionError"
 
@@ -63,4 +66,7 @@ const (
 const (
 	// ProviderInstalledCondition documents a Provider that has been installed.
 	ProviderInstalledCondition clusterv1.ConditionType = "ProviderInstalled"
+
+	// ProviderUpgradedCondition documents a Provider that has been recently upgraded.
+	ProviderUpgradedCondition clusterv1.ConditionType = "ProviderUpgraded"
 )
