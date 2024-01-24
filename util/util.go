@@ -17,9 +17,23 @@ limitations under the License.
 package util
 
 import (
+	"context"
+	"fmt"
+	"net/url"
+	"strings"
+
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
 	"sigs.k8s.io/cluster-api-operator/internal/controller/genericprovider"
 	clusterctlv1 "sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3"
+	configclient "sigs.k8s.io/cluster-api/cmd/clusterctl/client/config"
+	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/repository"
+)
+
+const (
+	httpsScheme             = "https"
+	githubDomain            = "github.com"
+	gitlabHostPrefix        = "gitlab."
+	gitlabPackagesAPIPrefix = "/api/v4/projects/"
 )
 
 func IsCoreProvider(p genericprovider.GenericProvider) bool {
@@ -45,4 +59,40 @@ func ClusterctlProviderType(genericProvider operatorv1.GenericProvider) clusterc
 	}
 
 	return clusterctlv1.ProviderTypeUnknown
+}
+
+// RepositoryFactory returns the repository implementation corresponding to the provider URL.
+// inspired by https://github.com/kubernetes-sigs/cluster-api/blob/124d9be7035e492f027cdc7a701b6b179451190a/cmd/clusterctl/client/repository/client.go#L170
+func RepositoryFactory(ctx context.Context, providerConfig configclient.Provider, configVariablesClient configclient.VariablesClient) (repository.Repository, error) {
+	// parse the repository url
+	rURL, err := url.Parse(providerConfig.URL())
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse repository url %q", providerConfig.URL())
+	}
+
+	if rURL.Scheme != httpsScheme {
+		return nil, fmt.Errorf("invalid provider url. there are no provider implementation for %q schema", rURL.Scheme)
+	}
+
+	// if the url is a GitHub repository
+	if rURL.Host == githubDomain {
+		repo, err := repository.NewGitHubRepository(ctx, providerConfig, configVariablesClient)
+		if err != nil {
+			return nil, fmt.Errorf("error creating the GitHub repository client: %w", err)
+		}
+
+		return repo, err
+	}
+
+	// if the url is a GitLab repository
+	if strings.HasPrefix(rURL.Host, gitlabHostPrefix) && strings.HasPrefix(rURL.Path, gitlabPackagesAPIPrefix) {
+		repo, err := repository.NewGitLabRepository(providerConfig, configVariablesClient)
+		if err != nil {
+			return nil, fmt.Errorf("error creating the GitLab repository client: %w", err)
+		}
+
+		return repo, err
+	}
+
+	return nil, fmt.Errorf("invalid provider url. Only GitHub and GitLab are supported for %q schema", rURL.Scheme)
 }

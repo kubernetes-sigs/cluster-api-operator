@@ -18,14 +18,32 @@ package cmd
 
 import (
 	"context"
+	"fmt"
+	"strings"
+	"sync"
+	"time"
 
-	"github.com/go-errors/errors"
 	"github.com/spf13/cobra"
+
+	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/util/wait"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	clusterctlv1 "sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3"
+	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/cluster"
+	configclient "sigs.k8s.io/cluster-api/cmd/clusterctl/client/config"
+	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/repository"
+	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/yamlprocessor"
+	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
+
+	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
+	"sigs.k8s.io/cluster-api-operator/util"
 )
 
 type initOptions struct {
 	kubeconfig              string
 	kubeconfigContext       string
+	operatorVersion         string
 	coreProvider            string
 	bootstrapProviders      []string
 	controlPlaneProviders   []string
@@ -34,10 +52,15 @@ type initOptions struct {
 	// runtimeExtensionProviders []string
 	addonProviders      []string
 	targetNamespace     string
-	validate            bool
+	configSecret        string
 	waitProviders       bool
 	waitProviderTimeout int
 }
+
+const (
+	capiOperatorProviderName         = "capi-operator"
+	capiOperatorManifestsURLTemplate = "https://github.com/kubernetes-sigs/cluster-api-operator/releases/%s/operator-components.yaml"
+)
 
 var initOpts = &initOptions{}
 
@@ -67,22 +90,25 @@ var initCmd = &cobra.Command{
 		#
 		# Note: when this command is executed on an empty management cluster,
  		#       it automatically triggers the installation of the Cluster API core provider.
-		capioperator init --infrastructure=aws
+		capioperator init --infrastructure=aws --config-secret=capa-secret
 
-		# Initialize a management cluster with a specific version of the given infrastructure provider.
-		capioperator init --infrastructure=aws:v0.4.1
+		# Initialize a management cluster with a specific version of the given infrastructure provider in the default namespace.
+		capioperator init --infrastructure=aws::v2.3.0 --config-secret=capa-secret
+
+		# Initialize a management cluster with a specific namespace and the latest version of the given infrastructure provider.
+		capioperator init --infrastructure=aws:custom-namespace --config-secret=capa-secret
 
 		# Initialize a management cluster with a specific version and namespace of the given infrastructure provider.
-		capioperator init --infrastructure=custom-namespace:aws:v0.4.1
+		capioperator init --infrastructure=aws:custom-namespace:v2.3.0 --config-secret=capa-secret
 
 		# Initialize a management cluster with a custom kubeconfig path and the given infrastructure provider.
-		capioperator init --kubeconfig=foo.yaml --infrastructure=aws
+		capioperator init --kubeconfig=foo.yaml --infrastructure=aws --config-secret=capa-secret
 
 		# Initialize a management cluster with multiple infrastructure providers.
-		capioperator init --infrastructure=aws;vsphere
+		capioperator init --infrastructure=aws --infrastructure=vsphere --config-secret=infra-secret
 
 		# Initialize a management cluster with a custom target namespace for the operator.
-		capioperator init --infrastructure aws --target-namespace foo`),
+		capioperator init --infrastructure aws --config-secret=capa-secret --target-namespace foo`),
 	Args: cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return runInit()
@@ -94,28 +120,30 @@ func init() {
 		"Path to the kubeconfig for the management cluster. If unspecified, default discovery rules apply.")
 	initCmd.PersistentFlags().StringVar(&initOpts.kubeconfigContext, "kubeconfig-context", "",
 		"Context to be used within the kubeconfig file. If empty, current context will be used.")
-	initCmd.PersistentFlags().StringVar(&initOpts.coreProvider, "core", "",
+	initCmd.PersistentFlags().StringVar(&initOpts.operatorVersion, "operator-version", latestVersion,
+		"CAPI Operator version (e.g. v0.7.0) to install on the management cluster. If unspecified, the latest release is used.")
+	initCmd.PersistentFlags().StringVar(&initOpts.coreProvider, "core", "cluster-api",
 		"Core provider version (e.g. cluster-api:v1.1.5) to add to the management cluster. If unspecified, Cluster API's latest release is used.")
-	initCmd.PersistentFlags().StringSliceVarP(&initOpts.infrastructureProviders, "infrastructure", "i", nil,
+	initCmd.PersistentFlags().StringSliceVarP(&initOpts.infrastructureProviders, "infrastructure", "i", []string{},
 		"Infrastructure providers and versions (e.g. aws:v0.5.0) to add to the management cluster.")
-	initCmd.PersistentFlags().StringSliceVarP(&initOpts.bootstrapProviders, "bootstrap", "b", nil,
+	initCmd.PersistentFlags().StringSliceVarP(&initOpts.bootstrapProviders, "bootstrap", "b", []string{"kubeadm"},
 		"Bootstrap providers and versions (e.g. kubeadm:v1.1.5) to add to the management cluster. If unspecified, Kubeadm bootstrap provider's latest release is used.")
-	initCmd.PersistentFlags().StringSliceVarP(&initOpts.controlPlaneProviders, "control-plane", "c", nil,
+	initCmd.PersistentFlags().StringSliceVarP(&initOpts.controlPlaneProviders, "control-plane", "c", []string{"kubeadm"},
 		"Control plane providers and versions (e.g. kubeadm:v1.1.5) to add to the management cluster. If unspecified, the Kubeadm control plane provider's latest release is used.")
 	initCmd.PersistentFlags().StringSliceVar(&initOpts.ipamProviders, "ipam", nil,
 		"IPAM providers and versions (e.g. infoblox:v0.0.1) to add to the management cluster.")
 	// initCmd.PersistentFlags().StringSliceVar(&initOpts.runtimeExtensionProviders, "runtime-extension", nil,
 	//	"Runtime extension providers and versions (e.g. test:v0.0.1) to add to the management cluster.")
-	initCmd.PersistentFlags().StringSliceVar(&initOpts.addonProviders, "addon", nil,
+	initCmd.PersistentFlags().StringSliceVar(&initOpts.addonProviders, "addon", []string{},
 		"Add-on providers and versions (e.g. helm:v0.1.0) to add to the management cluster.")
 	initCmd.Flags().StringVarP(&initOpts.targetNamespace, "target-namespace", "n", "capi-operator-system",
 		"The target namespace where the operator should be deployed. If unspecified, the 'capi-operator-system' namespace is used.")
-	initCmd.Flags().BoolVar(&initOpts.waitProviders, "wait-providers", false,
+	initCmd.Flags().StringVar(&initOpts.configSecret, "config-secret", "",
+		"The config secret reference in format <config_secret_name>:<config_secret_namespace> to be used for the management cluster. If namespace is unspecified, target namespace will be used.")
+	initCmd.Flags().BoolVar(&initOpts.waitProviders, "wait-providers", true,
 		"Wait for providers to be installed.")
 	initCmd.Flags().IntVar(&initOpts.waitProviderTimeout, "wait-provider-timeout", 5*60,
 		"Wait timeout per provider installation in seconds. This value is ignored if --wait-providers is false")
-	initCmd.Flags().BoolVar(&initOpts.validate, "validate", true,
-		"If true, capioperator will validate that the deployments will succeed on the management cluster.")
 
 	RootCmd.AddCommand(initCmd)
 }
@@ -123,9 +151,374 @@ func init() {
 func runInit() error {
 	ctx := context.Background()
 
-	return initProvider(ctx, initOpts)
+	if initOpts.kubeconfig == "" {
+		initOpts.kubeconfig = GetKubeconfigLocation()
+	}
+
+	client, err := CreateKubeClient(initOpts.kubeconfig, initOpts.kubeconfigContext)
+	if err != nil {
+		return fmt.Errorf("cannot create a client: %w", err)
+	}
+
+	log.Info("Checking that Cert Manager is installed and running.")
+
+	// Ensure that cert manager is installed.
+	if err := ensureCertManager(ctx, initOpts); err != nil {
+		return fmt.Errorf("cannot ensure that cert manager is installed: %w", err)
+	}
+
+	log.Info("Checking that CAPI Operator is installed and running.")
+
+	deploymentExists, err := CheckDeploymentAvailability(ctx, client, capiOperatorLabels)
+	if err != nil {
+		return fmt.Errorf("cannot check CAPI operator availability: %w", err)
+	}
+
+	if deploymentExists && initOpts.operatorVersion != latestVersion {
+		return fmt.Errorf("cannot specify operator version when the CAPI operator is already installed")
+	}
+
+	// Deploy CAPI operator if it doesn't exist.
+	if !deploymentExists {
+		log.Info("Installing CAPI operator", "Version", initOpts.operatorVersion)
+
+		if err := deployCAPIOperator(ctx, initOpts); err != nil {
+			return fmt.Errorf("cannot deploy CAPI operator: %w", err)
+		}
+
+		opts := wait.Backoff{
+			Duration: 500 * time.Millisecond,
+			Factor:   1.5,
+			Steps:    10,
+			Jitter:   0.4,
+		}
+
+		log.Info("Waiting for CAPI Operator to be available...")
+
+		if err := wait.ExponentialBackoff(opts, func() (bool, error) {
+			return CheckDeploymentAvailability(ctx, client, capiOperatorLabels)
+		}); err != nil {
+			return fmt.Errorf("cannot check CAPI operator availability: %w", err)
+		}
+
+		log.Info("CAPI Operator is successfully installed.")
+	} else {
+		log.Info("Skipping installing CAPI Operator as it is already installed.")
+	}
+
+	return initProviders(ctx, client, initOpts)
 }
 
-func initProvider(ctx context.Context, opts *initOptions) error {
-	return errors.New("Not implemented")
+func initProviders(ctx context.Context, client ctrlclient.Client, initOpts *initOptions) error {
+	createdProviders := []operatorv1.GenericProvider{}
+
+	// Parsing secret config reference
+	var configSecretName, configSecretNamespace string
+
+	secretConfigParts := strings.Split(initOpts.configSecret, ":")
+	switch len(secretConfigParts) {
+	case 2:
+		configSecretName = secretConfigParts[0]
+		configSecretNamespace = secretConfigParts[1]
+	case 1:
+		configSecretName = secretConfigParts[0]
+		configSecretNamespace = initOpts.targetNamespace
+	default:
+		return fmt.Errorf("invalid secret config reference: %s", initOpts.configSecret)
+	}
+
+	// Deploy Core Provider.
+	if initOpts.coreProvider != "" {
+		provider, err := createGenericProvider(ctx, client, clusterctlv1.CoreProviderType, initOpts.coreProvider, initOpts.targetNamespace, configSecretName, configSecretNamespace)
+		if err != nil {
+			if !apierrors.IsAlreadyExists(err) {
+				return fmt.Errorf("cannot create core provider: %w", err)
+			}
+		} else {
+			createdProviders = append(createdProviders, provider)
+		}
+	}
+
+	// Deploy Bootstrap Providers.
+	for _, bootstrapProvider := range initOpts.bootstrapProviders {
+		provider, err := createGenericProvider(ctx, client, clusterctlv1.BootstrapProviderType, bootstrapProvider, initOpts.targetNamespace, configSecretName, configSecretNamespace)
+		if err != nil {
+			if apierrors.IsAlreadyExists(err) {
+				continue
+			}
+
+			return fmt.Errorf("cannot create bootstrap provider: %w", err)
+		}
+
+		createdProviders = append(createdProviders, provider)
+	}
+
+	// Deploy Infrastructure Providers.
+	for _, infrastructureProvider := range initOpts.infrastructureProviders {
+		provider, err := createGenericProvider(ctx, client, clusterctlv1.InfrastructureProviderType, infrastructureProvider, initOpts.targetNamespace, configSecretName, configSecretNamespace)
+		if err != nil {
+			if apierrors.IsAlreadyExists(err) {
+				continue
+			}
+
+			return fmt.Errorf("cannot create infrastructure provider: %w", err)
+		}
+
+		createdProviders = append(createdProviders, provider)
+	}
+
+	// Deploy Control Plane Providers.
+	for _, controlPlaneProvider := range initOpts.controlPlaneProviders {
+		provider, err := createGenericProvider(ctx, client, clusterctlv1.ControlPlaneProviderType, controlPlaneProvider, initOpts.targetNamespace, configSecretName, configSecretNamespace)
+		if err != nil {
+			if apierrors.IsAlreadyExists(err) {
+				continue
+			}
+
+			return fmt.Errorf("cannot create controlplane provider: %w", err)
+		}
+
+		createdProviders = append(createdProviders, provider)
+	}
+
+	// Deploy Add-on Providers.
+	for _, addonProvider := range initOpts.addonProviders {
+		provider, err := createGenericProvider(ctx, client, clusterctlv1.AddonProviderType, addonProvider, initOpts.targetNamespace, configSecretName, configSecretNamespace)
+		if err != nil {
+			if apierrors.IsAlreadyExists(err) {
+				continue
+			}
+
+			return fmt.Errorf("cannot create addon provider: %w", err)
+		}
+
+		createdProviders = append(createdProviders, provider)
+	}
+
+	// Deploy IPAM Providers.
+	for _, ipamProvider := range initOpts.ipamProviders {
+		provider, err := createGenericProvider(ctx, client, clusterctlv1.IPAMProviderType, ipamProvider, initOpts.targetNamespace, configSecretName, configSecretNamespace)
+		if err != nil {
+			if apierrors.IsAlreadyExists(err) {
+				continue
+			}
+
+			return fmt.Errorf("cannot create addon provider: %w", err)
+		}
+
+		createdProviders = append(createdProviders, provider)
+	}
+
+	if initOpts.waitProviders {
+		var wg sync.WaitGroup
+
+		for providerIndex := range createdProviders {
+			wg.Add(1)
+
+			go func(provider operatorv1.GenericProvider) {
+				defer wg.Done()
+				checkProviderReadiness(ctx, client, provider, time.Duration(initOpts.waitProviderTimeout)*time.Second)
+			}(createdProviders[providerIndex])
+		}
+
+		wg.Wait()
+	}
+
+	return nil
+}
+
+func checkProviderReadiness(ctx context.Context, client ctrlclient.Client, genericProvider operatorv1.GenericProvider, timeout time.Duration) {
+	log.Info("Waiting for provider to become ready", "Type", genericProvider.GetType(), "Name", genericProvider.GetName(), "Namespace", genericProvider.GetNamespace())
+
+	pollingInterval := 500 * time.Microsecond
+
+	// Check if the provider is ready.
+	if err := wait.PollUntilContextTimeout(ctx, pollingInterval, timeout, false, func(ctx context.Context) (done bool, err error) {
+		err = client.Get(ctx, ctrlclient.ObjectKeyFromObject(genericProvider), genericProvider)
+		if err != nil {
+			return false, fmt.Errorf("cannot get provider: %w", err)
+		}
+
+		// Checking Ready condition for the provider.
+		for _, cond := range genericProvider.GetConditions() {
+			if cond.Type == clusterv1.ReadyCondition && cond.Status == corev1.ConditionTrue {
+				log.Info("Provider is ready", "Type", genericProvider.GetType(), "Name", genericProvider.GetName(), "Namespace", genericProvider.GetNamespace())
+
+				return true, nil
+			}
+		}
+
+		return false, nil
+	}); err != nil {
+		log.Error(err, "Provider is not ready", "Type", genericProvider.GetType(), "Name", genericProvider.GetName(), "Namespace", genericProvider.GetNamespace())
+	}
+}
+
+func ensureCertManager(ctx context.Context, opts *initOptions) error {
+	configClient, err := configclient.New(ctx, "")
+	if err != nil {
+		return fmt.Errorf("cannot create config client: %w", err)
+	}
+
+	clusterKubeconfig := cluster.Kubeconfig{
+		Path:    opts.kubeconfig,
+		Context: opts.kubeconfigContext,
+	}
+
+	clusterClient := cluster.New(clusterKubeconfig, configClient)
+
+	// Before installing the operator, ensure the cert-manager Webhook is in place.
+	certManager := clusterClient.CertManager()
+	if err := certManager.EnsureInstalled(ctx); err != nil {
+		return fmt.Errorf("cannot install cert-manager Webhook: %w", err)
+	}
+
+	return nil
+}
+
+// deployCAPIOperator deploys the CAPI operator on the management cluster.
+func deployCAPIOperator(ctx context.Context, opts *initOptions) error {
+	configClient, err := configclient.New(ctx, "")
+	if err != nil {
+		return fmt.Errorf("cannot create config client: %w", err)
+	}
+
+	capiOperatorManifestsURL := fmt.Sprintf(capiOperatorManifestsURLTemplate, opts.operatorVersion)
+
+	providerConfig := configclient.NewProvider(capiOperatorProviderName, capiOperatorManifestsURL, clusterctlv1.ProviderTypeUnknown)
+
+	// Reduce waiting time for the repository creation from 30 seconds to 5.
+	repoCtx, cancel := context.WithTimeout(ctx, time.Second*5)
+	defer cancel()
+
+	repo, err := util.RepositoryFactory(repoCtx, providerConfig, configClient.Variables())
+	if err != nil {
+		return fmt.Errorf("cannot create repository: %w", err)
+	}
+
+	if opts.operatorVersion == latestVersion {
+		opts.operatorVersion = repo.DefaultVersion()
+
+		log.Info("Detected latest operator version", "Version", opts.operatorVersion)
+	}
+
+	componentsFile, err := repo.GetFile(ctx, opts.operatorVersion, repo.ComponentsPath())
+	if err != nil {
+		return fmt.Errorf("cannot get components file: %w", err)
+	}
+
+	options := repository.ComponentsOptions{
+		TargetNamespace:     opts.targetNamespace,
+		SkipTemplateProcess: false,
+		Version:             opts.operatorVersion,
+	}
+
+	components, err := repository.NewComponents(repository.ComponentsInput{
+		Provider:     providerConfig,
+		ConfigClient: configClient,
+		Processor:    yamlprocessor.NewSimpleProcessor(),
+		RawYaml:      componentsFile,
+		Options:      options,
+	})
+	if err != nil {
+		return fmt.Errorf("cannot generate CAPI operator components: %w", err)
+	}
+
+	clusterKubeconfig := cluster.Kubeconfig{
+		Path:    opts.kubeconfig,
+		Context: opts.kubeconfigContext,
+	}
+
+	clusterClient := cluster.New(clusterKubeconfig, configClient)
+
+	if err := clusterClient.ProviderComponents().Create(ctx, components.Objs()); err != nil {
+		return fmt.Errorf("cannot create CAPI operator components: %w", err)
+	}
+
+	return nil
+}
+
+// createGenericProvider creates a generic provider.
+func createGenericProvider(ctx context.Context, client ctrlclient.Client, providerType clusterctlv1.ProviderType, providerInput, defaultNamespace, configSecretName, configSecretNamespace string) (operatorv1.GenericProvider, error) {
+	// Parse the provider string
+	// Format is <provider-name>:<optional-namespace>:<optional-version>
+	// Example: aws:capa-system:v2.1.5 -> name: aws, namespace: capa-system, version: v2.1.5
+	// Example: aws -> name: aws, namespace: <defaultNamespace>, version: <latestVersion>
+	// Example: aws::v2.1.5 -> name: aws, namespace: <defaultNamespace>, version: v2.1.5
+	// Example: aws:capa-system -> name: aws, namespace: capa-system, version: <latestVersion>
+	var name, namespace, version string
+
+	parts := strings.Split(providerInput, ":")
+	switch len(parts) {
+	case 1:
+		name = parts[0]
+	case 2:
+		name = parts[0]
+		namespace = parts[1]
+	case 3:
+		name = parts[0]
+		namespace = parts[1]
+		version = parts[2]
+	default:
+		return nil, fmt.Errorf("invalid provider format: %s", providerInput)
+	}
+
+	if name == "" {
+		return nil, fmt.Errorf("provider name can't be empty")
+	}
+
+	provider := NewGenericProvider(providerType)
+
+	// Set name and namespace
+	provider.SetName(name)
+
+	if namespace == "" {
+		namespace = defaultNamespace
+	}
+
+	provider.SetNamespace(namespace)
+
+	// Set version
+	if version != "" {
+		spec := provider.GetSpec()
+		spec.Version = version
+		provider.SetSpec(spec)
+	} else {
+		version = latestVersion
+	}
+
+	// Set config secret
+	if configSecretName != "" {
+		spec := provider.GetSpec()
+
+		if configSecretNamespace == "" {
+			configSecretNamespace = defaultNamespace
+		}
+
+		spec.ConfigSecret = &operatorv1.SecretReference{
+			Name:      configSecretName,
+			Namespace: configSecretNamespace,
+		}
+		provider.SetSpec(spec)
+	}
+
+	// Ensure that desired namespace exists
+	if err := EnsureNamespaceExists(ctx, client, namespace); err != nil {
+		return nil, fmt.Errorf("cannot ensure that namespace exists: %w", err)
+	}
+
+	log.Info("Installing provider", "Type", provider.GetType(), "Name", name, "Version", version, "Namespace", namespace)
+
+	// Create the provider
+	if err := client.Create(ctx, provider); err != nil {
+		if !apierrors.IsAlreadyExists(err) {
+			return nil, fmt.Errorf("cannot create provider: %w", err)
+		}
+
+		log.Info("Provider already exists, skipping creation", "Type", provider.GetType(), "Name", name, "Version", version, "Namespace", namespace)
+
+		return nil, err
+	}
+
+	return provider, nil
 }

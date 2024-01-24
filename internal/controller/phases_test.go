@@ -29,6 +29,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
+	"sigs.k8s.io/cluster-api-operator/util"
 )
 
 func TestSecretReader(t *testing.T) {
@@ -475,7 +476,7 @@ func TestRepositoryFactory(t *testing.T) {
 			providerConfig, err := configClient.Providers().Get(providerName, providerType)
 			g.Expect(err).ToNot(HaveOccurred())
 
-			repo, err := repositoryFactory(ctx, providerConfig, configClient.Variables())
+			repo, err := util.RepositoryFactory(ctx, providerConfig, configClient.Variables())
 			if tc.expectedError {
 				g.Expect(err).To(HaveOccurred())
 
