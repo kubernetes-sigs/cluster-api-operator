@@ -31,11 +31,14 @@ type ControlPlaneProviderStatus struct {
 }
 
 // +kubebuilder:object:root=true
+// +kubebuilder:deprecatedversion
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="InstalledVersion",type="string",JSONPath=".status.installedVersion"
 // +kubebuilder:printcolumn:name="Ready",type="string",JSONPath=".status.conditions[?(@.type=='Ready')].status"
 
 // ControlPlaneProvider is the Schema for the controlplaneproviders API.
+//
+// Deprecated: This type will be removed in one of the next releases.
 type ControlPlaneProvider struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -47,6 +50,8 @@ type ControlPlaneProvider struct {
 // +kubebuilder:object:root=true
 
 // ControlPlaneProviderList contains a list of ControlPlaneProvider.
+//
+// Deprecated: This type will be removed in one of the next releases.
 type ControlPlaneProviderList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`

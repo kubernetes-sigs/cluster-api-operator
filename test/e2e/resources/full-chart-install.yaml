@@ -1605,10 +1605,12 @@ spec:
     - jsonPath: .status.conditions[?(@.type=='Ready')].status
       name: Ready
       type: string
+    deprecated: true
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: BootstrapProvider is the Schema for the bootstrapproviders API.
+        description: "BootstrapProvider is the Schema for the bootstrapproviders API.
+          \n Deprecated: This type will be removed in one of the next releases."
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -4700,11 +4702,12 @@ spec:
     - jsonPath: .status.conditions[?(@.type=='Ready')].status
       name: Ready
       type: string
+    deprecated: true
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: ControlPlaneProvider is the Schema for the controlplaneproviders
-          API.
+        description: "ControlPlaneProvider is the Schema for the controlplaneproviders
+          API. \n Deprecated: This type will be removed in one of the next releases."
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -7799,10 +7802,12 @@ spec:
     - jsonPath: .status.conditions[?(@.type=='Ready')].status
       name: Ready
       type: string
+    deprecated: true
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: CoreProvider is the Schema for the coreproviders API.
+        description: "CoreProvider is the Schema for the coreproviders API. \n Deprecated:
+          This type will be removed in one of the next releases."
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -10894,11 +10899,12 @@ spec:
     - jsonPath: .status.conditions[?(@.type=='Ready')].status
       name: Ready
       type: string
+    deprecated: true
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: InfrastructureProvider is the Schema for the infrastructureproviders
-          API.
+        description: "InfrastructureProvider is the Schema for the infrastructureproviders
+          API. \n Deprecated: This type will be removed in one of the next releases."
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
