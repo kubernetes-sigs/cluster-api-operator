@@ -61,6 +61,9 @@ const (
 
 	// NoDeploymentAvailableConditionReason documents that there is no Available condition for provider deployment yet.
 	NoDeploymentAvailableConditionReason = "NoDeploymentAvailableConditionReason"
+
+	// UnsupportedProviderDowngradeReason documents that the provider downgrade is not supported.
+	UnsupportedProviderDowngradeReason = "UnsupportedProviderDowngradeReason"
 )
 
 const (
