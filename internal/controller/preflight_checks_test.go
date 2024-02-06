@@ -623,3 +623,103 @@ func TestPreflightChecks(t *testing.T) {
 		})
 	}
 }
+
+func TestPreflightChecksUpgradesDowngrades(t *testing.T) {
+	testCases := []struct {
+		name                    string
+		installedVersion        string
+		targetVersion           string
+		expectedConditionStatus corev1.ConditionStatus
+		expectedError           bool
+	}{
+		{
+			name:                    "upgrade core provider major version",
+			expectedConditionStatus: corev1.ConditionTrue,
+			installedVersion:        "v1.9.0",
+			targetVersion:           "v2.0.0",
+		},
+		{
+			name:                    "upgrade core provider minor version",
+			expectedConditionStatus: corev1.ConditionTrue,
+			installedVersion:        "v1.9.0",
+			targetVersion:           "v1.10.0",
+		},
+		{
+			name:                    "downgrade core provider major version",
+			expectedConditionStatus: corev1.ConditionFalse,
+			installedVersion:        "v2.0.0",
+			targetVersion:           "v1.9.0",
+			expectedError:           true,
+		},
+		{
+			name:                    "downgrade core provider minor version",
+			expectedConditionStatus: corev1.ConditionFalse,
+			installedVersion:        "v1.10.0",
+			targetVersion:           "v1.9.0",
+			expectedError:           true,
+		},
+		{
+			name:                    "downgrade core provider patch version",
+			expectedConditionStatus: corev1.ConditionTrue,
+			installedVersion:        "v1.10.1",
+			targetVersion:           "v1.10.0",
+		},
+		{
+			name:                    "same version",
+			expectedConditionStatus: corev1.ConditionTrue,
+			installedVersion:        "v1.10.0",
+			targetVersion:           "v1.10.0",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			gs := NewWithT(t)
+
+			provider := &operatorv1.CoreProvider{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "cluster-api",
+					Namespace: "provider-test-ns-1",
+				},
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "CoreProvider",
+					APIVersion: "operator.cluster.x-k8s.io/v1alpha1",
+				},
+				Spec: operatorv1.CoreProviderSpec{
+					ProviderSpec: operatorv1.ProviderSpec{
+						Version: tc.targetVersion,
+						FetchConfig: &operatorv1.FetchConfiguration{
+							URL: "https://example.com",
+						},
+					},
+				},
+				Status: operatorv1.CoreProviderStatus{
+					ProviderStatus: operatorv1.ProviderStatus{
+						InstalledVersion: &tc.installedVersion,
+					},
+				},
+			}
+
+			fakeclient := fake.NewClientBuilder().WithObjects().Build()
+
+			gs.Expect(fakeclient.Create(ctx, provider)).To(Succeed())
+
+			_, err := preflightChecks(context.Background(), fakeclient, provider, &operatorv1.CoreProviderList{})
+			if tc.expectedError {
+				gs.Expect(err).To(HaveOccurred())
+			} else {
+				gs.Expect(err).ToNot(HaveOccurred())
+			}
+
+			// Check if proper condition is returned
+			gs.Expect(provider.GetStatus().Conditions).To(HaveLen(1))
+			gs.Expect(provider.GetStatus().Conditions[0].Type).To(Equal(operatorv1.PreflightCheckCondition))
+			gs.Expect(provider.GetStatus().Conditions[0].Status).To(Equal(tc.expectedConditionStatus))
+
+			if tc.expectedConditionStatus == corev1.ConditionFalse {
+				gs.Expect(provider.GetStatus().Conditions[0].Reason).To(Equal(operatorv1.UnsupportedProviderDowngradeReason))
+				gs.Expect(provider.GetStatus().Conditions[0].Severity).To(Equal(clusterv1.ConditionSeverityError))
+			}
+		})
+	}
+}

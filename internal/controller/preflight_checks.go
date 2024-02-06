@@ -48,6 +48,7 @@ var (
 	invalidGithubTokenMessage                    = "Invalid github token, please check your github token value and its permissions" //nolint:gosec
 	waitingForCoreProviderReadyMessage           = "Waiting for the core provider to be installed."
 	incorrectCoreProviderNameMessage             = "Incorrect CoreProvider name: %s. It should be %s"
+	unsupportedProviderDowngradeMessage          = "Downgrade is not supported for provider %s"
 )
 
 // preflightChecks performs preflight checks before installing provider.
@@ -58,18 +59,10 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 
 	spec := provider.GetSpec()
 
-	// Check that provider version contains a valid value if it's not empty.
 	if spec.Version != "" {
-		if _, err := version.ParseSemantic(spec.Version); err != nil {
-			log.Info("Version contains invalid value")
-			conditions.Set(provider, conditions.FalseCondition(
-				operatorv1.PreflightCheckCondition,
-				operatorv1.IncorrectVersionFormatReason,
-				clusterv1.ConditionSeverityError,
-				err.Error(),
-			))
-
-			return ctrl.Result{}, fmt.Errorf("version contains invalid value for provider %q", provider.GetName())
+		// Check that the provider version is supported.
+		if err := checkProviderVersion(ctx, spec.Version, provider); err != nil {
+			return ctrl.Result{}, err
 		}
 	}
 
@@ -206,6 +199,46 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 	log.Info("Preflight checks passed")
 
 	return ctrl.Result{}, nil
+}
+
+// checkProviderVersion verifies that target and installed provider versions are correct.
+func checkProviderVersion(ctx context.Context, providerVersion string, provider genericprovider.GenericProvider) error {
+	log := ctrl.LoggerFrom(ctx)
+
+	// Check that provider version contains a valid value if it's not empty.
+	targetVersion, err := version.ParseSemantic(providerVersion)
+	if err != nil {
+		log.Info("Version contains invalid value")
+		conditions.Set(provider, conditions.FalseCondition(
+			operatorv1.PreflightCheckCondition,
+			operatorv1.IncorrectVersionFormatReason,
+			clusterv1.ConditionSeverityError,
+			err.Error(),
+		))
+
+		return fmt.Errorf("version contains invalid value for provider %q", provider.GetName())
+	}
+
+	// Cluster API doesn't support downgrades by design. We need to report that for the user.
+	if provider.GetStatus().InstalledVersion != nil && *provider.GetStatus().InstalledVersion != "" {
+		installedVersion, err := version.ParseSemantic(*provider.GetStatus().InstalledVersion)
+		if err != nil {
+			return fmt.Errorf("installed version contains invalid value for provider %q", provider.GetName())
+		}
+
+		if targetVersion.Major() < installedVersion.Major() || targetVersion.Major() == installedVersion.Major() && targetVersion.Minor() < installedVersion.Minor() {
+			conditions.Set(provider, conditions.FalseCondition(
+				operatorv1.PreflightCheckCondition,
+				operatorv1.UnsupportedProviderDowngradeReason,
+				clusterv1.ConditionSeverityError,
+				fmt.Sprintf(unsupportedProviderDowngradeMessage, provider.GetName(), configclient.ClusterAPIProviderName),
+			))
+
+			return fmt.Errorf("downgrade is not supported for provider %q", provider.GetName())
+		}
+	}
+
+	return nil
 }
 
 // coreProviderIsReady returns true if the core provider is ready.
