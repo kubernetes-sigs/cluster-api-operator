@@ -14,7 +14,7 @@ builds:
   - -X 'sigs.k8s.io/cluster-api-operator/version.gitMinor={{.Minor}}'
   - -X 'sigs.k8s.io/cluster-api-operator/version.gitVersion={{.Version}}'
   - -X 'sigs.k8s.io/cluster-api-operator/version.gitCommit={{.Commit}}'
-  - -X 'sigs.k8s.io/cluster-api-operator/version.gitTreeState={{ if .IsGitDirty }}dirty{{ else }}clean{{ end }}'
+  - -X 'sigs.k8s.io/cluster-api-operator/version.gitTreeState={{.GitTreeState}}'
   - -X 'sigs.k8s.io/cluster-api-operator/version.buildDate={{.Date}}'
   goos:
   - linux
