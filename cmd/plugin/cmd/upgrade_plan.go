@@ -31,6 +31,7 @@ import (
 	clusterctlv1 "sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3"
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/cluster"
 	configclient "sigs.k8s.io/cluster-api/cmd/clusterctl/client/config"
+	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
 	"sigs.k8s.io/cluster-api-operator/util"
@@ -123,6 +124,11 @@ func runUpgradePlan() error {
 		upgradePlanOpts.kubeconfig = GetKubeconfigLocation()
 	}
 
+	client, err := CreateKubeClient(upgradePlanOpts.kubeconfig, upgradePlanOpts.kubeconfigContext)
+	if err != nil {
+		return fmt.Errorf("cannot create a client: %w", err)
+	}
+
 	certManUpgradePlan, err := planCertManagerUpgrade(ctx, upgradePlanOpts)
 	if err != nil {
 		return err
@@ -138,7 +144,7 @@ func runUpgradePlan() error {
 		log.Info("There are no managed Cert-Manager installations found")
 	}
 
-	capiOperatorUpgradePlan, err := planCAPIOperatorUpgrade(ctx, upgradePlanOpts)
+	capiOperatorUpgradePlan, err := planCAPIOperatorUpgrade(ctx, client)
 	if err != nil {
 		return err
 	}
@@ -153,7 +159,7 @@ func runUpgradePlan() error {
 		log.Info("CAPI operator is not managed by the plugin and won't be modified during upgrade")
 	}
 
-	upgradePlan, err := planUpgrade(ctx)
+	upgradePlan, err := planUpgrade(ctx, client)
 	if err != nil {
 		return err
 	}
@@ -233,15 +239,10 @@ func planCertManagerUpgrade(ctx context.Context, opts *upgradePlanOptions) (cert
 	}, nil
 }
 
-func planCAPIOperatorUpgrade(ctx context.Context, opts *upgradePlanOptions) (capiOperatorUpgradePlan, error) {
+func planCAPIOperatorUpgrade(ctx context.Context, client ctrlclient.Client) (capiOperatorUpgradePlan, error) {
 	upgradePlan := capiOperatorUpgradePlan{}
 
 	log.Info("Checking CAPI Operator version...")
-
-	client, err := CreateKubeClient(opts.kubeconfig, opts.kubeconfigContext)
-	if err != nil {
-		return upgradePlan, fmt.Errorf("cannot create a client: %w", err)
-	}
 
 	capiOperatorDeployment, err := GetDeploymentByLabels(ctx, client, capiOperatorLabels)
 	if err != nil {
@@ -294,12 +295,8 @@ func isCAPIOperatorExternallyManaged(deployment *appsv1.Deployment) bool {
 	return deployment.Labels[clusterv1.ProviderNameLabel] != capiOperatorProviderName
 }
 
-func planUpgrade(ctx context.Context) (upgradePlan, error) {
-	if initOpts.kubeconfig == "" {
-		initOpts.kubeconfig = GetKubeconfigLocation()
-	}
-
-	genericProviders, contract, err := getInstalledProviders(ctx)
+func planUpgrade(ctx context.Context, client ctrlclient.Client) (upgradePlan, error) {
+	genericProviders, contract, err := getInstalledProviders(ctx, client)
 	if err != nil {
 		return upgradePlan{}, fmt.Errorf("cannot get installed providers: %w", err)
 	}
@@ -343,16 +340,11 @@ func planUpgrade(ctx context.Context) (upgradePlan, error) {
 	return upgradePlan{Contract: contract, Providers: upgradeItems}, nil
 }
 
-func getInstalledProviders(ctx context.Context) ([]operatorv1.GenericProvider, string, error) {
-	client, err := CreateKubeClient(initOpts.kubeconfig, initOpts.kubeconfigContext)
-	if err != nil {
-		return nil, "", fmt.Errorf("cannot create a client: %w", err)
-	}
-
+func getInstalledProviders(ctx context.Context, client ctrlclient.Client) ([]operatorv1.GenericProvider, string, error) {
 	// Iterate through installed providers and create a list of upgrade plans.
 	genericProviders := []operatorv1.GenericProvider{}
 
-	var contract string
+	contract := "v1beta1"
 
 	// Get Core Providers.
 	var coreProviderList operatorv1.CoreProviderList
@@ -361,9 +353,11 @@ func getInstalledProviders(ctx context.Context) ([]operatorv1.GenericProvider, s
 		return nil, "", fmt.Errorf("cannot get a list of core providers from the server: %w", err)
 	}
 
-	for i := range coreProviderList.Items {
+	if len(coreProviderList.Items) == 1 && coreProviderList.Items[0].Status.Contract != nil {
 		contract = *coreProviderList.Items[0].Status.Contract
+	}
 
+	for i := range coreProviderList.Items {
 		genericProviders = append(genericProviders, &coreProviderList.Items[i])
 	}
 
