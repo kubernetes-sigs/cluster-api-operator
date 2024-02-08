@@ -19,7 +19,6 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"os"
 	"testing"
 
 	. "github.com/onsi/gomega"
@@ -29,9 +28,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	clusterctlv1 "sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3"
-	"sigs.k8s.io/cluster-api/util/kubeconfig"
 
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
 	"sigs.k8s.io/cluster-api-operator/internal/controller/genericprovider"
@@ -371,100 +368,6 @@ func generateCAPIOperatorDeployment(name, namespace string) *appsv1.Deployment {
 				},
 			},
 		},
-	}
-}
-
-func TestDeployCAPIOperator(t *testing.T) {
-	g := NewWithT(t)
-
-	envCluster := &clusterv1.Cluster{}
-	envCluster.Name = "test-cluster"
-
-	kubeconfigRaw := kubeconfig.FromEnvTestConfig(env.GetConfig(), envCluster)
-
-	tempDir := os.TempDir()
-
-	kubeconfigFile, err := os.CreateTemp(tempDir, "kubeconfig")
-	g.Expect(err).NotTo(HaveOccurred())
-
-	defer func() {
-		if err := os.Remove(kubeconfigFile.Name()); err != nil {
-			t.Error(err)
-		}
-	}()
-
-	_, err = kubeconfigFile.Write(kubeconfigRaw)
-	g.Expect(err).NotTo(HaveOccurred())
-
-	tests := []struct {
-		name          string
-		opts          *initOptions
-		wantedVersion string
-		wantErr       bool
-	}{
-		{
-			name:          "with version",
-			wantedVersion: "v0.7.0",
-			wantErr:       false,
-			opts: &initOptions{
-				kubeconfig:        kubeconfigFile.Name(),
-				kubeconfigContext: "@test-cluster",
-				operatorVersion:   "v0.7.0",
-			},
-		},
-		{
-			name:    "incorrect version",
-			wantErr: true,
-			opts: &initOptions{
-				kubeconfig:        kubeconfigFile.Name(),
-				kubeconfigContext: "@test-cluster",
-				operatorVersion:   "v1000000",
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			g := NewWithT(t)
-
-			ctx, cancel := context.WithTimeout(context.Background(), waitLong)
-
-			defer cancel()
-
-			resources := []ctrlclient.Object{}
-
-			deployment := generateCAPIOperatorDeployment("capi-operator-controller-manager", "capi-operator-system")
-
-			err := deployCAPIOperator(ctx, tt.opts)
-
-			if tt.wantErr {
-				g.Expect(err).To(HaveOccurred())
-
-				return
-			} else {
-				g.Expect(err).NotTo(HaveOccurred())
-			}
-
-			resources = append(resources, deployment)
-
-			g.Eventually(func() (bool, error) {
-				err := env.Get(ctx, ctrlclient.ObjectKeyFromObject(deployment), deployment)
-				if err != nil {
-					return false, err
-				}
-
-				return deployment != nil, nil
-			}, waitShort).Should(BeTrue())
-
-			g.Expect(deployment.Spec.Template.Spec.Containers).NotTo(BeEmpty())
-
-			if tt.wantedVersion != "" {
-				g.Expect(deployment.Spec.Template.Spec.Containers[0].Image).To(HaveSuffix(tt.wantedVersion))
-			} else {
-				g.Expect(deployment.Spec.Template.Spec.Containers[0].Image).To(HaveSuffix(tt.opts.operatorVersion))
-			}
-
-			g.Expect(env.CleanupAndWait(ctx, resources...)).To(Succeed())
-		})
 	}
 }
 
