@@ -82,7 +82,7 @@ var deleteCmd = &cobra.Command{
 		# Important! As a consequence of this operation, all the corresponding resources managed by
 		# the AWS infrastructure provider and Cluster API Providers are orphaned and there might be
 		# ongoing costs incurred as a result of this.
-		capioperator delete --core cluster-api --infrastructure aws
+		capioperator delete --core --infrastructure aws
 
 		# Delete the AWS infrastructure provider and related CRDs. Please note that this forces deletion of
 		# all the related objects (e.g. AWSClusters, AWSMachines etc.).
@@ -118,7 +118,7 @@ func init() {
 		"Forces the deletion of the provider's CRDs (and of all the related objects)")
 
 	deleteCmd.Flags().BoolVar(&deleteOpts.coreProvider, "core", false,
-		"Core provider (e.g. cluster-api) to delete from the management cluster")
+		"Core provider to delete from the management cluster. If not set, core provider is not removed. Cluster cannot have more then 1 core provider in total.")
 	deleteCmd.Flags().StringSliceVarP(&deleteOpts.infrastructureProviders, "infrastructure", "i", nil,
 		"Infrastructure provider and namespace (e.g. aws:<namespace>) to delete from the management cluster")
 	deleteCmd.Flags().StringSliceVarP(&deleteOpts.bootstrapProviders, "bootstrap", "b", nil,
@@ -335,6 +335,8 @@ func deleteProviders(ctx context.Context, client ctrlclient.Client, providerList
 	}
 
 	if deleteOpts.includeCRDs && len(providerList.GetItems()) == 0 {
+		log.Info("Removing CRDs")
+
 		group := gvk.GroupKind()
 		group.Kind = strings.Replace(strings.ToLower(group.Kind), "list", "s", 1)
 		crd := &apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: group.String()}}
@@ -343,6 +345,8 @@ func deleteProviders(ctx context.Context, client ctrlclient.Client, providerList
 			return false, fmt.Errorf("unable to issue delete for %s: %w", group, err)
 		}
 	}
+
+	log.Info("All requested providers are deleted")
 
 	return ready, nil
 }

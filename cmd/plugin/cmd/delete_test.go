@@ -20,7 +20,11 @@ import (
 	"testing"
 
 	. "github.com/onsi/gomega"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
+
+	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
+	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func TestSelectorFromProvider(t *testing.T) {
@@ -66,6 +70,50 @@ func TestSelectorFromProvider(t *testing.T) {
 			} else {
 				g.Expect(err).ToNot(HaveOccurred())
 				g.Expect(actual).To(Equal(tc.expected))
+			}
+		})
+	}
+}
+
+func TestDeleteProviders(t *testing.T) {
+	tests := []struct {
+		name      string
+		list      genericProviderList
+		providers []genericProvider
+		selector  fields.Set
+	}{{
+		name: "Delete providers",
+		list: &operatorv1.AddonProviderList{},
+		providers: []genericProvider{&operatorv1.AddonProvider{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "addon",
+				Namespace: "default",
+			},
+		}, &operatorv1.AddonProvider{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "other",
+				Namespace: "default",
+			},
+		}},
+		selector: fields.Set{"metadata.namespace": "default"},
+	}}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := NewWithT(t)
+			for _, provider := range tt.providers {
+				g.Expect(env.Create(ctx, provider)).To(Succeed())
+			}
+
+			_, err := deleteProviders(ctx, env, tt.list, ctrlclient.MatchingFieldsSelector{
+				Selector: fields.SelectorFromSet(tt.selector),
+			})
+			g.Expect(err).NotTo(HaveOccurred())
+
+			for _, genericProvider := range tt.providers {
+				g.Eventually(func() error {
+					return env.Get(ctx, ctrlclient.ObjectKeyFromObject(genericProvider), genericProvider)
+				}, waitShort).Should(HaveOccurred())
 			}
 		})
 	}
