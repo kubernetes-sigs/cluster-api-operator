@@ -18,21 +18,40 @@ package cmd
 
 import (
 	"context"
+	"fmt"
+	"strings"
+	"time"
 
 	"github.com/go-errors/errors"
 	"github.com/spf13/cobra"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/klog/v2/klogr"
+
+	kerrors "k8s.io/apimachinery/pkg/util/errors"
+
+	"k8s.io/apimachinery/pkg/api/meta"
+	ctrl "sigs.k8s.io/controller-runtime"
+
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
+
+	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
 )
 
 type deleteOptions struct {
 	kubeconfig              string
 	kubeconfigContext       string
-	coreProvider            string
+	coreProvider            bool
 	bootstrapProviders      []string
 	controlPlaneProviders   []string
 	infrastructureProviders []string
 	ipamProviders           []string
+	addonProviders          []string
 	// runtimeExtensionProviders []string
-	addonProviders   []string
 	includeNamespace bool
 	includeCRDs      bool
 	deleteAll        bool
@@ -63,7 +82,7 @@ var deleteCmd = &cobra.Command{
 		# Important! As a consequence of this operation, all the corresponding resources managed by
 		# the AWS infrastructure provider and Cluster API Providers are orphaned and there might be
 		# ongoing costs incurred as a result of this.
-		capioperator delete --core cluster-api --infrastructure aws
+		capioperator delete --core --infrastructure aws
 
 		# Delete the AWS infrastructure provider and related CRDs. Please note that this forces deletion of
 		# all the related objects (e.g. AWSClusters, AWSMachines etc.).
@@ -98,20 +117,20 @@ func init() {
 	deleteCmd.Flags().BoolVar(&deleteOpts.includeCRDs, "include-crd", false,
 		"Forces the deletion of the provider's CRDs (and of all the related objects)")
 
-	deleteCmd.Flags().StringVar(&deleteOpts.coreProvider, "core", "",
-		"Core provider version (e.g. cluster-api:v1.1.5) to delete from the management cluster")
+	deleteCmd.Flags().BoolVar(&deleteOpts.coreProvider, "core", false,
+		"Core provider to delete from the management cluster. If not set, core provider is not removed. Cluster cannot have more then 1 core provider in total.")
 	deleteCmd.Flags().StringSliceVarP(&deleteOpts.infrastructureProviders, "infrastructure", "i", nil,
-		"Infrastructure providers and versions (e.g. aws:v0.5.0) to delete from the management cluster")
+		"Infrastructure provider and namespace (e.g. aws:<namespace>) to delete from the management cluster")
 	deleteCmd.Flags().StringSliceVarP(&deleteOpts.bootstrapProviders, "bootstrap", "b", nil,
-		"Bootstrap providers and versions (e.g. kubeadm:v1.1.5) to delete from the management cluster")
+		"Bootstrap provider and namespace (e.g. kubeadm:<namespace>) to delete from the management cluster")
 	deleteCmd.Flags().StringSliceVarP(&deleteOpts.controlPlaneProviders, "control-plane", "c", nil,
-		"ControlPlane providers and versions (e.g. kubeadm:v1.1.5) to delete from the management cluster")
+		"ControlPlane provider and namespace (e.g. kubeadm:<namespace>) to delete from the management cluster")
 	deleteCmd.Flags().StringSliceVar(&deleteOpts.ipamProviders, "ipam", nil,
-		"IPAM providers and versions (e.g. infoblox:v0.0.1) to delete from the management cluster")
+		"IPAM provider and namespace (e.g. infoblox:<namespace>) to delete from the management cluster")
 	// deleteCmd.Flags().StringSliceVar(&deleteOpts.runtimeExtensionProviders, "runtime-extension", nil,
 	//	"Runtime extension providers and versions (e.g. test:v0.0.1) to delete from the management cluster")
 	deleteCmd.Flags().StringSliceVar(&deleteOpts.addonProviders, "addon", nil,
-		"Add-on providers and versions (e.g. helm:v0.1.0) to delete from the management cluster")
+		"Add-on providers and versions (e.g. helm:<namespace>) to delete from the management cluster")
 
 	deleteCmd.Flags().BoolVar(&deleteOpts.deleteAll, "all", false,
 		"Force deletion of all the providers")
@@ -122,11 +141,13 @@ func init() {
 func runDelete() error {
 	ctx := context.Background()
 
-	hasProviderNames := (deleteOpts.coreProvider != "") ||
+	ctrl.SetLogger(klogr.New())
+
+	hasProviderNames := deleteOpts.coreProvider ||
 		(len(deleteOpts.bootstrapProviders) > 0) ||
 		(len(deleteOpts.controlPlaneProviders) > 0) ||
 		(len(deleteOpts.infrastructureProviders) > 0) ||
-		// (len(deleteOpts.ipamProviders) > 0) ||
+		(len(deleteOpts.ipamProviders) > 0) ||
 		// (len(deleteOpts.runtimeExtensionProviders) > 0) ||
 		(len(deleteOpts.addonProviders) > 0)
 
@@ -138,9 +159,194 @@ func runDelete() error {
 		return errors.New("At least one of --core, --bootstrap, --control-plane, --infrastructure, --ipam, --extension, --addon should be specified or the --all flag should be set")
 	}
 
-	return deleteProvider(ctx, deleteOpts)
+	if deleteOpts.kubeconfig == "" {
+		deleteOpts.kubeconfig = GetKubeconfigLocation()
+	}
+
+	cl, err := CreateKubeClient(deleteOpts.kubeconfig, deleteOpts.kubeconfigContext)
+	if err != nil {
+		return fmt.Errorf("unable to create client from kubeconfig flag %s with context %s: %w", deleteOpts.kubeconfig, deleteOpts.kubeconfigContext, err)
+	}
+
+	group := &DeleteGroup{
+		selectors: []fields.Set{},
+		providers: []genericProviderList{},
+	}
+	errors := append([]error{},
+		group.delete(&operatorv1.BootstrapProviderList{}, deleteOpts.bootstrapProviders...),
+		group.delete(&operatorv1.ControlPlaneProviderList{}, deleteOpts.controlPlaneProviders...),
+		group.delete(&operatorv1.InfrastructureProviderList{}, deleteOpts.infrastructureProviders...),
+		group.delete(&operatorv1.IPAMProviderList{}, deleteOpts.ipamProviders...),
+		group.delete(&operatorv1.AddonProviderList{}, deleteOpts.addonProviders...))
+
+	if deleteOpts.coreProvider {
+		errors = append(errors, group.delete(&operatorv1.CoreProviderList{}, []string{""}...))
+	}
+
+	if err := kerrors.NewAggregate(errors); err != nil {
+		return err
+	}
+
+	if deleteOpts.deleteAll {
+		group.deleteAll()
+	}
+
+	return group.execute(ctx, cl)
 }
 
-func deleteProvider(ctx context.Context, opts *deleteOptions) error {
-	return errors.New("Not implemented")
+type DeleteGroup struct {
+	selectors []fields.Set
+	providers []genericProviderList
+}
+
+func (d *DeleteGroup) delete(providerType genericProviderList, names ...string) error {
+	for _, provider := range names {
+		selector, err := selectorFromProvider(provider)
+		if err != nil {
+			return fmt.Errorf("invalid provider format: %w", err)
+		}
+
+		d.providers = append(d.providers, providerType)
+		d.selectors = append(d.selectors, selector)
+	}
+
+	return nil
+}
+
+func (d *DeleteGroup) deleteAll() {
+	for _, list := range operatorv1.ProviderLists {
+		providerList, ok := list.(genericProviderList)
+		if !ok {
+			log.V(5).Info("Expected to get GenericProviderList")
+			continue
+		}
+
+		d.providers = append(d.providers, providerList)
+		d.selectors = append(d.selectors, fields.Set{})
+	}
+}
+
+func (d *DeleteGroup) execute(ctx context.Context, cl ctrlclient.Client) error {
+	opts := wait.Backoff{
+		Duration: 500 * time.Millisecond,
+		Factor:   1.5,
+		Steps:    10,
+		Jitter:   0.4,
+	}
+
+	log.Info("Waiting for CAPI Operator manifests to be removed...")
+
+	if err := wait.ExponentialBackoff(opts, func() (bool, error) {
+		ready := true
+		for i := range d.providers {
+			if done, err := deleteProviders(ctx, cl, d.providers[i], ctrlclient.MatchingFieldsSelector{
+				Selector: fields.SelectorFromSet(d.selectors[i]),
+			}); err != nil {
+				return false, err
+			} else {
+				ready = ready && done
+			}
+		}
+
+		return ready, nil
+	}); err != nil {
+		return fmt.Errorf("cannot remove provider: %w", err)
+	}
+
+	return nil
+}
+
+func selectorFromProvider(provider string) (fields.Set, error) {
+	var name, namespace string
+
+	parts := strings.Split(provider, ":")
+	switch len(parts) {
+	case 0 | 3:
+	case 1:
+		name = parts[0]
+	case 2:
+		name, namespace = parts[0], parts[1]
+	default:
+		return nil, fmt.Errorf("invalid provider format: %s", provider)
+	}
+
+	selector := fields.Set{}
+
+	if name != "" {
+		selector["metadata.name"] = name
+	}
+
+	if namespace != "" {
+		selector["metadata.namespace"] = namespace
+	}
+
+	return selector, nil
+}
+
+func deleteProviders(ctx context.Context, client ctrlclient.Client, providerList genericProviderList, selector ctrlclient.MatchingFieldsSelector) (bool, error) {
+	//nolint:forcetypeassert
+	providerList = providerList.DeepCopyObject().(genericProviderList)
+	ready := true
+
+	gvks, _, err := scheme.ObjectKinds(providerList)
+	if err != nil {
+		log.Error(err, "Kind is not registered in provider list")
+		return false, err
+	}
+
+	gvk := gvks[0]
+
+	if err := client.List(ctx, providerList, selector); meta.IsNoMatchError(err) || apierrors.IsNotFound(err) {
+		return true, nil
+	} else if err != nil {
+		log.Error(err, fmt.Sprintf("Unable to list providers to delete, %#v", err))
+		return false, err
+	}
+
+	for _, provider := range providerList.GetItems() {
+		log.Info(fmt.Sprintf("Deleting %s %s/%s", provider.GetType(), provider.GetName(), provider.GetNamespace()))
+
+		provider, ok := provider.(genericProvider)
+		if !ok {
+			log.Info(fmt.Sprintf("Expected to get GenericProvider for %s", gvk))
+			continue
+		}
+
+		if err := client.DeleteAllOf(ctx, provider, ctrlclient.InNamespace(provider.GetNamespace())); err != nil {
+			return false, fmt.Errorf("unable to issue delete for %s: %w", gvk, err)
+		}
+
+		if deleteOpts.includeNamespace {
+			if strings.HasPrefix(provider.GetNamespace(), "kube-") || provider.GetNamespace() == "default" {
+				log.Info(fmt.Sprintf("Skipping system namespace %s", provider.GetNamespace()))
+				continue
+			}
+
+			ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: provider.GetNamespace()}}
+			if err := client.Delete(ctx, ns); ctrlclient.IgnoreNotFound(err) != nil {
+				return false, fmt.Errorf("unable to issue delete for Namespace %s: %w", provider.GetNamespace(), err)
+			}
+		}
+	}
+
+	if len(providerList.GetItems()) > 0 {
+		log.Info(fmt.Sprintf("%d items remaning...", len(providerList.GetItems())))
+		return false, nil
+	}
+
+	if deleteOpts.includeCRDs && len(providerList.GetItems()) == 0 {
+		log.Info("Removing CRDs")
+
+		group := gvk.GroupKind()
+		group.Kind = strings.Replace(strings.ToLower(group.Kind), "list", "s", 1)
+		crd := &apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: group.String()}}
+
+		if err := client.Delete(ctx, crd); ctrlclient.IgnoreNotFound(err) != nil {
+			return false, fmt.Errorf("unable to issue delete for %s: %w", group, err)
+		}
+	}
+
+	log.Info("All requested providers are deleted")
+
+	return ready, nil
 }

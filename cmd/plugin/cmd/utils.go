@@ -33,7 +33,10 @@ import (
 	clusterctlv1 "sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
+	admissionv1 "k8s.io/api/admissionregistration/v1"
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
+
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 )
 
 var capiOperatorLabels = map[string]string{
@@ -41,7 +44,28 @@ var capiOperatorLabels = map[string]string{
 	"control-plane":                    "controller-manager",
 }
 
-var ErrNotFound = fmt.Errorf("resource was not found")
+var (
+	ErrNotFound = fmt.Errorf("resource was not found")
+	scheme      = runtime.NewScheme()
+)
+
+func init() {
+	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
+	utilruntime.Must(apiextensionsv1.AddToScheme(scheme))
+	utilruntime.Must(operatorv1.AddToScheme(scheme))
+	utilruntime.Must(admissionv1.AddToScheme(scheme))
+	utilruntime.Must(clusterctlv1.AddToScheme(scheme))
+}
+
+type genericProvider interface {
+	ctrlclient.Object
+	operatorv1.GenericProvider
+}
+
+type genericProviderList interface {
+	ctrlclient.ObjectList
+	operatorv1.GenericProviderList
+}
 
 // CreateKubeClient creates a kubernetes client from provided kubeconfig and kubecontext.
 func CreateKubeClient(kubeconfigPath, kubeconfigContext string) (ctrlclient.Client, error) {
@@ -54,10 +78,6 @@ func CreateKubeClient(kubeconfigPath, kubeconfigContext string) (ctrlclient.Clie
 	if err != nil {
 		return nil, fmt.Errorf("error loading client config: %w", err)
 	}
-
-	scheme := runtime.NewScheme()
-	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
-	utilruntime.Must(operatorv1.AddToScheme(scheme))
 
 	client, err := ctrlclient.New(config, ctrlclient.Options{Scheme: scheme})
 	if err != nil {

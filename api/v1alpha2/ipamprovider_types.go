@@ -56,5 +56,6 @@ type IPAMProviderList struct {
 }
 
 func init() {
-	objectTypes = append(objectTypes, &IPAMProvider{}, &IPAMProviderList{})
+	ProviderLists = append(ProviderLists, &IPAMProviderList{})
+	Providers = append(Providers, &IPAMProvider{})
 }

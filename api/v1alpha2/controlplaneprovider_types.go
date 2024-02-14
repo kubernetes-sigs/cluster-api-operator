@@ -56,5 +56,6 @@ type ControlPlaneProviderList struct {
 }
 
 func init() {
-	objectTypes = append(objectTypes, &ControlPlaneProvider{}, &ControlPlaneProviderList{})
+	ProviderLists = append(ProviderLists, &ControlPlaneProviderList{})
+	Providers = append(Providers, &ControlPlaneProvider{})
 }

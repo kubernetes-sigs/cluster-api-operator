@@ -56,5 +56,6 @@ type AddonProviderList struct {
 }
 
 func init() {
-	objectTypes = append(objectTypes, &AddonProvider{}, &AddonProviderList{})
+	ProviderLists = append(ProviderLists, &AddonProviderList{})
+	Providers = append(Providers, &AddonProvider{})
 }

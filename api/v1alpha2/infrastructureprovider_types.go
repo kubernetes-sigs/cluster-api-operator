@@ -56,5 +56,6 @@ type InfrastructureProviderList struct {
 }
 
 func init() {
-	objectTypes = append(objectTypes, &InfrastructureProvider{}, &InfrastructureProviderList{})
+	ProviderLists = append(ProviderLists, &InfrastructureProviderList{})
+	Providers = append(Providers, &InfrastructureProvider{})
 }

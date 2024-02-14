@@ -56,5 +56,6 @@ type CoreProviderList struct {
 }
 
 func init() {
-	objectTypes = append(objectTypes, &CoreProvider{}, &CoreProviderList{})
+	ProviderLists = append(ProviderLists, &CoreProviderList{})
+	Providers = append(Providers, &CoreProvider{})
 }

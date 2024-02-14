@@ -24,6 +24,9 @@ import (
 
 	"sigs.k8s.io/cluster-api-operator/internal/envtest"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
 )
 
 const (
@@ -40,6 +43,24 @@ func TestMain(m *testing.M) {
 	fmt.Println("Creating new test environment")
 
 	env = envtest.New()
+
+	if err := env.Manager.GetCache().IndexField(ctx, &operatorv1.AddonProvider{},
+		"metadata.name",
+		func(obj client.Object) []string {
+			return []string{obj.GetName()}
+		},
+	); err != nil {
+		panic(fmt.Sprintf("Error setting up name index field: %v", err))
+	}
+
+	if err := env.Manager.GetCache().IndexField(ctx, &operatorv1.AddonProvider{},
+		"metadata.namespace",
+		func(obj client.Object) []string {
+			return []string{obj.GetNamespace()}
+		},
+	); err != nil {
+		panic(fmt.Sprintf("Error setting up namespace index field: %v", err))
+	}
 
 	go func() {
 		if err := env.Start(ctx); err != nil {
