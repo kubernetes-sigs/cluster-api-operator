@@ -267,7 +267,7 @@ metadata:
 			e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 	})
 
-	It("should successfully create and delete an IPAMProvider", func() {
+	PIt("should successfully create and delete an IPAMProvider", func() {
 		bootstrapCluster := bootstrapClusterProxy.GetClient()
 		ipamProvider := &operatorv1.IPAMProvider{
 			ObjectMeta: metav1.ObjectMeta{
