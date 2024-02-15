@@ -44,6 +44,15 @@ spec:
 {{- if $infrastructureVersion }}
   version: {{ $infrastructureVersion }}
 {{- end }}
+{{- if $.Values.manager }}
+  manager:
+{{- if $.Values.manager.featureGates }}
+    featureGates:
+{{- range $key, $value := $.Values.manager.featureGates }}
+      {{ $key }}: {{ $value }}
+{{- end }}
+{{- end }}
+{{- end }}
 {{- if $.Values.configSecret.name }}
   configSecret:
     name: {{ $.Values.configSecret.name }}

@@ -12,6 +12,7 @@ bootstrap: ""
 controlPlane: ""
 infrastructure: ""
 addon: ""
+manager.featureGates: {}
 # ---
 # Common configuration secret options
 configSecret: {}
