@@ -28,7 +28,8 @@ var (
 )
 
 const (
-	operatorNamespace = "capi-operator-system"
+	operatorNamespace   = "capi-operator-system"
+	capiSystemNamespace = "capi-system"
 
 	previousCAPIVersion = "v1.5.4"
 

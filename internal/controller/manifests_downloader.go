@@ -127,6 +127,7 @@ func (p *phaseReconciler) checkConfigMapExists(ctx context.Context, labelSelecto
 	labelSet := labels.Set(labelSelector.MatchLabels)
 	listOpts := []client.ListOption{
 		client.MatchingLabelsSelector{Selector: labels.SelectorFromSet(labelSet)},
+		client.InNamespace(p.provider.GetNamespace()),
 	}
 
 	var configMapList corev1.ConfigMapList

@@ -54,6 +54,14 @@ var _ = Describe("Install Core Provider in an air-gapped environment", func() {
 			configMaps = append(configMaps, configMap)
 		}
 
+		By("Creating capi-system namespace")
+		namespace := &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: capiSystemNamespace,
+			},
+		}
+		Expect(bootstrapCluster.Create(ctx, namespace)).To(Succeed())
+
 		By("Applying core provider manifests to the cluster")
 		for _, cm := range configMaps {
 			Expect(bootstrapCluster.Create(ctx, &cm)).To(Succeed())
@@ -65,7 +73,7 @@ var _ = Describe("Install Core Provider in an air-gapped environment", func() {
 		coreProvider := &operatorv1.CoreProvider{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      coreProviderName,
-				Namespace: operatorNamespace,
+				Namespace: capiSystemNamespace,
 			},
 			Spec: operatorv1.CoreProviderSpec{
 				ProviderSpec: operatorv1.ProviderSpec{
@@ -87,7 +95,7 @@ var _ = Describe("Install Core Provider in an air-gapped environment", func() {
 		By("Waiting for the core provider deployment to be ready")
 		framework.WaitForDeploymentsAvailable(ctx, framework.WaitForDeploymentsAvailableInput{
 			Getter:     bootstrapClusterProxy.GetClient(),
-			Deployment: &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: coreProviderDeploymentName, Namespace: operatorNamespace}},
+			Deployment: &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: coreProviderDeploymentName, Namespace: capiSystemNamespace}},
 		}, e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
 		By("Waiting for core provider to be ready")
@@ -104,7 +112,7 @@ var _ = Describe("Install Core Provider in an air-gapped environment", func() {
 	It("should successfully upgrade a CoreProvider (v1.5.4 -> latest)", func() {
 		bootstrapCluster := bootstrapClusterProxy.GetClient()
 		coreProvider := &operatorv1.CoreProvider{}
-		key := client.ObjectKey{Namespace: operatorNamespace, Name: coreProviderName}
+		key := client.ObjectKey{Namespace: capiSystemNamespace, Name: coreProviderName}
 		Expect(bootstrapCluster.Get(ctx, key, coreProvider)).To(Succeed())
 
 		coreProvider.Spec.Version = ""
@@ -114,7 +122,7 @@ var _ = Describe("Install Core Provider in an air-gapped environment", func() {
 		By("Waiting for the core provider deployment to be ready")
 		framework.WaitForDeploymentsAvailable(ctx, framework.WaitForDeploymentsAvailableInput{
 			Getter:     bootstrapClusterProxy.GetClient(),
-			Deployment: &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: coreProviderDeploymentName, Namespace: operatorNamespace}},
+			Deployment: &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: coreProviderDeploymentName, Namespace: capiSystemNamespace}},
 		}, e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
 		By("Waiting for core provider to be ready")
@@ -132,7 +140,7 @@ var _ = Describe("Install Core Provider in an air-gapped environment", func() {
 		bootstrapCluster := bootstrapClusterProxy.GetClient()
 		coreProvider := &operatorv1.CoreProvider{ObjectMeta: metav1.ObjectMeta{
 			Name:      coreProviderName,
-			Namespace: operatorNamespace,
+			Namespace: capiSystemNamespace,
 		}}
 
 		Expect(bootstrapCluster.Delete(ctx, coreProvider)).To(Succeed())
@@ -140,7 +148,7 @@ var _ = Describe("Install Core Provider in an air-gapped environment", func() {
 		By("Waiting for the core provider deployment to be deleted")
 		WaitForDelete(ctx, For(&appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{
 			Name:      coreProviderDeploymentName,
-			Namespace: operatorNamespace,
+			Namespace: capiSystemNamespace,
 		}}).In(bootstrapCluster), e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
 		By("Waiting for the core provider object to be deleted")
@@ -168,5 +176,13 @@ var _ = Describe("Install Core Provider in an air-gapped environment", func() {
 		for _, cm := range configMaps {
 			Expect(bootstrapCluster.Delete(ctx, &cm)).To(Succeed())
 		}
+
+		By("Deleting capi-system namespace")
+		namespace := &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: capiSystemNamespace,
+			},
+		}
+		Expect(bootstrapCluster.Delete(ctx, namespace)).To(Succeed())
 	})
 })

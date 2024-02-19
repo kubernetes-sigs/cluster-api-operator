@@ -176,7 +176,7 @@ func (p *phaseReconciler) load(ctx context.Context) (reconcile.Result, error) {
 		return reconcile.Result{}, wrapPhaseError(err, "failed to load additional manifests", operatorv1.ProviderInstalledCondition)
 	}
 
-	p.repo, err = p.configmapRepository(ctx, labelSelector, additionalManifests)
+	p.repo, err = p.configmapRepository(ctx, labelSelector, p.provider.GetNamespace(), additionalManifests)
 	if err != nil {
 		return reconcile.Result{}, wrapPhaseError(err, "failed to load the repository", operatorv1.ProviderInstalledCondition)
 	}
@@ -269,7 +269,7 @@ func (p *phaseReconciler) secretReader(ctx context.Context, providers ...configc
 
 // configmapRepository use clusterctl NewMemoryRepository structure to store the manifests
 // and metadata from a given configmap.
-func (p *phaseReconciler) configmapRepository(ctx context.Context, labelSelector *metav1.LabelSelector, additionalManifests string) (repository.Repository, error) {
+func (p *phaseReconciler) configmapRepository(ctx context.Context, labelSelector *metav1.LabelSelector, namespace, additionalManifests string) (repository.Repository, error) {
 	mr := repository.NewMemoryRepository()
 	mr.WithPaths("", "components.yaml")
 
@@ -280,7 +280,7 @@ func (p *phaseReconciler) configmapRepository(ctx context.Context, labelSelector
 		return nil, err
 	}
 
-	if err = p.ctrlClient.List(ctx, cml, &client.ListOptions{LabelSelector: selector}); err != nil {
+	if err = p.ctrlClient.List(ctx, cml, &client.ListOptions{LabelSelector: selector, Namespace: namespace}); err != nil {
 		return nil, err
 	}
 
