@@ -499,6 +499,7 @@ upload-staging-artifacts: ## Upload release artifacts to the staging bucket
 update-helm-plugin-repo:
 	./hack/update-plugin-yaml.sh $(RELEASE_TAG)
 	./hack/update-helm-repo.sh $(RELEASE_TAG)
+	./hack/publish-index-changes.sh $(RELEASE_TAG)
 
 .PHONY: promote-images
 promote-images: $(KPROMO)
