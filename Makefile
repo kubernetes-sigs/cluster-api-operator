@@ -106,7 +106,7 @@ YQ_VER := v4.25.2
 YQ_BIN := yq
 YQ := $(TOOLS_BIN_DIR)/$(YQ_BIN)-$(YQ_VER)
 
-KPROMO_VER := v3.5.1
+KPROMO_VER := v4.0.5
 KPROMO_BIN := kpromo
 KPROMO :=  $(TOOLS_BIN_DIR)/$(KPROMO_BIN)-$(KPROMO_VER)
 
@@ -229,7 +229,7 @@ $(YQ):
 	GOBIN=$(TOOLS_BIN_DIR) $(GO_INSTALL) github.com/mikefarah/yq/v4 $(YQ_BIN) ${YQ_VER}
 
 $(KPROMO):
-	GOBIN=$(TOOLS_BIN_DIR) $(GO_INSTALL) sigs.k8s.io/promo-tools/v3/cmd/kpromo $(KPROMO_BIN) ${KPROMO_VER}
+	GOBIN=$(TOOLS_BIN_DIR) $(GO_INSTALL) sigs.k8s.io/promo-tools/v4/cmd/kpromo $(KPROMO_BIN) ${KPROMO_VER}
 
 $(CONVERSION_GEN):
 	GOBIN=$(TOOLS_BIN_DIR) $(GO_INSTALL) k8s.io/code-generator/cmd/conversion-gen $(CONVERSION_GEN_BIN) ${CONVERSION_GEN_VER}
@@ -502,7 +502,7 @@ update-helm-plugin-repo:
 
 .PHONY: promote-images
 promote-images: $(KPROMO)
-	$(KPROMO) pr --project capi-operator --tag $(RELEASE_TAG) --reviewers "$(IMAGE_REVIEWERS)" --fork $(USER_FORK) --image cluster-api-operator
+	$(KPROMO) pr --project capi-operator --tag $(RELEASE_TAG) --reviewers "$(IMAGE_REVIEWERS)" --fork $(USER_FORK) --image cluster-api-operator --use-ssh=false
 
 ## --------------------------------------
 ## Cleanup / Verification
