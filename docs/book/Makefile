@@ -18,19 +18,30 @@ TOOLS_DIR := $(realpath ../../hack/tools)
 TOOLS_BIN_DIR := $(TOOLS_DIR)/bin
 BIN_DIR := bin
 MDBOOK_INSTALL := $(realpath ../../scripts/ci-install-mdbook.sh)
+TABULATE := $(TOOLS_BIN_DIR)/mdbook-tabulate
+EMBED := $(TOOLS_BIN_DIR)/mdbook-embed
+RELEASELINK := $(TOOLS_BIN_DIR)/mdbook-releaselink
+MDBOOK := $(TOOLS_BIN_DIR)/bin/mdbook
 
 export PATH := $(abspath $(TOOLS_BIN_DIR)/bin):$(PATH)
 
-# Only set MDBOOK if it's not set as an environment variable
-MDBOOK ?= $(TOOLS_BIN_DIR)/bin/mdbook
+BOOK_DEPS := $(MDBOOK) $(TABULATE) $(EMBED) $(RELEASELINK)
+
+$(TOOLS_BIN_DIR)/%: $(TOOLS_DIR_DEPS)
+	make -C $(TOOLS_DIR) $(subst $(TOOLS_DIR)/,,$@)
+
 $(MDBOOK):
-	$(MDBOOK_INSTALL) 0.4.35 $(TOOLS_BIN_DIR)
+	$(MDBOOK_INSTALL) 0.4.37 $(TOOLS_BIN_DIR)
 
 .PHONY: serve
-serve: $(MDBOOK)
+serve: $(BOOK_DEPS) ## Run a local web server with the compiled book
 	$(MDBOOK) serve
 
 .PHONY: build
-build: $(MDBOOK)
+build: $(BOOK_DEPS) ## Build the book
 	$(MDBOOK) build
 	cp $(ROOT_DIR)/index.yaml book
+
+.PHONY: clean
+clean:
+	rm -rf book

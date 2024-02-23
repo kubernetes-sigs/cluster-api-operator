@@ -5,22 +5,21 @@ src = "src"
 title = "Cluster API Operator"
 description = "Cluster API Operator"
 
-[preprocessor.toc]
-command = "mdbook-toc"
-marker = "[[_TOC_]]"
-
-[preprocessor.fs-summary]
-# (default: true)
-clean-paths = false
-
-# other preprocessors will naturally need to 
-# run after the summary has been generated 
-[preprocessor.links]
-after = ["fs-summary"] 
-
 [output.html]
 mathjax-support = true
 git-repository-url = "https://github.com/kubernetes-sigs/cluster-api-operator"
 git-repository-icon = "fa-github"
 site-url = "/cluster-api-operator/"
 
+[output.html.redirect]
+"/agenda.html" = "/agenda/2024.html"
+"/agenda/2024.html" = "https://docs.google.com/document/d/1-X4TQBLrGrVhUMTZokwaMil94aA-gXqdJj4Sp3Asdps"
+
+[preprocessor.tabulate]
+command = "./util-tabulate.sh"
+
+[preprocessor.embed]
+command = "./util-embed.sh"
+
+[preprocessor.releaselink]
+command = "./util-releaselink.sh"

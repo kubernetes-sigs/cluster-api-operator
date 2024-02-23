@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Copyright 2023 The Kubernetes Authors.
+# Copyright 2019 The Kubernetes Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,15 +18,7 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
-VERSION=${1}
-OUTPUT_PATH=${2}
-
-# Ensure the output folder exists
-mkdir -p "${OUTPUT_PATH}"
-
-# Install cargo
-curl https://sh.rustup.rs -sSf | sh -s -- -y
-. "$HOME/.cargo/env"
-
-# Install mdbook and dependencies
-cargo install mdbook --version "$VERSION" --root "$OUTPUT_PATH"
+REPO_ROOT=$(git rev-parse --show-toplevel)
+TABULATE=${REPO_ROOT}/hack/tools/bin/mdbook-tabulate
+make "${TABULATE}" GOPROXY="${GOPROXY:-"https://proxy.golang.org"}" &>/dev/null
+${TABULATE} "$@"
