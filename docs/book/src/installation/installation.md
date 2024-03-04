@@ -2,6 +2,3 @@
 
 This section describes `cluster-api-operator` components installation instructions.
 
-## [Plugin](./01_plugin.md)
-
-This document describes the plugin installation steps and prerequisites.
