@@ -81,3 +81,26 @@ type IPAMProvider struct {
 ```
 
 The following sections provide details about `ProviderSpec` and `ProviderStatus`, which are shared among all the provider types.
+
+## Provider Status
+
+`ProviderStatus`: observed state of the Provider, consisting of:
+
+- Contract (optional string): core provider contract being adhered to (e.g., "v1beta1")
+- Conditions (optional clusterv1.Conditions): current service state of the provider
+- ObservedGeneration (optional int64): latest generation observed by the controller
+- InstalledVersion (optional string): version of the provider that is installed
+
+   YAML example:
+
+   ```yaml
+   status:
+     contract: "v1beta1"
+     conditions:
+       - type: "Ready"
+         status: "True"
+         reason: "ProviderAvailable"
+         message: "Provider is available and ready"
+     observedGeneration: 1
+     installedVersion: "v0.1.0"
+   ```
