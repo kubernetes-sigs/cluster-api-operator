@@ -30,3 +30,5 @@ curl https://sh.rustup.rs -sSf | sh -s -- -y
 
 # Install mdbook and dependencies
 cargo install mdbook --version "$VERSION" --root "$OUTPUT_PATH"
+cargo install mdbook-fs-summary --root "$OUTPUT_PATH"
+cargo install mdbook-toc --root "$OUTPUT_PATH"
