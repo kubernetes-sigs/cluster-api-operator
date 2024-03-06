@@ -1,1 +1,0 @@
-# Injecting additional manifests

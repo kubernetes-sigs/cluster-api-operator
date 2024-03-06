@@ -1,1 +1,0 @@
-# Air-gapped Environment

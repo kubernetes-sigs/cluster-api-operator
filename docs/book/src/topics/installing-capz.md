@@ -1,1 +1,0 @@
-# Installing Azure Infrastructure Provider

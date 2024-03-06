@@ -22,10 +22,11 @@ TABULATE := $(TOOLS_BIN_DIR)/mdbook-tabulate
 EMBED := $(TOOLS_BIN_DIR)/mdbook-embed
 RELEASELINK := $(TOOLS_BIN_DIR)/mdbook-releaselink
 MDBOOK := $(TOOLS_BIN_DIR)/bin/mdbook
+FS_SUMMARY := $(TOOLS_BIN_DIR)/bin/mdbook-fs-summary
 
 export PATH := $(abspath $(TOOLS_BIN_DIR)/bin):$(PATH)
 
-BOOK_DEPS := $(MDBOOK) $(TABULATE) $(EMBED) $(RELEASELINK)
+BOOK_DEPS := $(MDBOOK) $(TABULATE) $(EMBED) $(RELEASELINK) $(FS_SUMMARY)
 
 $(TOOLS_BIN_DIR)/%: $(TOOLS_DIR_DEPS)
 	make -C $(TOOLS_DIR) $(subst $(TOOLS_DIR)/,,$@)
