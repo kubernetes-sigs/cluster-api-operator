@@ -548,3 +548,6 @@ test-e2e-run: $(GINKGO) $(ENVSUBST) $(HELM) ## Run e2e tests
 		-e2e.config="$(E2E_CONF_FILE_ENVSUBST)"  -e2e.components=$(RELEASE_DIR)/operator-components.yaml \
 		-e2e.skip-resource-cleanup=$(SKIP_CLEANUP) -e2e.use-existing-cluster=$(SKIP_CREATE_MGMT_CLUSTER) \
 		-e2e.helm-binary-path=$(HELM) -e2e.chart-path=$(CHART_PACKAGE_DIR)/cluster-api-operator-$(HELM_CHART_TAG).tgz $(E2E_ARGS)
+
+go-version: ## Print the go version we use to compile our binaries and images
+	@echo $(GO_VERSION)
