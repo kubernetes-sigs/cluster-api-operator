@@ -1,6 +1,4 @@
-# Configuration
-
-## Provider Spec
+# Provider Spec
 
 1. `ProviderSpec`: desired state of the Provider, consisting of:
    - Version (string): provider version (e.g., "v0.1.0")

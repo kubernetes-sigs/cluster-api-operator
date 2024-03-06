@@ -1,1 +1,0 @@
-# Cluster API Provider Lifecycle
