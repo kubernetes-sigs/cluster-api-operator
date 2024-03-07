@@ -62,7 +62,7 @@ func TestManifestsDownloader(t *testing.T) {
 		MatchLabels: p.prepareConfigMapLabels(),
 	}
 
-	exists, err := p.checkConfigMapExists(ctx, labelSelector)
+	exists, err := p.checkConfigMapExists(ctx, labelSelector, p.provider.GetNamespace())
 	g.Expect(err).ToNot(HaveOccurred())
 
 	g.Expect(exists).To(BeTrue())

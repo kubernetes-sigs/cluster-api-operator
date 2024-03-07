@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	. "github.com/onsi/gomega"
@@ -26,6 +27,7 @@ import (
 	clusterctlv1 "sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3"
 	configclient "sigs.k8s.io/cluster-api/cmd/clusterctl/client/config"
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/repository"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
@@ -406,6 +408,214 @@ metadata:
 			gotMetadata, err := got.GetFile(ctx, got.DefaultVersion(), "metadata.yaml")
 			g.Expect(err).To(Succeed())
 			g.Expect(string(gotMetadata)).To(Equal(metadata))
+
+			g.Expect(got.DefaultVersion()).To(Equal(tt.wantDefaultVersion))
+		})
+	}
+}
+
+func TestRepositoryProxy(t *testing.T) {
+	coreProvider := configclient.NewProvider("cluster-api", "https://github.com/kubernetes-sigs/cluster-api/releases/latest/core-components.yaml", clusterctlv1.CoreProviderType)
+	awsProvider := configclient.NewProvider("aws", "https://github.com/kubernetes-sigs/cluster-api-provider-aws/releases/v1.4.1/infrastructure-components.yaml", clusterctlv1.InfrastructureProviderType)
+
+	provider := &operatorv1.InfrastructureProvider{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "aws",
+			Namespace: "ns1",
+		},
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "InfrastructureProvider",
+			APIVersion: "operator.cluster.x-k8s.io/v1alpha2",
+		},
+		Spec: operatorv1.InfrastructureProviderSpec{
+			ProviderSpec: operatorv1.ProviderSpec{
+				Version: "v2.3.5",
+				FetchConfig: &operatorv1.FetchConfiguration{
+					Selector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{"provider-components": "aws"},
+					},
+				},
+			},
+		},
+	}
+
+	core := &operatorv1.CoreProvider{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "cluster-api",
+			Namespace: "default",
+		},
+		Spec: operatorv1.CoreProviderSpec{
+			ProviderSpec: operatorv1.ProviderSpec{
+				Version: testCurrentVersion,
+			},
+		},
+	}
+
+	awsMetadata := `
+apiVersion: clusterctl.cluster.x-k8s.io/v1alpha3
+releaseSeries:
+  - major: 2
+    minor: 4
+    contract: v1beta1
+  - major: 2
+    minor: 3
+    contract: v1beta1`
+
+	awsMetaReleaseSeries := []clusterctlv1.ReleaseSeries{
+		{
+			Major:    2,
+			Minor:    4,
+			Contract: "v1beta1",
+		}, {
+			Major:    2,
+			Minor:    3,
+			Contract: "v1beta1",
+		},
+	}
+
+	metadata := `
+apiVersion: clusterctl.cluster.x-k8s.io/v1alpha3
+releaseSeries:
+  - major: 0
+    minor: 4
+    contract: v1alpha4
+  - major: 0
+    minor: 3
+    contract: v1alpha3`
+
+	metaReleaseSeries := []clusterctlv1.ReleaseSeries{{
+		Major:    0,
+		Minor:    4,
+		Contract: "v1alpha4",
+	}, {
+		Major:    0,
+		Minor:    3,
+		Contract: "v1alpha3",
+	}}
+
+	tests := []struct {
+		name               string
+		configMaps         []corev1.ConfigMap
+		genericProviders   []client.Object
+		provider           configclient.Provider
+		defaultRepository  bool
+		wantMetadataSeries []clusterctlv1.ReleaseSeries
+		wantErr            string
+		metadataErr        string
+		wantDefaultVersion string
+	}{
+		{
+			name:               "missing configmaps",
+			provider:           coreProvider,
+			wantDefaultVersion: testCurrentVersion,
+			genericProviders:   []client.Object{core, provider},
+			metadataErr:        "failed to read \"metadata.yaml\" from the repository for provider \"cluster-api\": unable to get files for version v0.4.2",
+		},
+		{
+			name:               "correct configmap with data",
+			genericProviders:   []client.Object{core, provider},
+			provider:           coreProvider,
+			defaultRepository:  true,
+			wantDefaultVersion: testCurrentVersion,
+			wantMetadataSeries: metaReleaseSeries,
+			configMaps: []corev1.ConfigMap{
+				{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "ConfigMap",
+						APIVersion: "v1",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      testCurrentVersion,
+						Namespace: "default",
+						Labels: map[string]string{
+							configMapVersionLabel: testCurrentVersion,
+							configMapTypeLabel:    core.GetType(),
+							configMapNameLabel:    core.GetName(),
+							operatorManagedLabel:  "true",
+						},
+					},
+					Data: map[string]string{"metadata": metadata, "components": ""},
+				},
+			},
+		},
+		{
+			name:             "upgrade required validation of another provider missing config map",
+			genericProviders: []client.Object{core, provider},
+			provider:         awsProvider,
+			wantErr:          wrapPhaseError(fmt.Errorf("config map not found"), "config map repository required for validation does not exist yet for provider ns1/aws", operatorv1.ProviderUpgradedCondition).Error(),
+		},
+		{
+			name:             "updgrade requested an unknown provider for the operator",
+			genericProviders: []client.Object{core},
+			provider:         awsProvider,
+			wantErr:          wrapPhaseError(fmt.Errorf("unable to find provider manifest with name aws"), "unable to find generic provider for configclient InfrastructureProvider: aws", operatorv1.ProviderUpgradedCondition).Error(),
+		},
+		{
+			name:               "upgrade required validation of another provider metadata succeeds",
+			genericProviders:   []client.Object{core, provider},
+			provider:           awsProvider,
+			wantDefaultVersion: "v2.3.5",
+			wantMetadataSeries: awsMetaReleaseSeries,
+			configMaps: []corev1.ConfigMap{
+				{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "ConfigMap",
+						APIVersion: "v1",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "v2.3.5",
+						Namespace: provider.Namespace,
+						Labels:    map[string]string{"provider-components": "aws"},
+					},
+					Data: map[string]string{"metadata": awsMetadata, "components": ""},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := NewWithT(t)
+
+			fakeclient := fake.NewClientBuilder().WithScheme(setupScheme()).WithObjects(tt.genericProviders...).Build()
+			p := &phaseReconciler{
+				ctrlClient:     fakeclient,
+				providerConfig: coreProvider,
+				repo:           repository.NewMemoryRepository(),
+				provider:       core,
+			}
+
+			for i := range tt.configMaps {
+				g.Expect(fakeclient.Create(ctx, &tt.configMaps[i])).To(Succeed())
+			}
+			if tt.defaultRepository {
+				var err error
+				p.repo, err = p.configmapRepository(ctx, &metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						operatorManagedLabel: "true",
+					},
+				}, "default", "")
+				g.Expect(err).To(Succeed())
+			}
+
+			cl, err := configclient.New(ctx, "")
+			g.Expect(err).To(Succeed())
+
+			got, err := p.repositoryProxy(ctx, tt.provider, cl)
+			if len(tt.wantErr) > 0 {
+				g.Expect(err).Should(MatchError(tt.wantErr))
+				return
+			}
+			g.Expect(err).To(Succeed())
+
+			meta := got.Metadata(tt.wantDefaultVersion)
+			metadataData, err := meta.Get(ctx)
+			if len(tt.metadataErr) > 0 {
+				g.Expect(err).Should(MatchError(tt.metadataErr))
+				return
+			}
+			g.Expect(err).To(Succeed())
+			g.Expect(metadataData.ReleaseSeries).To(Equal(tt.wantMetadataSeries))
 
 			g.Expect(got.DefaultVersion()).To(Equal(tt.wantDefaultVersion))
 		})
