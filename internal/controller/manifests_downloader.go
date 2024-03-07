@@ -66,7 +66,7 @@ func (p *phaseReconciler) downloadManifests(ctx context.Context) (reconcile.Resu
 		MatchLabels: p.prepareConfigMapLabels(),
 	}
 
-	exists, err := p.checkConfigMapExists(ctx, labelSelector)
+	exists, err := p.checkConfigMapExists(ctx, labelSelector, p.provider.GetNamespace())
 	if err != nil {
 		return reconcile.Result{}, wrapPhaseError(err, "failed to check that config map with manifests exists", operatorv1.ProviderInstalledCondition)
 	}
@@ -123,11 +123,11 @@ func (p *phaseReconciler) downloadManifests(ctx context.Context) (reconcile.Resu
 }
 
 // checkConfigMapExists checks if a config map exists in Kubernetes with the given LabelSelector.
-func (p *phaseReconciler) checkConfigMapExists(ctx context.Context, labelSelector metav1.LabelSelector) (bool, error) {
+func (p *phaseReconciler) checkConfigMapExists(ctx context.Context, labelSelector metav1.LabelSelector, namespace string) (bool, error) {
 	labelSet := labels.Set(labelSelector.MatchLabels)
 	listOpts := []client.ListOption{
 		client.MatchingLabelsSelector{Selector: labels.SelectorFromSet(labelSet)},
-		client.InNamespace(p.provider.GetNamespace()),
+		client.InNamespace(namespace),
 	}
 
 	var configMapList corev1.ConfigMapList
@@ -145,12 +145,7 @@ func (p *phaseReconciler) checkConfigMapExists(ctx context.Context, labelSelecto
 
 // prepareConfigMapLabels returns labels that identify a config map with downloaded manifests.
 func (p *phaseReconciler) prepareConfigMapLabels() map[string]string {
-	return map[string]string{
-		configMapVersionLabel: p.provider.GetSpec().Version,
-		configMapTypeLabel:    p.provider.GetType(),
-		configMapNameLabel:    p.provider.GetName(),
-		operatorManagedLabel:  "true",
-	}
+	return providerLabels(p.provider)
 }
 
 // createManifestsConfigMap creates a config map with downloaded manifests.
@@ -208,6 +203,27 @@ func (p *phaseReconciler) createManifestsConfigMap(ctx context.Context, metadata
 	}
 
 	return nil
+}
+
+func providerLabelSelector(provider operatorv1.GenericProvider) *metav1.LabelSelector {
+	// Replace label selector if user wants to use custom config map
+	if provider.GetSpec().FetchConfig != nil && provider.GetSpec().FetchConfig.Selector != nil {
+		return provider.GetSpec().FetchConfig.Selector
+	}
+
+	return &metav1.LabelSelector{
+		MatchLabels: providerLabels(provider),
+	}
+}
+
+// prepareConfigMapLabels returns default set of labels that identify a config map with downloaded manifests.
+func providerLabels(provider operatorv1.GenericProvider) map[string]string {
+	return map[string]string{
+		configMapVersionLabel: provider.GetSpec().Version,
+		configMapTypeLabel:    provider.GetType(),
+		configMapNameLabel:    provider.GetName(),
+		operatorManagedLabel:  "true",
+	}
 }
 
 // needToCompress checks whether the input data exceeds the maximum configmap
