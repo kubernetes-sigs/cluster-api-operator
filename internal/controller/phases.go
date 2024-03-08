@@ -48,7 +48,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-const metadataFile = "metadata.yaml"
+const (
+	metadataFile = "metadata.yaml"
+)
 
 // phaseReconciler holds all required information for interacting with clusterctl code and
 // helps to iterate through provider reconciliation phases.
@@ -574,7 +576,32 @@ func clusterctlProviderName(provider operatorv1.GenericProvider) client.ObjectKe
 }
 
 func (p *phaseReconciler) repositoryProxy(ctx context.Context, provider configclient.Provider, configClient configclient.Client, options ...repository.Option) (repository.Client, error) {
-	cl, err := repository.New(ctx, provider, configClient, append([]repository.Option{repository.InjectRepository(p.repo)}, options...)...)
+	injectRepo := p.repo
+
+	if !provider.SameAs(p.providerConfig) {
+		genericProvider, err := util.GetGenericProvider(ctx, p.ctrlClient, provider)
+		if err != nil {
+			return nil, wrapPhaseError(err, "unable to find generic provider for configclient "+string(provider.Type())+": "+provider.Name(), operatorv1.ProviderUpgradedCondition)
+		}
+
+		if exists, err := p.checkConfigMapExists(ctx, *providerLabelSelector(genericProvider), genericProvider.GetNamespace()); err != nil {
+			provider := client.ObjectKeyFromObject(genericProvider)
+			return nil, wrapPhaseError(err, "failed to check the config map repository existence for provider "+provider.String(), operatorv1.ProviderUpgradedCondition)
+		} else if !exists {
+			provider := client.ObjectKeyFromObject(genericProvider)
+			return nil, wrapPhaseError(fmt.Errorf("config map not found"), "config map repository required for validation does not exist yet for provider "+provider.String(), operatorv1.ProviderUpgradedCondition)
+		}
+
+		repo, err := p.configmapRepository(ctx, providerLabelSelector(genericProvider), genericProvider.GetNamespace(), "")
+		if err != nil {
+			provider := client.ObjectKeyFromObject(genericProvider)
+			return nil, wrapPhaseError(err, "failed to load the repository for provider "+provider.String(), operatorv1.ProviderUpgradedCondition)
+		}
+
+		injectRepo = repo
+	}
+
+	cl, err := repository.New(ctx, provider, configClient, append([]repository.Option{repository.InjectRepository(injectRepo)}, options...)...)
 	if err != nil {
 		return nil, err
 	}

@@ -27,6 +27,7 @@ import (
 	clusterctlv1 "sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3"
 	configclient "sigs.k8s.io/cluster-api/cmd/clusterctl/client/config"
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/repository"
+	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -35,6 +36,11 @@ const (
 	gitlabHostPrefix        = "gitlab."
 	gitlabPackagesAPIPrefix = "/api/v4/projects/"
 )
+
+type genericProviderList interface {
+	ctrlclient.ObjectList
+	operatorv1.GenericProviderList
+}
 
 func IsCoreProvider(p genericprovider.GenericProvider) bool {
 	_, ok := p.(*operatorv1.CoreProvider)
@@ -59,6 +65,40 @@ func ClusterctlProviderType(genericProvider operatorv1.GenericProvider) clusterc
 	}
 
 	return clusterctlv1.ProviderTypeUnknown
+}
+
+// GetGenericProvider returns the first of generic providers matching the type and the name from the configclient.Provider.
+func GetGenericProvider(ctx context.Context, cl ctrlclient.Client, provider configclient.Provider) (operatorv1.GenericProvider, error) {
+	var list genericProviderList
+
+	switch provider.Type() {
+	case clusterctlv1.CoreProviderType:
+		list = &operatorv1.CoreProviderList{}
+	case clusterctlv1.ControlPlaneProviderType:
+		list = &operatorv1.ControlPlaneProviderList{}
+	case clusterctlv1.InfrastructureProviderType:
+		list = &operatorv1.InfrastructureProviderList{}
+	case clusterctlv1.BootstrapProviderType:
+		list = &operatorv1.BootstrapProviderList{}
+	case clusterctlv1.AddonProviderType:
+		list = &operatorv1.AddonProviderList{}
+	case clusterctlv1.IPAMProviderType:
+		list = &operatorv1.IPAMProviderList{}
+	case clusterctlv1.RuntimeExtensionProviderType, clusterctlv1.ProviderTypeUnknown:
+		return nil, fmt.Errorf("provider %s type is not supported %s", provider.Name(), provider.Type())
+	}
+
+	if err := cl.List(ctx, list); err != nil {
+		return nil, err
+	}
+
+	for _, p := range list.GetItems() {
+		if p.GetName() == provider.Name() {
+			return p, nil
+		}
+	}
+
+	return nil, fmt.Errorf("unable to find provider manifest with name %s", provider.Name())
 }
 
 // RepositoryFactory returns the repository implementation corresponding to the provider URL.
