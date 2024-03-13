@@ -32,15 +32,9 @@ if [[ ! "$1" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
 fi
 
 VERSION=$1
-URL="https://github.com/cert-manager/cert-manager/releases/download/${VERSION}/cert-manager.crds.yaml"
-OUTPUT_DIR="${CHART_DIR}/crds"
 
 # Create the output directory if it doesn't exist
-mkdir -p "$OUTPUT_DIR"
-
-# Download and save the file
-curl -L -o "${OUTPUT_DIR}/cert-manager.crds.yaml" "$URL"
-echo "Downloaded cert-manager.crds.yaml for ${VERSION} and saved it in ${OUTPUT_DIR}"
+mkdir -p "$CHART_DIR"
 
 # Modify version in Chart.yaml
 CHART_FILE="${CHART_DIR}/Chart.yaml"
