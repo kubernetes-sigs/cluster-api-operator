@@ -58,8 +58,10 @@ type initOptions struct {
 }
 
 const (
-	capiOperatorProviderName         = "capi-operator"
-	capiOperatorManifestsURLTemplate = "https://github.com/kubernetes-sigs/cluster-api-operator/releases/%s/operator-components.yaml"
+	capiOperatorProviderName = "capi-operator"
+	// We have to specify a version here, because if we set "latest", clusterctl libs will try to fetch metadata.yaml file for the latest
+	// release and fail since CAPI operator doesn't provide this file.
+	capiOperatorManifestsURL = "https://github.com/kubernetes-sigs/cluster-api-operator/releases/v0.1.0/operator-components.yaml"
 )
 
 var initOpts = &initOptions{}
@@ -383,8 +385,6 @@ func deployCAPIOperator(ctx context.Context, opts *initOptions) error {
 		return fmt.Errorf("cannot create config client: %w", err)
 	}
 
-	capiOperatorManifestsURL := fmt.Sprintf(capiOperatorManifestsURLTemplate, opts.operatorVersion)
-
 	providerConfig := configclient.NewProvider(capiOperatorProviderName, capiOperatorManifestsURL, clusterctlv1.ProviderTypeUnknown)
 
 	// Reduce waiting time for the repository creation from 30 seconds to 5.
@@ -397,7 +397,11 @@ func deployCAPIOperator(ctx context.Context, opts *initOptions) error {
 	}
 
 	if opts.operatorVersion == latestVersion {
-		opts.operatorVersion = repo.DefaultVersion()
+		// Detecting the latest release by sorting all available tags and picking that last one with release.
+		opts.operatorVersion, err = GetLatestRelease(ctx, repo)
+		if err != nil {
+			return fmt.Errorf("cannot get latest release: %w", err)
+		}
 
 		log.Info("Detected latest operator version", "Version", opts.operatorVersion)
 	}
