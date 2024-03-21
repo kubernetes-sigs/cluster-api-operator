@@ -21,8 +21,8 @@ require (
 	k8s.io/component-base v0.28.5
 	k8s.io/klog/v2 v2.100.1
 	k8s.io/utils v0.0.0-20230406110748-d93618cff8a2
-	sigs.k8s.io/cluster-api v1.6.1
-	sigs.k8s.io/controller-runtime v0.16.3
+	sigs.k8s.io/cluster-api v1.6.3
+	sigs.k8s.io/controller-runtime v0.16.5
 	sigs.k8s.io/yaml v1.4.0
 )
 
@@ -125,7 +125,7 @@ require (
 	google.golang.org/genproto/googleapis/api v0.0.0-20231016165738-49dd2c1f3d0b // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20231030173426-d783a09b4405 // indirect
 	google.golang.org/grpc v1.59.0 // indirect
-	google.golang.org/protobuf v1.31.0 // indirect
+	google.golang.org/protobuf v1.33.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
