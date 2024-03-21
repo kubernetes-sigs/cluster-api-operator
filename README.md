@@ -15,7 +15,9 @@ The **Cluster API Operator** is a Kubernetes Operator designed to empower cluste
 
 This operator leverages a declarative API and extends the capabilities of the `clusterctl` CLI, allowing greater flexibility and configuration options for cluster administrators. 
 
-See this [document](./docs/README.md) for more details.
+## 📖 Documentation
+
+Please see our [book](https://cluster-api-operator.sigs.k8s.io) for in-depth documentation.
 
 ## 🌟 Features
 
@@ -29,7 +31,7 @@ See this [document](./docs/README.md) for more details.
 
 You can reach the maintainers of this project at:
 
-- [Slack](http://slack.k8s.io/) in the [#cluster-api-operator][#cluster-api-operator slack] channel
+- Kubernetes [Slack](http://slack.k8s.io/) in the [#cluster-api-operator][#cluster-api-operator slack] channel
 
 Pull Requests and feedback on issues are very welcome!
 
