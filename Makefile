@@ -156,6 +156,10 @@ E2E_OPERATOR_IMAGE ?= $(CONTROLLER_IMG):$(TAG)
 # Relase
 RELEASE_TAG ?= $(shell git describe --abbrev=0 2>/dev/null)
 HELM_CHART_TAG := $(shell echo $(RELEASE_TAG) | cut -c 2-)
+ifeq ($(HELM_CHART_TAG),)
+	HELM_CHART_TAG := v0.0.1-test
+	RELEASE_TAG := v0.0.1-test
+endif
 RELEASE_ALIAS_TAG ?= $(PULL_BASE_REF)
 RELEASE_DIR := $(ROOT)/out
 CHART_DIR := $(RELEASE_DIR)/charts/cluster-api-operator
