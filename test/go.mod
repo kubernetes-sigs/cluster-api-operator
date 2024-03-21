@@ -8,9 +8,9 @@ require (
 	github.com/onsi/ginkgo/v2 v2.15.0
 	github.com/onsi/gomega v1.31.1
 	golang.org/x/tools v0.18.0
-	k8s.io/api v0.28.6
-	k8s.io/apiextensions-apiserver v0.28.6
-	k8s.io/apimachinery v0.28.7
+	k8s.io/api v0.28.8
+	k8s.io/apiextensions-apiserver v0.28.8
+	k8s.io/apimachinery v0.28.8
 	k8s.io/klog/v2 v2.100.1
 	k8s.io/utils v0.0.0-20230726121419-3b25d923346b
 	sigs.k8s.io/cluster-api v1.6.3
@@ -55,7 +55,7 @@ require (
 	github.com/gobuffalo/flect v1.0.2 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
-	github.com/golang/protobuf v1.5.3 // indirect
+	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/cel-go v0.16.1 // indirect
 	github.com/google/gnostic-models v0.6.8 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
@@ -123,10 +123,10 @@ require (
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/apiserver v0.28.6 // indirect
-	k8s.io/client-go v0.28.6 // indirect
+	k8s.io/apiserver v0.28.8 // indirect
+	k8s.io/client-go v0.28.8 // indirect
 	k8s.io/cluster-bootstrap v0.28.4 // indirect
-	k8s.io/component-base v0.28.6 // indirect
+	k8s.io/component-base v0.28.8 // indirect
 	k8s.io/kube-openapi v0.0.0-20230717233707-2695361300d9 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/kind v0.20.0 // indirect
