@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package controller
+package phases
 
 import (
 	"context"
@@ -31,8 +31,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
+	"sigs.k8s.io/cluster-api-operator/internal/controller/generic"
 	"sigs.k8s.io/cluster-api-operator/util"
 )
+
+const testCurrentVersion = "v0.4.2"
 
 func TestSecretReader(t *testing.T) {
 	g := NewWithT(t)
@@ -42,27 +45,23 @@ func TestSecretReader(t *testing.T) {
 	secretName := "test-secret"
 	secretNamespace := "test-secret-namespace"
 	namespace := "test-namespace"
-
-	p := &phaseReconciler{
-		ctrlClient: fakeclient,
-		provider: &operatorv1.CoreProvider{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "cluster-api",
-				Namespace: namespace,
-			},
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "CoreProvider",
-				APIVersion: "operator.cluster.x-k8s.io/v1alpha1",
-			},
-			Spec: operatorv1.CoreProviderSpec{
-				ProviderSpec: operatorv1.ProviderSpec{
-					ConfigSecret: &operatorv1.SecretReference{
-						Name:      secretName,
-						Namespace: secretNamespace,
-					},
-					FetchConfig: &operatorv1.FetchConfiguration{
-						URL: "https://example.com",
-					},
+	core := &operatorv1.CoreProvider{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "cluster-api",
+			Namespace: namespace,
+		},
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "CoreProvider",
+			APIVersion: "operator.cluster.x-k8s.io/v1alpha1",
+		},
+		Spec: operatorv1.CoreProviderSpec{
+			ProviderSpec: operatorv1.ProviderSpec{
+				ConfigSecret: &operatorv1.SecretReference{
+					Name:      secretName,
+					Namespace: secretNamespace,
+				},
+				FetchConfig: &operatorv1.FetchConfiguration{
+					URL: "https://example.com",
 				},
 			},
 		},
@@ -86,7 +85,12 @@ func TestSecretReader(t *testing.T) {
 		},
 	})).To(Succeed())
 
-	configreader, err := p.secretReader(context.TODO(), configclient.NewProvider(testKey3, testValue3, clusterctlv1.CoreProviderType))
+	configreader, err := secretReader(context.TODO(), Phase[*operatorv1.CoreProvider]{
+		Client:             fakeclient,
+		Provider:           core,
+		ProviderType:       clusterctlv1.CoreProviderType,
+		ClusterctlProvider: &clusterctlv1.Provider{},
+	}, configclient.NewProvider(testKey3, testValue3, clusterctlv1.CoreProviderType))
 	g.Expect(err).ToNot(HaveOccurred())
 
 	expectedValue1, err := configreader.Get(testKey1)
@@ -381,16 +385,12 @@ metadata:
 			g := NewWithT(t)
 
 			fakeclient := fake.NewClientBuilder().WithScheme(setupScheme()).WithObjects(provider).Build()
-			p := &phaseReconciler{
-				ctrlClient: fakeclient,
-				provider:   provider,
-			}
 
 			for i := range tt.configMaps {
 				g.Expect(fakeclient.Create(ctx, &tt.configMaps[i])).To(Succeed())
 			}
 
-			got, err := p.configmapRepository(context.TODO(), p.provider.GetSpec().FetchConfig.Selector, "ns1", tt.additionalManifests)
+			got, err := configmapRepository(context.TODO(), fakeclient, provider.GetSpec().FetchConfig.Selector, "ns1", tt.additionalManifests)
 			if len(tt.wantErr) > 0 {
 				g.Expect(err).Should(MatchError(tt.wantErr))
 				return
@@ -415,6 +415,12 @@ metadata:
 }
 
 func TestRepositoryProxy(t *testing.T) {
+	generic.ProviderReconcilers[clusterctlv1.InfrastructureProviderType] = Phase[*operatorv1.InfrastructureProvider]{
+		ProviderType: clusterctlv1.InfrastructureProviderType,
+		Provider:     &operatorv1.InfrastructureProvider{},
+		ProviderList: &operatorv1.InfrastructureProviderList{},
+	}
+
 	coreProvider := configclient.NewProvider("cluster-api", "https://github.com/kubernetes-sigs/cluster-api/releases/latest/core-components.yaml", clusterctlv1.CoreProviderType)
 	awsProvider := configclient.NewProvider("aws", "https://github.com/kubernetes-sigs/cluster-api-provider-aws/releases/v1.4.1/infrastructure-components.yaml", clusterctlv1.InfrastructureProviderType)
 
@@ -578,11 +584,10 @@ releaseSeries:
 			g := NewWithT(t)
 
 			fakeclient := fake.NewClientBuilder().WithScheme(setupScheme()).WithObjects(tt.genericProviders...).Build()
-			p := &phaseReconciler{
+			p := &PhaseReconciler[*operatorv1.CoreProvider, Phase[*operatorv1.CoreProvider]]{
 				ctrlClient:     fakeclient,
 				providerConfig: coreProvider,
 				repo:           repository.NewMemoryRepository(),
-				provider:       core,
 			}
 
 			for i := range tt.configMaps {
@@ -590,7 +595,7 @@ releaseSeries:
 			}
 			if tt.defaultRepository {
 				var err error
-				p.repo, err = p.configmapRepository(ctx, &metav1.LabelSelector{
+				p.repo, err = configmapRepository(ctx, fakeclient, &metav1.LabelSelector{
 					MatchLabels: map[string]string{
 						operatorManagedLabel: "true",
 					},

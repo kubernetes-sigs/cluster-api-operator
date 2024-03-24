@@ -1,5 +1,5 @@
 /*
-Copyright 2023 The Kubernetes Authors.
+Copyright 2021 The Kubernetes Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,25 +14,21 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package healthcheck
+package phases
 
 import (
 	"fmt"
 	"os"
 	"testing"
-	"time"
 
-	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/controller"
-
-	providercontroller "sigs.k8s.io/cluster-api-operator/internal/controller"
-	"sigs.k8s.io/cluster-api-operator/internal/controller/phases"
-	"sigs.k8s.io/cluster-api-operator/internal/controller/providers"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
 	"sigs.k8s.io/cluster-api-operator/internal/envtest"
-)
 
-const (
-	timeout = time.Second * 30
+	clusterctlv1 "sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3"
+	ctrl "sigs.k8s.io/controller-runtime"
 )
 
 var (
@@ -40,23 +36,19 @@ var (
 	ctx = ctrl.SetupSignalHandler()
 )
 
+func setupScheme() *runtime.Scheme {
+	scheme := runtime.NewScheme()
+	utilruntime.Must(corev1.AddToScheme(scheme))
+	utilruntime.Must(operatorv1.AddToScheme(scheme))
+	utilruntime.Must(clusterctlv1.AddToScheme(scheme))
+
+	return scheme
+}
+
 func TestMain(m *testing.M) {
 	fmt.Println("Creating new test environment")
 
 	env = envtest.New()
-
-	if err := providercontroller.NewProviderControllerWrapper(
-		providers.NewCoreProviderReconcier(env),
-		phases.NewPhase,
-	).SetupWithManager(env.Manager, controller.Options{MaxConcurrentReconciles: 1}); err != nil {
-		panic(fmt.Sprintf("Failed to start CoreProviderReconciler: %v", err))
-	}
-
-	if err := (&ProviderHealthCheckReconciler{
-		Client: env,
-	}).SetupWithManager(env.Manager, controller.Options{MaxConcurrentReconciles: 1}); err != nil {
-		panic(fmt.Sprintf("Failed to start Healthcheck controller: %v", err))
-	}
 
 	go func() {
 		if err := env.Start(ctx); err != nil {

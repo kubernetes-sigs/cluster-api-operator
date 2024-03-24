@@ -22,11 +22,11 @@ import (
 	"testing"
 	"time"
 
+	"sigs.k8s.io/cluster-api-operator/internal/controller/phases"
+	"sigs.k8s.io/cluster-api-operator/internal/controller/providers"
+	"sigs.k8s.io/cluster-api-operator/internal/envtest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
-
-	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
-	"sigs.k8s.io/cluster-api-operator/internal/envtest"
 )
 
 const (
@@ -43,35 +43,31 @@ func TestMain(m *testing.M) {
 
 	env = envtest.New()
 
-	if err := (&GenericProviderReconciler{
-		Provider:     &operatorv1.CoreProvider{},
-		ProviderList: &operatorv1.CoreProviderList{},
-		Client:       env,
-	}).SetupWithManager(env.Manager, controller.Options{MaxConcurrentReconciles: 1}); err != nil {
+	if err := NewProviderControllerWrapper(
+		providers.NewCoreProviderReconcier(env),
+		phases.NewPhase,
+	).SetupWithManager(env.Manager, controller.Options{MaxConcurrentReconciles: 1}); err != nil {
 		panic(fmt.Sprintf("Failed to start CoreProviderReconciler: %v", err))
 	}
 
-	if err := (&GenericProviderReconciler{
-		Provider:     &operatorv1.InfrastructureProvider{},
-		ProviderList: &operatorv1.InfrastructureProviderList{},
-		Client:       env,
-	}).SetupWithManager(env.Manager, controller.Options{MaxConcurrentReconciles: 1}); err != nil {
+	if err := NewProviderControllerWrapper(
+		providers.NewInfrastructureProviderReconciler(env),
+		phases.NewPhase,
+	).SetupWithManager(env.Manager, controller.Options{MaxConcurrentReconciles: 1}); err != nil {
 		panic(fmt.Sprintf("Failed to start InfrastructureProviderReconciler: %v", err))
 	}
 
-	if err := (&GenericProviderReconciler{
-		Provider:     &operatorv1.BootstrapProvider{},
-		ProviderList: &operatorv1.BootstrapProviderList{},
-		Client:       env,
-	}).SetupWithManager(env.Manager, controller.Options{MaxConcurrentReconciles: 1}); err != nil {
+	if err := NewProviderControllerWrapper(
+		providers.NewBootstrapProviderReconciler(env),
+		phases.NewPhase,
+	).SetupWithManager(env.Manager, controller.Options{MaxConcurrentReconciles: 1}); err != nil {
 		panic(fmt.Sprintf("Failed to start BootstrapProviderReconciler: %v", err))
 	}
 
-	if err := (&GenericProviderReconciler{
-		Provider:     &operatorv1.ControlPlaneProvider{},
-		ProviderList: &operatorv1.ControlPlaneProviderList{},
-		Client:       env,
-	}).SetupWithManager(env.Manager, controller.Options{MaxConcurrentReconciles: 1}); err != nil {
+	if err := NewProviderControllerWrapper(
+		providers.NewControlPlaneProviderReconciler(env),
+		phases.NewPhase,
+	).SetupWithManager(env.Manager, controller.Options{MaxConcurrentReconciles: 1}); err != nil {
 		panic(fmt.Sprintf("Failed to start ControlPlaneProviderReconciler: %v", err))
 	}
 

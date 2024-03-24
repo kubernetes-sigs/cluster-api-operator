@@ -24,15 +24,13 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-	clusterctlv1 "sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3"
+	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
-	"sigs.k8s.io/cluster-api-operator/internal/controller/genericprovider"
+	"sigs.k8s.io/cluster-api-operator/internal/controller/generic"
 )
 
 const (
@@ -77,7 +75,7 @@ spec:
 	testCurrentVersion = "v0.4.2"
 )
 
-func insertDummyConfig(provider genericprovider.GenericProvider) {
+func insertDummyConfig(provider generic.Provider) {
 	spec := provider.GetSpec()
 	spec.FetchConfig = &operatorv1.FetchConfiguration{
 		Selector: &metav1.LabelSelector{
@@ -109,12 +107,12 @@ func TestReconcilerPreflightConditions(t *testing.T) {
 	testCases := []struct {
 		name      string
 		namespace string
-		providers []genericprovider.GenericProvider
+		providers []generic.Provider
 	}{
 		{
 			name:      "preflight conditions for CoreProvider",
 			namespace: "test-core-provider",
-			providers: []genericprovider.GenericProvider{
+			providers: []generic.Provider{
 				&operatorv1.CoreProvider{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "cluster-api",
@@ -130,7 +128,7 @@ func TestReconcilerPreflightConditions(t *testing.T) {
 		{
 			name:      "preflight conditions for ControlPlaneProvider",
 			namespace: "test-cp-provider",
-			providers: []genericprovider.GenericProvider{
+			providers: []generic.Provider{
 				&operatorv1.CoreProvider{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "cluster-api",
@@ -260,32 +258,59 @@ releaseSeries:
 			newVersion: "v999.9.1",
 		},
 	}
+	g := NewWithT(t)
+
+	core := &operatorv1.CoreProvider{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "cluster-api",
+		},
+		Spec: operatorv1.CoreProviderSpec{
+			ProviderSpec: operatorv1.ProviderSpec{
+				Version: "v999.9.3",
+			},
+		},
+	}
+
+	namespace := "test-upgrades-downgrades"
+
+	t.Log("Ensure namespace exists", namespace)
+	g.Expect(env.EnsureNamespaceExists(ctx, namespace)).To(Succeed())
+
+	insertDummyConfig(core)
+	core.SetNamespace(namespace)
+	t.Log("creating core provider", core.GetName())
+	g.Expect(env.CreateAndWait(ctx, dummyFutureConfigMap(namespace, "v999.9.3"))).To(Succeed())
+	g.Expect(env.CreateAndWait(ctx, core)).To(Succeed())
+
+	g.Eventually(func() error {
+		if err := env.Get(ctx, client.ObjectKeyFromObject(core), core); err != nil {
+			return err
+		}
+
+		conditions.MarkTrue(core, clusterv1.ReadyCondition)
+		return env.Status().Update(ctx, core)
+	}).Should(Succeed())
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			g := NewWithT(t)
-
-			provider := &operatorv1.CoreProvider{
+			provider := &operatorv1.InfrastructureProvider{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: "cluster-api",
+					Name: "docker",
 				},
-				Spec: operatorv1.CoreProviderSpec{
+				Spec: operatorv1.InfrastructureProviderSpec{
 					ProviderSpec: operatorv1.ProviderSpec{
 						Version: currentVersion,
 					},
 				},
 			}
 
-			namespace := "test-upgrades-downgrades"
+			ns, err := env.CreateNamespace(ctx, "infra")
+			g.Expect(err).ToNot(HaveOccurred())
 
-			t.Log("Ensure namespace exists", namespace)
-			g.Expect(env.EnsureNamespaceExists(ctx, namespace)).To(Succeed())
-
-			g.Expect(env.CreateAndWait(ctx, dummyFutureConfigMap(namespace, currentVersion))).To(Succeed())
-
-			insertDummyConfig(provider)
-			provider.SetNamespace(namespace)
 			t.Log("creating test provider", provider.GetName())
+			provider.SetNamespace(ns.Name)
+			insertDummyConfig(provider)
+			g.Expect(env.CreateAndWait(ctx, dummyFutureConfigMap(ns.Name, currentVersion))).To(Succeed())
 			g.Expect(env.CreateAndWait(ctx, provider)).To(Succeed())
 
 			g.Eventually(func() bool {
@@ -294,6 +319,7 @@ releaseSeries:
 				}
 
 				if provider.GetStatus().InstalledVersion == nil || *provider.GetStatus().InstalledVersion != currentVersion {
+					t.Log(t.Name(), provider.GetName(), provider.GetStatus().InstalledVersion)
 					return false
 				}
 
@@ -311,14 +337,14 @@ releaseSeries:
 
 			// creating another configmap with another version
 			if tc.newVersion != currentVersion {
-				g.Expect(env.CreateAndWait(ctx, dummyFutureConfigMap(namespace, tc.newVersion))).To(Succeed())
+				g.Expect(env.CreateAndWait(ctx, dummyFutureConfigMap(ns.Name, tc.newVersion))).To(Succeed())
 			}
 
 			// Change provider version
 			providerSpec := provider.GetSpec()
 			providerSpec.Version = tc.newVersion
 			providerSpec.Deployment = &operatorv1.DeploymentSpec{
-				Replicas: pointer.Int(2),
+				Replicas: ptr.To(2),
 			}
 			provider.SetSpec(providerSpec)
 
@@ -330,7 +356,9 @@ releaseSeries:
 			labels["provider-version"] = tc.newVersion
 			provider.SetLabels(labels)
 
-			g.Expect(env.Client.Update(ctx, provider)).To(Succeed())
+			g.Eventually(func() error {
+				return env.Client.Update(ctx, provider.DeepCopy())
+			}, timeout).Should(Succeed())
 
 			g.Eventually(func() bool {
 				if err := env.Get(ctx, client.ObjectKeyFromObject(provider), provider); err != nil {
@@ -403,24 +431,12 @@ releaseSeries:
 			}, 2*time.Second).Should(BeTrue())
 
 			// Clean up
-			objs := []client.Object{provider}
-			objs = append(objs, &corev1.ConfigMap{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      currentVersion,
-					Namespace: namespace,
-				},
-			})
-
-			objs = append(objs, &corev1.ConfigMap{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      tc.newVersion,
-					Namespace: namespace,
-				},
-			})
-
-			g.Expect(env.CleanupAndWait(ctx, objs...)).To(Succeed())
+			g.Expect(env.CleanupAndWait(ctx, provider, dummyFutureConfigMap(ns.Name, currentVersion), dummyFutureConfigMap(ns.Name, tc.newVersion))).To(Succeed())
+			g.Expect(env.Cleanup(ctx, ns)).To(Succeed())
 		})
 	}
+
+	g.Expect(env.CleanupAndWait(ctx, core)).To(Succeed())
 }
 
 func TestProviderSpecChanges(t *testing.T) {
@@ -468,7 +484,7 @@ func TestProviderSpecChanges(t *testing.T) {
 			updatedSpec: operatorv1.ProviderSpec{
 				Version: testCurrentVersion,
 				Deployment: &operatorv1.DeploymentSpec{
-					Replicas: pointer.Int(2),
+					Replicas: ptr.To(2),
 				},
 				FetchConfig: &operatorv1.FetchConfiguration{
 					Selector: &metav1.LabelSelector{
@@ -495,7 +511,7 @@ func TestProviderSpecChanges(t *testing.T) {
 			updatedSpec: operatorv1.ProviderSpec{
 				Version: "10000.0.0-NONEXISTENT",
 				Deployment: &operatorv1.DeploymentSpec{
-					Replicas: pointer.Int(2),
+					Replicas: ptr.To(2),
 				},
 				FetchConfig: &operatorv1.FetchConfiguration{
 					Selector: &metav1.LabelSelector{
@@ -573,7 +589,7 @@ func TestProviderSpecChanges(t *testing.T) {
 	}
 }
 
-func generateExpectedResultChecker(provider genericprovider.GenericProvider, specHash string, condStatus corev1.ConditionStatus) func() bool {
+func generateExpectedResultChecker(provider generic.Provider, specHash string, condStatus corev1.ConditionStatus) func() bool {
 	return func() bool {
 		if err := env.Get(ctx, client.ObjectKeyFromObject(provider), provider); err != nil {
 			return false
@@ -594,13 +610,4 @@ func generateExpectedResultChecker(provider genericprovider.GenericProvider, spe
 
 		return false
 	}
-}
-
-func setupScheme() *runtime.Scheme {
-	scheme := runtime.NewScheme()
-	utilruntime.Must(corev1.AddToScheme(scheme))
-	utilruntime.Must(operatorv1.AddToScheme(scheme))
-	utilruntime.Must(clusterctlv1.AddToScheme(scheme))
-
-	return scheme
 }

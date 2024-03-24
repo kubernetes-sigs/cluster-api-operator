@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package controller
+package phases
 
 import (
 	"context"
@@ -27,96 +27,78 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/version"
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
-	"sigs.k8s.io/cluster-api-operator/internal/controller/genericprovider"
-	"sigs.k8s.io/cluster-api-operator/util"
+	"sigs.k8s.io/cluster-api-operator/internal/controller/generic"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	clusterctlv1 "sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3"
 	configclient "sigs.k8s.io/cluster-api/cmd/clusterctl/client/config"
 	"sigs.k8s.io/cluster-api/util/conditions"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-)
-
-const (
-	coreProvider = "CoreProvider"
 )
 
 var (
-	moreThanOneCoreProviderInstanceExistsMessage = "CoreProvider already exists in the cluster. Only one is allowed."
-	moreThanOneProviderInstanceExistsMessage     = "There is already a %s with name %s in the cluster. Only one is allowed."
-	capiVersionIncompatibilityMessage            = "CAPI operator is only compatible with %s providers, detected %s for provider %s."
-	invalidGithubTokenMessage                    = "Invalid github token, please check your github token value and its permissions" //nolint:gosec
-	waitingForCoreProviderReadyMessage           = "Waiting for the core provider to be installed."
-	incorrectCoreProviderNameMessage             = "Incorrect CoreProvider name: %s. It should be %s"
-	unsupportedProviderDowngradeMessage          = "Downgrade is not supported for provider %s"
+	moreThanOneProviderInstanceExistsMessage = "There is already a %s with name %s in the cluster. Only one is allowed."
+	capiVersionIncompatibilityMessage        = "CAPI operator is only compatible with %s providers, detected %s for provider %s."
+	invalidGithubTokenMessage                = "Invalid github token, please check your github token value and its permissions" //nolint:gosec
+	unsupportedProviderDowngradeMessage      = "Downgrade is not supported for provider %s"
 )
 
-// preflightChecks performs preflight checks before installing provider.
-func preflightChecks(ctx context.Context, c client.Client, provider genericprovider.GenericProvider, providerList genericprovider.GenericProviderList) (ctrl.Result, error) {
+// PreflightChecks performs preflight checks before installing provider.
+func PreflightChecks[P generic.Provider](ctx context.Context, phase generic.Group[P]) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 
 	log.Info("Performing preflight checks")
 
-	spec := provider.GetSpec()
+	spec := phase.GetProvider().GetSpec()
 
 	if spec.Version != "" {
 		// Check that the provider version is supported.
-		if err := checkProviderVersion(ctx, spec.Version, provider); err != nil {
+		if err := checkProviderVersion(ctx, spec.Version, phase.GetProvider()); err != nil {
 			return ctrl.Result{}, err
 		}
 	}
 
-	// Ensure that the CoreProvider is called "cluster-api".
-	if util.IsCoreProvider(provider) {
-		if provider.GetName() != configclient.ClusterAPIProviderName {
-			conditions.Set(provider, conditions.FalseCondition(
-				operatorv1.PreflightCheckCondition,
-				operatorv1.IncorrectCoreProviderNameReason,
-				clusterv1.ConditionSeverityError,
-				fmt.Sprintf(incorrectCoreProviderNameMessage, provider.GetName(), configclient.ClusterAPIProviderName),
-			))
-
-			return ctrl.Result{}, fmt.Errorf("incorrect CoreProvider name: %s, it should be %s", provider.GetName(), configclient.ClusterAPIProviderName)
-		}
-	}
-
 	// Check that if a predefined provider is being installed, and if it's not - ensure that FetchConfig is specified.
-	isPredefinedProvider, err := isPredefinedProvider(ctx, provider.GetName(), util.ClusterctlProviderType(provider))
+	isPredefinedProvider, err := isPredefinedProvider(ctx, phase.GetProvider().GetName(), phase.ClusterctlProviderType())
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to generate a list of predefined providers: %w", err)
 	}
 
-	if !isPredefinedProvider {
-		if spec.FetchConfig == nil || spec.FetchConfig.Selector == nil && spec.FetchConfig.URL == "" {
-			conditions.Set(provider, conditions.FalseCondition(
-				operatorv1.PreflightCheckCondition,
-				operatorv1.FetchConfigValidationErrorReason,
-				clusterv1.ConditionSeverityError,
-				"Either Selector or URL must be provided for a not predefined provider",
-			))
+	if !isPredefinedProvider && spec.FetchConfig == nil {
+		conditions.Set(phase.GetProvider(), conditions.FalseCondition(
+			operatorv1.PreflightCheckCondition,
+			operatorv1.FetchConfigValidationErrorReason,
+			clusterv1.ConditionSeverityError,
+			"Either Selector or URL must be provided for a not predefined provider",
+		))
 
-			return ctrl.Result{}, fmt.Errorf("either selector or URL must be provided for a not predefined provider %s", provider.GetName())
-		}
-	}
+		return ctrl.Result{}, fmt.Errorf("either selector or URL must be provided for a not predefined provider %s", phase.GetProvider().GetName())
+	} else if spec.FetchConfig != nil && (spec.FetchConfig.Selector == nil && spec.FetchConfig.URL == "") {
+		conditions.Set(phase.GetProvider(), conditions.FalseCondition(
+			operatorv1.PreflightCheckCondition,
+			operatorv1.FetchConfigValidationErrorReason,
+			clusterv1.ConditionSeverityError,
+			"Either Selector or URL must be provided for a fetchConfig",
+		))
 
-	if spec.FetchConfig != nil && spec.FetchConfig.Selector != nil && spec.FetchConfig.URL != "" {
+		return ctrl.Result{}, fmt.Errorf("either selector or URL must be provided for provider %s", phase.GetProvider().GetName())
+	} else if spec.FetchConfig != nil && spec.FetchConfig.Selector != nil && spec.FetchConfig.URL != "" {
 		// If FetchConfiguration is not nil, exactly one of `URL` or `Selector` must be specified.
-		conditions.Set(provider, conditions.FalseCondition(
+		conditions.Set(phase.GetProvider(), conditions.FalseCondition(
 			operatorv1.PreflightCheckCondition,
 			operatorv1.FetchConfigValidationErrorReason,
 			clusterv1.ConditionSeverityError,
 			"Only one of Selector and URL must be provided, not both",
 		))
 
-		return ctrl.Result{}, fmt.Errorf("only one of Selector and URL must be provided for provider %s", provider.GetName())
+		return ctrl.Result{}, fmt.Errorf("only one of Selector and URL must be provided for provider %s", phase.GetProvider().GetName())
 	}
 
 	// Validate that provided github token works and has repository access.
 	if spec.ConfigSecret != nil {
 		secret := &corev1.Secret{}
-		key := types.NamespacedName{Namespace: provider.GetSpec().ConfigSecret.Namespace, Name: provider.GetSpec().ConfigSecret.Name}
+		key := types.NamespacedName{Namespace: phase.GetProvider().GetSpec().ConfigSecret.Namespace, Name: phase.GetProvider().GetSpec().ConfigSecret.Name}
 
-		if err := c.Get(ctx, key, secret); err != nil {
+		if err := phase.GetClient().Get(ctx, key, secret); err != nil {
 			return ctrl.Result{}, fmt.Errorf("failed to get providers secret: %w", err)
 		}
 
@@ -125,7 +107,7 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 				&oauth2.Token{AccessToken: string(token)},
 			)))
 			if _, _, err := client.Organizations.List(ctx, "kubernetes-sigs", nil); err != nil {
-				conditions.Set(provider, conditions.FalseCondition(
+				conditions.Set(phase.GetProvider(), conditions.FalseCondition(
 					operatorv1.PreflightCheckCondition,
 					operatorv1.InvalidGithubTokenReason,
 					clusterv1.ConditionSeverityError,
@@ -137,14 +119,10 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 		}
 	}
 
-	if err := c.List(ctx, providerList); err != nil {
-		return ctrl.Result{}, fmt.Errorf("failed to list providers: %w", err)
-	}
-
 	// Check that no more than one instance of the provider is installed.
-	for _, p := range providerList.GetItems() {
+	for _, p := range phase.GetProviderList().GetItems() {
 		// Skip if provider in the list is the same as provider it's compared with.
-		if p.GetNamespace() == provider.GetNamespace() && p.GetName() == provider.GetName() {
+		if p.GetNamespace() == phase.GetProvider().GetNamespace() && p.GetName() == phase.GetProvider().GetName() {
 			continue
 		}
 
@@ -155,46 +133,17 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 			"",
 		)
 
-		// CoreProvider is a singleton resource, more than one instances should not exist
-		if util.IsCoreProvider(p) {
-			log.Info(moreThanOneCoreProviderInstanceExistsMessage)
-			preflightFalseCondition.Message = moreThanOneCoreProviderInstanceExistsMessage
-			conditions.Set(provider, preflightFalseCondition)
-
-			return ctrl.Result{}, fmt.Errorf("only one instance of CoreProvider is allowed")
-		}
-
 		// For any other provider we should check that instances with similar name exist in any namespace
-		if p.GetObjectKind().GroupVersionKind().Kind != coreProvider && p.GetName() == provider.GetName() {
+		if p.GetName() == phase.GetProvider().GetName() {
 			preflightFalseCondition.Message = fmt.Sprintf(moreThanOneProviderInstanceExistsMessage, p.GetName(), p.GetNamespace())
 			log.Info(preflightFalseCondition.Message)
-			conditions.Set(provider, preflightFalseCondition)
+			conditions.Set(phase.GetProvider(), preflightFalseCondition)
 
 			return ctrl.Result{}, fmt.Errorf("only one %s provider is allowed in the cluster", p.GetName())
 		}
 	}
 
-	// Wait for core provider to be ready before we install other providers.
-	if !util.IsCoreProvider(provider) {
-		ready, err := coreProviderIsReady(ctx, c)
-		if err != nil {
-			return ctrl.Result{}, fmt.Errorf("failed to get coreProvider ready condition: %w", err)
-		}
-
-		if !ready {
-			log.Info(waitingForCoreProviderReadyMessage)
-			conditions.Set(provider, conditions.FalseCondition(
-				operatorv1.PreflightCheckCondition,
-				operatorv1.WaitingForCoreProviderReadyReason,
-				clusterv1.ConditionSeverityInfo,
-				waitingForCoreProviderReadyMessage,
-			))
-
-			return ctrl.Result{RequeueAfter: preflightFailedRequeueAfter}, nil
-		}
-	}
-
-	conditions.Set(provider, conditions.TrueCondition(operatorv1.PreflightCheckCondition))
+	conditions.Set(phase.GetProvider(), conditions.TrueCondition(operatorv1.PreflightCheckCondition))
 
 	log.Info("Preflight checks passed")
 
@@ -202,7 +151,7 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 }
 
 // checkProviderVersion verifies that target and installed provider versions are correct.
-func checkProviderVersion(ctx context.Context, providerVersion string, provider genericprovider.GenericProvider) error {
+func checkProviderVersion[P generic.Provider](ctx context.Context, providerVersion string, provider P) error {
 	log := ctrl.LoggerFrom(ctx)
 
 	// Check that provider version contains a valid value if it's not empty.
@@ -239,25 +188,6 @@ func checkProviderVersion(ctx context.Context, providerVersion string, provider 
 	}
 
 	return nil
-}
-
-// coreProviderIsReady returns true if the core provider is ready.
-func coreProviderIsReady(ctx context.Context, c client.Client) (bool, error) {
-	cpl := &operatorv1.CoreProviderList{}
-
-	if err := c.List(ctx, cpl); err != nil {
-		return false, err
-	}
-
-	for _, cp := range cpl.Items {
-		for _, cond := range cp.Status.Conditions {
-			if cond.Type == clusterv1.ReadyCondition && cond.Status == corev1.ConditionTrue {
-				return true, nil
-			}
-		}
-	}
-
-	return false, nil
 }
 
 // isPredefinedProvider checks if a given provider is known for Cluster API.

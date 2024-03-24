@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package controller
+package proxy
 
 import (
 	"context"
@@ -25,33 +25,36 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	// kerrors "k8s.io/apimachinery/pkg/util/errors"
+
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
 
-	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
+	// "sigs.k8s.io/cluster-api-operator/internal/controller/generic"
 	clusterctlv1 "sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3"
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/cluster"
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/repository"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// clientProxy implements the Proxy interface from the clusterctl. It is used to
+// ClientProxy implements the Proxy interface from the clusterctl. It is used to
 // interact with the management cluster.
-type clientProxy struct {
+type ClientProxy struct {
 	client.Client
+	ListProviders func(context.Context, client.Client, *clusterctlv1.ProviderList, ...client.ListOption) error
 }
 
-func (c clientProxy) List(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
+func (c ClientProxy) List(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
 	switch l := list.(type) {
 	case *clusterctlv1.ProviderList:
-		return listProviders(ctx, c.Client, l)
+		return c.ListProviders(ctx, c.Client, l, opts...)
 	default:
 		return c.Client.List(ctx, l, opts...)
 	}
 }
 
-func (c clientProxy) Get(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+func (c ClientProxy) Get(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
 	switch o := obj.(type) {
 	case *clusterctlv1.Provider:
 		return nil
@@ -60,7 +63,7 @@ func (c clientProxy) Get(ctx context.Context, key client.ObjectKey, obj client.O
 	}
 }
 
-func (c clientProxy) Patch(ctx context.Context, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
+func (c ClientProxy) Patch(ctx context.Context, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
 	switch o := obj.(type) {
 	case *clusterctlv1.Provider:
 		return nil
@@ -69,53 +72,25 @@ func (c clientProxy) Patch(ctx context.Context, obj client.Object, patch client.
 	}
 }
 
-func listProviders(ctx context.Context, cl client.Client, list *clusterctlv1.ProviderList) error {
-	providers := []operatorv1.GenericProviderList{
-		&operatorv1.CoreProviderList{},
-		&operatorv1.InfrastructureProviderList{},
-		&operatorv1.BootstrapProviderList{},
-		&operatorv1.ControlPlaneProviderList{},
-		&operatorv1.AddonProviderList{},
-		&operatorv1.IPAMProviderList{},
-	}
-
-	for _, group := range providers {
-		g, ok := group.(client.ObjectList)
-		if !ok {
-			continue
-		}
-
-		if err := cl.List(ctx, g); err != nil {
-			return err
-		}
-
-		for _, p := range group.GetItems() {
-			list.Items = append(list.Items, getProvider(p, ""))
-		}
-	}
-
-	return nil
-}
-
-// controllerProxy implements the Proxy interface from the clusterctl. It is used to
+// ControllerProxy implements the Proxy interface from the clusterctl. It is used to
 // interact with the management cluster.
-type controllerProxy struct {
-	ctrlClient clientProxy
-	ctrlConfig *rest.Config
+type ControllerProxy struct {
+	CtrlClient ClientProxy
+	CtrlConfig *rest.Config
 }
 
-var _ cluster.Proxy = &controllerProxy{}
+var _ cluster.Proxy = &ControllerProxy{}
 
-func (k *controllerProxy) CurrentNamespace() (string, error)           { return "default", nil }
-func (k *controllerProxy) ValidateKubernetesVersion() error            { return nil }
-func (k *controllerProxy) GetConfig() (*rest.Config, error)            { return k.ctrlConfig, nil }
-func (k *controllerProxy) NewClient() (client.Client, error)           { return k.ctrlClient, nil }
-func (k *controllerProxy) GetContexts(prefix string) ([]string, error) { return nil, nil }
-func (k *controllerProxy) CheckClusterAvailable() error                { return nil }
+func (k *ControllerProxy) CurrentNamespace() (string, error)           { return "default", nil }
+func (k *ControllerProxy) ValidateKubernetesVersion() error            { return nil }
+func (k *ControllerProxy) GetConfig() (*rest.Config, error)            { return k.CtrlConfig, nil }
+func (k *ControllerProxy) NewClient() (client.Client, error)           { return k.CtrlClient, nil }
+func (k *ControllerProxy) GetContexts(prefix string) ([]string, error) { return nil, nil }
+func (k *ControllerProxy) CheckClusterAvailable() error                { return nil }
 
 // GetResourceNames returns the list of resource names which begin with prefix.
-func (k *controllerProxy) GetResourceNames(ctx context.Context, groupVersion, kind string, options []client.ListOption, prefix string) ([]string, error) {
-	objList, err := listObjByGVK(ctx, k.ctrlClient, groupVersion, kind, options)
+func (k *ControllerProxy) GetResourceNames(ctx context.Context, groupVersion, kind string, options []client.ListOption, prefix string) ([]string, error) {
+	objList, err := listObjByGVK(ctx, k.CtrlClient, groupVersion, kind, options)
 	if err != nil {
 		return nil, err
 	}
@@ -134,7 +109,7 @@ func (k *controllerProxy) GetResourceNames(ctx context.Context, groupVersion, ki
 }
 
 // ListResources lists namespaced and cluster-wide resources for a component matching the labels.
-func (k *controllerProxy) ListResources(ctx context.Context, labels map[string]string, namespaces ...string) ([]unstructured.Unstructured, error) {
+func (k *ControllerProxy) ListResources(ctx context.Context, labels map[string]string, namespaces ...string) ([]unstructured.Unstructured, error) {
 	resourceList := []*metav1.APIResourceList{
 		{
 			GroupVersion: "v1",
@@ -183,7 +158,7 @@ func (k *controllerProxy) ListResources(ctx context.Context, labels map[string]s
 		for _, resourceKind := range resourceGroup.APIResources {
 			if resourceKind.Namespaced {
 				for _, namespace := range namespaces {
-					objList, err := listObjByGVK(ctx, k.ctrlClient, resourceGroup.GroupVersion, resourceKind.Kind, []client.ListOption{client.MatchingLabels(labels), client.InNamespace(namespace)})
+					objList, err := listObjByGVK(ctx, k.CtrlClient, resourceGroup.GroupVersion, resourceKind.Kind, []client.ListOption{client.MatchingLabels(labels), client.InNamespace(namespace)})
 					if err != nil {
 						return nil, err
 					}
@@ -193,7 +168,7 @@ func (k *controllerProxy) ListResources(ctx context.Context, labels map[string]s
 					ret = append(ret, objList.Items...)
 				}
 			} else {
-				objList, err := listObjByGVK(ctx, k.ctrlClient, resourceGroup.GroupVersion, resourceKind.Kind, []client.ListOption{client.MatchingLabels(labels)})
+				objList, err := listObjByGVK(ctx, k.CtrlClient, resourceGroup.GroupVersion, resourceKind.Kind, []client.ListOption{client.MatchingLabels(labels)})
 				if err != nil {
 					return nil, err
 				}
@@ -220,24 +195,24 @@ func listObjByGVK(ctx context.Context, c client.Client, groupVersion, kind strin
 	return objList, nil
 }
 
-type repositoryProxy struct {
+type RepositoryProxy struct {
 	repository.Client
 
-	components repository.Components
+	RepositoryComponents repository.Components
 }
 
-type repositoryClient struct {
-	components repository.Components
+type RepositoryClient struct {
+	repository.Components
 }
 
-func (r repositoryClient) Raw(ctx context.Context, options repository.ComponentsOptions) ([]byte, error) {
+func (r RepositoryClient) Raw(ctx context.Context, options repository.ComponentsOptions) ([]byte, error) {
 	return nil, nil
 }
 
-func (r repositoryClient) Get(ctx context.Context, options repository.ComponentsOptions) (repository.Components, error) {
-	return r.components, nil
+func (r RepositoryClient) Get(ctx context.Context, options repository.ComponentsOptions) (repository.Components, error) {
+	return r.Components, nil
 }
 
-func (r repositoryProxy) Components() repository.ComponentsClient {
-	return repositoryClient{r.components}
+func (r RepositoryProxy) Components() repository.ComponentsClient {
+	return RepositoryClient{r.RepositoryComponents}
 }

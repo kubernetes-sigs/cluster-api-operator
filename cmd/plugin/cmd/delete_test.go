@@ -24,6 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
+	"sigs.k8s.io/cluster-api-operator/internal/controller/generic"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -78,13 +79,13 @@ func TestSelectorFromProvider(t *testing.T) {
 func TestDeleteProviders(t *testing.T) {
 	tests := []struct {
 		name      string
-		list      genericProviderList
-		providers []genericProvider
+		list      generic.ProviderList
+		providers []generic.Provider
 		selector  fields.Set
 	}{{
 		name: "Delete providers",
 		list: &operatorv1.AddonProviderList{},
-		providers: []genericProvider{&operatorv1.AddonProvider{
+		providers: []generic.Provider{&operatorv1.AddonProvider{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "addon",
 				Namespace: "default",

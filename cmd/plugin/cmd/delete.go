@@ -40,6 +40,7 @@ import (
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
+	"sigs.k8s.io/cluster-api-operator/internal/controller/generic"
 )
 
 type deleteOptions struct {
@@ -170,7 +171,7 @@ func runDelete() error {
 
 	group := &DeleteGroup{
 		selectors: []fields.Set{},
-		providers: []genericProviderList{},
+		providers: []generic.ProviderList{},
 	}
 	errors := append([]error{},
 		group.delete(&operatorv1.BootstrapProviderList{}, deleteOpts.bootstrapProviders...),
@@ -196,10 +197,10 @@ func runDelete() error {
 
 type DeleteGroup struct {
 	selectors []fields.Set
-	providers []genericProviderList
+	providers []generic.ProviderList
 }
 
-func (d *DeleteGroup) delete(providerType genericProviderList, names ...string) error {
+func (d *DeleteGroup) delete(providerType generic.ProviderList, names ...string) error {
 	for _, provider := range names {
 		selector, err := selectorFromProvider(provider)
 		if err != nil {
@@ -215,7 +216,7 @@ func (d *DeleteGroup) delete(providerType genericProviderList, names ...string) 
 
 func (d *DeleteGroup) deleteAll() {
 	for _, list := range operatorv1.ProviderLists {
-		providerList, ok := list.(genericProviderList)
+		providerList, ok := list.(generic.ProviderList)
 		if !ok {
 			log.V(5).Info("Expected to get GenericProviderList")
 			continue
@@ -283,9 +284,9 @@ func selectorFromProvider(provider string) (fields.Set, error) {
 	return selector, nil
 }
 
-func deleteProviders(ctx context.Context, client ctrlclient.Client, providerList genericProviderList, selector ctrlclient.MatchingFieldsSelector) (bool, error) {
+func deleteProviders(ctx context.Context, client ctrlclient.Client, providerList generic.ProviderList, selector ctrlclient.MatchingFieldsSelector) (bool, error) {
 	//nolint:forcetypeassert
-	providerList = providerList.DeepCopyObject().(genericProviderList)
+	providerList = providerList.DeepCopyObject().(generic.ProviderList)
 	ready := true
 
 	gvks, _, err := scheme.ObjectKinds(providerList)
@@ -306,7 +307,7 @@ func deleteProviders(ctx context.Context, client ctrlclient.Client, providerList
 	for _, provider := range providerList.GetItems() {
 		log.Info(fmt.Sprintf("Deleting %s %s/%s", provider.GetType(), provider.GetName(), provider.GetNamespace()))
 
-		provider, ok := provider.(genericProvider)
+		provider, ok := provider.(generic.Provider)
 		if !ok {
 			log.Info(fmt.Sprintf("Expected to get GenericProvider for %s", gvk))
 			continue
