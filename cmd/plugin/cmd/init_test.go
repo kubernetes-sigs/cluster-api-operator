@@ -18,8 +18,9 @@ package cmd
 
 import (
 	"context"
-	"fmt"
+	"os"
 	"testing"
+	"time"
 
 	. "github.com/onsi/gomega"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
@@ -27,12 +28,12 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	clusterctlv1 "sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3"
+	"sigs.k8s.io/cluster-api/util/kubeconfig"
 
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
-	"sigs.k8s.io/cluster-api-operator/internal/controller/genericprovider"
-	"sigs.k8s.io/cluster-api-operator/util"
+	"sigs.k8s.io/cluster-api-operator/internal/controller/generic"
 )
 
 func TestCheckCAPIOperatorAvailability(t *testing.T) {
@@ -108,7 +109,9 @@ func TestCheckCAPIOperatorAvailability(t *testing.T) {
 				deployment := generateCAPIOperatorDeployment("capi-operator-controller-manager", "default")
 				resources = append(resources, deployment)
 
-				g.Expect(env.Create(ctx, deployment)).To(Succeed())
+				g.Eventually(func() error {
+					return env.Create(ctx, deployment)
+				}, 10*time.Second).Should(Succeed())
 
 				g.Eventually(func() (bool, error) {
 					deploymentFromServer := &appsv1.Deployment{}
@@ -159,18 +162,18 @@ func TestInitProviders(t *testing.T) {
 	tests := []struct {
 		name            string
 		opts            *initOptions
-		wantedProviders []genericprovider.GenericProvider
+		wantedProviders []generic.Provider
 		wantErr         bool
 	}{
 		{
 			name:            "no providers",
-			wantedProviders: []genericprovider.GenericProvider{},
+			wantedProviders: []generic.Provider{},
 			wantErr:         false,
 			opts:            &initOptions{},
 		},
 		{
 			name: "core provider",
-			wantedProviders: []genericprovider.GenericProvider{
+			wantedProviders: []generic.Provider{
 				generateGenericProvider(clusterctlv1.CoreProviderType, "cluster-api", "capi-system", "v1.8.0", "", ""),
 			},
 			wantErr: false,
@@ -181,7 +184,7 @@ func TestInitProviders(t *testing.T) {
 		},
 		{
 			name: "core provider in default target namespace",
-			wantedProviders: []genericprovider.GenericProvider{
+			wantedProviders: []generic.Provider{
 				generateGenericProvider(clusterctlv1.CoreProviderType, "cluster-api", "capi-operator-system", "v1.8.0", "", ""),
 			},
 			wantErr: false,
@@ -192,7 +195,7 @@ func TestInitProviders(t *testing.T) {
 		},
 		{
 			name: "core provider without version",
-			wantedProviders: []genericprovider.GenericProvider{
+			wantedProviders: []generic.Provider{
 				generateGenericProvider(clusterctlv1.CoreProviderType, "cluster-api", "capi-system", "", "", ""),
 			},
 			wantErr: false,
@@ -203,7 +206,7 @@ func TestInitProviders(t *testing.T) {
 		},
 		{
 			name: "core provider without namespace and version",
-			wantedProviders: []genericprovider.GenericProvider{
+			wantedProviders: []generic.Provider{
 				generateGenericProvider(clusterctlv1.CoreProviderType, "cluster-api", "capi-operator-system", "", "", ""),
 			},
 			wantErr: false,
@@ -214,7 +217,7 @@ func TestInitProviders(t *testing.T) {
 		},
 		{
 			name: "core provider with config secret",
-			wantedProviders: []genericprovider.GenericProvider{
+			wantedProviders: []generic.Provider{
 				generateGenericProvider(clusterctlv1.CoreProviderType, "cluster-api", "capi-operator-system", "", "capi-secrets", ""),
 			},
 			wantErr: false,
@@ -226,7 +229,7 @@ func TestInitProviders(t *testing.T) {
 		},
 		{
 			name: "core provider with config secret in a custom namespace",
-			wantedProviders: []genericprovider.GenericProvider{
+			wantedProviders: []generic.Provider{
 				generateGenericProvider(clusterctlv1.CoreProviderType, "cluster-api", "capi-operator-system", "", "capi-secrets", "custom-namespace"),
 			},
 			wantErr: false,
@@ -238,7 +241,7 @@ func TestInitProviders(t *testing.T) {
 		},
 		{
 			name: "multiple providers of one type",
-			wantedProviders: []genericprovider.GenericProvider{
+			wantedProviders: []generic.Provider{
 				generateGenericProvider(clusterctlv1.InfrastructureProviderType, "aws", "capa-operator-system", "", "", ""),
 				generateGenericProvider(clusterctlv1.InfrastructureProviderType, "docker", "capd-operator-system", "", "", ""),
 			},
@@ -253,7 +256,7 @@ func TestInitProviders(t *testing.T) {
 		},
 		{
 			name: "all providers",
-			wantedProviders: []genericprovider.GenericProvider{
+			wantedProviders: []generic.Provider{
 				generateGenericProvider(clusterctlv1.CoreProviderType, "cluster-api", "capi-system", "v1.8.0", "", ""),
 				generateGenericProvider(clusterctlv1.InfrastructureProviderType, "aws", "capa-operator-system", "", "", ""),
 				generateGenericProvider(clusterctlv1.InfrastructureProviderType, "docker", "capd-operator-system", "", "", ""),
@@ -282,7 +285,7 @@ func TestInitProviders(t *testing.T) {
 		},
 		{
 			name:            "invalid input",
-			wantedProviders: []genericprovider.GenericProvider{},
+			wantedProviders: []generic.Provider{},
 			wantErr:         true,
 			opts: &initOptions{
 				infrastructureProviders: []string{
@@ -293,7 +296,7 @@ func TestInitProviders(t *testing.T) {
 		},
 		{
 			name:            "empty provider",
-			wantedProviders: []genericprovider.GenericProvider{},
+			wantedProviders: []generic.Provider{},
 			wantErr:         true,
 			opts: &initOptions{
 				infrastructureProviders: []string{
@@ -323,18 +326,11 @@ func TestInitProviders(t *testing.T) {
 			}
 
 			for _, genericProvider := range tt.wantedProviders {
-				g.Eventually(func() (bool, error) {
-					provider, err := getGenericProvider(ctx, env, string(util.ClusterctlProviderType(genericProvider)), genericProvider.GetName(), genericProvider.GetNamespace())
-					if err != nil {
-						return false, err
-					}
-
-					if provider.GetSpec().Version != genericProvider.GetSpec().Version {
-						return false, nil
-					}
-
-					return true, nil
-				}, waitShort).Should(BeTrue())
+				g.Eventually(func(g Gomega) {
+					copy := genericProvider.DeepCopyObject().(generic.Provider)
+					g.Expect(env.Get(ctx, ctrlclient.ObjectKeyFromObject(genericProvider), copy)).To(Succeed())
+					g.Expect(copy.GetSpec().Version).To(Equal(genericProvider.GetSpec().Version))
+				}, waitShort).Should(Succeed())
 			}
 
 			g.Expect(env.CleanupAndWait(ctx, resources...)).To(Succeed())
@@ -370,8 +366,103 @@ func generateCAPIOperatorDeployment(name, namespace string) *appsv1.Deployment {
 	}
 }
 
-func generateGenericProvider(providerType clusterctlv1.ProviderType, name, namespace, version, configSecretName, configSecretNamespace string) genericprovider.GenericProvider {
-	genericProvider := NewGenericProvider(providerType)
+func TestDeployCAPIOperator(t *testing.T) {
+	g := NewWithT(t)
+
+	envCluster := &clusterv1.Cluster{}
+	envCluster.Name = "test-cluster"
+
+	kubeconfigRaw := kubeconfig.FromEnvTestConfig(env.GetConfig(), envCluster)
+
+	tempDir := os.TempDir()
+
+	kubeconfigFile, err := os.CreateTemp(tempDir, "kubeconfig")
+	g.Expect(err).NotTo(HaveOccurred())
+
+	defer func() {
+		if err := os.Remove(kubeconfigFile.Name()); err != nil {
+			t.Error(err)
+		}
+	}()
+
+	_, err = kubeconfigFile.Write(kubeconfigRaw)
+	g.Expect(err).NotTo(HaveOccurred())
+
+	tests := []struct {
+		name          string
+		opts          *initOptions
+		wantedVersion string
+		wantErr       bool
+	}{
+		{
+			name:          "with version",
+			wantedVersion: "v0.7.0",
+			wantErr:       false,
+			opts: &initOptions{
+				kubeconfig:        kubeconfigFile.Name(),
+				kubeconfigContext: "@test-cluster",
+				operatorVersion:   "v0.7.0",
+			},
+		},
+		{
+			name:    "incorrect version",
+			wantErr: true,
+			opts: &initOptions{
+				kubeconfig:        kubeconfigFile.Name(),
+				kubeconfigContext: "@test-cluster",
+				operatorVersion:   "v1000000",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := NewWithT(t)
+
+			ctx, cancel := context.WithTimeout(context.Background(), waitLong)
+
+			defer cancel()
+
+			resources := []ctrlclient.Object{}
+
+			deployment := generateCAPIOperatorDeployment("capi-operator-controller-manager", "capi-operator-system")
+
+			err := deployCAPIOperator(ctx, tt.opts)
+
+			if tt.wantErr {
+				g.Expect(err).To(HaveOccurred())
+
+				return
+			} else {
+				g.Expect(err).NotTo(HaveOccurred())
+			}
+
+			resources = append(resources, deployment)
+
+			g.Eventually(func() (bool, error) {
+				err := env.Get(ctx, ctrlclient.ObjectKeyFromObject(deployment), deployment)
+				if err != nil {
+					return false, err
+				}
+
+				return deployment != nil, nil
+			}, waitShort).Should(BeTrue())
+
+			g.Expect(deployment.Spec.Template.Spec.Containers).NotTo(BeEmpty())
+
+			if tt.wantedVersion != "" {
+				g.Expect(deployment.Spec.Template.Spec.Containers[0].Image).To(HaveSuffix(tt.wantedVersion))
+			} else {
+				g.Expect(deployment.Spec.Template.Spec.Containers[0].Image).To(HaveSuffix(tt.opts.operatorVersion))
+			}
+
+			g.Expect(env.CleanupAndWait(ctx, resources...)).To(Succeed())
+		})
+	}
+}
+
+func generateGenericProvider(providerType clusterctlv1.ProviderType, name, namespace, version, configSecretName, configSecretNamespace string) generic.Provider {
+	rec := generic.ProviderReconcilers[providerType]
+	genericProvider := rec.GenericProvider()
 
 	genericProvider.SetName(name)
 
@@ -386,53 +477,4 @@ func generateGenericProvider(providerType clusterctlv1.ProviderType, name, names
 	genericProvider.SetSpec(spec)
 
 	return genericProvider
-}
-
-func getGenericProvider(ctx context.Context, client ctrlclient.Client, providerKind, providerName, providerNamespace string) (genericprovider.GenericProvider, error) {
-	switch providerKind {
-	case "CoreProvider":
-		provider := &operatorv1.CoreProvider{}
-		if err := client.Get(ctx, types.NamespacedName{Name: providerName, Namespace: providerNamespace}, provider); err != nil {
-			return nil, err
-		}
-
-		return provider, nil
-	case "BootstrapProvider":
-		provider := &operatorv1.BootstrapProvider{}
-		if err := client.Get(ctx, types.NamespacedName{Name: providerName, Namespace: providerNamespace}, provider); err != nil {
-			return nil, err
-		}
-
-		return provider, nil
-	case "ControlPlaneProvider":
-		provider := &operatorv1.ControlPlaneProvider{}
-		if err := client.Get(ctx, types.NamespacedName{Name: providerName, Namespace: providerNamespace}, provider); err != nil {
-			return nil, err
-		}
-
-		return provider, nil
-	case "InfrastructureProvider":
-		provider := &operatorv1.InfrastructureProvider{}
-		if err := client.Get(ctx, types.NamespacedName{Name: providerName, Namespace: providerNamespace}, provider); err != nil {
-			return nil, err
-		}
-
-		return provider, nil
-	case "AddonProvider":
-		provider := &operatorv1.AddonProvider{}
-		if err := client.Get(ctx, types.NamespacedName{Name: providerName, Namespace: providerNamespace}, provider); err != nil {
-			return nil, err
-		}
-
-		return provider, nil
-	case "RuntimeExtensionProvider":
-		provider := &operatorv1.RuntimeExtensionProvider{}
-		if err := client.Get(ctx, types.NamespacedName{Name: providerName, Namespace: providerNamespace}, provider); err != nil {
-			return nil, err
-		}
-
-		return provider, nil
-	default:
-		return nil, fmt.Errorf("failed to cast interface for type: %s", providerKind)
-	}
 }

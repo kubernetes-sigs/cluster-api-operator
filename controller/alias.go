@@ -16,6 +16,9 @@ limitations under the License.
 
 package controller
 
-import providercontroller "sigs.k8s.io/cluster-api-operator/internal/controller"
+import (
+	providercontroller "sigs.k8s.io/cluster-api-operator/internal/controller"
+	"sigs.k8s.io/cluster-api-operator/internal/controller/generic"
+)
 
-type GenericProviderReconciler = providercontroller.GenericProviderReconciler
+type GenericProviderReconciler = providercontroller.ProviderControllerWrapper[generic.Provider, generic.ProviderReconciler[generic.Provider]]

@@ -25,8 +25,9 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 
-	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
 	providercontroller "sigs.k8s.io/cluster-api-operator/internal/controller"
+	"sigs.k8s.io/cluster-api-operator/internal/controller/phases"
+	"sigs.k8s.io/cluster-api-operator/internal/controller/providers"
 	"sigs.k8s.io/cluster-api-operator/internal/envtest"
 )
 
@@ -44,11 +45,11 @@ func TestMain(m *testing.M) {
 
 	env = envtest.New()
 
-	if err := (&providercontroller.GenericProviderReconciler{
-		Provider:     &operatorv1.CoreProvider{},
-		ProviderList: &operatorv1.CoreProviderList{},
-		Client:       env,
-	}).SetupWithManager(ctx, env.Manager, controller.Options{MaxConcurrentReconciles: 1}); err != nil {
+	if err := providercontroller.NewProviderControllerWrapper(
+		providers.NewCoreProviderReconcier(env),
+		phases.NewPhase,
+		false,
+	).SetupWithManager(ctx, env.Manager, controller.Options{MaxConcurrentReconciles: 1}); err != nil {
 		panic(fmt.Sprintf("Failed to start CoreProviderReconciler: %v", err))
 	}
 

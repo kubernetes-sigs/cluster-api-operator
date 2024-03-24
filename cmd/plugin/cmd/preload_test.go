@@ -29,12 +29,12 @@ import (
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
-	"sigs.k8s.io/cluster-api-operator/internal/controller/genericprovider"
+	"sigs.k8s.io/cluster-api-operator/internal/controller/generic"
 )
 
 type publishProvider struct {
 	configMapName  string
-	provider       genericprovider.GenericProvider
+	provider       generic.Provider
 	metadataKey    string
 	componentsKey  string
 	metadataData   []byte
@@ -51,7 +51,7 @@ func TestPreloadCommand(t *testing.T) {
 		name               string
 		customURL          string
 		publishOpts        *publishOptions
-		existingProviders  []genericprovider.GenericProvider
+		existingProviders  []generic.Provider
 		expectedConfigMaps int
 		wantErr            bool
 	}{
@@ -98,8 +98,8 @@ func TestPreloadCommand(t *testing.T) {
 		},
 		{
 			name: "custom url infra provider",
-			existingProviders: []genericprovider.GenericProvider{
-				func() genericprovider.GenericProvider {
+			existingProviders: []generic.Provider{
+				func() generic.Provider {
 					p := generateGenericProvider(clusterctlv1.InfrastructureProviderType, "docker", "default", "v1.10.0-beta.0", "", "")
 					spec := p.GetSpec()
 					spec.FetchConfig = &operatorv1.FetchConfiguration{
@@ -114,7 +114,7 @@ func TestPreloadCommand(t *testing.T) {
 		},
 		{
 			name: "regular core and infra provider",
-			existingProviders: []genericprovider.GenericProvider{
+			existingProviders: []generic.Provider{
 				generateGenericProvider(clusterctlv1.CoreProviderType, "cluster-api", "default", "v1.10.0-beta.0", "", ""),
 				generateGenericProvider(clusterctlv1.InfrastructureProviderType, "docker", "default", "v1.10.0-beta.0", "", ""),
 			},
@@ -152,8 +152,8 @@ func TestPreloadCommand(t *testing.T) {
 		},
 		{
 			name: "OCI override with missing image",
-			existingProviders: []genericprovider.GenericProvider{
-				func() genericprovider.GenericProvider {
+			existingProviders: []generic.Provider{
+				func() generic.Provider {
 					p := generateGenericProvider(clusterctlv1.InfrastructureProviderType, "docker", "default", "v1.10.0-beta.0", "", "")
 					spec := p.GetSpec()
 					spec.FetchConfig = &operatorv1.FetchConfiguration{
