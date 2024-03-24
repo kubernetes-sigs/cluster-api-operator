@@ -78,8 +78,6 @@ type genericProviderList interface {
 	operatorv1.GenericProviderList
 }
 
-var errNotFound = errors.New("404 Not Found")
-
 // CreateKubeClient creates a kubernetes client from provided kubeconfig and kubecontext.
 func CreateKubeClient(kubeconfigPath, kubeconfigContext string) (ctrlclient.Client, error) {
 	// Use specified kubeconfig path and context
@@ -181,27 +179,6 @@ func GetKubeconfigLocation() string {
 	return clientcmd.RecommendedHomeFile
 }
 
-func NewGenericProvider(providerType clusterctlv1.ProviderType) operatorv1.GenericProvider {
-	switch providerType {
-	case clusterctlv1.CoreProviderType:
-		return &operatorv1.CoreProvider{}
-	case clusterctlv1.BootstrapProviderType:
-		return &operatorv1.BootstrapProvider{}
-	case clusterctlv1.ControlPlaneProviderType:
-		return &operatorv1.ControlPlaneProvider{}
-	case clusterctlv1.InfrastructureProviderType:
-		return &operatorv1.InfrastructureProvider{}
-	case clusterctlv1.AddonProviderType:
-		return &operatorv1.AddonProvider{}
-	case clusterctlv1.RuntimeExtensionProviderType:
-		return &operatorv1.RuntimeExtensionProvider{}
-	case clusterctlv1.IPAMProviderType, clusterctlv1.ProviderTypeUnknown:
-		panic(fmt.Sprintf("unsupported provider type %s", providerType))
-	default:
-		panic(fmt.Sprintf("unknown provider type %s", providerType))
-	}
-}
-
 // GetLatestRelease returns the latest patch release.
 func GetLatestRelease(ctx context.Context, repo repository.Repository) (string, error) {
 	versions, err := repo.GetVersions(ctx)
@@ -260,7 +237,7 @@ func GetLatestRelease(ctx context.Context, repo repository.Repository) (string, 
 
 		_, err := repo.GetFile(ctx, versionString, repo.ComponentsPath())
 		if err != nil {
-			if errors.Is(err, errNotFound) {
+			if errors.Is(err, ErrNotFound) {
 				// Ignore this version
 				continue
 			}

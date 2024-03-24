@@ -23,12 +23,8 @@ import (
 	"regexp"
 	"strings"
 
-	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
-	"sigs.k8s.io/cluster-api-operator/internal/controller/genericprovider"
-	clusterctlv1 "sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3"
 	configclient "sigs.k8s.io/cluster-api/cmd/clusterctl/client/config"
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/repository"
-	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -38,101 +34,17 @@ const (
 	gitlabPackagesAPIPrefix = "/api/v4/projects/"
 )
 
-type genericProviderList interface {
-	ctrlclient.ObjectList
-	operatorv1.GenericProviderList
-}
+// Or compares the values and returns first non-empty occurence
+func Or[T comparable](values ...T) T {
+	var zero T
 
-func IsCoreProvider(p genericprovider.GenericProvider) bool {
-	_, ok := p.(*operatorv1.CoreProvider)
-	return ok
-}
-
-// ClusterctlProviderType returns the provider type from the genericProvider.
-func ClusterctlProviderType(genericProvider operatorv1.GenericProvider) clusterctlv1.ProviderType {
-	switch genericProvider.(type) {
-	case *operatorv1.CoreProvider:
-		return clusterctlv1.CoreProviderType
-	case *operatorv1.ControlPlaneProvider:
-		return clusterctlv1.ControlPlaneProviderType
-	case *operatorv1.InfrastructureProvider:
-		return clusterctlv1.InfrastructureProviderType
-	case *operatorv1.BootstrapProvider:
-		return clusterctlv1.BootstrapProviderType
-	case *operatorv1.AddonProvider:
-		return clusterctlv1.AddonProviderType
-	case *operatorv1.IPAMProvider:
-		return clusterctlv1.IPAMProviderType
-	case *operatorv1.RuntimeExtensionProvider:
-		return clusterctlv1.RuntimeExtensionProviderType
-	}
-
-	return clusterctlv1.ProviderTypeUnknown
-}
-
-// GetCustomProviders retrieves all custom providers using `FetchConfig` that aren't the current provider name / type.
-func GetCustomProviders(ctx context.Context, cl ctrlclient.Client, currProvider genericprovider.GenericProvider) ([]operatorv1.GenericProvider, error) {
-	customProviders := []operatorv1.GenericProvider{}
-	currProviderName := currProvider.GetName()
-	currProviderType := currProvider.GetType()
-
-	for _, providerList := range operatorv1.ProviderLists {
-		genProviderList, ok := providerList.(genericProviderList)
-		if !ok {
-			return nil, fmt.Errorf("cannot cast providers list to genericProviderList")
-		}
-
-		if err := cl.List(ctx, genProviderList); err != nil {
-			return nil, fmt.Errorf("cannot get a list of providers from the server: %w", err)
-		}
-
-		genProviderListItems := genProviderList.GetItems()
-		for i, provider := range genProviderListItems {
-			if provider.GetName() == currProviderName && provider.GetType() == currProviderType || provider.GetSpec().FetchConfig == nil {
-				continue
-			}
-
-			customProviders = append(customProviders, genProviderListItems[i])
+	for _, v := range values {
+		if v != zero {
+			return v
 		}
 	}
 
-	return customProviders, nil
-}
-
-// GetGenericProvider returns the first of generic providers matching the type and the name from the configclient.Provider.
-func GetGenericProvider(ctx context.Context, cl ctrlclient.Client, provider configclient.Provider) (operatorv1.GenericProvider, error) {
-	var list genericProviderList
-
-	switch provider.Type() {
-	case clusterctlv1.CoreProviderType:
-		list = &operatorv1.CoreProviderList{}
-	case clusterctlv1.ControlPlaneProviderType:
-		list = &operatorv1.ControlPlaneProviderList{}
-	case clusterctlv1.InfrastructureProviderType:
-		list = &operatorv1.InfrastructureProviderList{}
-	case clusterctlv1.BootstrapProviderType:
-		list = &operatorv1.BootstrapProviderList{}
-	case clusterctlv1.AddonProviderType:
-		list = &operatorv1.AddonProviderList{}
-	case clusterctlv1.IPAMProviderType:
-		list = &operatorv1.IPAMProviderList{}
-	case clusterctlv1.RuntimeExtensionProviderType:
-		list = &operatorv1.RuntimeExtensionProviderList{}
-	case clusterctlv1.ProviderTypeUnknown:
-		return nil, fmt.Errorf("provider %s type is not supported %s", provider.Name(), provider.Type())
-	}
-
-	if err := cl.List(ctx, list); err != nil {
-		return nil, err
-	}
-
-	for _, p := range list.GetItems() {
-		if p.GetName() == provider.Name() {
-			return p, nil
-		}
-	}
-
-	return nil, fmt.Errorf("unable to find provider manifest with name %s", provider.Name())
+	return zero
 }
 
 // RepositoryFactory returns the repository implementation corresponding to the provider URL.

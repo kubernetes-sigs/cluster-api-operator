@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package controller
+package phases
 
 import (
 	"bytes"
@@ -37,21 +37,12 @@ import (
 	"sigs.k8s.io/cluster-api-operator/util"
 )
 
-const (
-	configMapSourceLabel      = "provider.cluster.x-k8s.io/source"
-	configMapSourceAnnotation = "provider.cluster.x-k8s.io/source"
-	operatorManagedLabel      = "managed-by.operator.cluster.x-k8s.io"
-
-	maxConfigMapSize = 1 * 1024 * 1024
-	ociSource        = "oci"
-)
-
-// downloadManifests downloads CAPI manifests from a url.
-func (p *phaseReconciler) downloadManifests(ctx context.Context) (reconcile.Result, error) {
+// DownloadManifests downloads CAPI manifests from a url.
+func (p *PhaseReconciler[P, G]) DownloadManifests(ctx context.Context, phase G) (reconcile.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 
 	// Return immediately if a custom config map is used instead of a url.
-	if p.provider.GetSpec().FetchConfig != nil && p.provider.GetSpec().FetchConfig.Selector != nil {
+	if phase.GetProvider().GetSpec().FetchConfig != nil && phase.GetProvider().GetSpec().FetchConfig.Selector != nil {
 		log.V(5).Info("Custom config map is used, skip downloading provider manifests")
 
 		return reconcile.Result{}, nil
@@ -59,10 +50,10 @@ func (p *phaseReconciler) downloadManifests(ctx context.Context) (reconcile.Resu
 
 	// Check if manifests are already downloaded and stored in a configmap
 	labelSelector := metav1.LabelSelector{
-		MatchLabels: p.prepareConfigMapLabels(),
+		MatchLabels: ProviderLabels(phase.GetProvider()),
 	}
 
-	exists, err := p.checkConfigMapExists(ctx, labelSelector, p.provider.GetNamespace())
+	exists, err := checkConfigMapExists(ctx, phase.GetClient(), labelSelector, phase.GetProvider().GetNamespace())
 	if err != nil {
 		return reconcile.Result{}, wrapPhaseError(err, "failed to check that config map with manifests exists", operatorv1.ProviderInstalledCondition)
 	}
@@ -84,14 +75,14 @@ func (p *phaseReconciler) downloadManifests(ctx context.Context) (reconcile.Resu
 		}
 	}
 
-	spec := p.provider.GetSpec()
+	spec := phase.GetProvider().GetSpec()
 
 	if spec.Version == "" && p.repo != nil {
 		// User didn't set the version, try to get repository default.
 		spec.Version = p.repo.DefaultVersion()
 
 		// Add version to the provider spec.
-		p.provider.SetSpec(spec)
+		phase.GetProvider().SetSpec(spec)
 	}
 
 	var configMap *corev1.ConfigMap
@@ -119,7 +110,7 @@ func (p *phaseReconciler) downloadManifests(ctx context.Context) (reconcile.Resu
 }
 
 // checkConfigMapExists checks if a config map exists in Kubernetes with the given LabelSelector.
-func (p *phaseReconciler) checkConfigMapExists(ctx context.Context, labelSelector metav1.LabelSelector, namespace string) (bool, error) {
+func checkConfigMapExists(ctx context.Context, cl client.Client, labelSelector metav1.LabelSelector, namespace string) (bool, error) {
 	labelSet := labels.Set(labelSelector.MatchLabels)
 	listOpts := []client.ListOption{
 		client.MatchingLabelsSelector{Selector: labels.SelectorFromSet(labelSet)},
@@ -128,7 +119,7 @@ func (p *phaseReconciler) checkConfigMapExists(ctx context.Context, labelSelecto
 
 	var configMapList corev1.ConfigMapList
 
-	if err := p.ctrlClient.List(ctx, &configMapList, listOpts...); err != nil {
+	if err := cl.List(ctx, &configMapList, listOpts...); err != nil {
 		return false, fmt.Errorf("failed to list ConfigMaps: %w", err)
 	}
 
@@ -137,11 +128,6 @@ func (p *phaseReconciler) checkConfigMapExists(ctx context.Context, labelSelecto
 	}
 
 	return len(configMapList.Items) == 1, nil
-}
-
-// prepareConfigMapLabels returns labels that identify a config map with downloaded manifests.
-func (p *phaseReconciler) prepareConfigMapLabels() map[string]string {
-	return ProviderLabels(p.provider)
 }
 
 // TemplateManifestsConfigMap prepares a config map with downloaded manifests.

@@ -25,17 +25,14 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/utils/ptr"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-	clusterctlv1 "sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3"
 	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
-	"sigs.k8s.io/cluster-api-operator/internal/controller/genericprovider"
+	"sigs.k8s.io/cluster-api-operator/internal/controller/generic"
 )
 
 const (
@@ -82,7 +79,7 @@ spec:
 	testCurrentVersion = "v0.4.2"
 )
 
-func insertDummyConfig(provider genericprovider.GenericProvider) {
+func insertDummyConfig(provider generic.Provider) {
 	spec := provider.GetSpec()
 	spec.FetchConfig = &operatorv1.FetchConfiguration{
 		Selector: &metav1.LabelSelector{
@@ -110,7 +107,7 @@ func dummyConfigMap(ns string) *corev1.ConfigMap {
 	}
 }
 
-func createDummyProviderWithConfigSecret(objs []client.Object, provider genericprovider.GenericProvider, configSecret *corev1.Secret) ([]client.Object, error) {
+func createDummyProviderWithConfigSecret(objs []client.Object, provider generic.Provider, configSecret *corev1.Secret) ([]client.Object, error) {
 	cm := dummyConfigMap(provider.GetNamespace())
 
 	if err := env.CreateAndWait(ctx, cm); err != nil {
@@ -222,12 +219,12 @@ func TestReconcilerPreflightConditions(t *testing.T) {
 	testCases := []struct {
 		name      string
 		namespace string
-		providers []genericprovider.GenericProvider
+		providers []generic.Provider
 	}{
 		{
 			name:      "preflight conditions for CoreProvider",
 			namespace: "test-core-provider",
-			providers: []genericprovider.GenericProvider{
+			providers: []generic.Provider{
 				&operatorv1.CoreProvider{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "cluster-api",
@@ -243,7 +240,7 @@ func TestReconcilerPreflightConditions(t *testing.T) {
 		{
 			name:      "preflight conditions for ControlPlaneProvider",
 			namespace: "test-cp-provider",
-			providers: []genericprovider.GenericProvider{
+			providers: []generic.Provider{
 				&operatorv1.CoreProvider{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "cluster-api",
@@ -365,32 +362,59 @@ releaseSeries:
 			newVersion: "v999.9.1",
 		},
 	}
+	g := NewWithT(t)
+
+	core := &operatorv1.CoreProvider{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "cluster-api",
+		},
+		Spec: operatorv1.CoreProviderSpec{
+			ProviderSpec: operatorv1.ProviderSpec{
+				Version: "v999.9.3",
+			},
+		},
+	}
+
+	namespace := "test-upgrades-downgrades"
+
+	t.Log("Ensure namespace exists", namespace)
+	g.Expect(env.EnsureNamespaceExists(ctx, namespace)).To(Succeed())
+
+	insertDummyConfig(core)
+	core.SetNamespace(namespace)
+	t.Log("creating core provider", core.GetName())
+	g.Expect(env.CreateAndWait(ctx, dummyFutureConfigMap(namespace, "v999.9.3"))).To(Succeed())
+	g.Expect(env.CreateAndWait(ctx, core)).To(Succeed())
+
+	g.Eventually(func() error {
+		if err := env.Get(ctx, client.ObjectKeyFromObject(core), core); err != nil {
+			return err
+		}
+
+		conditions.MarkTrue(core, clusterv1.ReadyCondition)
+		return env.Status().Update(ctx, core)
+	}).Should(Succeed())
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			g := NewWithT(t)
-
-			provider := &operatorv1.CoreProvider{
+			provider := &operatorv1.InfrastructureProvider{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: "cluster-api",
+					Name: "docker",
 				},
-				Spec: operatorv1.CoreProviderSpec{
+				Spec: operatorv1.InfrastructureProviderSpec{
 					ProviderSpec: operatorv1.ProviderSpec{
 						Version: currentVersion,
 					},
 				},
 			}
 
-			namespace := "test-upgrades-downgrades"
+			ns, err := env.CreateNamespace(ctx, "infra")
+			g.Expect(err).ToNot(HaveOccurred())
 
-			t.Log("Ensure namespace exists", namespace)
-			g.Expect(env.EnsureNamespaceExists(ctx, namespace)).To(Succeed())
-
-			g.Expect(env.CreateAndWait(ctx, dummyFutureConfigMap(namespace, currentVersion))).To(Succeed())
-
-			insertDummyConfig(provider)
-			provider.SetNamespace(namespace)
 			t.Log("creating test provider", provider.GetName())
+			provider.SetNamespace(ns.Name)
+			insertDummyConfig(provider)
+			g.Expect(env.CreateAndWait(ctx, dummyFutureConfigMap(ns.Name, currentVersion))).To(Succeed())
 			g.Expect(env.CreateAndWait(ctx, provider)).To(Succeed())
 
 			defer func() {
@@ -404,6 +428,7 @@ releaseSeries:
 				}
 
 				if provider.GetStatus().InstalledVersion == nil || *provider.GetStatus().InstalledVersion != currentVersion {
+					t.Log(t.Name(), provider.GetName(), provider.GetStatus().InstalledVersion)
 					return false
 				}
 
@@ -421,7 +446,7 @@ releaseSeries:
 
 			// creating another configmap with another version
 			if tc.newVersion != currentVersion {
-				g.Expect(env.CreateAndWait(ctx, dummyFutureConfigMap(namespace, tc.newVersion))).To(Succeed())
+				g.Expect(env.CreateAndWait(ctx, dummyFutureConfigMap(ns.Name, tc.newVersion))).To(Succeed())
 			}
 
 			// Change provider version
@@ -441,7 +466,9 @@ releaseSeries:
 			labels["provider-version"] = tc.newVersion
 			provider.SetLabels(labels)
 
-			g.Expect(env.Client.Update(ctx, provider)).To(Succeed())
+			g.Eventually(func() error {
+				return env.Client.Update(ctx, provider.DeepCopy())
+			}, timeout).Should(Succeed())
 
 			g.Eventually(func() bool {
 				if err := env.Get(ctx, client.ObjectKeyFromObject(provider), provider); err != nil {
@@ -601,7 +628,7 @@ func TestReconcilerPreflightConditionsFromCoreProviderEvents(t *testing.T) {
 
 	g.Expect(env.CreateAndWait(ctx, dummyConfigMap(namespace))).To(Succeed())
 
-	for _, p := range []genericprovider.GenericProvider{coreProvider, infrastructureProvider} {
+	for _, p := range []generic.Provider{coreProvider, infrastructureProvider} {
 		insertDummyConfig(p)
 		p.SetNamespace(namespace)
 		t.Log("creating test provider", p.GetName())
@@ -960,7 +987,7 @@ func TestProviderSpecChanges(t *testing.T) {
 	}
 }
 
-func generateExpectedResultChecker(provider genericprovider.GenericProvider, specHash string, condStatus corev1.ConditionStatus) func() bool {
+func generateExpectedResultChecker(provider generic.Provider, specHash string, condStatus corev1.ConditionStatus) func() bool {
 	return func() bool {
 		if err := env.Get(ctx, client.ObjectKeyFromObject(provider), provider); err != nil {
 			return false
@@ -975,13 +1002,4 @@ func generateExpectedResultChecker(provider genericprovider.GenericProvider, spe
 
 		return condition != nil && condition.Status == condStatus
 	}
-}
-
-func setupScheme() *runtime.Scheme {
-	scheme := runtime.NewScheme()
-	utilruntime.Must(corev1.AddToScheme(scheme))
-	utilruntime.Must(operatorv1.AddToScheme(scheme))
-	utilruntime.Must(clusterctlv1.AddToScheme(scheme))
-
-	return scheme
 }

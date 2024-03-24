@@ -48,6 +48,8 @@ import (
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
 	providercontroller "sigs.k8s.io/cluster-api-operator/internal/controller"
 	healtchcheckcontroller "sigs.k8s.io/cluster-api-operator/internal/controller/healthcheck"
+	"sigs.k8s.io/cluster-api-operator/internal/controller/phases"
+	"sigs.k8s.io/cluster-api-operator/internal/controller/providers"
 )
 
 var (
@@ -220,79 +222,65 @@ func setupChecks(mgr ctrl.Manager) {
 }
 
 func setupReconcilers(ctx context.Context, mgr ctrl.Manager, watchConfigSecretChanges bool) {
-	if err := (&providercontroller.GenericProviderReconciler{
-		Provider:                 &operatorv1.CoreProvider{},
-		ProviderList:             &operatorv1.CoreProviderList{},
-		Client:                   mgr.GetClient(),
-		Config:                   mgr.GetConfig(),
-		WatchConfigSecretChanges: watchConfigSecretChanges,
-	}).SetupWithManager(ctx, mgr, concurrency(concurrencyNumber)); err != nil {
+	if err := providercontroller.NewProviderControllerWrapper(
+		providers.NewCoreProviderReconcier(mgr),
+		phases.NewPhase,
+		watchConfigSecretChanges,
+	).SetupWithManager(ctx, mgr, concurrency(concurrencyNumber)); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "CoreProvider")
 		os.Exit(1)
 	}
 
-	if err := (&providercontroller.GenericProviderReconciler{
-		Provider:                 &operatorv1.InfrastructureProvider{},
-		ProviderList:             &operatorv1.InfrastructureProviderList{},
-		Client:                   mgr.GetClient(),
-		Config:                   mgr.GetConfig(),
-		WatchConfigSecretChanges: watchConfigSecretChanges,
-	}).SetupWithManager(ctx, mgr, concurrency(concurrencyNumber)); err != nil {
+	if err := providercontroller.NewProviderControllerWrapper(
+		providers.NewInfrastructureProviderReconciler(mgr),
+		phases.NewPhase,
+		watchConfigSecretChanges,
+	).SetupWithManager(ctx, mgr, concurrency(concurrencyNumber)); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "InfrastructureProvider")
 		os.Exit(1)
 	}
 
-	if err := (&providercontroller.GenericProviderReconciler{
-		Provider:                 &operatorv1.BootstrapProvider{},
-		ProviderList:             &operatorv1.BootstrapProviderList{},
-		Client:                   mgr.GetClient(),
-		Config:                   mgr.GetConfig(),
-		WatchConfigSecretChanges: watchConfigSecretChanges,
-	}).SetupWithManager(ctx, mgr, concurrency(concurrencyNumber)); err != nil {
+	if err := providercontroller.NewProviderControllerWrapper(
+		providers.NewBootstrapProviderReconciler(mgr),
+		phases.NewPhase,
+		watchConfigSecretChanges,
+	).SetupWithManager(ctx, mgr, concurrency(concurrencyNumber)); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "BootstrapProvider")
 		os.Exit(1)
 	}
 
-	if err := (&providercontroller.GenericProviderReconciler{
-		Provider:                 &operatorv1.ControlPlaneProvider{},
-		ProviderList:             &operatorv1.ControlPlaneProviderList{},
-		Client:                   mgr.GetClient(),
-		Config:                   mgr.GetConfig(),
-		WatchConfigSecretChanges: watchConfigSecretChanges,
-	}).SetupWithManager(ctx, mgr, concurrency(concurrencyNumber)); err != nil {
+	if err := providercontroller.NewProviderControllerWrapper(
+		providers.NewControlPlaneProviderReconciler(mgr),
+		phases.NewPhase,
+		watchConfigSecretChanges,
+	).SetupWithManager(ctx, mgr, concurrency(concurrencyNumber)); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ControlPlaneProvider")
 		os.Exit(1)
 	}
 
-	if err := (&providercontroller.GenericProviderReconciler{
-		Provider:                 &operatorv1.AddonProvider{},
-		ProviderList:             &operatorv1.AddonProviderList{},
-		Client:                   mgr.GetClient(),
-		Config:                   mgr.GetConfig(),
-		WatchConfigSecretChanges: watchConfigSecretChanges,
-	}).SetupWithManager(ctx, mgr, concurrency(concurrencyNumber)); err != nil {
+	if err := providercontroller.NewProviderControllerWrapper(
+		providers.NewAddonProviderReconciler(mgr),
+		phases.NewPhase,
+		watchConfigSecretChanges,
+	).SetupWithManager(ctx, mgr, concurrency(concurrencyNumber)); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "AddonProvider")
 		os.Exit(1)
 	}
 
-	if err := (&providercontroller.GenericProviderReconciler{
-		Provider:                 &operatorv1.IPAMProvider{},
-		ProviderList:             &operatorv1.IPAMProviderList{},
-		Client:                   mgr.GetClient(),
-		Config:                   mgr.GetConfig(),
-		WatchConfigSecretChanges: watchConfigSecretChanges,
-	}).SetupWithManager(ctx, mgr, concurrency(concurrencyNumber)); err != nil {
+	if err := providercontroller.NewProviderControllerWrapper(
+		providers.NewIPAMProviderReconciler(mgr),
+		phases.NewPhase,
+		watchConfigSecretChanges,
+	).SetupWithManager(ctx, mgr, concurrency(concurrencyNumber)); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "IPAMProvider")
 		os.Exit(1)
 	}
 
-	if err := (&providercontroller.GenericProviderReconciler{
-		Provider:                 &operatorv1.RuntimeExtensionProvider{},
-		ProviderList:             &operatorv1.RuntimeExtensionProviderList{},
-		Client:                   mgr.GetClient(),
-		Config:                   mgr.GetConfig(),
-		WatchConfigSecretChanges: watchConfigSecretChanges,
-	}).SetupWithManager(ctx, mgr, concurrency(concurrencyNumber)); err != nil {
+	if err := providercontroller.NewProviderControllerWrapper(
+		providers.NewRuntimeExtensionProviderReconciler(mgr),
+		phases.NewPhase,
+		watchConfigSecretChanges,
+	).SetupWithManager(ctx, mgr, concurrency(concurrencyNumber)); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "RuntimeExtensionProvider")
 		os.Exit(1)
 	}

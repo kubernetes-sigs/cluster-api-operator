@@ -24,8 +24,7 @@ import (
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
-	"sigs.k8s.io/cluster-api-operator/internal/controller/genericprovider"
-	"sigs.k8s.io/cluster-api-operator/util"
+	"sigs.k8s.io/cluster-api-operator/internal/controller/generic"
 )
 
 func TestUpgradePlan(t *testing.T) {
@@ -34,7 +33,7 @@ func TestUpgradePlan(t *testing.T) {
 		opts              *initOptions
 		customURL         string
 		wantedUpgradePlan upgradePlan
-		wantedProviders   []genericprovider.GenericProvider
+		wantedProviders   []generic.Provider
 		wantErr           bool
 	}{
 		{
@@ -61,7 +60,7 @@ func TestUpgradePlan(t *testing.T) {
 					},
 				},
 			},
-			wantedProviders: []genericprovider.GenericProvider{
+			wantedProviders: []generic.Provider{
 				generateGenericProvider(clusterctlv1.CoreProviderType, "cluster-api", "capi-system", "v1.8.0", "", ""),
 			},
 			wantErr: false,
@@ -86,7 +85,7 @@ func TestUpgradePlan(t *testing.T) {
 					},
 				},
 			},
-			wantedProviders: []genericprovider.GenericProvider{
+			wantedProviders: []generic.Provider{
 				generateGenericProvider(clusterctlv1.InfrastructureProviderType, "docker", "capi-system", "v1.8.0", "", ""),
 			},
 			wantErr: false,
@@ -117,7 +116,9 @@ func TestUpgradePlan(t *testing.T) {
 
 			for _, genericProvider := range tt.wantedProviders {
 				g.Eventually(func() (bool, error) {
-					provider, err := getGenericProvider(ctx, env, string(util.ClusterctlProviderType(genericProvider)), genericProvider.GetName(), genericProvider.GetNamespace())
+					provider := genericProvider.DeepCopyObject().(generic.Provider)
+
+					err := env.Get(ctx, ctrlclient.ObjectKeyFromObject(genericProvider), provider)
 					if err != nil {
 						return false, err
 					}
@@ -133,7 +134,9 @@ func TestUpgradePlan(t *testing.T) {
 			// Init doesn't support custom URLs yet, so we have to update providers here
 			if tt.customURL != "" {
 				for _, genericProvider := range tt.wantedProviders {
-					provider, err := getGenericProvider(ctx, env, string(util.ClusterctlProviderType(genericProvider)), genericProvider.GetName(), genericProvider.GetNamespace())
+					provider := genericProvider.DeepCopyObject().(generic.Provider)
+
+					err := env.Get(ctx, ctrlclient.ObjectKeyFromObject(genericProvider), provider)
 					g.Expect(err).NotTo(HaveOccurred())
 
 					spec := provider.GetSpec()
@@ -146,7 +149,9 @@ func TestUpgradePlan(t *testing.T) {
 					g.Expect(env.Update(ctx, provider)).NotTo(HaveOccurred())
 
 					g.Eventually(func() (bool, error) {
-						provider, err := getGenericProvider(ctx, env, string(util.ClusterctlProviderType(genericProvider)), genericProvider.GetName(), genericProvider.GetNamespace())
+						provider := genericProvider.DeepCopyObject().(generic.Provider)
+
+						err := env.Get(ctx, ctrlclient.ObjectKeyFromObject(genericProvider), provider)
 						if err != nil {
 							return false, err
 						}

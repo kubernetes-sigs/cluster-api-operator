@@ -448,7 +448,7 @@ func getProviderFetchConfig(ctx context.Context, genericProvider operatorv1.Gene
 		return "", "", err
 	}
 
-	providerConfig, err := configClient.Providers().Get(genericProvider.GetName(), util.ClusterctlProviderType(genericProvider))
+	providerConfig, err := configClient.Providers().Get(genericProvider.GetName(), clusterctlv1.ProviderType(genericProvider.GetType()))
 	if err != nil {
 		// TODO: implement support of fetching data from config maps
 		// This is a temporary fix for providers installed from config maps
