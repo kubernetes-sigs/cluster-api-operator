@@ -28,7 +28,7 @@ jobs:
       with:
         # go-version: ${{ steps.vars.outputs.go_version }} // TODO: we have to use go version consistent with test infra jobs
         go-version: '1.21'
-    - uses: actions/cache@ab5e6d0c87105b4c9c2047343972218f562e4319 # tag=v4.0.1
+    - uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9 # tag=v4.0.2
       name: Restore go cache
       with:
         path: |
