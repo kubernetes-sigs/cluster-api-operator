@@ -33,35 +33,35 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-type GenericProviderReconcier[P generic.Provider] struct {
+type GenericProviderReconciler[P generic.Provider] struct {
 	Client          client.Client
 	Config          *rest.Config
 	PhaseReconciler *phases.PhaseReconciler[P, generic.Group[P]]
 }
 
-func NewGenericProviderReconcier[P generic.Provider](conn generic.Connector) generic.ProviderReconciler[P] {
-	return &GenericProviderReconcier[P]{
+func NewGenericProviderReconciler[P generic.Provider](conn generic.Connector) *GenericProviderReconciler[P] {
+	return &GenericProviderReconciler[P]{
 		Client: conn.GetClient(),
 		Config: conn.GetConfig(),
 	}
 }
 
-func (r *GenericProviderReconcier[P]) Init() {
+func (r *GenericProviderReconciler[P]) Init() {
 	r.PhaseReconciler = phases.NewPhaseReconciler[P, generic.Group[P]](r.Client)
 }
 
 // GetClient implements GenericReconciler.
-func (r *GenericProviderReconcier[P]) GetClient() client.Client {
+func (r *GenericProviderReconciler[P]) GetClient() client.Client {
 	return r.Client
 }
 
 // GetConfig implements GenericReconciler.
-func (r *GenericProviderReconcier[P]) GetConfig() *rest.Config {
+func (r *GenericProviderReconciler[P]) GetConfig() *rest.Config {
 	return r.Config
 }
 
 // ReconcileDelete implements GenericReconciler.
-func (r *GenericProviderReconcier[P]) ReconcileDelete(ctx context.Context, provider P) []generic.ReconcileFn[P, generic.Group[P]] {
+func (r *GenericProviderReconciler[P]) ReconcileDelete(ctx context.Context, provider P) []generic.ReconcileFn[P, generic.Group[P]] {
 	log := ctrl.LoggerFrom(ctx)
 
 	log.Info("Deleting provider resources")
@@ -72,14 +72,14 @@ func (r *GenericProviderReconcier[P]) ReconcileDelete(ctx context.Context, provi
 }
 
 // PreflightChecks implements preflight checks for GenericReconciler.
-func (r *GenericProviderReconcier[P]) PreflightChecks(ctx context.Context, provider P) []generic.ReconcileFn[P, generic.Group[P]] {
+func (r *GenericProviderReconciler[P]) PreflightChecks(ctx context.Context, provider P) []generic.ReconcileFn[P, generic.Group[P]] {
 	return generic.NewReconcileFnList(
 		phases.PreflightChecks[P],
 	)
 }
 
 // ReconcileNormal implements GenericReconciler.
-func (r *GenericProviderReconcier[P]) ReconcileNormal(ctx context.Context, provider P) []generic.ReconcileFn[P, generic.Group[P]] {
+func (r *GenericProviderReconciler[P]) ReconcileNormal(ctx context.Context, provider P) []generic.ReconcileFn[P, generic.Group[P]] {
 	return generic.NewReconcileFnList(
 		r.PhaseReconciler.InitializePhaseReconciler,
 		r.PhaseReconciler.DownloadManifests,
@@ -91,29 +91,29 @@ func (r *GenericProviderReconcier[P]) ReconcileNormal(ctx context.Context, provi
 }
 
 // ReportStatus reports changes in status for the reconciled provider.
-func (r *GenericProviderReconcier[P]) ReportStatus(ctx context.Context, provider P) []generic.ReconcileFn[P, generic.Group[P]] {
+func (r *GenericProviderReconciler[P]) ReportStatus(ctx context.Context, provider P) []generic.ReconcileFn[P, generic.Group[P]] {
 	return generic.NewReconcileFnList(
 		r.PhaseReconciler.ReportStatus,
 	)
 }
 
 // ClusterctlProviderType returns ProviderType for the underlying clusterctl provider.
-func (r *GenericProviderReconcier[P]) ClusterctlProviderType() clusterctlv1.ProviderType {
+func (r *GenericProviderReconciler[P]) ClusterctlProviderType() clusterctlv1.ProviderType {
 	panic("Generic Provider Reconciler has no provider type")
 }
 
 // ClusterctlProvider returns initialized underlying clusterctl provider.
-func (r *GenericProviderReconcier[P]) ClusterctlProvider(provider P) *clusterctlv1.Provider {
+func (r *GenericProviderReconciler[P]) ClusterctlProvider(provider P) *clusterctlv1.Provider {
 	panic("Generic Provider Reconciler has no clusterctl provider")
 }
 
 // GetProviderList returns empty typed list for provider.
-func (r *GenericProviderReconcier[P]) GetProviderList() generic.ProviderList {
+func (r *GenericProviderReconciler[P]) GetProviderList() generic.ProviderList {
 	panic("Generic Provider Reconciler has no provider list")
 }
 
 // GenericProvider returns empty typed provider for generic reconciler.
-func (r *GenericProviderReconcier[P]) GenericProvider() generic.Provider {
+func (r *GenericProviderReconciler[P]) GenericProvider() generic.Provider {
 	return reflect.New(reflect.TypeOf(*new(P)).Elem()).Interface().(P) //nolint:forcetypeassert
 }
 
@@ -123,7 +123,7 @@ type CommonProviderReconciler[P generic.Provider] struct {
 
 func NewCommonProviderReconciler[P generic.Provider](conn generic.Connector) generic.ProviderReconciler[P] {
 	return &CommonProviderReconciler[P]{
-		ProviderReconciler: NewGenericProviderReconcier[P](conn),
+		ProviderReconciler: NewGenericProviderReconciler[P](conn),
 	}
 }
 

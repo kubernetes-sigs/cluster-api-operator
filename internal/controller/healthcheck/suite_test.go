@@ -46,7 +46,7 @@ func TestMain(m *testing.M) {
 	env = envtest.New()
 
 	if err := providercontroller.NewProviderControllerWrapper(
-		providers.NewCoreProviderReconcier(env),
+		providers.NewCoreProviderReconciler(env),
 		phases.NewPhase,
 		false,
 	).SetupWithManager(ctx, env.Manager, controller.Options{MaxConcurrentReconciles: 1}); err != nil {

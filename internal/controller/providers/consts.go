@@ -47,7 +47,7 @@ func (c ConnectorStub) GetConfig() *rest.Config {
 }
 
 func init() {
-	generic.ProviderReconcilers[(&CoreProviderReconciler{}).ClusterctlProviderType()] = NewCoreProviderReconcier(ConnectorStub{})
+	generic.ProviderReconcilers[(&CoreProviderReconciler{}).ClusterctlProviderType()] = NewCoreProviderReconciler(ConnectorStub{})
 	generic.ProviderReconcilers[(&InfrastructureProviderReconciler{}).ClusterctlProviderType()] = NewInfrastructureProviderReconciler(ConnectorStub{})
 	generic.ProviderReconcilers[(&BootstrapProviderReconciler{}).ClusterctlProviderType()] = NewBootstrapProviderReconciler(ConnectorStub{})
 	generic.ProviderReconcilers[(&ControlPlaneProviderReconciler{}).ClusterctlProviderType()] = NewControlPlaneProviderReconciler(ConnectorStub{})
