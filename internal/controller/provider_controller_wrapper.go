@@ -55,7 +55,7 @@ const (
 
 func (r *ProviderControllerWrapper[P, R]) SetupWithManager(mgr ctrl.Manager, options controller.Options) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(reflect.New(reflect.TypeOf(*new(P)).Elem()).Interface().(P)).
+		For(reflect.New(reflect.TypeOf(*new(P)).Elem()).Interface().(P)). //nolint:forcetypeassert
 		WithOptions(options).
 		Complete(reconcile.AsReconciler(mgr.GetClient(), r))
 }

@@ -456,7 +456,7 @@ func TestInfrastructurePreflightChecks(t *testing.T) {
 			}
 
 			for _, c := range tc.otherProviders {
-				gs.Expect(fakeclient.Create(ctx, c.DeepCopyObject().(client.Object))).To(Succeed())
+				gs.Expect(fakeclient.Create(ctx, c.DeepCopyObject().(client.Object))).To(Succeed()) //nolint:forcetypeassert
 			}
 
 			rec := NewProviderControllerWrapper(

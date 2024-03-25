@@ -288,6 +288,7 @@ releaseSeries:
 		}
 
 		conditions.MarkTrue(core, clusterv1.ReadyCondition)
+
 		return env.Status().Update(ctx, core)
 	}).Should(Succeed())
 

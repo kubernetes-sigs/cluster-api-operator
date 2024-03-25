@@ -329,7 +329,7 @@ func TestInitProviders(t *testing.T) {
 
 			for _, genericProvider := range tt.wantedProviders {
 				g.Eventually(func(g Gomega) {
-					copy := genericProvider.DeepCopyObject().(generic.Provider)
+					copy := genericProvider.DeepCopyObject().(generic.Provider) //nolint
 					g.Expect(env.Get(ctx, ctrlclient.ObjectKeyFromObject(genericProvider), copy)).To(Succeed())
 					g.Expect(copy.GetSpec().Version).To(Equal(genericProvider.GetSpec().Version))
 				}, waitShort).Should(Succeed())

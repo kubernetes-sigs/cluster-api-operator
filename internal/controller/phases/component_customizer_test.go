@@ -30,7 +30,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes/scheme"
 	configv1alpha1 "k8s.io/component-base/config/v1alpha1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
 )
@@ -112,11 +112,11 @@ func TestCustomizeDeployment(t *testing.T) {
 		{
 			name: "only replicas modified",
 			inputDeploymentSpec: &operatorv1.DeploymentSpec{
-				Replicas: pointer.Int(3),
+				Replicas: ptr.To(3),
 			},
 			expectedDeploymentSpec: func(inputDS *appsv1.DeploymentSpec) (*appsv1.DeploymentSpec, bool) {
 				expectedDS := &appsv1.DeploymentSpec{
-					Replicas: pointer.Int32(3),
+					Replicas: ptr.To(int32(3)),
 				}
 
 				return expectedDS, reflect.DeepEqual(inputDS.Replicas, expectedDS.Replicas)
@@ -251,7 +251,7 @@ func TestCustomizeDeployment(t *testing.T) {
 				Containers: []operatorv1.ContainerSpec{
 					{
 						Name:     "manager",
-						ImageURL: pointer.String("quay.io/dev/mydns:v3.4.2"),
+						ImageURL: ptr.To("quay.io/dev/mydns:v3.4.2"),
 						Env: []corev1.EnvVar{
 							{
 								Name:  "test1",
@@ -324,7 +324,7 @@ func TestCustomizeDeployment(t *testing.T) {
 		{
 			name: "all deployment options",
 			inputDeploymentSpec: &operatorv1.DeploymentSpec{
-				Replicas:     pointer.Int(3),
+				Replicas:     ptr.To(3),
 				NodeSelector: map[string]string{"a": "b"},
 				Tolerations: []corev1.Toleration{
 					{
@@ -351,7 +351,7 @@ func TestCustomizeDeployment(t *testing.T) {
 				Containers: []operatorv1.ContainerSpec{
 					{
 						Name:     "manager",
-						ImageURL: pointer.String("quay.io/dev/mydns:v3.4.2"),
+						ImageURL: ptr.To("quay.io/dev/mydns:v3.4.2"),
 						Env: []corev1.EnvVar{
 							{
 								Name:  "test1",
@@ -375,7 +375,7 @@ func TestCustomizeDeployment(t *testing.T) {
 			},
 			expectedDeploymentSpec: func(inputDS *appsv1.DeploymentSpec) (*appsv1.DeploymentSpec, bool) {
 				expectedDS := &appsv1.DeploymentSpec{
-					Replicas: pointer.Int32(3),
+					Replicas: ptr.To(int32(3)),
 					Template: corev1.PodTemplateSpec{
 						Spec: corev1.PodSpec{
 							NodeSelector: map[string]string{"a": "b"},
@@ -480,11 +480,11 @@ func TestCustomizeDeployment(t *testing.T) {
 						LivenessEndpointName:   "mostly",
 					},
 					Webhook: operatorv1.ControllerWebhook{
-						Port:    pointer.Int(3579),
+						Port:    ptr.To(3579),
 						CertDir: "/tmp/certs",
 					},
 					LeaderElection: &configv1alpha1.LeaderElectionConfiguration{
-						LeaderElect:       pointer.Bool(true),
+						LeaderElect:       ptr.To(true),
 						ResourceName:      "foo",
 						ResourceNamespace: "here",
 						LeaseDuration:     metav1.Duration{Duration: sevenHours},
@@ -602,7 +602,7 @@ func TestCustomizeMultipleDeployment(t *testing.T) {
 					Namespace: metav1.NamespaceSystem,
 				},
 				Spec: appsv1.DeploymentSpec{
-					Replicas: pointer.Int32(3),
+					Replicas: ptr.To(int32(3)),
 				},
 			}
 
@@ -627,7 +627,7 @@ func TestCustomizeMultipleDeployment(t *testing.T) {
 				Spec: operatorv1.CoreProviderSpec{
 					ProviderSpec: operatorv1.ProviderSpec{
 						Deployment: &operatorv1.DeploymentSpec{
-							Replicas: pointer.Int(10),
+							Replicas: ptr.To(10),
 						},
 					},
 				},

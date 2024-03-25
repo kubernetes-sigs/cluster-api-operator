@@ -28,7 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/kubernetes/scheme"
 	configv1alpha1 "k8s.io/component-base/config/v1alpha1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
 	"sigs.k8s.io/cluster-api/util"
 )
@@ -131,7 +131,7 @@ func customizeDeploymentSpec(pSpec operatorv1.ProviderSpec, d *appsv1.Deployment
 	dSpec := pSpec.Deployment
 
 	if dSpec.Replicas != nil {
-		d.Spec.Replicas = pointer.Int32(int32(*dSpec.Replicas))
+		d.Spec.Replicas = ptr.To(int32(*dSpec.Replicas))
 	}
 
 	if dSpec.Affinity != nil {

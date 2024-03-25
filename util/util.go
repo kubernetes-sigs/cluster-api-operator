@@ -33,7 +33,7 @@ const (
 	gitlabPackagesAPIPrefix = "/api/v4/projects/"
 )
 
-// Or compares the values and returns first non-empty occurence
+// Or compares the values and returns first non-empty occurrence.
 func Or[T comparable](values ...T) T {
 	var zero T
 

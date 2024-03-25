@@ -28,7 +28,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/klog/v2/klogr"
+	"k8s.io/klog/v2/textlogger"
 
 	kerrors "k8s.io/apimachinery/pkg/util/errors"
 
@@ -142,7 +142,8 @@ func init() {
 func runDelete() error {
 	ctx := context.Background()
 
-	ctrl.SetLogger(klogr.New())
+	loggerConfig := textlogger.NewConfig([]textlogger.ConfigOption{}...)
+	ctrl.SetLogger(textlogger.NewLogger(loggerConfig))
 
 	hasProviderNames := deleteOpts.coreProvider ||
 		(len(deleteOpts.bootstrapProviders) > 0) ||

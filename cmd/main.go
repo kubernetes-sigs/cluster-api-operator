@@ -30,7 +30,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/klog/v2"
-	"k8s.io/klog/v2/klogr"
+	"k8s.io/klog/v2/textlogger"
 	"sigs.k8s.io/cluster-api-operator/internal/webhook"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	clusterctlv1 "sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3"
@@ -131,7 +131,9 @@ func main() {
 	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
 	pflag.Parse()
 
-	ctrl.SetLogger(klogr.New())
+	loggerConfig := textlogger.NewConfig([]textlogger.ConfigOption{}...)
+	ctrl.SetLogger(textlogger.NewLogger(loggerConfig))
+
 	restConfig := ctrl.GetConfigOrDie()
 
 	diagnosticsOpts := flags.GetDiagnosticsOptions(diagnosticsOptions)

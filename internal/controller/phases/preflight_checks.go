@@ -63,7 +63,8 @@ func PreflightChecks[P generic.Provider](ctx context.Context, phase generic.Grou
 		return ctrl.Result{}, fmt.Errorf("failed to generate a list of predefined providers: %w", err)
 	}
 
-	if !isPredefinedProvider && spec.FetchConfig == nil {
+	switch {
+	case !isPredefinedProvider && spec.FetchConfig == nil:
 		conditions.Set(phase.GetProvider(), conditions.FalseCondition(
 			operatorv1.PreflightCheckCondition,
 			operatorv1.FetchConfigValidationErrorReason,
@@ -72,7 +73,7 @@ func PreflightChecks[P generic.Provider](ctx context.Context, phase generic.Grou
 		))
 
 		return ctrl.Result{}, fmt.Errorf("either selector or URL must be provided for a not predefined provider %s", phase.GetProvider().GetName())
-	} else if spec.FetchConfig != nil && (spec.FetchConfig.Selector == nil && spec.FetchConfig.URL == "") {
+	case spec.FetchConfig != nil && (spec.FetchConfig.Selector == nil && spec.FetchConfig.URL == ""):
 		conditions.Set(phase.GetProvider(), conditions.FalseCondition(
 			operatorv1.PreflightCheckCondition,
 			operatorv1.FetchConfigValidationErrorReason,
@@ -81,7 +82,7 @@ func PreflightChecks[P generic.Provider](ctx context.Context, phase generic.Grou
 		))
 
 		return ctrl.Result{}, fmt.Errorf("either selector or URL must be provided for provider %s", phase.GetProvider().GetName())
-	} else if spec.FetchConfig != nil && spec.FetchConfig.Selector != nil && spec.FetchConfig.URL != "" {
+	case spec.FetchConfig != nil && spec.FetchConfig.Selector != nil && spec.FetchConfig.URL != "":
 		// If FetchConfiguration is not nil, exactly one of `URL` or `Selector` must be specified.
 		conditions.Set(phase.GetProvider(), conditions.FalseCondition(
 			operatorv1.PreflightCheckCondition,

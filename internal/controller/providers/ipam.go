@@ -36,17 +36,18 @@ func NewIPAMProviderReconciler(conn generic.Connector) generic.ProviderReconcile
 	}
 }
 
-// ClusterctlProviderType returns ProviderType for the underlying clusterctl provider
+// ClusterctlProviderType returns ProviderType for the underlying clusterctl provider.
 func (r *IPAMProviderReconciler) ClusterctlProviderType() clusterctlv1.ProviderType {
 	return clusterctlv1.IPAMProviderType
 }
 
-// ClusterctlProvider returns Provider stucture of the underlying clusterctl provider
+// ClusterctlProvider returns Provider structure of the underlying clusterctl provider.
 func (r *IPAMProviderReconciler) ClusterctlProvider(provider *operatorv1.IPAMProvider) *clusterctlv1.Provider {
-	clusterctlProvider := &clusterctlv1.Provider{ObjectMeta: metav1.ObjectMeta{
-		Name:      "ipam-" + provider.GetName(),
-		Namespace: provider.GetNamespace(),
-	},
+	clusterctlProvider := &clusterctlv1.Provider{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "ipam-" + provider.GetName(),
+			Namespace: provider.GetNamespace(),
+		},
 		Type:         string(r.ClusterctlProviderType()),
 		ProviderName: provider.GetName(),
 		Version:      *util.Or(provider.GetStatus().InstalledVersion, ptr.To("")),
@@ -55,7 +56,7 @@ func (r *IPAMProviderReconciler) ClusterctlProvider(provider *operatorv1.IPAMPro
 	return clusterctlProvider
 }
 
-// ProviderList returns empty typed list for provider
+// GetProviderList returns empty typed list for provider.
 func (r *IPAMProviderReconciler) GetProviderList() generic.ProviderList {
 	return &operatorv1.IPAMProviderList{}
 }
