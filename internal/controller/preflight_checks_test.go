@@ -732,7 +732,7 @@ func TestCorePreflightChecks(t *testing.T) {
 			}
 
 			rec := NewProviderControllerWrapper(
-				providers.NewCoreProviderReconcier(newConnector(fakeclient)),
+				providers.NewCoreProviderReconciler(newConnector(fakeclient)),
 				phases.NewPhase,
 			)
 

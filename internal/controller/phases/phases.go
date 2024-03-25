@@ -666,7 +666,7 @@ func listProviders(ctx context.Context, cl client.Client, list *clusterctlv1.Pro
 }
 
 func combineProviders[P generic.Provider](ctx context.Context, cl client.Client, list *clusterctlv1.ProviderList, opts ...client.ListOption) error {
-	reconciler := generic.GetReconciler(*new(P))
+	reconciler := generic.GetBuilder(*new(P))
 	if reconciler == nil {
 		return fmt.Errorf("unable to find registered reconciler for type: %T", *new(P))
 	}

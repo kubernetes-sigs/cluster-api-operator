@@ -215,7 +215,7 @@ func setupChecks(mgr ctrl.Manager) {
 
 func setupReconcilers(mgr ctrl.Manager) {
 	if err := providercontroller.NewProviderControllerWrapper(
-		providers.NewCoreProviderReconcier(mgr),
+		providers.NewCoreProviderReconciler(mgr),
 		phases.NewPhase,
 	).SetupWithManager(mgr, concurrency(concurrencyNumber)); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "CoreProvider")
