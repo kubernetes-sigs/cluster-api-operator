@@ -225,7 +225,7 @@ func setupChecks(mgr ctrl.Manager) {
 
 func setupReconcilers(ctx context.Context, mgr ctrl.Manager, watchConfigSecretChanges bool) {
 	if err := providercontroller.NewProviderControllerWrapper(
-		providers.NewCoreProviderReconcier(mgr),
+		providers.NewCoreProviderReconciler(mgr),
 		phases.NewPhase,
 		watchConfigSecretChanges,
 	).SetupWithManager(ctx, mgr, concurrency(concurrencyNumber)); err != nil {

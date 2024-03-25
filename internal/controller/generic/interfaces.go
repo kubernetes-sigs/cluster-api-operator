@@ -74,13 +74,13 @@ type ProviderReconciler[P Provider] interface {
 // ReconcileFn is a function that represent a phase of the reconciliation.
 type ReconcileFn[P Provider, G Group[P]] func(context.Context, G) (reconcile.Result, error)
 
-var ProviderReconcilers = map[clusterctlv1.ProviderType]Getter{}
-
 func NewReconcileFnList[P Provider, G Group[P]](phaseFunc ...ReconcileFn[P, G]) []ReconcileFn[P, G] {
 	return phaseFunc
 }
 
-func GetReconciler[P Provider](_ P) ProviderReconciler[P] {
+var ProviderReconcilers = map[clusterctlv1.ProviderType]Getter{}
+
+func GetBuilder[P Provider](_ P) GroupBuilder[P] {
 	for _, reconciler := range ProviderReconcilers {
 		if r, ok := reconciler.(ProviderReconciler[P]); ok {
 			return r
