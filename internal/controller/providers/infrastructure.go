@@ -26,12 +26,12 @@ import (
 )
 
 type InfrastructureProviderReconciler struct {
-	generic.ProviderReconciler[*operatorv1.InfrastructureProvider]
+	*CommonProviderReconciler[*operatorv1.InfrastructureProvider]
 }
 
 func NewInfrastructureProviderReconciler(conn generic.Connector) generic.ProviderReconciler[*operatorv1.InfrastructureProvider] {
 	return &InfrastructureProviderReconciler{
-		ProviderReconciler: NewCommonProviderReconciler[*operatorv1.InfrastructureProvider](conn),
+		CommonProviderReconciler: NewCommonProviderReconciler[*operatorv1.InfrastructureProvider](conn),
 	}
 }
 

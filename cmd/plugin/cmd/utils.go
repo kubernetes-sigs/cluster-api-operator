@@ -68,16 +68,6 @@ func init() {
 	utilruntime.Must(clusterctlv1.AddToScheme(scheme))
 }
 
-type genericProvider interface {
-	ctrlclient.Object
-	operatorv1.GenericProvider
-}
-
-type genericProviderList interface {
-	ctrlclient.ObjectList
-	operatorv1.GenericProviderList
-}
-
 // CreateKubeClient creates a kubernetes client from provided kubeconfig and kubecontext.
 func CreateKubeClient(kubeconfigPath, kubeconfigContext string) (ctrlclient.Client, error) {
 	// Use specified kubeconfig path and context
