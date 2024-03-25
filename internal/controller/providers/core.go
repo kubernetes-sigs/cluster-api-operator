@@ -42,7 +42,7 @@ func NewCoreProviderReconcier(conn generic.Connector) generic.ProviderReconciler
 	}
 }
 
-// ReconcileNormal implements GenericReconciler.
+// PreflightChecks implements GenericReconciler.
 func (r *CoreProviderReconciler) PreflightChecks(
 	ctx context.Context,
 	provider *operatorv1.CoreProvider,
@@ -53,17 +53,18 @@ func (r *CoreProviderReconciler) PreflightChecks(
 	)
 }
 
-// ClusterctlProviderType returns ProviderType for the underlying clusterctl provider
+// ClusterctlProviderType returns ProviderType for the underlying clusterctl provider.
 func (r *CoreProviderReconciler) ClusterctlProviderType() clusterctlv1.ProviderType {
 	return clusterctlv1.CoreProviderType
 }
 
-// ClusterctlProvider returns Provider stucture of the underlying clusterctl provider
+// ClusterctlProvider returns Provider structure of the underlying clusterctl provider.
 func (r *CoreProviderReconciler) ClusterctlProvider(provider *operatorv1.CoreProvider) *clusterctlv1.Provider {
-	clusterctlProvider := &clusterctlv1.Provider{ObjectMeta: metav1.ObjectMeta{
-		Name:      provider.GetName(),
-		Namespace: provider.GetNamespace(),
-	},
+	clusterctlProvider := &clusterctlv1.Provider{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      provider.GetName(),
+			Namespace: provider.GetNamespace(),
+		},
 		Type:         string(r.ClusterctlProviderType()),
 		ProviderName: provider.GetName(),
 		Version:      *util.Or(provider.GetStatus().InstalledVersion, ptr.To("")),
@@ -72,7 +73,7 @@ func (r *CoreProviderReconciler) ClusterctlProvider(provider *operatorv1.CorePro
 	return clusterctlProvider
 }
 
-// ProviderList returns empty typed list for provider
+// GetProviderList returns empty typed list for provider.
 func (r *CoreProviderReconciler) GetProviderList() generic.ProviderList {
 	return &operatorv1.CoreProviderList{}
 }
@@ -110,7 +111,6 @@ func (r *CoreProviderReconciler) corePreflightChecks(ctx context.Context, phase 
 		conditions.Set(phase.GetProvider(), preflightFalseCondition)
 
 		return ctrl.Result{}, fmt.Errorf("only one instance of CoreProvider is allowed")
-
 	}
 
 	return ctrl.Result{}, nil

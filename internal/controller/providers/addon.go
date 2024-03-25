@@ -36,17 +36,18 @@ func NewAddonProviderReconciler(conn generic.Connector) generic.ProviderReconcil
 	}
 }
 
-// ClusterctlProviderType returns ProviderType for the underlying clusterctl provider
+// ClusterctlProviderType returns ProviderType for the underlying clusterctl provider.
 func (r *AddonProviderReconciler) ClusterctlProviderType() clusterctlv1.ProviderType {
 	return clusterctlv1.AddonProviderType
 }
 
-// ClusterctlProvider returns Provider stucture of the underlying clusterctl provider
+// ClusterctlProvider returns Provider structure of the underlying clusterctl provider.
 func (r *AddonProviderReconciler) ClusterctlProvider(provider *operatorv1.AddonProvider) *clusterctlv1.Provider {
-	clusterctlProvider := &clusterctlv1.Provider{ObjectMeta: metav1.ObjectMeta{
-		Name:      "addon-" + provider.GetName(),
-		Namespace: provider.GetNamespace(),
-	},
+	clusterctlProvider := &clusterctlv1.Provider{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "addon-" + provider.GetName(),
+			Namespace: provider.GetNamespace(),
+		},
 		Type:         string(r.ClusterctlProviderType()),
 		ProviderName: provider.GetName(),
 		Version:      *util.Or(provider.GetStatus().InstalledVersion, ptr.To("")),
@@ -55,7 +56,7 @@ func (r *AddonProviderReconciler) ClusterctlProvider(provider *operatorv1.AddonP
 	return clusterctlProvider
 }
 
-// ProviderList returns empty typed list for provider
+// GetProviderList returns empty typed list for provider.
 func (r *AddonProviderReconciler) GetProviderList() generic.ProviderList {
 	return &operatorv1.AddonProviderList{}
 }

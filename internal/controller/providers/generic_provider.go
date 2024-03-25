@@ -97,24 +97,24 @@ func (r *GenericProviderReconcier[P]) ReportStatus(ctx context.Context, provider
 	)
 }
 
-// ClusterctlProviderType returns ProviderType for the underlying clusterctl provider
+// ClusterctlProviderType returns ProviderType for the underlying clusterctl provider.
 func (r *GenericProviderReconcier[P]) ClusterctlProviderType() clusterctlv1.ProviderType {
 	panic("Generic Provider Reconciler has no provider type")
 }
 
-// ClusterctlProvider returns initialized underlying clusterctl provider
+// ClusterctlProvider returns initialized underlying clusterctl provider.
 func (r *GenericProviderReconcier[P]) ClusterctlProvider(provider P) *clusterctlv1.Provider {
 	panic("Generic Provider Reconciler has no clusterctl provider")
 }
 
-// GetProviderList returns empty typed list for provider
+// GetProviderList returns empty typed list for provider.
 func (r *GenericProviderReconcier[P]) GetProviderList() generic.ProviderList {
 	panic("Generic Provider Reconciler has no provider list")
 }
 
-// GenericProvider returns empty typed provider for generic reconciler
+// GenericProvider returns empty typed provider for generic reconciler.
 func (r *GenericProviderReconcier[P]) GenericProvider() generic.Provider {
-	return reflect.New(reflect.TypeOf(*new(P)).Elem()).Interface().(P)
+	return reflect.New(reflect.TypeOf(*new(P)).Elem()).Interface().(P) //nolint:forcetypeassert
 }
 
 type CommonProviderReconciler[P generic.Provider] struct {
@@ -127,7 +127,7 @@ func NewCommonProviderReconciler[P generic.Provider](conn generic.Connector) gen
 	}
 }
 
-// ReconcileNormal implements GenericReconciler.
+// PreflightChecks implements GenericReconciler.
 func (r *CommonProviderReconciler[P]) PreflightChecks(
 	ctx context.Context,
 	provider P,

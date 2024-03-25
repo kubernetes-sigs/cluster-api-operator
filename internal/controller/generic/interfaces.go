@@ -59,7 +59,7 @@ type Group[P Provider] interface {
 	GetClusterctlProvider() *clusterctlv1.Provider
 }
 
-// NewGroup is a function that creates a new group
+// NewGroup is a function that creates a new group.
 type NewGroup[P Provider] func(P, ProviderList, GroupBuilder[P]) Group[P]
 
 type ProviderReconciler[P Provider] interface {

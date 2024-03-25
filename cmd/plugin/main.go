@@ -21,7 +21,7 @@ import (
 
 	"sigs.k8s.io/cluster-api-operator/cmd/plugin/cmd"
 
-	// We need to initalize all registered providers
+	// We need to initialize all registered providers.
 	_ "sigs.k8s.io/cluster-api-operator/internal/controller/providers"
 )
 

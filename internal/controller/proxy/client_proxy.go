@@ -25,13 +25,13 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	// kerrors "k8s.io/apimachinery/pkg/util/errors"
+	// kerrors "k8s.io/apimachinery/pkg/util/errors".
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
 
-	// "sigs.k8s.io/cluster-api-operator/internal/controller/generic"
+	// "sigs.k8s.io/cluster-api-operator/internal/controller/generic".
 	clusterctlv1 "sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3"
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/cluster"
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/repository"

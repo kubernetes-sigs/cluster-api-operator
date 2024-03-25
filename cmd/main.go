@@ -136,7 +136,9 @@ func main() {
 	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
 	pflag.Parse()
 
-	ctrl.SetLogger(textlogger.NewLogger(textlogger.NewConfig()))
+	loggerConfig := textlogger.NewConfig([]textlogger.ConfigOption{}...)
+	ctrl.SetLogger(textlogger.NewLogger(loggerConfig))
+
 	restConfig := ctrl.GetConfigOrDie()
 
 	tlsOptions, metricsOptions, err := flags.GetManagerOptions(managerOptions)
