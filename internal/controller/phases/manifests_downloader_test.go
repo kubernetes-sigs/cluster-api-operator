@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package controller
+package phases
 
 import (
 	"context"
@@ -25,6 +25,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
+	clusterctlv1 "sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3"
 )
 
 func TestManifestsDownloader(t *testing.T) {
@@ -36,33 +37,43 @@ func TestManifestsDownloader(t *testing.T) {
 
 	namespace := "test-namespace"
 
-	p := &phaseReconciler{
-		ctrlClient: fakeclient,
-		provider: &operatorv1.CoreProvider{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "cluster-api",
-				Namespace: namespace,
-			},
-			Spec: operatorv1.CoreProviderSpec{
-				ProviderSpec: operatorv1.ProviderSpec{
-					Version: "v1.4.3",
-				},
+	core := &operatorv1.CoreProvider{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "cluster-api",
+			Namespace: namespace,
+		},
+		Spec: operatorv1.CoreProviderSpec{
+			ProviderSpec: operatorv1.ProviderSpec{
+				Version: "v1.4.3",
 			},
 		},
 	}
 
-	_, err := p.initializePhaseReconciler(ctx)
+	p := &PhaseReconciler[*operatorv1.CoreProvider, Phase[*operatorv1.CoreProvider]]{
+		ctrlClient: fakeclient,
+	}
+
+	_, err := p.InitializePhaseReconciler(ctx, Phase[*operatorv1.CoreProvider]{
+		Provider:     core,
+		ProviderType: clusterctlv1.CoreProviderType,
+		ProviderList: &operatorv1.CoreProviderList{},
+	})
 	g.Expect(err).ToNot(HaveOccurred())
 
-	_, err = p.downloadManifests(ctx)
+	_, err = p.DownloadManifests(ctx, Phase[*operatorv1.CoreProvider]{
+		Client:       fakeclient,
+		Provider:     core,
+		ProviderType: clusterctlv1.CoreProviderType,
+		ProviderList: &operatorv1.CoreProviderList{},
+	})
 	g.Expect(err).ToNot(HaveOccurred())
 
 	// Ensure that config map was created
 	labelSelector := metav1.LabelSelector{
-		MatchLabels: p.prepareConfigMapLabels(),
+		MatchLabels: providerLabels(core),
 	}
 
-	exists, err := p.checkConfigMapExists(ctx, labelSelector, p.provider.GetNamespace())
+	exists, err := checkConfigMapExists(ctx, fakeclient, labelSelector, core.GetNamespace())
 	g.Expect(err).ToNot(HaveOccurred())
 
 	g.Expect(exists).To(BeTrue())

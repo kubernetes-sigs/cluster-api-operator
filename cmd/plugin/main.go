@@ -20,6 +20,9 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
 	"sigs.k8s.io/cluster-api-operator/cmd/plugin/cmd"
+
+	// We need to initialize all registered providers.
+	_ "sigs.k8s.io/cluster-api-operator/internal/controller/providers"
 )
 
 func main() {

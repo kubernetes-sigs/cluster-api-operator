@@ -57,16 +57,6 @@ func init() {
 	utilruntime.Must(clusterctlv1.AddToScheme(scheme))
 }
 
-type genericProvider interface {
-	ctrlclient.Object
-	operatorv1.GenericProvider
-}
-
-type genericProviderList interface {
-	ctrlclient.ObjectList
-	operatorv1.GenericProviderList
-}
-
 // CreateKubeClient creates a kubernetes client from provided kubeconfig and kubecontext.
 func CreateKubeClient(kubeconfigPath, kubeconfigContext string) (ctrlclient.Client, error) {
 	// Use specified kubeconfig path and context
@@ -161,23 +151,4 @@ func GetKubeconfigLocation() string {
 	}
 
 	return clientcmd.RecommendedHomeFile
-}
-
-func NewGenericProvider(providerType clusterctlv1.ProviderType) operatorv1.GenericProvider {
-	switch providerType {
-	case clusterctlv1.CoreProviderType:
-		return &operatorv1.CoreProvider{}
-	case clusterctlv1.BootstrapProviderType:
-		return &operatorv1.BootstrapProvider{}
-	case clusterctlv1.ControlPlaneProviderType:
-		return &operatorv1.ControlPlaneProvider{}
-	case clusterctlv1.InfrastructureProviderType:
-		return &operatorv1.InfrastructureProvider{}
-	case clusterctlv1.AddonProviderType:
-		return &operatorv1.AddonProvider{}
-	case clusterctlv1.IPAMProviderType, clusterctlv1.RuntimeExtensionProviderType, clusterctlv1.ProviderTypeUnknown:
-		panic(fmt.Sprintf("unsupported provider type %s", providerType))
-	default:
-		panic(fmt.Sprintf("unknown provider type %s", providerType))
-	}
 }
