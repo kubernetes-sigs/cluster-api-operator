@@ -35,17 +35,18 @@ func NewControlPlaneProviderReconciler(conn generic.Connector) generic.ProviderR
 	}
 }
 
-// ClusterctlProviderType returns ProviderType for the underlying clusterctl provider
+// ClusterctlProviderType returns ProviderType for the underlying clusterctl provider.
 func (r *ControlPlaneProviderReconciler) ClusterctlProviderType() clusterctlv1.ProviderType {
 	return clusterctlv1.ControlPlaneProviderType
 }
 
-// ClusterctlProvider returns Provider stucture of the underlying clusterctl provider
+// ClusterctlProvider returns Provider structure of the underlying clusterctl provider.
 func (r *ControlPlaneProviderReconciler) ClusterctlProvider(provider *operatorv1.ControlPlaneProvider) *clusterctlv1.Provider {
-	clusterctlProvider := &clusterctlv1.Provider{ObjectMeta: metav1.ObjectMeta{
-		Name:      "control-plane-" + provider.GetName(),
-		Namespace: provider.GetNamespace(),
-	},
+	clusterctlProvider := &clusterctlv1.Provider{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "control-plane-" + provider.GetName(),
+			Namespace: provider.GetNamespace(),
+		},
 		Type:         string(r.ClusterctlProviderType()),
 		ProviderName: provider.GetName(),
 		Version:      *util.Or(provider.GetStatus().InstalledVersion, ptr.To("")),
@@ -54,7 +55,7 @@ func (r *ControlPlaneProviderReconciler) ClusterctlProvider(provider *operatorv1
 	return clusterctlProvider
 }
 
-// ProviderList returns empty typed list for provider
+// GetProviderList returns empty typed list for provider.
 func (r *ControlPlaneProviderReconciler) GetProviderList() generic.ProviderList {
 	return &operatorv1.ControlPlaneProviderList{}
 }

@@ -36,17 +36,18 @@ func NewBootstrapProviderReconciler(conn generic.Connector) generic.ProviderReco
 	}
 }
 
-// ClusterctlProviderType returns ProviderType for the underlying clusterctl provider
+// ClusterctlProviderType returns ProviderType for the underlying clusterctl provider.
 func (r *BootstrapProviderReconciler) ClusterctlProviderType() clusterctlv1.ProviderType {
 	return clusterctlv1.BootstrapProviderType
 }
 
-// ClusterctlProvider returns Provider stucture of the underlying clusterctl provider
+// ClusterctlProvider returns Provider structure of the underlying clusterctl provider.
 func (r *BootstrapProviderReconciler) ClusterctlProvider(provider *operatorv1.BootstrapProvider) *clusterctlv1.Provider {
-	clusterctlProvider := &clusterctlv1.Provider{ObjectMeta: metav1.ObjectMeta{
-		Name:      "bootstrap-" + provider.GetName(),
-		Namespace: provider.GetNamespace(),
-	},
+	clusterctlProvider := &clusterctlv1.Provider{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "bootstrap-" + provider.GetName(),
+			Namespace: provider.GetNamespace(),
+		},
 		Type:         string(r.ClusterctlProviderType()),
 		ProviderName: provider.GetName(),
 		Version:      *util.Or(provider.GetStatus().InstalledVersion, ptr.To("")),
@@ -55,7 +56,7 @@ func (r *BootstrapProviderReconciler) ClusterctlProvider(provider *operatorv1.Bo
 	return clusterctlProvider
 }
 
-// ProviderList returns empty typed list for provider
+// GetProviderList returns empty typed list for provider.
 func (r *BootstrapProviderReconciler) GetProviderList() generic.ProviderList {
 	return &operatorv1.BootstrapProviderList{}
 }

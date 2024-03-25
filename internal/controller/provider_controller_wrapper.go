@@ -25,8 +25,6 @@ import (
 	"hash"
 	"reflect"
 
-	"reflect"
-
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -64,7 +62,7 @@ const (
 )
 
 func (r *ProviderControllerWrapper[P, R]) SetupWithManager(ctx context.Context, mgr ctrl.Manager, options controller.Options) error {
-	provider := reflect.New(reflect.TypeOf(*new(P)).Elem()).Interface().(P)
+	provider := reflect.New(reflect.TypeOf(*new(P)).Elem()).Interface().(P) //nolint:forcetypeassert
 	builder := ctrl.NewControllerManagedBy(mgr).
 		For(provider).
 		WithOptions(options)
@@ -85,7 +83,7 @@ func (r *ProviderControllerWrapper[P, R]) SetupWithManager(ctx context.Context, 
 	}
 
 	// We don't want to receive secondary events from the CoreProvider for itself.
-	if reflect.TypeOf(provider) != reflect.TypeOf(genericprovider.GenericProvider(&operatorv1.CoreProvider{})) {
+	if reflect.TypeOf(provider) != reflect.TypeOf(&operatorv1.CoreProvider{}) {
 		builder.Watches(
 			&operatorv1.CoreProvider{},
 			handler.EnqueueRequestsFromMapFunc(newCoreProviderToProviderFuncMapForProviderList(mgr.GetClient(), r.Reconciler.GetProviderList())),

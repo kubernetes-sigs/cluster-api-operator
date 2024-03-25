@@ -28,9 +28,10 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
-	kerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/klog/v2/textlogger"
+
+	kerrors "k8s.io/apimachinery/pkg/util/errors"
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -140,7 +141,8 @@ func init() {
 func runDelete() error {
 	ctx := context.Background()
 
-	ctrl.SetLogger(textlogger.NewLogger(textlogger.NewConfig()))
+	loggerConfig := textlogger.NewConfig([]textlogger.ConfigOption{}...)
+	ctrl.SetLogger(textlogger.NewLogger(loggerConfig))
 
 	hasProviderNames := deleteOpts.coreProvider ||
 		(len(deleteOpts.bootstrapProviders) > 0) ||
