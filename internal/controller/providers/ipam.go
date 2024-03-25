@@ -27,12 +27,12 @@ import (
 )
 
 type IPAMProviderReconciler struct {
-	generic.ProviderReconciler[*operatorv1.IPAMProvider]
+	*CommonProviderReconciler[*operatorv1.IPAMProvider]
 }
 
 func NewIPAMProviderReconciler(conn generic.Connector) generic.ProviderReconciler[*operatorv1.IPAMProvider] {
 	return &IPAMProviderReconciler{
-		ProviderReconciler: NewCommonProviderReconciler[*operatorv1.IPAMProvider](conn),
+		CommonProviderReconciler: NewCommonProviderReconciler[*operatorv1.IPAMProvider](conn),
 	}
 }
 

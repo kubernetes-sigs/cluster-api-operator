@@ -121,7 +121,7 @@ type CommonProviderReconciler[P generic.Provider] struct {
 	generic.ProviderReconciler[P]
 }
 
-func NewCommonProviderReconciler[P generic.Provider](conn generic.Connector) generic.ProviderReconciler[P] {
+func NewCommonProviderReconciler[P generic.Provider](conn generic.Connector) *CommonProviderReconciler[P] {
 	return &CommonProviderReconciler[P]{
 		ProviderReconciler: NewGenericProviderReconciler[P](conn),
 	}

@@ -26,12 +26,12 @@ import (
 )
 
 type ControlPlaneProviderReconciler struct {
-	generic.ProviderReconciler[*operatorv1.ControlPlaneProvider]
+	*CommonProviderReconciler[*operatorv1.ControlPlaneProvider]
 }
 
 func NewControlPlaneProviderReconciler(conn generic.Connector) generic.ProviderReconciler[*operatorv1.ControlPlaneProvider] {
 	return &ControlPlaneProviderReconciler{
-		ProviderReconciler: NewCommonProviderReconciler[*operatorv1.ControlPlaneProvider](conn),
+		CommonProviderReconciler: NewCommonProviderReconciler[*operatorv1.ControlPlaneProvider](conn),
 	}
 }
 
