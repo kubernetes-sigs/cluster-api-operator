@@ -27,12 +27,12 @@ import (
 )
 
 type BootstrapProviderReconciler struct {
-	generic.ProviderReconciler[*operatorv1.BootstrapProvider]
+	*CommonProviderReconciler[*operatorv1.BootstrapProvider]
 }
 
 func NewBootstrapProviderReconciler(conn generic.Connector) generic.ProviderReconciler[*operatorv1.BootstrapProvider] {
 	return &BootstrapProviderReconciler{
-		ProviderReconciler: NewCommonProviderReconciler[*operatorv1.BootstrapProvider](conn),
+		CommonProviderReconciler: NewCommonProviderReconciler[*operatorv1.BootstrapProvider](conn),
 	}
 }
 

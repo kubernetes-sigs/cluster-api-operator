@@ -30,19 +30,15 @@ import (
 	configclient "sigs.k8s.io/cluster-api/cmd/clusterctl/client/config"
 	"sigs.k8s.io/cluster-api/util/conditions"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 type CoreProviderReconciler struct {
-	generic.ProviderReconciler[*operatorv1.CoreProvider]
-	r *GenericProviderReconciler[*operatorv1.CoreProvider]
+	*GenericProviderReconciler[*operatorv1.CoreProvider]
 }
 
 func NewCoreProviderReconciler(conn generic.Connector) generic.ProviderReconciler[*operatorv1.CoreProvider] {
-	r := NewGenericProviderReconciler[*operatorv1.CoreProvider](conn)
 	return &CoreProviderReconciler{
-		ProviderReconciler: r,
-		r:                  r,
+		GenericProviderReconciler: NewGenericProviderReconciler[*operatorv1.CoreProvider](conn),
 	}
 }
 
@@ -52,8 +48,8 @@ func (r *CoreProviderReconciler) PreflightChecks(
 	provider *operatorv1.CoreProvider,
 ) []generic.ReconcileFn[*operatorv1.CoreProvider, generic.Group[*operatorv1.CoreProvider]] {
 	return append(
-		generic.NewReconcileFnList(r.corePreflightChecks, r.testMyStuff),
-		r.ProviderReconciler.PreflightChecks(ctx, provider)...,
+		generic.NewReconcileFnList(r.corePreflightChecks),
+		r.GenericProviderReconciler.PreflightChecks(ctx, provider)...,
 	)
 }
 
@@ -117,11 +113,5 @@ func (r *CoreProviderReconciler) corePreflightChecks(ctx context.Context, phase 
 		return ctrl.Result{}, fmt.Errorf("only one instance of CoreProvider is allowed")
 	}
 
-	return ctrl.Result{}, nil
-}
-
-func (r *CoreProviderReconciler) testMyStuff(ctx context.Context, phase generic.Group[*operatorv1.CoreProvider]) (reconcile.Result, error) {
-	// r.ProviderReconciler.
-	// x := phase.GetProvider()
 	return ctrl.Result{}, nil
 }

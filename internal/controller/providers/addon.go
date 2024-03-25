@@ -27,12 +27,12 @@ import (
 )
 
 type AddonProviderReconciler struct {
-	generic.ProviderReconciler[*operatorv1.AddonProvider]
+	*CommonProviderReconciler[*operatorv1.AddonProvider]
 }
 
 func NewAddonProviderReconciler(conn generic.Connector) generic.ProviderReconciler[*operatorv1.AddonProvider] {
 	return &AddonProviderReconciler{
-		ProviderReconciler: NewCommonProviderReconciler[*operatorv1.AddonProvider](conn),
+		CommonProviderReconciler: NewCommonProviderReconciler[*operatorv1.AddonProvider](conn),
 	}
 }
 

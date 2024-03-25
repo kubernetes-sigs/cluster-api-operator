@@ -65,7 +65,7 @@ func (p *PhaseReconciler[P, G]) DownloadManifests(ctx context.Context, phase G) 
 
 	log.Info("Downloading provider manifests")
 
-	repo, err := util.RepositoryFactory(ctx, p.providerConfig, p.configClient.Variables())
+	repo, err := util.RepositoryFactory(ctx, p.ProviderConfig, p.ConfigClient.Variables())
 	if err != nil {
 		err = fmt.Errorf("failed to create repo from provider url for provider %q: %w", phase.GetProvider().GetName(), err)
 

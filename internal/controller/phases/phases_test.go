@@ -586,8 +586,8 @@ releaseSeries:
 			fakeclient := fake.NewClientBuilder().WithScheme(setupScheme()).WithObjects(tt.genericProviders...).Build()
 			p := &PhaseReconciler[*operatorv1.CoreProvider, Phase[*operatorv1.CoreProvider]]{
 				ctrlClient:     fakeclient,
-				providerConfig: coreProvider,
-				repo:           repository.NewMemoryRepository(),
+				ProviderConfig: coreProvider,
+				Repo:           repository.NewMemoryRepository(),
 			}
 
 			for i := range tt.configMaps {
@@ -595,7 +595,7 @@ releaseSeries:
 			}
 			if tt.defaultRepository {
 				var err error
-				p.repo, err = configmapRepository(ctx, fakeclient, &metav1.LabelSelector{
+				p.Repo, err = configmapRepository(ctx, fakeclient, &metav1.LabelSelector{
 					MatchLabels: map[string]string{
 						operatorManagedLabel: "true",
 					},

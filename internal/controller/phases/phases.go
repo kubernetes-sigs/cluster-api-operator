@@ -57,12 +57,12 @@ const (
 // helps to iterate through provider reconciliation phases.
 type PhaseReconciler[P generic.Provider, G generic.Group[P]] struct {
 	ctrlClient     client.Client
-	repo           repository.Repository
-	contract       string
-	options        repository.ComponentsOptions
-	providerConfig configclient.Provider
-	configClient   configclient.Client
-	components     repository.Components
+	Repo           repository.Repository
+	Contract       string
+	Options        repository.ComponentsOptions
+	ProviderConfig configclient.Provider
+	ConfigClient   configclient.Client
+	Components     repository.Components
 }
 
 type Phase[P generic.Provider] struct {
@@ -180,14 +180,14 @@ func (p *PhaseReconciler[P, G]) InitializePhaseReconciler(ctx context.Context, p
 	}
 
 	// Load provider's secret and config url.
-	p.configClient, err = configclient.New(ctx, "", configclient.InjectReader(reader))
+	p.ConfigClient, err = configclient.New(ctx, "", configclient.InjectReader(reader))
 	if err != nil {
 		return reconcile.Result{}, wrapPhaseError(err, "failed to load the secret reader", operatorv1.ProviderInstalledCondition)
 	}
 
 	// Get returns the configuration for the provider with a given name/type.
 	// This is done using clusterctl internal API types.
-	p.providerConfig, err = p.configClient.Providers().Get(phase.GetProvider().GetName(), phase.ClusterctlProviderType())
+	p.ProviderConfig, err = p.ConfigClient.Providers().Get(phase.GetProvider().GetName(), phase.ClusterctlProviderType())
 	if err != nil {
 		return reconcile.Result{}, wrapPhaseError(err, operatorv1.UnknownProviderReason, operatorv1.ProviderInstalledCondition)
 	}
@@ -219,14 +219,14 @@ func (p *PhaseReconciler[P, G]) Load(ctx context.Context, phase G) (reconcile.Re
 		return reconcile.Result{}, wrapPhaseError(err, "failed to load additional manifests", operatorv1.ProviderInstalledCondition)
 	}
 
-	p.repo, err = configmapRepository(ctx, phase.GetClient(), labelSelector, phase.GetProvider().GetNamespace(), additionalManifests)
+	p.Repo, err = configmapRepository(ctx, phase.GetClient(), labelSelector, phase.GetProvider().GetNamespace(), additionalManifests)
 	if err != nil {
 		return reconcile.Result{}, wrapPhaseError(err, "failed to load the repository", operatorv1.ProviderInstalledCondition)
 	}
 
 	if spec.Version == "" {
 		// User didn't set the version, so we need to find the latest one from the matching config maps.
-		repoVersions, err := p.repo.GetVersions(ctx)
+		repoVersions, err := p.Repo.GetVersions(ctx)
 		if err != nil {
 			return reconcile.Result{}, wrapPhaseError(err, fmt.Sprintf("failed to get a list of available versions for provider %q", phase.GetProvider().GetName()), operatorv1.ProviderInstalledCondition)
 		}
@@ -241,7 +241,7 @@ func (p *PhaseReconciler[P, G]) Load(ctx context.Context, phase G) (reconcile.Re
 	}
 
 	// Store some provider specific inputs for passing it to clusterctl library
-	p.options = repository.ComponentsOptions{
+	p.Options = repository.ComponentsOptions{
 		TargetNamespace:     phase.GetProvider().GetNamespace(),
 		SkipTemplateProcess: false,
 		Version:             spec.Version,
@@ -422,7 +422,7 @@ func getComponentsData(cm corev1.ConfigMap) (string, error) {
 func (p *PhaseReconciler[P, G]) validateRepoCAPIVersion(ctx context.Context, phase G) error {
 	name := phase.GetProvider().GetName()
 
-	file, err := p.repo.GetFile(ctx, p.options.Version, metadataFile)
+	file, err := p.Repo.GetFile(ctx, p.Options.Version, metadataFile)
 	if err != nil {
 		return fmt.Errorf("failed to read %q from the repository for provider %q: %w", metadataFile, name, err)
 	}
@@ -436,21 +436,21 @@ func (p *PhaseReconciler[P, G]) validateRepoCAPIVersion(ctx context.Context, pha
 	}
 
 	// Gets the contract for the target release.
-	targetVersion, err := versionutil.ParseSemantic(p.options.Version)
+	targetVersion, err := versionutil.ParseSemantic(p.Options.Version)
 	if err != nil {
 		return fmt.Errorf("failed to parse current version for the %s provider: %w", name, err)
 	}
 
 	releaseSeries := latestMetadata.GetReleaseSeriesForVersion(targetVersion)
 	if releaseSeries == nil {
-		return fmt.Errorf("invalid provider metadata: version %s for the provider %s does not match any release series", p.options.Version, name)
+		return fmt.Errorf("invalid provider metadata: version %s for the provider %s does not match any release series", p.Options.Version, name)
 	}
 
 	if releaseSeries.Contract != "v1alpha4" && releaseSeries.Contract != "v1beta1" {
 		return fmt.Errorf(capiVersionIncompatibilityMessage, clusterv1.GroupVersion.Version, releaseSeries.Contract, name)
 	}
 
-	p.contract = releaseSeries.Contract
+	p.Contract = releaseSeries.Contract
 
 	return nil
 }
@@ -461,9 +461,9 @@ func (p *PhaseReconciler[P, G]) Fetch(ctx context.Context, phase G) (reconcile.R
 	log.Info("Fetching provider")
 
 	// Fetch the provider components yaml file from the provided repository GitHub/GitLab/ConfigMap.
-	componentsFile, err := p.repo.GetFile(ctx, p.options.Version, p.repo.ComponentsPath())
+	componentsFile, err := p.Repo.GetFile(ctx, p.Options.Version, p.Repo.ComponentsPath())
 	if err != nil {
-		err = fmt.Errorf("failed to read %q from provider's repository %q: %w", p.repo.ComponentsPath(), p.providerConfig.ManifestLabel(), err)
+		err = fmt.Errorf("failed to read %q from provider's repository %q: %w", p.Repo.ComponentsPath(), p.ProviderConfig.ManifestLabel(), err)
 
 		return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.ProviderInstalledCondition)
 	}
@@ -471,12 +471,12 @@ func (p *PhaseReconciler[P, G]) Fetch(ctx context.Context, phase G) (reconcile.R
 	// Generate a set of new objects using the clusterctl library. NewComponents() will do the yaml processing,
 	// like ensure all the provider components are in proper namespace, replace variables, etc. See the clusterctl
 	// documentation for more details.
-	p.components, err = repository.NewComponents(repository.ComponentsInput{
-		Provider:     p.providerConfig,
-		ConfigClient: p.configClient,
+	p.Components, err = repository.NewComponents(repository.ComponentsInput{
+		Provider:     p.ProviderConfig,
+		ConfigClient: p.ConfigClient,
 		Processor:    yamlprocessor.NewSimpleProcessor(),
 		RawYaml:      componentsFile,
-		Options:      p.options,
+		Options:      p.Options,
 	})
 	if err != nil {
 		return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.ProviderInstalledCondition)
@@ -484,12 +484,12 @@ func (p *PhaseReconciler[P, G]) Fetch(ctx context.Context, phase G) (reconcile.R
 
 	// ProviderSpec provides fields for customizing the provider deployment options.
 	// We can use clusterctl library to apply this customizations.
-	if err := repository.AlterComponents(p.components, customizeObjectsFn(phase.GetProvider())); err != nil {
+	if err := repository.AlterComponents(p.Components, customizeObjectsFn(phase.GetProvider())); err != nil {
 		return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.ProviderInstalledCondition)
 	}
 
 	// Apply patches to the provider components if specified.
-	if err := repository.AlterComponents(p.components, applyPatches(ctx, phase.GetProvider())); err != nil {
+	if err := repository.AlterComponents(p.Components, applyPatches(ctx, phase.GetProvider())); err != nil {
 		return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.ProviderInstalledCondition)
 	}
 
@@ -541,7 +541,7 @@ func (p *PhaseReconciler[P, G]) Install(ctx context.Context, phase G) (reconcile
 
 	log.Info("Installing provider")
 
-	if err := clusterClient.ProviderComponents().Create(ctx, p.components.Objs()); err != nil {
+	if err := clusterClient.ProviderComponents().Create(ctx, p.Components.Objs()); err != nil {
 		reason := "Install failed"
 		if wait.Interrupted(err) {
 			reason = "Timed out waiting for deployment to become ready"
@@ -558,8 +558,8 @@ func (p *PhaseReconciler[P, G]) Install(ctx context.Context, phase G) (reconcile
 
 func (p *PhaseReconciler[P, G]) ReportStatus(_ context.Context, phase G) (reconcile.Result, error) {
 	status := phase.GetProvider().GetStatus()
-	status.Contract = &p.contract
-	installedVersion := p.components.Version()
+	status.Contract = &p.Contract
+	installedVersion := p.Components.Version()
 	status.InstalledVersion = &installedVersion
 	phase.GetProvider().SetStatus(status)
 
@@ -589,9 +589,9 @@ func (p *PhaseReconciler[P, G]) Delete(ctx context.Context, phase G) (reconcile.
 }
 
 func (p *PhaseReconciler[P, G]) repositoryProxy(ctx context.Context, provider configclient.Provider, configClient configclient.Client, options ...repository.Option) (repository.Client, error) {
-	injectRepo := p.repo
+	injectRepo := p.Repo
 
-	if !provider.SameAs(p.providerConfig) {
+	if !provider.SameAs(p.ProviderConfig) {
 		genericProvider, err := GetGenericProvider(ctx, p.ctrlClient, provider)
 		if err != nil {
 			return nil, wrapPhaseError(err, "unable to find generic provider for configclient "+string(provider.Type())+": "+provider.Name(), operatorv1.ProviderUpgradedCondition)
@@ -619,7 +619,7 @@ func (p *PhaseReconciler[P, G]) repositoryProxy(ctx context.Context, provider co
 		return nil, err
 	}
 
-	return proxy.RepositoryProxy{Client: cl, RepositoryComponents: p.components}, nil
+	return proxy.RepositoryProxy{Client: cl, RepositoryComponents: p.Components}, nil
 }
 
 // GetGenericProvider returns the first of generic providers matching the type and the name from the configclient.Provider.
@@ -645,7 +645,7 @@ func GetGenericProvider(ctx context.Context, cl client.Client, provider configcl
 
 // newClusterClient returns a clusterctl client for interacting with management cluster.
 func newClusterClient[P generic.Provider, G generic.Group[P]](p *PhaseReconciler[P, G], phase G) cluster.Client {
-	return cluster.New(cluster.Kubeconfig{}, p.configClient, cluster.InjectProxy(&proxy.ControllerProxy{
+	return cluster.New(cluster.Kubeconfig{}, p.ConfigClient, cluster.InjectProxy(&proxy.ControllerProxy{
 		CtrlClient: proxy.ClientProxy{
 			Client:        phase.GetClient(),
 			ListProviders: listProviders,
