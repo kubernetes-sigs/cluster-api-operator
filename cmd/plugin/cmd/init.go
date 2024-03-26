@@ -117,6 +117,13 @@ var initCmd = &cobra.Command{
 	},
 }
 
+var backoffOpts = wait.Backoff{
+	Duration: 500 * time.Millisecond,
+	Factor:   1.5,
+	Steps:    10,
+	Jitter:   0.4,
+}
+
 func init() {
 	initCmd.PersistentFlags().StringVar(&initOpts.kubeconfig, "kubeconfig", "",
 		"Path to the kubeconfig for the management cluster. If unspecified, default discovery rules apply.")
@@ -188,16 +195,9 @@ func runInit() error {
 			return fmt.Errorf("cannot deploy CAPI operator: %w", err)
 		}
 
-		opts := wait.Backoff{
-			Duration: 500 * time.Millisecond,
-			Factor:   1.5,
-			Steps:    10,
-			Jitter:   0.4,
-		}
-
 		log.Info("Waiting for CAPI Operator to be available...")
 
-		if err := wait.ExponentialBackoff(opts, func() (bool, error) {
+		if err := wait.ExponentialBackoff(backoffOpts, func() (bool, error) {
 			return CheckDeploymentAvailability(ctx, client, capiOperatorLabels)
 		}); err != nil {
 			return fmt.Errorf("cannot check CAPI operator availability: %w", err)
@@ -514,14 +514,21 @@ func createGenericProvider(ctx context.Context, client ctrlclient.Client, provid
 	log.Info("Installing provider", "Type", provider.GetType(), "Name", name, "Version", version, "Namespace", namespace)
 
 	// Create the provider
-	if err := client.Create(ctx, provider); err != nil {
-		if !apierrors.IsAlreadyExists(err) {
-			return nil, fmt.Errorf("cannot create provider: %w", err)
+	if err := wait.ExponentialBackoff(backoffOpts, func() (bool, error) {
+		if err := client.Create(ctx, provider); err != nil {
+			// If the provider already exists, return immediately and do not retry.
+			if apierrors.IsAlreadyExists(err) {
+				log.Info("Provider already exists, skipping creation", "Type", provider.GetType(), "Name", name, "Version", version, "Namespace", namespace)
+
+				return true, err
+			}
+
+			return false, err
 		}
 
-		log.Info("Provider already exists, skipping creation", "Type", provider.GetType(), "Name", name, "Version", version, "Namespace", namespace)
-
-		return nil, err
+		return true, nil
+	}); err != nil {
+		return nil, fmt.Errorf("cannot create provider: %w", err)
 	}
 
 	return provider, nil
