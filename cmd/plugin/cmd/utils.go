@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"sort"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -28,9 +29,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/apimachinery/pkg/util/version"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/clientcmd"
 	clusterctlv1 "sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3"
+	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/repository"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	admissionv1 "k8s.io/api/admissionregistration/v1"
@@ -66,6 +69,8 @@ type genericProviderList interface {
 	ctrlclient.ObjectList
 	operatorv1.GenericProviderList
 }
+
+var errNotFound = errors.New("404 Not Found")
 
 // CreateKubeClient creates a kubernetes client from provided kubeconfig and kubecontext.
 func CreateKubeClient(kubeconfigPath, kubeconfigContext string) (ctrlclient.Client, error) {
@@ -180,4 +185,76 @@ func NewGenericProvider(providerType clusterctlv1.ProviderType) operatorv1.Gener
 	default:
 		panic(fmt.Sprintf("unknown provider type %s", providerType))
 	}
+}
+
+// GetLatestRelease returns the latest patch release.
+func GetLatestRelease(ctx context.Context, repo repository.Repository) (string, error) {
+	versions, err := repo.GetVersions(ctx)
+	if err != nil {
+		return "", fmt.Errorf("failed to get repository versions: %w", err)
+	}
+
+	// Search for the latest release according to semantic version ordering.
+	// Releases with tag name that are not in semver format are ignored.
+	parsedReleaseVersions := []*version.Version{}
+
+	for _, v := range versions {
+		sv, err := version.ParseSemantic(v)
+		if err != nil {
+			// discard releases with tags that are not a valid semantic versions (the user can point explicitly to such releases)
+			continue
+		}
+
+		parsedReleaseVersions = append(parsedReleaseVersions, sv)
+	}
+
+	versionCandidates := parsedReleaseVersions
+
+	if len(parsedReleaseVersions) == 0 {
+		return "", errors.New("failed to find releases tagged with a valid semantic version number")
+	}
+
+	// Sort parsed versions by semantic version order.
+	sort.SliceStable(versionCandidates, func(i, j int) bool {
+		// Prioritize release versions over pre-releases. For example v1.0.0 > v2.0.0-alpha
+		// If both are pre-releases, sort by semantic version order as usual.
+		if versionCandidates[j].PreRelease() == "" && versionCandidates[i].PreRelease() != "" {
+			return false
+		}
+		if versionCandidates[i].PreRelease() == "" && versionCandidates[j].PreRelease() != "" {
+			return true
+		}
+
+		return versionCandidates[j].LessThan(versionCandidates[i])
+	})
+
+	// Limit the number of searchable versions by 3.
+	size := 3
+	if size > len(versionCandidates) {
+		size = len(versionCandidates)
+	}
+
+	versionCandidates = versionCandidates[:size]
+
+	for _, v := range versionCandidates {
+		// Iterate through sorted versions and try to fetch a file from that release.
+		// If it's completed successfully, we get the latest release.
+		// Note: the fetched file will be cached and next time we will get it from the cache.
+		versionString := "v" + v.String()
+
+		_, err := repo.GetFile(ctx, versionString, repo.ComponentsPath())
+		if err != nil {
+			if errors.Is(err, errNotFound) {
+				// Ignore this version
+				continue
+			}
+
+			return "", err
+		}
+
+		return versionString, nil
+	}
+
+	// If we reached this point, it means we didn't find any release.
+	return "", errors.New("failed to find releases tagged with a valid semantic version number")
 }

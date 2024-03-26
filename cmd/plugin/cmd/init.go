@@ -58,8 +58,10 @@ type initOptions struct {
 }
 
 const (
-	capiOperatorProviderName         = "capi-operator"
-	capiOperatorManifestsURLTemplate = "https://github.com/kubernetes-sigs/cluster-api-operator/releases/%s/operator-components.yaml"
+	capiOperatorProviderName = "capi-operator"
+	// We have to specify a version here, because if we set "latest", clusterctl libs will try to fetch metadata.yaml file for the latest
+	// release and fail since CAPI operator doesn't provide this file.
+	capiOperatorManifestsURL = "https://github.com/kubernetes-sigs/cluster-api-operator/releases/v0.1.0/operator-components.yaml"
 )
 
 var initOpts = &initOptions{}
@@ -113,6 +115,13 @@ var initCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return runInit()
 	},
+}
+
+var backoffOpts = wait.Backoff{
+	Duration: 500 * time.Millisecond,
+	Factor:   1.5,
+	Steps:    10,
+	Jitter:   0.4,
 }
 
 func init() {
@@ -186,16 +195,9 @@ func runInit() error {
 			return fmt.Errorf("cannot deploy CAPI operator: %w", err)
 		}
 
-		opts := wait.Backoff{
-			Duration: 500 * time.Millisecond,
-			Factor:   1.5,
-			Steps:    10,
-			Jitter:   0.4,
-		}
-
 		log.Info("Waiting for CAPI Operator to be available...")
 
-		if err := wait.ExponentialBackoff(opts, func() (bool, error) {
+		if err := wait.ExponentialBackoff(backoffOpts, func() (bool, error) {
 			return CheckDeploymentAvailability(ctx, client, capiOperatorLabels)
 		}); err != nil {
 			return fmt.Errorf("cannot check CAPI operator availability: %w", err)
@@ -383,8 +385,6 @@ func deployCAPIOperator(ctx context.Context, opts *initOptions) error {
 		return fmt.Errorf("cannot create config client: %w", err)
 	}
 
-	capiOperatorManifestsURL := fmt.Sprintf(capiOperatorManifestsURLTemplate, opts.operatorVersion)
-
 	providerConfig := configclient.NewProvider(capiOperatorProviderName, capiOperatorManifestsURL, clusterctlv1.ProviderTypeUnknown)
 
 	// Reduce waiting time for the repository creation from 30 seconds to 5.
@@ -397,7 +397,11 @@ func deployCAPIOperator(ctx context.Context, opts *initOptions) error {
 	}
 
 	if opts.operatorVersion == latestVersion {
-		opts.operatorVersion = repo.DefaultVersion()
+		// Detecting the latest release by sorting all available tags and picking that last one with release.
+		opts.operatorVersion, err = GetLatestRelease(ctx, repo)
+		if err != nil {
+			return fmt.Errorf("cannot get latest release: %w", err)
+		}
 
 		log.Info("Detected latest operator version", "Version", opts.operatorVersion)
 	}
@@ -510,14 +514,21 @@ func createGenericProvider(ctx context.Context, client ctrlclient.Client, provid
 	log.Info("Installing provider", "Type", provider.GetType(), "Name", name, "Version", version, "Namespace", namespace)
 
 	// Create the provider
-	if err := client.Create(ctx, provider); err != nil {
-		if !apierrors.IsAlreadyExists(err) {
-			return nil, fmt.Errorf("cannot create provider: %w", err)
+	if err := wait.ExponentialBackoff(backoffOpts, func() (bool, error) {
+		if err := client.Create(ctx, provider); err != nil {
+			// If the provider already exists, return immediately and do not retry.
+			if apierrors.IsAlreadyExists(err) {
+				log.Info("Provider already exists, skipping creation", "Type", provider.GetType(), "Name", name, "Version", version, "Namespace", namespace)
+
+				return true, err
+			}
+
+			return false, err
 		}
 
-		log.Info("Provider already exists, skipping creation", "Type", provider.GetType(), "Name", name, "Version", version, "Namespace", namespace)
-
-		return nil, err
+		return true, nil
+	}); err != nil {
+		return nil, fmt.Errorf("cannot create provider: %w", err)
 	}
 
 	return provider, nil
