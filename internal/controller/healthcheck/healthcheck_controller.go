@@ -92,6 +92,10 @@ func (r *ProviderHealthCheckReconciler) SetupWithManager(mgr ctrl.Manager, optio
 		}).SetupWithManager(mgr, options),
 		(&GenericProviderHealthCheckReconciler{
 			Client:   mgr.GetClient(),
+			Provider: &operatorv1.RuntimeExtensionProvider{},
+		}).SetupWithManager(mgr, options),
+		(&GenericProviderHealthCheckReconciler{
+			Client:   mgr.GetClient(),
 			Provider: &operatorv1.IPAMProvider{},
 		}).SetupWithManager(mgr, options),
 	})

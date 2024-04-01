@@ -62,6 +62,8 @@ func ClusterctlProviderType(genericProvider operatorv1.GenericProvider) clusterc
 		return clusterctlv1.AddonProviderType
 	case *operatorv1.IPAMProvider:
 		return clusterctlv1.IPAMProviderType
+	case *operatorv1.RuntimeExtensionProvider:
+		return clusterctlv1.RuntimeExtensionProviderType
 	}
 
 	return clusterctlv1.ProviderTypeUnknown
@@ -84,7 +86,9 @@ func GetGenericProvider(ctx context.Context, cl ctrlclient.Client, provider conf
 		list = &operatorv1.AddonProviderList{}
 	case clusterctlv1.IPAMProviderType:
 		list = &operatorv1.IPAMProviderList{}
-	case clusterctlv1.RuntimeExtensionProviderType, clusterctlv1.ProviderTypeUnknown:
+	case clusterctlv1.RuntimeExtensionProviderType:
+		list = &operatorv1.RuntimeExtensionProviderList{}
+	case clusterctlv1.ProviderTypeUnknown:
 		return nil, fmt.Errorf("provider %s type is not supported %s", provider.Name(), provider.Type())
 	}
 

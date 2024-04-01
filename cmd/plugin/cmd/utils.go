@@ -180,7 +180,9 @@ func NewGenericProvider(providerType clusterctlv1.ProviderType) operatorv1.Gener
 		return &operatorv1.InfrastructureProvider{}
 	case clusterctlv1.AddonProviderType:
 		return &operatorv1.AddonProvider{}
-	case clusterctlv1.IPAMProviderType, clusterctlv1.RuntimeExtensionProviderType, clusterctlv1.ProviderTypeUnknown:
+	case clusterctlv1.RuntimeExtensionProviderType:
+		return &operatorv1.RuntimeExtensionProvider{}
+	case clusterctlv1.IPAMProviderType, clusterctlv1.ProviderTypeUnknown:
 		panic(fmt.Sprintf("unsupported provider type %s", providerType))
 	default:
 		panic(fmt.Sprintf("unknown provider type %s", providerType))
