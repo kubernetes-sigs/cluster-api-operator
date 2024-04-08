@@ -46,10 +46,14 @@ spec:
 {{- end }}
 {{- if $.Values.manager }}
   manager:
-{{- if $.Values.manager.featureGates }}
-    featureGates:
+{{- if hasKey $.Values.manager.featureGates $infrastructureName }}
 {{- range $key, $value := $.Values.manager.featureGates }}
-      {{ $key }}: {{ $value }}
+  {{- if eq $key $infrastructureName }}
+    featureGates:
+    {{- range $k, $v := $value }}
+      {{ $k }}: {{ $v }}
+    {{- end }}
+  {{- end }}
 {{- end }}
 {{- end }}
 {{- end }}

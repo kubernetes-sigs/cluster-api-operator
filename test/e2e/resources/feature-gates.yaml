@@ -1,0 +1,123 @@
+---
+# Source: cluster-api-operator/templates/addon.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    "helm.sh/hook": "post-install"
+    "helm.sh/hook-weight": "1"
+  name: helm-addon-system
+---
+# Source: cluster-api-operator/templates/core.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    "helm.sh/hook": "post-install"
+    "helm.sh/hook-weight": "1"
+  name: capi-system
+---
+# Source: cluster-api-operator/templates/infra-conditions.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    "helm.sh/hook": "post-install"
+    "helm.sh/hook-weight": "1"
+  name: capi-kubeadm-bootstrap-system
+---
+# Source: cluster-api-operator/templates/infra-conditions.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    "helm.sh/hook": "post-install"
+    "helm.sh/hook-weight": "1"
+  name: capi-kubeadm-control-plane-system
+---
+# Source: cluster-api-operator/templates/infra.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    "helm.sh/hook": "post-install"
+    "helm.sh/hook-weight": "1"
+  name: aws-infrastructure-system
+---
+# Source: cluster-api-operator/templates/addon.yaml
+apiVersion: operator.cluster.x-k8s.io/v1alpha2
+kind: AddonProvider
+metadata:
+  name: helm
+  namespace: helm-addon-system
+  annotations:
+    "helm.sh/hook": "post-install"
+    "helm.sh/hook-weight": "2"
+---
+# Source: cluster-api-operator/templates/infra-conditions.yaml
+apiVersion: operator.cluster.x-k8s.io/v1alpha2
+kind: BootstrapProvider
+metadata:
+  name: kubeadm
+  namespace: capi-kubeadm-bootstrap-system
+  annotations:
+    "helm.sh/hook": "post-install"
+    "helm.sh/hook-weight": "2"
+spec:
+  configSecret:
+    name: aws-variables
+    namespace: default
+---
+# Source: cluster-api-operator/templates/infra-conditions.yaml
+apiVersion: operator.cluster.x-k8s.io/v1alpha2
+kind: ControlPlaneProvider
+metadata:
+  name: kubeadm
+  namespace: capi-kubeadm-control-plane-system
+  annotations:
+    "helm.sh/hook": "post-install"
+    "helm.sh/hook-weight": "2"
+spec:
+  configSecret:
+    name: aws-variables
+    namespace: default
+---
+# Source: cluster-api-operator/templates/core.yaml
+apiVersion: operator.cluster.x-k8s.io/v1alpha2
+kind: CoreProvider
+metadata:
+  name: cluster-api
+  namespace: capi-system
+  annotations:
+    "helm.sh/hook": "post-install"
+    "helm.sh/hook-weight": "2"
+spec:
+  version: v1.6.2
+  manager:
+    featureGates:
+      ClusterTopology: true
+      MachinePool: true
+  configSecret:
+    name: aws-variables
+    namespace: default
+---
+# Source: cluster-api-operator/templates/infra.yaml
+apiVersion: operator.cluster.x-k8s.io/v1alpha2
+kind: InfrastructureProvider
+metadata:
+  name: aws
+  namespace: aws-infrastructure-system
+  annotations:
+    "helm.sh/hook": "post-install"
+    "helm.sh/hook-weight": "2"
+spec:
+  version: v2.4.0
+  manager:
+    featureGates:
+      ClusterTopology: true
+      EKSAllowAddRoles: true
+      EKSEnableIAM: true
+      MachinePool: true
+  configSecret:
+    name: aws-variables
+    namespace: default
