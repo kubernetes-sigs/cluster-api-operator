@@ -1,4 +1,4 @@
-# Cluster API Operator v1alpha1 API compared to v1alpha2 API
+# Cluster API Operator v1alpha1 compared to v1alpha2
 
 This document provides an overview over relevant changes between Cluster API Operator API v1alpha1 and v1alpha2 for consumers of our Go API.
 
