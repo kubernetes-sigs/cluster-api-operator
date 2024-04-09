@@ -206,4 +206,27 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 		Expect(err).ToNot(HaveOccurred())
 		Expect(manifests).To(Equal(string(expectedManifests)))
 	})
+	It("should deploy core and infra with feature gates enabled", func() {
+		manifests, err := helmChart.Run(map[string]string{
+			"configSecret.name":        "aws-variables",
+			"configSecret.namespace":   "default",
+			"infrastructure":           "aws:v2.4.0",
+			"addon":                    "helm:",
+			"image.manager.tag":        "v0.9.1",
+			"cert-manager.enabled":     "false",
+			"cert-manager.installCRDs": "false",
+			"core":                     "cluster-api:v1.6.2",
+			"manager.featureGates.core.ClusterTopology": "true",
+			"manager.featureGates.core.MachinePool":     "true",
+			"manager.featureGates.aws.ClusterTopology":  "true",
+			"manager.featureGates.aws.MachinePool":      "true",
+			"manager.featureGates.aws.EKSEnableIAM":     "true",
+			"manager.featureGates.aws.EKSAllowAddRoles": "true",
+		})
+		Expect(err).ToNot(HaveOccurred())
+		Expect(manifests).ToNot(BeEmpty())
+		expectedManifests, err := os.ReadFile(filepath.Join(customManifestsFolder, "feature-gates.yaml"))
+		Expect(err).ToNot(HaveOccurred())
+		Expect(manifests).To(Equal(string(expectedManifests)))
+	})
 })
