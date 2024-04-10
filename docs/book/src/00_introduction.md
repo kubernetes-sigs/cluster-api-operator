@@ -14,8 +14,8 @@ This operator leverages a declarative API and extends the capabilities of the `c
 
 ## Getting started
 
-* [Quick Start](./user/quick-start.md)
-* [Concepts](./user/concepts.md)
-* [Developer guide](./developer/guide.md)
-* [Contributing](./CONTRIBUTING.md)
+* [Quick Start](./01_user/02_quick-start.md)
+* [Concepts](./01_user/01_concepts.md)
+* [Developer guide](./04_developer/02_guide.md)
+* [Contributing](./05_reference/04_contributing.md)
 
