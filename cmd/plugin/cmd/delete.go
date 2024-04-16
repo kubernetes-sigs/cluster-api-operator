@@ -308,12 +308,6 @@ func deleteProviders(ctx context.Context, client ctrlclient.Client, providerList
 	for _, provider := range providerList.GetItems() {
 		log.Info(fmt.Sprintf("Deleting %s %s/%s", provider.GetType(), provider.GetName(), provider.GetNamespace()))
 
-		provider, ok := provider.(generic.Provider)
-		if !ok {
-			log.Info(fmt.Sprintf("Expected to get GenericProvider for %s", gvk))
-			continue
-		}
-
 		if err := client.DeleteAllOf(ctx, provider, ctrlclient.InNamespace(provider.GetNamespace())); err != nil {
 			return false, fmt.Errorf("unable to issue delete for %s: %w", gvk, err)
 		}
