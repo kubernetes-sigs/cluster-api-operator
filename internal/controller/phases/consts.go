@@ -1,5 +1,5 @@
 /*
-Copyright 2021 The Kubernetes Authors.
+Copyright 2024 The Kubernetes Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,15 +14,22 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package controller
-
-import "time"
+package phases
 
 const (
-	// preflightFailedRequeueAfter is how long to wait before trying to reconcile
-	// if some preflight check has failed.
-	preflightFailedRequeueAfter = 30 * time.Second
-
 	// configPath is the path to the clusterctl config file.
 	configPath = "/config/clusterctl.yaml"
+
+	configMapVersionLabel = "provider.cluster.x-k8s.io/version"
+	configMapTypeLabel    = "provider.cluster.x-k8s.io/type"
+	configMapNameLabel    = "provider.cluster.x-k8s.io/name"
+	operatorManagedLabel  = "managed-by.operator.cluster.x-k8s.io"
+
+	compressedAnnotation = "provider.cluster.x-k8s.io/compressed"
+
+	metadataConfigMapKey            = "metadata"
+	componentsConfigMapKey          = "components"
+	additionalManifestsConfigMapKey = "manifests"
+
+	maxConfigMapSize = 1 * 1024 * 1024
 )

@@ -28,6 +28,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
+	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
+	"sigs.k8s.io/cluster-api-operator/internal/controller/generic"
+	"sigs.k8s.io/cluster-api-operator/util"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	clusterctlv1 "sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3"
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/cluster"
@@ -35,9 +38,6 @@ import (
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/repository"
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/yamlprocessor"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
-
-	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
-	"sigs.k8s.io/cluster-api-operator/util"
 )
 
 type initOptions struct {
@@ -471,7 +471,8 @@ func createGenericProvider(ctx context.Context, client ctrlclient.Client, provid
 		return nil, fmt.Errorf("provider name can't be empty")
 	}
 
-	provider := NewGenericProvider(providerType)
+	rec := generic.ProviderReconcilers[providerType]
+	provider := rec.GenericProvider()
 
 	// Set name and namespace
 	provider.SetName(name)
