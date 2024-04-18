@@ -41,20 +41,20 @@ import (
 )
 
 type initOptions struct {
-	kubeconfig              string
-	kubeconfigContext       string
-	operatorVersion         string
-	coreProvider            string
-	bootstrapProviders      []string
-	controlPlaneProviders   []string
-	infrastructureProviders []string
-	ipamProviders           []string
-	// runtimeExtensionProviders []string
-	addonProviders      []string
-	targetNamespace     string
-	configSecret        string
-	waitProviders       bool
-	waitProviderTimeout int
+	kubeconfig                string
+	kubeconfigContext         string
+	operatorVersion           string
+	coreProvider              string
+	bootstrapProviders        []string
+	controlPlaneProviders     []string
+	infrastructureProviders   []string
+	ipamProviders             []string
+	runtimeExtensionProviders []string
+	addonProviders            []string
+	targetNamespace           string
+	configSecret              string
+	waitProviders             bool
+	waitProviderTimeout       int
 }
 
 const (
@@ -141,8 +141,8 @@ func init() {
 		"Control plane providers and versions (e.g. kubeadm:v1.1.5) to add to the management cluster. If unspecified, the Kubeadm control plane provider's latest release is used.")
 	initCmd.PersistentFlags().StringSliceVar(&initOpts.ipamProviders, "ipam", nil,
 		"IPAM providers and versions (e.g. infoblox:v0.0.1) to add to the management cluster.")
-	// initCmd.PersistentFlags().StringSliceVar(&initOpts.runtimeExtensionProviders, "runtime-extension", nil,
-	//	"Runtime extension providers and versions (e.g. test:v0.0.1) to add to the management cluster.")
+	initCmd.PersistentFlags().StringSliceVar(&initOpts.runtimeExtensionProviders, "runtime-extension", nil,
+		"Runtime extension providers and versions (e.g. my-extension:v0.0.1) to add to the management cluster.")
 	initCmd.PersistentFlags().StringSliceVar(&initOpts.addonProviders, "addon", []string{},
 		"Add-on providers and versions (e.g. helm:v0.1.0) to add to the management cluster.")
 	initCmd.Flags().StringVarP(&initOpts.targetNamespace, "target-namespace", "n", "capi-operator-system",
@@ -305,7 +305,21 @@ func initProviders(ctx context.Context, client ctrlclient.Client, initOpts *init
 				continue
 			}
 
-			return fmt.Errorf("cannot create addon provider: %w", err)
+			return fmt.Errorf("cannot create IPAM provider: %w", err)
+		}
+
+		createdProviders = append(createdProviders, provider)
+	}
+
+	// Deploy Runtime Extension Providers.
+	for _, runtimeExtension := range initOpts.runtimeExtensionProviders {
+		provider, err := createGenericProvider(ctx, client, clusterctlv1.RuntimeExtensionProviderType, runtimeExtension, initOpts.targetNamespace, configSecretName, configSecretNamespace)
+		if err != nil {
+			if apierrors.IsAlreadyExists(err) {
+				continue
+			}
+
+			return fmt.Errorf("cannot create runtime extension provider: %w", err)
 		}
 
 		createdProviders = append(createdProviders, provider)

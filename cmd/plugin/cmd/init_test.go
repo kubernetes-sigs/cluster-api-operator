@@ -524,6 +524,13 @@ func getGenericProvider(ctx context.Context, client ctrlclient.Client, providerK
 		}
 
 		return provider, nil
+	case "RuntimExtensionProvider":
+		provider := &operatorv1.RuntimeExtensionProvider{}
+		if err := client.Get(ctx, types.NamespacedName{Name: providerName, Namespace: providerNamespace}, provider); err != nil {
+			return nil, err
+		}
+
+		return provider, nil
 	default:
 		return nil, fmt.Errorf("failed to cast interface for type: %s", providerKind)
 	}

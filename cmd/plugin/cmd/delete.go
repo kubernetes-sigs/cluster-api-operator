@@ -43,18 +43,18 @@ import (
 )
 
 type deleteOptions struct {
-	kubeconfig              string
-	kubeconfigContext       string
-	coreProvider            bool
-	bootstrapProviders      []string
-	controlPlaneProviders   []string
-	infrastructureProviders []string
-	ipamProviders           []string
-	addonProviders          []string
-	// runtimeExtensionProviders []string
-	includeNamespace bool
-	includeCRDs      bool
-	deleteAll        bool
+	kubeconfig                string
+	kubeconfigContext         string
+	coreProvider              bool
+	bootstrapProviders        []string
+	controlPlaneProviders     []string
+	infrastructureProviders   []string
+	ipamProviders             []string
+	addonProviders            []string
+	runtimeExtensionProviders []string
+	includeNamespace          bool
+	includeCRDs               bool
+	deleteAll                 bool
 }
 
 var deleteOpts = &deleteOptions{}
@@ -127,8 +127,8 @@ func init() {
 		"ControlPlane provider and namespace (e.g. kubeadm:<namespace>) to delete from the management cluster")
 	deleteCmd.Flags().StringSliceVar(&deleteOpts.ipamProviders, "ipam", nil,
 		"IPAM provider and namespace (e.g. infoblox:<namespace>) to delete from the management cluster")
-	// deleteCmd.Flags().StringSliceVar(&deleteOpts.runtimeExtensionProviders, "runtime-extension", nil,
-	//	"Runtime extension providers and versions (e.g. test:v0.0.1) to delete from the management cluster")
+	deleteCmd.Flags().StringSliceVar(&deleteOpts.runtimeExtensionProviders, "runtime-extension", nil,
+		"Runtime extension providers and namespace (e.g. my-runtime-ex:<namespace>) to delete from the management cluster")
 	deleteCmd.Flags().StringSliceVar(&deleteOpts.addonProviders, "addon", nil,
 		"Add-on providers and versions (e.g. helm:<namespace>) to delete from the management cluster")
 
@@ -177,7 +177,8 @@ func runDelete() error {
 		group.delete(&operatorv1.ControlPlaneProviderList{}, deleteOpts.controlPlaneProviders...),
 		group.delete(&operatorv1.InfrastructureProviderList{}, deleteOpts.infrastructureProviders...),
 		group.delete(&operatorv1.IPAMProviderList{}, deleteOpts.ipamProviders...),
-		group.delete(&operatorv1.AddonProviderList{}, deleteOpts.addonProviders...))
+		group.delete(&operatorv1.AddonProviderList{}, deleteOpts.addonProviders...),
+		group.delete(&operatorv1.RuntimeExtensionProviderList{}, deleteOpts.runtimeExtensionProviders...))
 
 	if deleteOpts.coreProvider {
 		errors = append(errors, group.delete(&operatorv1.CoreProviderList{}, []string{""}...))
