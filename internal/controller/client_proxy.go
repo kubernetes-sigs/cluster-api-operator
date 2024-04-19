@@ -197,7 +197,9 @@ func (k *controllerProxy) ListResources(ctx context.Context, labels map[string]s
 				if err != nil {
 					return nil, err
 				}
+
 				klog.V(3).InfoS("listed", "kind", resourceKind.Kind, "count", len(objList.Items))
+
 				ret = append(ret, objList.Items...)
 			}
 		}

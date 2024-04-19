@@ -223,6 +223,7 @@ func GetLatestRelease(ctx context.Context, repo repository.Repository) (string, 
 		if versionCandidates[j].PreRelease() == "" && versionCandidates[i].PreRelease() != "" {
 			return false
 		}
+
 		if versionCandidates[i].PreRelease() == "" && versionCandidates[j].PreRelease() != "" {
 			return true
 		}

@@ -65,6 +65,7 @@ func TestSelectorFromProvider(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			g := NewWithT(t)
 			actual, err := selectorFromProvider(tc.provider)
+
 			if tc.expectedErr {
 				g.Expect(err).To(HaveOccurred())
 			} else {

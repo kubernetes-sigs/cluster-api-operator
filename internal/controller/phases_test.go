@@ -391,10 +391,12 @@ metadata:
 			}
 
 			got, err := p.configmapRepository(context.TODO(), p.provider.GetSpec().FetchConfig.Selector, "ns1", tt.additionalManifests)
+
 			if len(tt.wantErr) > 0 {
 				g.Expect(err).Should(MatchError(tt.wantErr))
 				return
 			}
+
 			g.Expect(err).To(Succeed())
 			gotComponents, err := got.GetFile(ctx, got.DefaultVersion(), got.ComponentsPath())
 			g.Expect(err).To(Succeed())
@@ -588,6 +590,7 @@ releaseSeries:
 			for i := range tt.configMaps {
 				g.Expect(fakeclient.Create(ctx, &tt.configMaps[i])).To(Succeed())
 			}
+
 			if tt.defaultRepository {
 				var err error
 				p.repo, err = p.configmapRepository(ctx, &metav1.LabelSelector{
@@ -606,14 +609,17 @@ releaseSeries:
 				g.Expect(err).Should(MatchError(tt.wantErr))
 				return
 			}
+
 			g.Expect(err).To(Succeed())
 
 			meta := got.Metadata(tt.wantDefaultVersion)
 			metadataData, err := meta.Get(ctx)
+
 			if len(tt.metadataErr) > 0 {
 				g.Expect(err).Should(MatchError(tt.metadataErr))
 				return
 			}
+
 			g.Expect(err).To(Succeed())
 			g.Expect(metadataData.ReleaseSeries).To(Equal(tt.wantMetadataSeries))
 

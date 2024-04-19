@@ -107,7 +107,6 @@ func TestCheckCAPIOpearatorAvailability(t *testing.T) {
 
 			if tt.wantErr {
 				// To generate an error we create two deployments with the same labels.
-
 				// Deployment 1.
 				deployment := generateCAPIOperatorDeployment("capi-operator-controller-manager", "default")
 				resources = append(resources, deployment)
