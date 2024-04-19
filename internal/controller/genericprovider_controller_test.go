@@ -26,7 +26,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	clusterctlv1 "sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -318,7 +318,7 @@ releaseSeries:
 			providerSpec := provider.GetSpec()
 			providerSpec.Version = tc.newVersion
 			providerSpec.Deployment = &operatorv1.DeploymentSpec{
-				Replicas: pointer.Int(2),
+				Replicas: ptr.To(2),
 			}
 			provider.SetSpec(providerSpec)
 
@@ -468,7 +468,7 @@ func TestProviderSpecChanges(t *testing.T) {
 			updatedSpec: operatorv1.ProviderSpec{
 				Version: testCurrentVersion,
 				Deployment: &operatorv1.DeploymentSpec{
-					Replicas: pointer.Int(2),
+					Replicas: ptr.To(2),
 				},
 				FetchConfig: &operatorv1.FetchConfiguration{
 					Selector: &metav1.LabelSelector{
@@ -495,7 +495,7 @@ func TestProviderSpecChanges(t *testing.T) {
 			updatedSpec: operatorv1.ProviderSpec{
 				Version: "10000.0.0-NONEXISTENT",
 				Deployment: &operatorv1.DeploymentSpec{
-					Replicas: pointer.Int(2),
+					Replicas: ptr.To(2),
 				},
 				FetchConfig: &operatorv1.FetchConfiguration{
 					Selector: &metav1.LabelSelector{

@@ -1,3 +1,4 @@
+//nolint
 /*
 Copyright 2023 The Kubernetes Authors.
 
