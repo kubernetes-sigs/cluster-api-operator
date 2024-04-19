@@ -8,12 +8,12 @@ replace sigs.k8s.io/cluster-api => sigs.k8s.io/cluster-api v1.6.1
 
 require (
 	github.com/drone/envsubst/v2 v2.0.0-20210730161058-179042472c46
-	github.com/joelanford/go-apidiff v0.7.0
-	github.com/onsi/ginkgo/v2 v2.13.2
+	github.com/joelanford/go-apidiff v0.8.2
+	github.com/onsi/ginkgo/v2 v2.17.1
 	gotest.tools/gotestsum v1.11.0
 	sigs.k8s.io/cluster-api/hack/tools v0.0.0-20240116064735-bfe8d0d16ff3
-	sigs.k8s.io/controller-runtime/tools/setup-envtest v0.0.0-20211110210527-619e6b92dab9
-	sigs.k8s.io/controller-tools v0.13.0
+	sigs.k8s.io/controller-runtime/tools/setup-envtest v0.0.0-20240215143116-d0396a3d6f9f
+	sigs.k8s.io/controller-tools v0.14.0
 )
 
 require (
@@ -57,28 +57,28 @@ require (
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/xanzy/ssh-agent v0.3.3 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	go.uber.org/zap v1.25.0 // indirect
+	go.uber.org/zap v1.26.0 // indirect
 	golang.org/x/crypto v0.18.0 // indirect
 	golang.org/x/exp v0.0.0-20230905200255-921286631fa9 // indirect
 	golang.org/x/mod v0.14.0 // indirect
 	golang.org/x/net v0.20.0 // indirect
-	golang.org/x/sync v0.5.0 // indirect
+	golang.org/x/sync v0.6.0 // indirect
 	golang.org/x/sys v0.16.0 // indirect
 	golang.org/x/term v0.16.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
-	golang.org/x/tools v0.16.1 // indirect
+	golang.org/x/tools v0.17.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/api v0.28.5 // indirect
-	k8s.io/apiextensions-apiserver v0.28.5 // indirect
-	k8s.io/apimachinery v0.28.5 // indirect
-	k8s.io/klog/v2 v2.100.1 // indirect
+	k8s.io/api v0.29.0 // indirect
+	k8s.io/apiextensions-apiserver v0.29.0 // indirect
+	k8s.io/apimachinery v0.29.0 // indirect
+	k8s.io/klog/v2 v2.110.1 // indirect
 	k8s.io/utils v0.0.0-20231127182322-b307cd553661 // indirect
 	sigs.k8s.io/cluster-api v0.0.0-00010101000000-000000000000 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/kubebuilder/docs/book/utils v0.0.0-20211028165026-57688c578b5d // indirect
-	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
+	sigs.k8s.io/structured-merge-diff/v4 v4.4.1 // indirect
 	sigs.k8s.io/yaml v1.4.0 // indirect
 )
