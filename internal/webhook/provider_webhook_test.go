@@ -99,6 +99,7 @@ func TestSetDefaultProviderSpec(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			gs := NewWithT(t)
+
 			setDefaultProviderSpec(tc.providerSpec, tc.namespace)
 			gs.Expect(reflect.DeepEqual(tc.providerSpec, tc.expectedProviderSpec)).To(BeTrue())
 		})

@@ -327,6 +327,7 @@ releaseSeries:
 			if labels == nil {
 				labels = map[string]string{}
 			}
+
 			labels["provider-version"] = tc.newVersion
 			provider.SetLabels(labels)
 

@@ -50,6 +50,7 @@ func TestApplyPatches(t *testing.T) {
 			if tc.expectedError {
 				g.Expect(err).To(HaveOccurred())
 			}
+
 			g.Expect(err).NotTo(HaveOccurred())
 
 			resultYaml, err := utilyaml.FromUnstructured(result)
