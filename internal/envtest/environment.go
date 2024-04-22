@@ -40,7 +40,7 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
-	"k8s.io/klog/v2/klogr"
+	"k8s.io/klog/v2/textlogger"
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	clusterctlv1 "sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3"
@@ -56,9 +56,7 @@ import (
 func init() {
 	klog.InitFlags(nil)
 
-	logger := klogr.New()
-	// Additionally force all of the controllers to use the Ginkgo logger.
-	ctrl.SetLogger(logger)
+	ctrl.SetLogger(textlogger.NewLogger(textlogger.NewConfig()))
 
 	// Calculate the scheme.
 	utilruntime.Must(apiextensionsv1.AddToScheme(scheme.Scheme))

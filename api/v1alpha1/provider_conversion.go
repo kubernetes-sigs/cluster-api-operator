@@ -20,7 +20,7 @@ import (
 	"strings"
 
 	apimachineryconversion "k8s.io/apimachinery/pkg/conversion"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	utilconversion "sigs.k8s.io/cluster-api/util/conversion"
 	ctrlconfigv1 "sigs.k8s.io/controller-runtime/pkg/config/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/conversion"
@@ -525,5 +525,5 @@ func fromImageMeta(im *ImageMeta) *string {
 		result = result + ":" + im.Tag
 	}
 
-	return pointer.String(result)
+	return ptr.To(result)
 }

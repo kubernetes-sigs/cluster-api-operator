@@ -25,14 +25,12 @@ import (
 	"github.com/go-errors/errors"
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
-	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/klog/v2/klogr"
-
 	kerrors "k8s.io/apimachinery/pkg/util/errors"
-
-	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/klog/v2/textlogger"
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -141,7 +139,7 @@ func init() {
 func runDelete() error {
 	ctx := context.Background()
 
-	ctrl.SetLogger(klogr.New())
+	ctrl.SetLogger(textlogger.NewLogger(textlogger.NewConfig()))
 
 	hasProviderNames := deleteOpts.coreProvider ||
 		(len(deleteOpts.bootstrapProviders) > 0) ||
