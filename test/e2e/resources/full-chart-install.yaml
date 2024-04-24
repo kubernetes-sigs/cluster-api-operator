@@ -6,6 +6,7 @@ metadata:
   annotations:
     cert-manager.io/inject-ca-from: 'default/capi-operator-serving-cert'
     controller-gen.kubebuilder.io/version: v0.14.0
+    helm.sh/resource-policy: keep
   labels:
     clusterctl.cluster.x-k8s.io/core: capi-operator
   name: addonproviders.operator.cluster.x-k8s.io
@@ -1623,6 +1624,7 @@ metadata:
   annotations:
     cert-manager.io/inject-ca-from: 'default/capi-operator-serving-cert'
     controller-gen.kubebuilder.io/version: v0.14.0
+    helm.sh/resource-policy: keep
   labels:
     clusterctl.cluster.x-k8s.io/core: capi-operator
   name: bootstrapproviders.operator.cluster.x-k8s.io
@@ -4825,6 +4827,7 @@ metadata:
   annotations:
     cert-manager.io/inject-ca-from: 'default/capi-operator-serving-cert'
     controller-gen.kubebuilder.io/version: v0.14.0
+    helm.sh/resource-policy: keep
   labels:
     clusterctl.cluster.x-k8s.io/core: capi-operator
   name: controlplaneproviders.operator.cluster.x-k8s.io
@@ -8030,6 +8033,7 @@ metadata:
   annotations:
     cert-manager.io/inject-ca-from: 'default/capi-operator-serving-cert'
     controller-gen.kubebuilder.io/version: v0.14.0
+    helm.sh/resource-policy: keep
   labels:
     clusterctl.cluster.x-k8s.io/core: capi-operator
   name: coreproviders.operator.cluster.x-k8s.io
@@ -11232,6 +11236,7 @@ metadata:
   annotations:
     cert-manager.io/inject-ca-from: 'default/capi-operator-serving-cert'
     controller-gen.kubebuilder.io/version: v0.14.0
+    helm.sh/resource-policy: keep
   labels:
     clusterctl.cluster.x-k8s.io/core: capi-operator
   name: infrastructureproviders.operator.cluster.x-k8s.io
@@ -14437,6 +14442,7 @@ metadata:
   annotations:
     cert-manager.io/inject-ca-from: 'default/capi-operator-serving-cert'
     controller-gen.kubebuilder.io/version: v0.14.0
+    helm.sh/resource-policy: keep
   labels:
     clusterctl.cluster.x-k8s.io/core: capi-operator
   name: ipamproviders.operator.cluster.x-k8s.io
@@ -16054,6 +16060,7 @@ metadata:
   annotations:
     cert-manager.io/inject-ca-from: 'default/capi-operator-serving-cert'
     controller-gen.kubebuilder.io/version: v0.14.0
+    helm.sh/resource-policy: keep
   labels:
     clusterctl.cluster.x-k8s.io/core: capi-operator
   name: runtimeextensionproviders.operator.cluster.x-k8s.io
