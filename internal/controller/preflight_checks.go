@@ -231,7 +231,7 @@ func checkProviderVersion(ctx context.Context, providerVersion string, provider 
 				operatorv1.PreflightCheckCondition,
 				operatorv1.UnsupportedProviderDowngradeReason,
 				clusterv1.ConditionSeverityError,
-				fmt.Sprintf(unsupportedProviderDowngradeMessage, provider.GetName(), configclient.ClusterAPIProviderName),
+				fmt.Sprintf(unsupportedProviderDowngradeMessage, provider.GetName()),
 			))
 
 			return fmt.Errorf("downgrade is not supported for provider %q", provider.GetName())
