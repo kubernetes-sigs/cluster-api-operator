@@ -5,7 +5,6 @@ cert-manager:
   enabled: false
   fullnameOverride: "cert-manager"
   namespace: "cert-manager"
-  installCRDs: true
 # ---
 # Cluster API provider options
 core: ""
