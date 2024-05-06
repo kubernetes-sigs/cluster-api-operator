@@ -59,9 +59,6 @@ type initOptions struct {
 
 const (
 	capiOperatorProviderName = "capi-operator"
-	// We have to specify a version here, because if we set "latest", clusterctl libs will try to fetch metadata.yaml file for the latest
-	// release and fail since CAPI operator doesn't provide this file.
-	capiOperatorManifestsURL = "https://github.com/kubernetes-sigs/cluster-api-operator/releases/v0.1.0/operator-components.yaml"
 )
 
 var initOpts = &initOptions{}

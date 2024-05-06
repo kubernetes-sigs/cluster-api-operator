@@ -40,15 +40,9 @@ func init() {
 
 func sortUpgradeItems(plan upgradePlan) {
 	sort.Slice(plan.Providers, func(i, j int) bool {
-		return plan.Providers[i].GetType() < plan.Providers[j].GetType() ||
-			(plan.Providers[i].GetType() == plan.Providers[j].GetType() && plan.Providers[i].GetName() < plan.Providers[j].GetName()) ||
-			(plan.Providers[i].GetType() == plan.Providers[j].GetType() && plan.Providers[i].GetName() == plan.Providers[j].GetName() && plan.Providers[i].GetNamespace() < plan.Providers[j].GetNamespace())
-	})
-}
-
-func sortUpgradePlans(upgradePlans []upgradePlan) {
-	sort.Slice(upgradePlans, func(i, j int) bool {
-		return upgradePlans[i].Contract < upgradePlans[j].Contract
+		return plan.Providers[i].Type < plan.Providers[j].Type ||
+			(plan.Providers[i].Type == plan.Providers[j].Type && plan.Providers[i].Name < plan.Providers[j].Name) ||
+			(plan.Providers[i].Type == plan.Providers[j].Type && plan.Providers[i].Name == plan.Providers[j].Name && plan.Providers[i].Namespace < plan.Providers[j].Namespace)
 	})
 }
 
