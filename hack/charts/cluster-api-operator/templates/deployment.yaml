@@ -47,6 +47,8 @@ spec:
       {{- toYaml . | nindent 8 }}
       {{- end }}
     spec:
+      serviceAccountName: capi-operator-manager
+      automountServiceAccountToken: true
       {{- with .Values.securityContext }}
       securityContext:
       {{- toYaml . | nindent 8 }}
