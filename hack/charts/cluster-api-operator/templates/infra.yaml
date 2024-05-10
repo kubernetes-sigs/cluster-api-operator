@@ -66,3 +66,6 @@ spec:
 {{- end }}
 {{- end }}
 {{- end }}
+{{- if hasKey $.Values.deploymentOverride "infrastructure" }}
+  {{ $.Values.deploymentOverride.infrastructure | toYaml | nindent 2 }}
+{{- end }}

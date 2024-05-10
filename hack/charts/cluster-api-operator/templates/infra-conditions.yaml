@@ -56,5 +56,7 @@ spec:
     {{- end }}
 {{- end }}
 {{- end }}
-
+{{- end }}
+{{- if hasKey $.Values.deploymentOverride "infra-condition" }}
+  {{ $.Values.deploymentOverride.infra-condition | toYaml | nindent 2 }}
 {{- end }}
