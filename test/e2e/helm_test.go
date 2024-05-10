@@ -229,4 +229,33 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 		Expect(err).ToNot(HaveOccurred())
 		Expect(manifests).To(Equal(string(expectedManifests)))
 	})
+
+	It("should include deplpoymentoverrides when specified - all", func() {
+		manifest, err := helmChart.Run(map[string]string{
+			"core":           "override-test-core",
+			"bootstrap":      "override-test-core",
+			"controlPlane":   "override-test-core",
+			"infrastructure": "override-test-core",
+			"addon":          "override-test-core",
+			"deploymentOverride.addon.containers[0].name":                         "manager",
+			"deploymentOverride.addon.containers[0].imageUrl":                     "test.org/cluster-api-provider-aws/cluster-api-provider-aws-controller:v0.6.0",
+			"deploymentOverride.core.containers[0].name":                          "manager",
+			"deploymentOverride.core.containers[0].imageUrl":                      "test.org/cluster-api/cluster-api-controller:v1.7.1",
+			"deploymentOverride.infrastructure.deployment.containers[0].name":     "manager",
+			"deploymentOverride.infrastructure.deployment.containers[0].imageUrl": "test.org/cluster-api-vsphere/cluster-api-vsphere-controller:v1.10.0",
+			"deploymentOverride.bootstrap.deployment.containers[0].name":          "manager",
+			"deploymentOverride.bootstrap.deployment.containers[0].imageUrl":      "test.org/cluster-api-bootstrap-provider-kubeadm/cluster-api-kubeadm-controller:v0.4.0",
+			"deploymentOverride.controlPlane.deployment.containers[0].name":       "manager",
+			"deploymentOverride.controlPlane.deployment.containers[0].imageUrl":   "test.org/cluster-api-control-plane/cluster-api-control-plane-controller:v0.4.0",
+			"deploymentOverride.coreConditions.containers[0].name":                "manager",
+			"deploymentOverride.coreConditions.containers[0].imageUrl":            "test.org/cluster-api/cluster-api-controller:v1.7.1",
+			"deploymentOverride.infraConditions.containers[0].name":               "manager",
+			"deploymentOverride.infraConditions.containers[0].imageUrl":           "test.org/cluster-api/cluster-api-controller:v1.7.1",
+		})
+		Except(err).ToNot(HaveOccurred())
+		Except(manifest).ToNot(BeEmpty())
+		expectedManifests, err := os.ReadFile(filepath.Join(customManifestsFolder, "deployment-overrides-all.yaml"))
+		Except(err).ToNot(HaveOccurred())
+		Except(manifest).To(Equal(string(expectedManifests)))
+	})
 })

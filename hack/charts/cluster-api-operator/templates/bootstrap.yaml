@@ -52,4 +52,7 @@ spec:
     {{- end }}
 {{- end }}
 {{- end }}
+{{- if hasKey $.Values.deploymentOverride "bootstrap" }}
+  {{ .Values.deploymentOverride.bootstrap | toYaml | nindent 2 }}
+{{- end }}
 {{- end }}
