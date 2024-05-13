@@ -8,6 +8,7 @@ For more detailed information, please refer to the full documentation.
 
 - [Running Kubernetes cluster](https://cluster-api.sigs.k8s.io/user/quick-start#install-andor-configure-a-kubernetes-cluster).
 - [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/) for interacting with the management cluster.
+- [Cert Manager](https://cert-manager.io/docs/installation/) for managing operator certificates.
 - [Helm](https://helm.sh/docs/intro/install/) for installing operator on the cluster (optional).
 
 ## Install and configure Cluster API Operator
@@ -37,7 +38,7 @@ helm repo update
 Deploy Cluster API components with docker provider using a single command during operator installation
 
 ```bash
-helm install capi-operator capi-operator/cluster-api-operator --create-namespace -n capi-operator-system --set infrastructure=docker --set cert-manager.enabled=true --set configSecret.name=${CREDENTIALS_SECRET_NAME} --set configSecret.namespace=${CREDENTIALS_SECRET_NAMESPACE}  --wait --timeout 90s
+helm install capi-operator capi-operator/cluster-api-operator --create-namespace -n capi-operator-system --set infrastructure=docker --set configSecret.name=${CREDENTIALS_SECRET_NAME} --set configSecret.namespace=${CREDENTIALS_SECRET_NAMESPACE}  --wait --timeout 90s
 ```
 
 Docker provider can be replaced by any provider supported by [clusterctl](https://cluster-api.sigs.k8s.io/reference/providers.html#infrastructure).

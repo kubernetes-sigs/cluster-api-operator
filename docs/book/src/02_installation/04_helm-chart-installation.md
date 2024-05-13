@@ -8,10 +8,6 @@ helm repo update
 helm install capi-operator capi-operator/cluster-api-operator --create-namespace -n capi-operator-system
 ```
 
-#### Installing cert-manager using Helm chart
-
-CAPI operator Helm chart supports provisioning of cert-manager as a dependency. It is disabled by default, but you can enable it with `--set cert-manager.enabled=true` option to `helm install` command or inside of `cert-manager` section in [values.yaml](https://github.com/kubernetes-sigs/cluster-api-operator/blob/main/hack/charts/cluster-api-operator/values.yaml) file. Additionally you can define other [parameters](https://artifacthub.io/packages/helm/cert-manager/cert-manager#configuration) provided by the cert-manager chart.
-
 #### Installing providers using Helm chart
 
 The operator Helm chart supports a "quickstart" option for bootstrapping a management cluster. The user experience is relatively similar to [clusterctl init](https://cluster-api.sigs.k8s.io/clusterctl/commands/init.html?highlight=init#clusterctl-init):

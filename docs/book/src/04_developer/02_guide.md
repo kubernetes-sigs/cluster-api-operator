@@ -67,7 +67,7 @@ kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/
 Ensure the cert-manager webhook service is ready before creating the Cluster API Operator components.
 
 This can be done by following instructions for [manual verification](https://cert-manager.io/docs/installation/verify/#manual-verification)
-from the [cert-manager] web site.
+from the [cert-manager] website.
 Note: make sure to follow instructions for the release of cert-manager you are installing.
 
 [cert-manager]: https://github.com/cert-manager/cert-manager
