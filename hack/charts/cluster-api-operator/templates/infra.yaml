@@ -1,3 +1,13 @@
+{{- define "recursivePrinter" }}
+{{- range $key, $value := . }}
+{{- if kindIs "map" $value }}
+  {{ $key }}:
+  {{- include "recursivePrinter" $value | indent 2 }}
+{{- else }}
+  {{ $key }}: {{ $value }}
+{{- end }}
+{{- end }}
+{{- end }}
 # Infrastructure providers
 {{- if .Values.infrastructure }}
 {{- $infrastructures := split ";" .Values.infrastructure }}
@@ -40,7 +50,7 @@ metadata:
     "helm.sh/hook": "post-install"
     "helm.sh/hook-weight": "2"
     "argocd.argoproj.io/sync-wave": "2"
-{{- if or $infrastructureVersion $.Values.configSecret.name $.Values.manager }}
+{{- if or $infrastructureVersion $.Values.configSecret.name $.Values.manager $.Values.additionalDeployments }}
 spec:
 {{- end }}
 {{- if $infrastructureVersion }}
@@ -65,6 +75,10 @@ spec:
     {{- if $.Values.configSecret.namespace }}
     namespace: {{ $.Values.configSecret.namespace }}
     {{- end }}
+{{- end }}
+{{- if $.Values.additionalDeployments }}
+  additionalDeployments:
+  {{- include "recursivePrinter" $.Values.additionalDeployments | indent 2 }}
 {{- end }}
 {{- end }}
 {{- end }}
