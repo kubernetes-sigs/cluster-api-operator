@@ -4,8 +4,3 @@ description: Cluster API Operator
 type: application
 version: 0.0.0
 appVersion: "0.0.0"
-dependencies:
-  - name: cert-manager
-    version: "0.0.0"
-    repository: https://charts.jetstack.io
-    condition: cert-manager.enabled

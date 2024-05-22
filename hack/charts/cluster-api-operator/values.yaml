@@ -1,11 +1,4 @@
 ---
-# Cert Manager options
-# Full list of supported values is available at https://artifacthub.io/packages/helm/cert-manager/cert-manager
-cert-manager:
-  enabled: false
-  fullnameOverride: "cert-manager"
-  namespace: "cert-manager"
-  installCRDs: true
 # ---
 # Cluster API provider options
 core: ""

@@ -57,9 +57,9 @@ The lexicon used in this document is described in more detail [here](https://git
 
 ## Installation
 
-### Method 1: Apply Manifests from Release Assets
+### Prerequisites
 
-Before installing the Cluster API Operator this way, you must first ensure that cert-manager is installed, as the operator does not manage cert-manager installations. To install cert-manager, run the following command:
+Before installing the Cluster API Operator, you must first ensure that cert-manager is installed, as the operator does not manage cert-manager installations. To install cert-manager, run the following command:
 
 ```bash
 kubectl apply -f https://github.com/jetstack/cert-manager/releases/latest/download/cert-manager.yaml
@@ -67,7 +67,11 @@ kubectl apply -f https://github.com/jetstack/cert-manager/releases/latest/downlo
 
 Wait for cert-manager to be ready before proceeding.
 
-After cert-manager is successfully installed, you can install the Cluster API operator directly by applying the latest release assets:
+After cert-manager is successfully installed, you can proceed installing the Cluster API operator.
+
+### Method 1: Apply Manifests from Release Assets
+
+You can install the Cluster API operator directly by applying the latest release assets:
 
 ```bash
 kubectl apply -f https://github.com/kubernetes-sigs/cluster-api-operator/releases/latest/download/operator-components.yaml
@@ -82,10 +86,6 @@ helm repo add capi-operator https://kubernetes-sigs.github.io/cluster-api-operat
 helm repo update
 helm install capi-operator capi-operator/cluster-api-operator --create-namespace -n capi-operator-system
 ```
-
-#### Installing cert-manager using Helm chart
-
-CAPI operator Helm chart supports provisioning of cert-manager as a dependency. It is disabled by default, but you can enable it with `--set cert-manager.enabled=true` option to `helm install` command or inside of `cert-manager` section in [values.yaml](https://github.com/kubernetes-sigs/cluster-api-operator/blob/main/hack/charts/cluster-api-operator/values.yaml) file. Additionally you can define other [parameters](https://artifacthub.io/packages/helm/cert-manager/cert-manager#configuration) provided by the cert-manager chart.
 
 #### Installing providers using Helm chart
 
