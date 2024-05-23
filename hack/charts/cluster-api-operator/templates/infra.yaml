@@ -38,7 +38,7 @@ metadata:
   annotations:
     "helm.sh/hook": "post-install"
     "helm.sh/hook-weight": "2"
-{{- if or $infrastructureVersion $.Values.configSecret.name }}
+{{- if or $infrastructureVersion $.Values.configSecret.name $.Values.manager }}
 spec:
 {{- end }}
 {{- if $infrastructureVersion }}
@@ -46,7 +46,7 @@ spec:
 {{- end }}
 {{- if $.Values.manager }}
   manager:
-{{- if hasKey $.Values.manager.featureGates $infrastructureName }}
+{{- if and (kindIs "map" $.Values.manager.featureGates) (hasKey $.Values.manager.featureGates $infrastructureName) }}
 {{- range $key, $value := $.Values.manager.featureGates }}
   {{- if eq $key $infrastructureName }}
     featureGates:
