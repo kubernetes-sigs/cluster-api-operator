@@ -49,6 +49,15 @@ metadata:
     "helm.sh/hook-weight": "2"
 {{- with .Values.configSecret }}
 spec:
+{{- if $.Values.manager }}
+  manager:
+{{- if $.Values.manager.featureGates.kubeadm }}
+    featureGates:
+    {{- range $key, $value := $.Values.manager.featureGates.kubeadm }}
+      {{ $key }}: {{ $value }}
+    {{- end }}
+{{- end }}
+{{- end }}
   configSecret:
     name: {{ .name }}
     {{- if .namespace }}
