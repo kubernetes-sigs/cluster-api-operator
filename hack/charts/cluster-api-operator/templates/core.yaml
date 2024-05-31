@@ -37,6 +37,7 @@ metadata:
   annotations:
     "helm.sh/hook": "post-install"
     "helm.sh/hook-weight": "2"
+    "argocd.argoproj.io/sync-wave": "2"
 {{- if or $coreVersion $.Values.configSecret.name }}
 spec:
 {{- end}}

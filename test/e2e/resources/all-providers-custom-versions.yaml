@@ -6,6 +6,7 @@ metadata:
   annotations:
     "helm.sh/hook": "post-install"
     "helm.sh/hook-weight": "1"
+    "argocd.argoproj.io/sync-wave": "1"
   name: helm-addon-system
 ---
 # Source: cluster-api-operator/templates/bootstrap.yaml
@@ -42,6 +43,7 @@ metadata:
   annotations:
     "helm.sh/hook": "post-install"
     "helm.sh/hook-weight": "1"
+    "argocd.argoproj.io/sync-wave": "1"
   name: docker-infrastructure-system
 ---
 # Source: cluster-api-operator/templates/addon.yaml
@@ -53,6 +55,7 @@ metadata:
   annotations:
     "helm.sh/hook": "post-install"
     "helm.sh/hook-weight": "2"
+    "argocd.argoproj.io/sync-wave": "2"
 spec:
   version: v0.1.0-alpha.9
 ---
@@ -95,6 +98,7 @@ metadata:
   annotations:
     "helm.sh/hook": "post-install"
     "helm.sh/hook-weight": "2"
+    "argocd.argoproj.io/sync-wave": "2"
 spec:
   version: v1.5.4
   configSecret:
@@ -110,6 +114,7 @@ metadata:
   annotations:
     "helm.sh/hook": "post-install"
     "helm.sh/hook-weight": "2"
+    "argocd.argoproj.io/sync-wave": "2"
 spec:
   version: v1.5.4
   configSecret:
