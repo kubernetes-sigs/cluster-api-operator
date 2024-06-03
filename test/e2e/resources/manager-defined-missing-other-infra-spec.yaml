@@ -1,0 +1,120 @@
+---
+# Source: cluster-api-operator/templates/addon.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    "helm.sh/hook": "post-install"
+    "helm.sh/hook-weight": "1"
+    "argocd.argoproj.io/sync-wave": "1"
+  name: helm-addon-system
+---
+# Source: cluster-api-operator/templates/bootstrap.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    "helm.sh/hook": "post-install"
+    "helm.sh/hook-weight": "1"
+  name: kubeadm-bootstrap-system
+---
+# Source: cluster-api-operator/templates/control-plane.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    "helm.sh/hook": "post-install"
+    "helm.sh/hook-weight": "1"
+  name: kubeadm-control-plane-system
+---
+# Source: cluster-api-operator/templates/core.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    "helm.sh/hook": "post-install"
+    "helm.sh/hook-weight": "1"
+  name: capi-system
+---
+# Source: cluster-api-operator/templates/infra.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    "helm.sh/hook": "post-install"
+    "helm.sh/hook-weight": "1"
+    "argocd.argoproj.io/sync-wave": "1"
+  name: docker-infrastructure-system
+---
+# Source: cluster-api-operator/templates/addon.yaml
+apiVersion: operator.cluster.x-k8s.io/v1alpha2
+kind: AddonProvider
+metadata:
+  name: helm
+  namespace: helm-addon-system
+  annotations:
+    "helm.sh/hook": "post-install"
+    "helm.sh/hook-weight": "2"
+    "argocd.argoproj.io/sync-wave": "2"
+---
+# Source: cluster-api-operator/templates/bootstrap.yaml
+apiVersion: operator.cluster.x-k8s.io/v1alpha2
+kind: BootstrapProvider
+metadata:
+  name: kubeadm
+  namespace: kubeadm-bootstrap-system
+  annotations:
+    "helm.sh/hook": "post-install"
+    "helm.sh/hook-weight": "2"
+spec:
+  configSecret:
+    name: test-secret-name
+    namespace: test-secret-namespace
+---
+# Source: cluster-api-operator/templates/control-plane.yaml
+apiVersion: operator.cluster.x-k8s.io/v1alpha2
+kind: ControlPlaneProvider
+metadata:
+  name: kubeadm
+  namespace: kubeadm-control-plane-system
+  annotations:
+    "helm.sh/hook": "post-install"
+    "helm.sh/hook-weight": "2"
+spec:
+  configSecret:
+    name: test-secret-name
+    namespace: test-secret-namespace
+---
+# Source: cluster-api-operator/templates/core.yaml
+apiVersion: operator.cluster.x-k8s.io/v1alpha2
+kind: CoreProvider
+metadata:
+  name: cluster-api
+  namespace: capi-system
+  annotations:
+    "helm.sh/hook": "post-install"
+    "helm.sh/hook-weight": "2"
+    "argocd.argoproj.io/sync-wave": "2"
+spec:
+  configSecret:
+    name: test-secret-name
+    namespace: test-secret-namespace
+---
+# Source: cluster-api-operator/templates/infra.yaml
+apiVersion: operator.cluster.x-k8s.io/v1alpha2
+kind: InfrastructureProvider
+metadata:
+  name: docker
+  namespace: docker-infrastructure-system
+  annotations:
+    "helm.sh/hook": "post-install"
+    "helm.sh/hook-weight": "2"
+    "argocd.argoproj.io/sync-wave": "2"
+spec:
+  configSecret:
+    name: test-secret-name
+    namespace: test-secret-namespace
+  manager:
+    featureGates:
+      ClusterTopology: true
+      MachinePool: true
