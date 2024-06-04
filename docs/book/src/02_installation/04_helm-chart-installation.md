@@ -12,6 +12,14 @@ helm install capi-operator capi-operator/cluster-api-operator --create-namespace
 
 The operator Helm chart supports a "quickstart" option for bootstrapping a management cluster. The user experience is relatively similar to [clusterctl init](https://cluster-api.sigs.k8s.io/clusterctl/commands/init.html?highlight=init#clusterctl-init):
 
+<aside class="note warning">
+
+<h1> Warning </h1>
+
+The `--wait` flag is REQUIRED for the helm install command to work with providers.
+
+</aside>
+
 ```bash
 helm install capi-operator capi-operator/cluster-api-operator --create-namespace -n capi-operator-system --set infrastructure=docker:v1.4.2  --wait --timeout 90s # core Cluster API with kubeadm bootstrap and control plane providers will also be installed
 ```
