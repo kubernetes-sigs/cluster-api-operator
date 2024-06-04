@@ -51,7 +51,7 @@ spec:
   secretNamespace: {{ $.Values.secretNamespace }}
 {{- end }}
 {{- end }}
-{{- end }}
 {{- if hasKey $.Values.deploymentOverride "addon" }}
-  {{ $.Values.deploymentOverride.addon | toYaml | nindent 2 }}
+  {{ .Values.deploymentOverride.addon | toYaml | nindent 2 }}
+{{- end }}
 {{- end }}

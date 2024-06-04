@@ -52,7 +52,8 @@ spec:
     {{- end }}
 {{- end }}
 {{- end }}
+{{- if hasKey $.Values.deploymentOverride "controlPlane" }}
+  {{ .Values.deploymentOverride.controlPlane | toYaml | nindent 2 }}
 {{- end }}
-{{- if hasKey $.Values.deploymentOverride "control-plane" }}
-  {{ $.Values.deploymentOverride.control-plane | toYaml | nindent 2 }}
 {{- end }}
+

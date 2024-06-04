@@ -27,8 +27,7 @@ spec:
     {{- end }}
 {{- end }}
 {{- end }}
+{{- if hasKey $.Values.deploymentOverride "coreCondition" }}
+  {{ .Values.deploymentOverride.coreCondition| toYaml | nindent 2 }}
 {{- end }}
-{{- if hasKey $.Values.deploymentOverride "core-condition" }}
-  {{ $.Values.deploymentOverride.core-condition | toYaml | nindent 2 }}
 {{- end }}
-
