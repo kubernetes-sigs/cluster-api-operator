@@ -6,6 +6,7 @@ metadata:
   annotations:
     "helm.sh/hook": "post-install"
     "helm.sh/hook-weight": "1"
+    "argocd.argoproj.io/sync-wave": "1"
   name: helm-addon-system
 ---
 # Source: cluster-api-operator/templates/core-conditions.yaml
@@ -24,6 +25,7 @@ metadata:
   annotations:
     "helm.sh/hook": "post-install"
     "helm.sh/hook-weight": "1"
+    "argocd.argoproj.io/sync-wave": "1"
   name: capi-kubeadm-bootstrap-system
 ---
 # Source: cluster-api-operator/templates/infra-conditions.yaml
@@ -33,6 +35,7 @@ metadata:
   annotations:
     "helm.sh/hook": "post-install"
     "helm.sh/hook-weight": "1"
+    "argocd.argoproj.io/sync-wave": "1"
   name: capi-kubeadm-control-plane-system
 ---
 # Source: cluster-api-operator/templates/infra.yaml
@@ -42,6 +45,7 @@ metadata:
   annotations:
     "helm.sh/hook": "post-install"
     "helm.sh/hook-weight": "1"
+    "argocd.argoproj.io/sync-wave": "1"
   name: docker-infrastructure-system
 ---
 # Source: cluster-api-operator/templates/addon.yaml
@@ -53,6 +57,7 @@ metadata:
   annotations:
     "helm.sh/hook": "post-install"
     "helm.sh/hook-weight": "2"
+    "argocd.argoproj.io/sync-wave": "2"
 ---
 # Source: cluster-api-operator/templates/infra-conditions.yaml
 apiVersion: operator.cluster.x-k8s.io/v1alpha2
@@ -63,6 +68,7 @@ metadata:
   annotations:
     "helm.sh/hook": "post-install"
     "helm.sh/hook-weight": "2"
+    "argocd.argoproj.io/sync-wave": "2"
 spec:
   configSecret:
     name: test-secret-name
@@ -77,6 +83,7 @@ metadata:
   annotations:
     "helm.sh/hook": "post-install"
     "helm.sh/hook-weight": "2"
+    "argocd.argoproj.io/sync-wave": "2"
 spec:
   configSecret:
     name: test-secret-name
@@ -105,6 +112,7 @@ metadata:
   annotations:
     "helm.sh/hook": "post-install"
     "helm.sh/hook-weight": "2"
+    "argocd.argoproj.io/sync-wave": "2"
 spec:
   configSecret:
     name: test-secret-name
