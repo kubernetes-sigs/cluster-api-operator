@@ -91,6 +91,9 @@ helm install capi-operator capi-operator/cluster-api-operator --create-namespace
 
 The operator Helm chart supports a "quickstart" option for bootstrapping a management cluster. The user experience is relatively similar to [clusterctl init](https://cluster-api.sigs.k8s.io/clusterctl/commands/init.html?highlight=init#clusterctl-init):
 
+> **Warning**
+> The `--wait` flag is REQUIRED for the helm install command to work with providers. If the --wait flag is not used, the helm install command will not wait for the resources to be created and will return immediately.
+
 ```bash
 helm install capi-operator capi-operator/cluster-api-operator --create-namespace -n capi-operator-system --set infrastructure=docker:v1.4.2  --wait --timeout 90s # core Cluster API with kubeadm bootstrap and control plane providers will also be installed
 ```
@@ -115,10 +118,13 @@ The operator Helm chart provides multiple ways to configure deployment. For inst
 
 #### Helm installation example
 
-The following command will install cert-manager, CAPI operator itself with modified log level, Core CAPI provider with kubeadm bootstrap and control plane, and Docker infrastructure.
+The following commands will install cert-manager, CAPI operator itself with modified log level, Core CAPI provider with kubeadm bootstrap and control plane, and Docker infrastructure.
 
 ```bash
-helm install capi-operator capi-operator/cluster-api-operator --create-namespace -n capi-operator-system --set infrastructure=docker:v1.5.0  --set cert-manager.enabled=true --set logLevel=4 --wait --timeout 90s
+helm repo add jetstack https://charts.jetstack.io --force-update
+helm repo update
+helm install cert-manager jetstack/cert-manager --namespace cert-manager --create-namespace --set installCRDs=true
+helm install capi-operator capi-operator/cluster-api-operator --create-namespace -n capi-operator-system --set infrastructure=docker:v1.5.0 --wait --timeout 90s
 ```
 
 ## Configuration
