@@ -46,6 +46,7 @@ func (src *BootstrapProvider) ConvertTo(dstRaw conversion.Hub) error {
 	}
 
 	dst.Spec.ManifestPatches = restored.Spec.ManifestPatches
+	dst.Spec.AdditionalDeployments = restored.Spec.AdditionalDeployments
 
 	return nil
 }
@@ -107,6 +108,7 @@ func (src *ControlPlaneProvider) ConvertTo(dstRaw conversion.Hub) error {
 	}
 
 	dst.Spec.ManifestPatches = restored.Spec.ManifestPatches
+	dst.Spec.AdditionalDeployments = restored.Spec.AdditionalDeployments
 
 	return nil
 }
@@ -168,6 +170,7 @@ func (src *CoreProvider) ConvertTo(dstRaw conversion.Hub) error {
 	}
 
 	dst.Spec.ManifestPatches = restored.Spec.ManifestPatches
+	dst.Spec.AdditionalDeployments = restored.Spec.AdditionalDeployments
 
 	return nil
 }
@@ -229,6 +232,7 @@ func (src *InfrastructureProvider) ConvertTo(dstRaw conversion.Hub) error {
 	}
 
 	dst.Spec.ManifestPatches = restored.Spec.ManifestPatches
+	dst.Spec.AdditionalDeployments = restored.Spec.AdditionalDeployments
 
 	return nil
 }

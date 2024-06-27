@@ -945,6 +945,7 @@ func autoConvert_v1alpha2_ProviderSpec_To_v1alpha1_ProviderSpec(in *v1alpha2.Pro
 	out.FetchConfig = (*FetchConfiguration)(unsafe.Pointer(in.FetchConfig))
 	out.AdditionalManifestsRef = (*ConfigmapReference)(unsafe.Pointer(in.AdditionalManifestsRef))
 	// WARNING: in.ManifestPatches requires manual conversion: does not exist in peer-type
+	// WARNING: in.AdditionalDeployments requires manual conversion: does not exist in peer-type
 	return nil
 }
 
