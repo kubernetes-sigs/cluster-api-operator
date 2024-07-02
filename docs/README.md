@@ -778,7 +778,7 @@ spec:
 ## Patching provider manifests
 
 Provider manifests can be patched using JSON merge patches. This can be useful when you need to modify the provider manifests that are fetched from the repository. In order to provider
-manifests `spec.ResourcePatches` has to be used where an array of patches can be specified:
+manifests `spec.ManifestPatches` has to be used where an array of patches can be specified:
 
 ```yaml
 ---
@@ -788,13 +788,13 @@ metadata:
   name: cluster-api
   namespace: capi-system
 spec:
-  resourcePatches:
+  manifestPatches:
     - |
-apiVersion: v1
-kind: Service
-metadata:
-labels:
-    test-label: test-value
+      apiVersion: v1
+      kind: Service
+      metadata:
+        labels:
+            test-label: test-value
 ```
 
 More information about JSON merge patches can be found here https://datatracker.ietf.org/doc/html/rfc7396
