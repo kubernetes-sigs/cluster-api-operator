@@ -73,25 +73,41 @@ func customizeObjectsFn(provider operatorv1.GenericProvider) func(objs []unstruc
 					}))
 			}
 
+			//nolint:nestif
 			if o.GetKind() == deploymentKind {
-				// We need to skip the deployment customization if there are several deployments available
-				// and the deployment name doesn't follow "ca*-controller-manager" pattern.
-				// Currently it is applicable only for CAPZ manifests, which contain 2 deployments:
-				// capz-controller-manager and azureserviceoperator-controller-manager
-				// This is a temporary fix until CAPI provides a contract to distinguish provider deployments.
-				// TODO: replace this check and just compare labels when CAPI provides the contract for that.
-				if isMultipleDeployments && !isProviderManagerDeploymentName(o.GetName()) {
-					results = append(results, o)
-
-					continue
-				}
-
 				d := &appsv1.Deployment{}
 				if err := scheme.Scheme.Convert(&o, d, nil); err != nil {
 					return nil, err
 				}
 
-				if err := customizeDeployment(provider.GetSpec(), d); err != nil {
+				providerDeployment := provider.GetSpec().Deployment
+				providerManager := provider.GetSpec().Manager
+
+				// If there are multiple deployments, check if we specify customizations for those deployments.
+				// We need to skip the deployment customization if there are several deployments available
+				// and the deployment name doesn't follow "ca*-controller-manager" pattern, or the provider
+				// doesn't specify customizations for the deployment.
+				// This is a temporary fix until CAPI provides a contract to distinguish provider deployments.
+				// TODO: replace this check and just compare labels when CAPI provides the contract for that.
+				if isMultipleDeployments && !isProviderManagerDeploymentName(o.GetName()) {
+					additionalDeployments := provider.GetSpec().AdditionalDeployments
+					// Skip the deployment if there are no additional deployments specified.
+					if additionalDeployments == nil {
+						results = append(results, o)
+						continue
+					}
+
+					additionalProviderCustomization, ok := additionalDeployments[o.GetName()]
+					if !ok {
+						results = append(results, o)
+						continue
+					}
+
+					providerDeployment = additionalProviderCustomization.Deployment
+					providerManager = additionalProviderCustomization.Manager
+				}
+
+				if err := customizeDeployment(providerDeployment, providerManager, d); err != nil {
 					return nil, err
 				}
 
@@ -108,28 +124,26 @@ func customizeObjectsFn(provider operatorv1.GenericProvider) func(objs []unstruc
 }
 
 // customizeDeployment customize provider deployment base on provider spec input.
-func customizeDeployment(pSpec operatorv1.ProviderSpec, d *appsv1.Deployment) error {
+func customizeDeployment(dSpec *operatorv1.DeploymentSpec, mSpec *operatorv1.ManagerSpec, d *appsv1.Deployment) error {
 	// Customize deployment spec first.
-	if pSpec.Deployment != nil {
-		customizeDeploymentSpec(pSpec, d)
+	if dSpec != nil {
+		customizeDeploymentSpec(*dSpec, d)
 	}
 
 	// Run the customizeManagerContainer after, so it overrides anything in the deploymentSpec.
-	if pSpec.Manager != nil {
+	if mSpec != nil {
 		container := findManagerContainer(&d.Spec)
 		if container == nil {
 			return fmt.Errorf("cannot find %q container in deployment %q", managerContainerName, d.Name)
 		}
 
-		customizeManagerContainer(pSpec.Manager, container)
+		customizeManagerContainer(mSpec, container)
 	}
 
 	return nil
 }
 
-func customizeDeploymentSpec(pSpec operatorv1.ProviderSpec, d *appsv1.Deployment) {
-	dSpec := pSpec.Deployment
-
+func customizeDeploymentSpec(dSpec operatorv1.DeploymentSpec, d *appsv1.Deployment) {
 	if dSpec.Replicas != nil {
 		d.Spec.Replicas = ptr.To(int32(*dSpec.Replicas))
 	}

@@ -73,6 +73,24 @@ type ProviderSpec struct {
 	// This should be an inline yaml blob-string https://datatracker.ietf.org/doc/html/rfc7396
 	// +optional
 	ManifestPatches []string `json:"manifestPatches,omitempty"`
+
+	// AdditionalDeployments is a map of additional deployments that the provider
+	// should manage. The key is the name of the deployment and the value is the
+	// DeploymentSpec.
+	// +optional
+	AdditionalDeployments map[string]AdditionalDeployments `json:"additionalDeployments,omitempty"`
+}
+
+// AdditionalDeployments defines the properties that can be enabled on the controller
+// manager and deployment for the provider if the provider is managing additional deployments.
+type AdditionalDeployments struct {
+	// Manager defines the properties that can be enabled on the controller manager for the additional provider deployment.
+	// +optional
+	Manager *ManagerSpec `json:"manager,omitempty"`
+
+	// Deployment defines the properties that can be enabled on the deployment for the additional provider deployment.
+	// +optional
+	Deployment *DeploymentSpec `json:"deployment,omitempty"`
 }
 
 // ConfigmapReference contains enough information to locate the configmap.
