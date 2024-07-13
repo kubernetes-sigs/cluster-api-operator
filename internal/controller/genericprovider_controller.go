@@ -23,7 +23,9 @@ import (
 	"errors"
 	"fmt"
 
+	v1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/client-go/rest"
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
@@ -46,7 +48,8 @@ type GenericProviderReconciler struct {
 }
 
 const (
-	appliedSpecHashAnnotation = "operator.cluster.x-k8s.io/applied-spec-hash"
+	appliedSpecHashAnnotation   = "operator.cluster.x-k8s.io/applied-spec-hash"
+	appliedConfigHashAnnotation = "operator.cluster.x-k8s.io/applied-config-hash"
 )
 
 func (r *GenericProviderReconciler) SetupWithManager(mgr ctrl.Manager, options controller.Options) error {
@@ -107,9 +110,19 @@ func (r *GenericProviderReconciler) Reconcile(ctx context.Context, req reconcile
 		return ctrl.Result{}, err
 	}
 
-	if r.Provider.GetAnnotations()[appliedSpecHashAnnotation] == specHash {
-		log.Info("No changes detected, skipping further steps")
+	upTodate := r.Provider.GetAnnotations()[appliedSpecHashAnnotation] == specHash
 
+	configHash, err := r.getProviderConfigSecretHash(ctx)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	if r.Provider.GetAnnotations()[appliedConfigHashAnnotation] != configHash {
+		upTodate = false
+	}
+
+	if upTodate {
+		log.Info("No changes detected, skipping further steps")
 		return ctrl.Result{}, nil
 	}
 
@@ -129,8 +142,19 @@ func (r *GenericProviderReconciler) Reconcile(ctx context.Context, req reconcile
 		}
 
 		annotations[appliedSpecHashAnnotation] = specHash
+
+		configHash, err := r.getProviderConfigSecretHash(ctx)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		if configHash != "" {
+			annotations[appliedConfigHashAnnotation] = configHash
+		} else {
+			delete(annotations, appliedConfigHashAnnotation)
+		}
 	} else {
 		annotations[appliedSpecHashAnnotation] = ""
+		delete(annotations, appliedConfigHashAnnotation)
 	}
 
 	r.Provider.SetAnnotations(annotations)
@@ -216,6 +240,30 @@ func (r *GenericProviderReconciler) reconcileDelete(ctx context.Context, provide
 	controllerutil.RemoveFinalizer(provider, operatorv1.ProviderFinalizer)
 
 	return res, nil
+}
+
+func (r *GenericProviderReconciler) getProviderConfigSecretHash(ctx context.Context) (string, error) {
+	if r.Provider.GetSpec().ConfigSecret != nil {
+		secret := &v1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: r.Provider.GetSpec().ConfigSecret.Namespace,
+				Name:      r.Provider.GetSpec().ConfigSecret.Name,
+			},
+		}
+		if secret.Namespace == "" {
+			secret.Namespace = r.Provider.GetNamespace()
+		}
+		err := r.Client.Get(ctx, client.ObjectKeyFromObject(secret), secret)
+		if err != nil {
+			return "", err
+		}
+		configHash, err := calculateHash(secret.Data)
+		if err != nil {
+			return "", err
+		}
+		return configHash, nil
+	}
+	return "", nil
 }
 
 func calculateHash(object interface{}) (string, error) {
