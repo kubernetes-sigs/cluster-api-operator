@@ -74,6 +74,9 @@ spec:
         {{- if .Values.insecureDiagnostics }}
         - --insecure-diagnostics={{ .Values.insecureDiagnostics }}
         {{- end }}
+        {{- if .Values.watchConfigSecret }}
+        - --watch-configsecret
+        {{- end }}
         {{- with .Values.leaderElection }}
         - --leader-elect={{ .enabled }}
         {{- if .leaseDuration }}
