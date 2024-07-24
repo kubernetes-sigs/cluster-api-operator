@@ -26,7 +26,7 @@ ROOT:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 GO_VERSION ?= 1.21.8
 GO_CONTAINER_IMAGE ?= docker.io/library/golang:$(GO_VERSION)
 
-# Use GOPROXY environment variable if set
+# Use GOPROXY environment variable if set otherwise use the default value.
 GOPROXY := $(shell go env GOPROXY)
 ifeq ($(GOPROXY),)
 GOPROXY := https://proxy.golang.org
