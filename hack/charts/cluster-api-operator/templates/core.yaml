@@ -60,7 +60,7 @@ spec:
     namespace: {{ $.Values.configSecret.namespace }}
     {{- end }}
 {{- end }}
-{{- if hasKey $.Values.deploymentOverride "core" }}
+{{- if hasKey (default (dict) $.Values.deploymentOverride) "core" }}
   {{ .Values.deploymentOverride.core | toYaml | nindent 2 }}
 {{- end }}
 {{- end }}

@@ -81,7 +81,7 @@ spec:
   {{- include "recursivePrinter" $.Values.additionalDeployments | indent 2 }}
 {{- end }}
 {{- end }}
-{{- if hasKey $.Values.deploymentOverride "infrastructure" }}
+{{- if hasKey (default (dict) $.Values.deploymentOverride ) "infrastructure" }}
   {{ .Values.deploymentOverride.infrastructure | toYaml | nindent 2 }}
 {{- end }}
 {{- end }}
