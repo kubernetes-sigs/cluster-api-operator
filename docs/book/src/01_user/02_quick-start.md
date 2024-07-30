@@ -8,6 +8,7 @@ For more detailed information, please refer to the full documentation.
 
 - [Running Kubernetes cluster](https://cluster-api.sigs.k8s.io/user/quick-start#install-andor-configure-a-kubernetes-cluster).
 - [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/) for interacting with the management cluster.
+- [Cert Manager](https://cert-manager.io/docs/installation/) for managing operator certificates.
 - [Helm](https://helm.sh/docs/intro/install/) for installing operator on the cluster (optional).
 
 ## Install and configure Cluster API Operator
@@ -27,17 +28,32 @@ kubectl create secret generic "${CREDENTIALS_SECRET_NAME}" --from-literal=AWS_B6
 
 ### Installing Cluster API Operator
 
-Add helm repository:
+Add CAPI Operator & cert manager helm repository:
 
 ```bash
 helm repo add capi-operator https://kubernetes-sigs.github.io/cluster-api-operator
+helm repo add jetstack https://charts.jetstack.io --force-update
 helm repo update
 ```
 
-Deploy Cluster API components with docker provider using a single command during operator installation
+Install cert manager:
 
 ```bash
-helm install capi-operator capi-operator/cluster-api-operator --create-namespace -n capi-operator-system --set infrastructure=docker --set cert-manager.enabled=true --set configSecret.name=${CREDENTIALS_SECRET_NAME} --set configSecret.namespace=${CREDENTIALS_SECRET_NAMESPACE}  --wait --timeout 90s
+helm install cert-manager jetstack/cert-manager --namespace cert-manager --create-namespace --set installCRDs=true
+```
+
+Deploy Cluster API components with docker provider using a single command during operator installation.
+
+<aside class="note warning">
+
+<h1> Warning </h1>
+
+The `--wait` flag is REQUIRED for the helm install command to work. If the --wait flag is not used, the helm install command will not wait for the resources to be created and will return immediately. This will cause the helm install command to fail because the webhooks will not be ready in time. The --timeout flag is optional and can be used to specify the amount of time to wait for the resources to be created.
+
+</aside>
+
+```bash
+helm install capi-operator capi-operator/cluster-api-operator --create-namespace -n capi-operator-system --set infrastructure=docker --set configSecret.name=${CREDENTIALS_SECRET_NAME} --set configSecret.namespace=${CREDENTIALS_SECRET_NAMESPACE}  --wait --timeout 90s
 ```
 
 Docker provider can be replaced by any provider supported by [clusterctl](https://cluster-api.sigs.k8s.io/reference/providers.html#infrastructure).

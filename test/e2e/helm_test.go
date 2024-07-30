@@ -42,7 +42,7 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 		manifests, err := fullRun.Run(nil)
 		Expect(err).ToNot(HaveOccurred())
 		fullChartInstall, err := os.ReadFile(filepath.Join(customManifestsFolder, "full-chart-install.yaml"))
-		Expect(manifests).To(Equal(string(fullChartInstall)))
+		Expect(manifests).To(MatchYAML(string(fullChartInstall)))
 	})
 
 	It("should not deploy providers when none specified", func() {
@@ -65,7 +65,7 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 		Expect(manifests).ToNot(BeEmpty())
 		expectedManifests, err := os.ReadFile(filepath.Join(customManifestsFolder, "all-providers-custom-ns-versions.yaml"))
 		Expect(err).ToNot(HaveOccurred())
-		Expect(manifests).To(Equal(string(expectedManifests)))
+		Expect(manifests).To(MatchYAML(string(expectedManifests)))
 	})
 
 	It("should deploy all providers with custom versions", func() {
@@ -82,7 +82,7 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 		Expect(manifests).ToNot(BeEmpty())
 		expectedManifests, err := os.ReadFile(filepath.Join(customManifestsFolder, "all-providers-custom-versions.yaml"))
 		Expect(err).ToNot(HaveOccurred())
-		Expect(manifests).To(Equal(string(expectedManifests)))
+		Expect(manifests).To(MatchYAML(string(expectedManifests)))
 	})
 
 	It("should deploy all providers with latest version", func() {
@@ -99,7 +99,7 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 		Expect(manifests).ToNot(BeEmpty())
 		expectedManifests, err := os.ReadFile(filepath.Join(customManifestsFolder, "all-providers-latest-versions.yaml"))
 		Expect(err).ToNot(HaveOccurred())
-		Expect(manifests).To(Equal(string(expectedManifests)))
+		Expect(manifests).To(MatchYAML(string(expectedManifests)))
 	})
 
 	It("should deploy core, bootstrap, control plane when only infra is specified", func() {
@@ -112,7 +112,7 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 		Expect(manifests).ToNot(BeEmpty())
 		expectedManifests, err := os.ReadFile(filepath.Join(customManifestsFolder, "only-infra.yaml"))
 		Expect(err).ToNot(HaveOccurred())
-		Expect(manifests).To(Equal(string(expectedManifests)))
+		Expect(manifests).To(MatchYAML(string(expectedManifests)))
 	})
 
 	It("should deploy core when only bootstrap is specified", func() {
@@ -125,7 +125,7 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 		Expect(manifests).ToNot(BeEmpty())
 		expectedManifests, err := os.ReadFile(filepath.Join(customManifestsFolder, "only-bootstrap.yaml"))
 		Expect(err).ToNot(HaveOccurred())
-		Expect(manifests).To(Equal(string(expectedManifests)))
+		Expect(manifests).To(MatchYAML(string(expectedManifests)))
 	})
 
 	It("should deploy core when only control plane is specified", func() {
@@ -138,7 +138,7 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 		Expect(manifests).ToNot(BeEmpty())
 		expectedManifests, err := os.ReadFile(filepath.Join(customManifestsFolder, "only-control-plane.yaml"))
 		Expect(err).ToNot(HaveOccurred())
-		Expect(manifests).To(Equal(string(expectedManifests)))
+		Expect(manifests).To(MatchYAML(string(expectedManifests)))
 	})
 
 	It("should deploy multiple infra providers with custom namespace and versions", func() {
@@ -151,7 +151,7 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 		Expect(manifests).ToNot(BeEmpty())
 		expectedManifests, err := os.ReadFile(filepath.Join(customManifestsFolder, "multiple-infra-custom-ns-versions.yaml"))
 		Expect(err).ToNot(HaveOccurred())
-		Expect(manifests).To(Equal(string(expectedManifests)))
+		Expect(manifests).To(MatchYAML(string(expectedManifests)))
 	})
 
 	It("should deploy multiple control plane providers with custom namespace and versions", func() {
@@ -164,7 +164,7 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 		Expect(manifests).ToNot(BeEmpty())
 		expectedManifests, err := os.ReadFile(filepath.Join(customManifestsFolder, "multiple-control-plane-custom-ns-versions.yaml"))
 		Expect(err).ToNot(HaveOccurred())
-		Expect(manifests).To(Equal(string(expectedManifests)))
+		Expect(manifests).To(MatchYAML(string(expectedManifests)))
 	})
 
 	It("should deploy multiple bootstrap providers with custom namespace and versions", func() {
@@ -177,7 +177,7 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 		Expect(manifests).ToNot(BeEmpty())
 		expectedManifests, err := os.ReadFile(filepath.Join(customManifestsFolder, "multiple-bootstrap-custom-ns-versions.yaml"))
 		Expect(err).ToNot(HaveOccurred())
-		Expect(manifests).To(Equal(string(expectedManifests)))
+		Expect(manifests).To(MatchYAML(string(expectedManifests)))
 	})
 
 	It("should deploy core when only addon is specified", func() {
@@ -190,7 +190,7 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 		Expect(manifests).ToNot(BeEmpty())
 		expectedManifests, err := os.ReadFile(filepath.Join(customManifestsFolder, "only-addon.yaml"))
 		Expect(err).ToNot(HaveOccurred())
-		Expect(manifests).To(Equal(string(expectedManifests)))
+		Expect(manifests).To(MatchYAML(string(expectedManifests)))
 	})
 
 	It("should deploy core, bootstrap, control plane when only infra and addon is specified", func() {
@@ -204,7 +204,7 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 		Expect(manifests).ToNot(BeEmpty())
 		expectedManifests, err := os.ReadFile(filepath.Join(customManifestsFolder, "only-infra-and-addon.yaml"))
 		Expect(err).ToNot(HaveOccurred())
-		Expect(manifests).To(Equal(string(expectedManifests)))
+		Expect(manifests).To(MatchYAML(string(expectedManifests)))
 	})
 	It("should deploy core and infra with feature gates enabled", func() {
 		manifests, err := helmChart.Run(map[string]string{
@@ -227,7 +227,39 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 		Expect(manifests).ToNot(BeEmpty())
 		expectedManifests, err := os.ReadFile(filepath.Join(customManifestsFolder, "feature-gates.yaml"))
 		Expect(err).ToNot(HaveOccurred())
-		Expect(manifests).To(Equal(string(expectedManifests)))
+		Expect(manifests).To(MatchYAML(string(expectedManifests)))
+	})
+	It("should deploy all providers with manager defined but no feature gates enabled", func() {
+		manifests, err := helmChart.Run(map[string]string{
+			"configSecret.name":                "test-secret-name",
+			"configSecret.namespace":           "test-secret-namespace",
+			"infrastructure":                   "azure",
+			"addon":                            "helm",
+			"core":                             "cluster-api",
+			"manager.cert-manager.enabled":     "false",
+			"manager.cert-manager.installCRDs": "false",
+		})
+		Expect(err).ToNot(HaveOccurred())
+		Expect(manifests).ToNot(BeEmpty())
+		expectedManifests, err := os.ReadFile(filepath.Join(customManifestsFolder, "all-providers-latest-versions.yaml"))
+		Expect(err).ToNot(HaveOccurred())
+		Expect(manifests).To(MatchYAML(string(expectedManifests)))
+	})
+	It("should deploy all providers when manager is defined but another infrastructure spec field is defined", func() {
+		manifests, err := helmChart.Run(map[string]string{
+			"core":           "cluster-api",
+			"controlPlane":   "kubeadm",
+			"bootstrap":      "kubeadm",
+			"infrastructure": "docker",
+			"addon":          "helm",
+			"manager.featureGates.core.ClusterTopology": "true",
+			"manager.featureGates.core.MachinePool":     "true",
+		})
+		Expect(err).ToNot(HaveOccurred())
+		Expect(manifests).ToNot(BeEmpty())
+		expectedManifests, err := os.ReadFile(filepath.Join(customManifestsFolder, "manager-defined-missing-other-infra-spec.yaml"))
+		Expect(err).ToNot(HaveOccurred())
+		Expect(manifests).To(MatchYAML(string(expectedManifests)))
 	})
 
 	It("should include deplpoymentoverrides when specified - all", func() {

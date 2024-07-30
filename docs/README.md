@@ -57,9 +57,9 @@ The lexicon used in this document is described in more detail [here](https://git
 
 ## Installation
 
-### Method 1: Apply Manifests from Release Assets
+### Prerequisites
 
-Before installing the Cluster API Operator this way, you must first ensure that cert-manager is installed, as the operator does not manage cert-manager installations. To install cert-manager, run the following command:
+Before installing the Cluster API Operator, you must first ensure that cert-manager is installed, as the operator does not manage cert-manager installations. To install cert-manager, run the following command:
 
 ```bash
 kubectl apply -f https://github.com/jetstack/cert-manager/releases/latest/download/cert-manager.yaml
@@ -67,7 +67,11 @@ kubectl apply -f https://github.com/jetstack/cert-manager/releases/latest/downlo
 
 Wait for cert-manager to be ready before proceeding.
 
-After cert-manager is successfully installed, you can install the Cluster API operator directly by applying the latest release assets:
+After cert-manager is successfully installed, you can proceed installing the Cluster API operator.
+
+### Method 1: Apply Manifests from Release Assets
+
+You can install the Cluster API operator directly by applying the latest release assets:
 
 ```bash
 kubectl apply -f https://github.com/kubernetes-sigs/cluster-api-operator/releases/latest/download/operator-components.yaml
@@ -83,13 +87,12 @@ helm repo update
 helm install capi-operator capi-operator/cluster-api-operator --create-namespace -n capi-operator-system
 ```
 
-#### Installing cert-manager using Helm chart
-
-CAPI operator Helm chart supports provisioning of cert-manager as a dependency. It is disabled by default, but you can enable it with `--set cert-manager.enabled=true` option to `helm install` command or inside of `cert-manager` section in [values.yaml](https://github.com/kubernetes-sigs/cluster-api-operator/blob/main/hack/charts/cluster-api-operator/values.yaml) file. Additionally you can define other [parameters](https://artifacthub.io/packages/helm/cert-manager/cert-manager#configuration) provided by the cert-manager chart.
-
 #### Installing providers using Helm chart
 
 The operator Helm chart supports a "quickstart" option for bootstrapping a management cluster. The user experience is relatively similar to [clusterctl init](https://cluster-api.sigs.k8s.io/clusterctl/commands/init.html?highlight=init#clusterctl-init):
+
+> **Warning**
+> The `--wait` flag is REQUIRED for the helm install command to work with providers. If the --wait flag is not used, the helm install command will not wait for the resources to be created and will return immediately.
 
 ```bash
 helm install capi-operator capi-operator/cluster-api-operator --create-namespace -n capi-operator-system --set infrastructure=docker:v1.4.2  --wait --timeout 90s # core Cluster API with kubeadm bootstrap and control plane providers will also be installed
@@ -115,10 +118,13 @@ The operator Helm chart provides multiple ways to configure deployment. For inst
 
 #### Helm installation example
 
-The following command will install cert-manager, CAPI operator itself with modified log level, Core CAPI provider with kubeadm bootstrap and control plane, and Docker infrastructure.
+The following commands will install cert-manager, CAPI operator itself with modified log level, Core CAPI provider with kubeadm bootstrap and control plane, and Docker infrastructure.
 
 ```bash
-helm install capi-operator capi-operator/cluster-api-operator --create-namespace -n capi-operator-system --set infrastructure=docker:v1.5.0  --set cert-manager.enabled=true --set logLevel=4 --wait --timeout 90s
+helm repo add jetstack https://charts.jetstack.io --force-update
+helm repo update
+helm install cert-manager jetstack/cert-manager --namespace cert-manager --create-namespace --set installCRDs=true
+helm install capi-operator capi-operator/cluster-api-operator --create-namespace -n capi-operator-system --set infrastructure=docker:v1.5.0 --wait --timeout 90s
 ```
 
 ## Configuration
@@ -772,7 +778,7 @@ spec:
 ## Patching provider manifests
 
 Provider manifests can be patched using JSON merge patches. This can be useful when you need to modify the provider manifests that are fetched from the repository. In order to provider
-manifests `spec.ResourcePatches` has to be used where an array of patches can be specified:
+manifests `spec.ManifestPatches` has to be used where an array of patches can be specified:
 
 ```yaml
 ---
@@ -782,13 +788,13 @@ metadata:
   name: cluster-api
   namespace: capi-system
 spec:
-  resourcePatches:
+  manifestPatches:
     - |
-apiVersion: v1
-kind: Service
-metadata:
-labels:
-    test-label: test-value
+      apiVersion: v1
+      kind: Service
+      metadata:
+        labels:
+            test-label: test-value
 ```
 
 More information about JSON merge patches can be found here https://datatracker.ietf.org/doc/html/rfc7396

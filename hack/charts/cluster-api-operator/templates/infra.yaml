@@ -1,3 +1,13 @@
+{{- define "recursivePrinter" }}
+{{- range $key, $value := . }}
+{{- if kindIs "map" $value }}
+  {{ $key }}:
+  {{- include "recursivePrinter" $value | indent 2 }}
+{{- else }}
+  {{ $key }}: {{ $value }}
+{{- end }}
+{{- end }}
+{{- end }}
 # Infrastructure providers
 {{- if .Values.infrastructure }}
 {{- $infrastructures := split ";" .Values.infrastructure }}
@@ -28,6 +38,7 @@ metadata:
   annotations:
     "helm.sh/hook": "post-install"
     "helm.sh/hook-weight": "1"
+    "argocd.argoproj.io/sync-wave": "1"
   name: {{ $infrastructureNamespace }}
 ---
 apiVersion: operator.cluster.x-k8s.io/v1alpha2
@@ -38,7 +49,8 @@ metadata:
   annotations:
     "helm.sh/hook": "post-install"
     "helm.sh/hook-weight": "2"
-{{- if or $infrastructureVersion $.Values.configSecret.name }}
+    "argocd.argoproj.io/sync-wave": "2"
+{{- if or $infrastructureVersion $.Values.configSecret.name $.Values.manager $.Values.additionalDeployments }}
 spec:
 {{- end }}
 {{- if $infrastructureVersion }}
@@ -46,7 +58,7 @@ spec:
 {{- end }}
 {{- if $.Values.manager }}
   manager:
-{{- if hasKey $.Values.manager.featureGates $infrastructureName }}
+{{- if and (kindIs "map" $.Values.manager.featureGates) (hasKey $.Values.manager.featureGates $infrastructureName) }}
 {{- range $key, $value := $.Values.manager.featureGates }}
   {{- if eq $key $infrastructureName }}
     featureGates:
@@ -63,6 +75,10 @@ spec:
     {{- if $.Values.configSecret.namespace }}
     namespace: {{ $.Values.configSecret.namespace }}
     {{- end }}
+{{- end }}
+{{- if $.Values.additionalDeployments }}
+  additionalDeployments:
+  {{- include "recursivePrinter" $.Values.additionalDeployments | indent 2 }}
 {{- end }}
 {{- end }}
 {{- if hasKey $.Values.deploymentOverride "infrastructure" }}

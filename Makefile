@@ -140,7 +140,7 @@ CONTROLLER_IMG_TAG ?= $(CONTROLLER_IMG)-$(ARCH):$(TAG)
 LDFLAGS := $(shell $(ROOT)/hack/version.sh)
 
 # Default cert-manager version
-CERT_MANAGER_VERSION ?= v1.13.2
+CERT_MANAGER_VERSION ?= v1.14.5
 
 # E2E configuration
 GINKGO_NOCOLOR ?= false
@@ -480,7 +480,6 @@ release-manifests: $(KUSTOMIZE) $(RELEASE_DIR) ## Builds the manifests to publis
 release-chart: $(HELM) $(KUSTOMIZE) $(RELEASE_DIR) $(CHART_DIR) $(CHART_PACKAGE_DIR) ## Builds the chart to publish with a release
 	cp -rf $(ROOT)/hack/charts/cluster-api-operator/. $(CHART_DIR)
 	$(KUSTOMIZE) build ./config/chart > $(CHART_DIR)/templates/operator-components.yaml
-	$(ROOT)/hack/inject-cert-manager-chart-version.sh $(CERT_MANAGER_VERSION)
 	$(HELM) package $(CHART_DIR) --app-version=$(HELM_CHART_TAG) --version=$(HELM_CHART_TAG) --destination=$(CHART_PACKAGE_DIR)
 
 .PHONY: release-staging

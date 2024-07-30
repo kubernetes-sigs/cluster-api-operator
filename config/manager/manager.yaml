@@ -15,6 +15,8 @@ spec:
       labels:
         control-plane: controller-manager
     spec:
+      serviceAccountName: manager
+      automountServiceAccountToken: true
       containers:
       - command:
         - /manager
