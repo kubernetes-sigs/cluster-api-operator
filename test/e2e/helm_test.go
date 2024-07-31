@@ -261,4 +261,20 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 		Expect(err).ToNot(HaveOccurred())
 		Expect(manifests).To(MatchYAML(string(expectedManifests)))
 	})
+
+	It("should include deplpoymentoverrides when specified", func() {
+		manifests, err := helmChart.Run(map[string]string{
+			"configSecret.name":      "test-secret-name",
+			"configSecret.namespace": "test-secret-namespace",
+			"infrastructure":         "docker",
+			"addon":                  "helm",
+			"deploymentOverride.infrastructure.deployment.containers[0].name":     "manager",
+			"deploymentOverride.infrastructure.deployment.containers[0].imageUrl": "test.org/cluster-api-vsphere/cluster-api-vsphere-controller:v1.10.0",
+		})
+		Expect(err).ToNot(HaveOccurred())
+		Expect(manifests).ToNot(BeEmpty())
+		expectedManifests, err := os.ReadFile(filepath.Join(customManifestsFolder, "only-infra-and-addon-override.yaml"))
+		Expect(err).ToNot(HaveOccurred())
+		Expect(manifests).To(MatchYAML(string(expectedManifests)))
+	})
 })
