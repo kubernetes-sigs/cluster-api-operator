@@ -4,7 +4,7 @@ apiVersion: v1
 kind: Namespace
 metadata:
   annotations:
-    "helm.sh/hook": "post-install"
+    "helm.sh/hook": "post-install,post-upgrade"
     "helm.sh/hook-weight": "1"
   name: kubeadm-control-plane-system
 ---
@@ -13,7 +13,7 @@ apiVersion: v1
 kind: Namespace
 metadata:
   annotations:
-    "helm.sh/hook": "post-install"
+    "helm.sh/hook": "post-install,post-upgrade"
     "helm.sh/hook-weight": "1"
   name: capi-system
 ---
@@ -24,7 +24,7 @@ metadata:
   name: kubeadm
   namespace: kubeadm-control-plane-system
   annotations:
-    "helm.sh/hook": "post-install"
+    "helm.sh/hook": "post-install,post-upgrade"
     "helm.sh/hook-weight": "2"
 spec:
   configSecret:
@@ -38,7 +38,7 @@ metadata:
   name: cluster-api
   namespace: capi-system
   annotations:
-    "helm.sh/hook": "post-install"
+    "helm.sh/hook": "post-install,post-upgrade"
     "helm.sh/hook-weight": "2"
 spec:
   configSecret:
