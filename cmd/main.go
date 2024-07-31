@@ -46,6 +46,7 @@ import (
 	operatorv1alpha1 "sigs.k8s.io/cluster-api-operator/api/v1alpha1"
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
 	providercontroller "sigs.k8s.io/cluster-api-operator/internal/controller"
+	"sigs.k8s.io/cluster-api-operator/internal/controller/genericprovider"
 	healtchcheckcontroller "sigs.k8s.io/cluster-api-operator/internal/controller/healthcheck"
 )
 
@@ -67,6 +68,7 @@ var (
 	webhookPort                 int
 	webhookCertDir              string
 	healthAddr                  string
+	watchConfigSecretChanges    bool
 	diagnosticsOptions          = flags.DiagnosticsOptions{}
 )
 
@@ -97,6 +99,9 @@ func InitFlags(fs *pflag.FlagSet) {
 
 	fs.StringVar(&watchFilterValue, "watch-filter", "",
 		fmt.Sprintf("Label value that the controller watches to reconcile cluster-api objects. Label key is always %s. If unspecified, the controller watches for all cluster-api objects.", clusterv1.WatchLabel))
+
+	fs.BoolVar(&watchConfigSecretChanges, "watch-configsecret", false,
+		"Watch for changes to the ConfigSecret resource and reconcile all providers using it.")
 
 	fs.StringVar(&watchNamespace, "namespace", "",
 		"Namespace that the controller watches to reconcile cluster-api objects. If unspecified, the controller watches for cluster-api objects across all namespaces.")
@@ -185,7 +190,7 @@ func main() {
 	ctx := ctrl.SetupSignalHandler()
 
 	setupChecks(mgr)
-	setupReconcilers(mgr)
+	setupReconcilers(mgr, watchConfigSecretChanges)
 	setupWebhooks(mgr)
 
 	// +kubebuilder:scaffold:builder
@@ -209,7 +214,7 @@ func setupChecks(mgr ctrl.Manager) {
 	}
 }
 
-func setupReconcilers(mgr ctrl.Manager) {
+func setupReconcilers(mgr ctrl.Manager, watchConfigSecretChanges bool) {
 	if err := (&providercontroller.GenericProviderReconciler{
 		Provider:     &operatorv1.CoreProvider{},
 		ProviderList: &operatorv1.CoreProviderList{},
@@ -285,6 +290,24 @@ func setupReconcilers(mgr ctrl.Manager) {
 	}).SetupWithManager(mgr, concurrency(concurrencyNumber)); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Healthcheck")
 		os.Exit(1)
+	}
+
+	if watchConfigSecretChanges {
+		if err := (&providercontroller.SecretReconciler{
+			ProviderLists: []genericprovider.GenericProviderList{
+				&operatorv1.CoreProviderList{},
+				&operatorv1.InfrastructureProviderList{},
+				&operatorv1.BootstrapProviderList{},
+				&operatorv1.ControlPlaneProviderList{},
+				&operatorv1.AddonProviderList{},
+				&operatorv1.IPAMProviderList{},
+				&operatorv1.RuntimeExtensionProviderList{},
+			},
+			Client: mgr.GetClient(),
+		}).SetupWithManager(mgr, concurrency(concurrencyNumber)); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "Secret")
+			os.Exit(1)
+		}
 	}
 }
 
