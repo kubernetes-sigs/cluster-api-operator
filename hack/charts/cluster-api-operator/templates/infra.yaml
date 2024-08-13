@@ -1,13 +1,3 @@
-{{- define "recursivePrinter" }}
-{{- range $key, $value := . }}
-{{- if kindIs "map" $value }}
-  {{ $key }}:
-  {{- include "recursivePrinter" $value | indent 2 }}
-{{- else }}
-  {{ $key }}: {{ $value }}
-{{- end }}
-{{- end }}
-{{- end }}
 # Infrastructure providers
 {{- if .Values.infrastructure }}
 {{- $infrastructures := split ";" .Values.infrastructure }}
@@ -77,8 +67,7 @@ spec:
     {{- end }}
 {{- end }}
 {{- if $.Values.additionalDeployments }}
-  additionalDeployments:
-  {{- include "recursivePrinter" $.Values.additionalDeployments | indent 2 }}
+  additionalDeployments: {{ toYaml $.Values.additionalDeployments | nindent 4 }}
 {{- end }}
 {{- end }}
 {{- end }}
