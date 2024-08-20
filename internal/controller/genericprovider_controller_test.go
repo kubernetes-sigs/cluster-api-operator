@@ -23,6 +23,7 @@ import (
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -43,13 +44,15 @@ releaseSeries:
     minor: 4
     contract: v1beta1
 `
-	testComponents = `
+	testDeploymentName = "capd-controller-manager"
+	testComponents     = `
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
     cluster.x-k8s.io/provider: infrastructure-docker
     control-plane: controller-manager
+    value-from-config: ${CONFIGURED_VALUE:=default-value}
   name: capd-controller-manager
   namespace: capd-system
 spec:
@@ -103,6 +106,107 @@ func dummyConfigMap(ns, name string) *corev1.ConfigMap {
 			"components": testComponents,
 		},
 	}
+}
+
+func createDummyProviderWithConfigSecret(objs []client.Object, provider genericprovider.GenericProvider, configSecret *v1.Secret) ([]client.Object, error) {
+	cm := dummyConfigMap(provider.GetNamespace(), testCurrentVersion)
+
+	if err := env.CreateAndWait(ctx, cm); err != nil {
+		return objs, err
+	}
+	objs = append(objs, cm)
+	provider.SetSpec(operatorv1.ProviderSpec{
+		Version: testCurrentVersion,
+		ConfigSecret: &operatorv1.SecretReference{
+			Name:      configSecret.GetName(),
+			Namespace: configSecret.GetNamespace(),
+		},
+		ManifestPatches: []string{},
+	})
+	insertDummyConfig(provider)
+	err := env.CreateAndWait(ctx, provider)
+	if err != nil {
+		return objs, err
+	}
+	objs = append(objs, provider)
+	return objs, nil
+}
+
+func testDeploymentLabelValueGetter(deploymentNS, deploymentName string) func() string {
+	return func() string {
+		deployment := &appsv1.Deployment{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      deploymentName,
+				Namespace: deploymentNS,
+			},
+		}
+
+		if err := env.Get(ctx, client.ObjectKeyFromObject(deployment), deployment); err != nil {
+			return ""
+		}
+
+		return deployment.Labels["value-from-config"]
+	}
+}
+
+func TestConfigSecretChangesAreAppliedTotheDeployment(t *testing.T) {
+	g := NewWithT(t)
+	objs := []client.Object{}
+	defer func() {
+		g.Expect(env.CleanupAndWait(ctx, objs...)).To(Succeed())
+	}()
+
+	ns, err := env.CreateNamespace(ctx, "config-secret-namespace")
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(ns.Name).NotTo(BeEmpty())
+
+	t.Log("Ensure namespace exists", ns.Name)
+
+	configSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: "config-secret-",
+			Namespace:    ns.Name,
+		},
+		StringData: map[string]string{
+			"CONFIGURED_VALUE": "initial-value",
+		},
+	}
+	g.Expect(env.CreateAndWait(ctx, configSecret)).To(Succeed())
+	objs = append(objs, configSecret)
+
+	t.Log("Created config secret")
+
+	objs, err = createDummyProviderWithConfigSecret(
+		objs,
+		&operatorv1.CoreProvider{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "cluster-api",
+				Namespace: ns.Name,
+			},
+		},
+		configSecret,
+	)
+	g.Expect(err).To(Succeed())
+
+	t.Log("Created provider")
+
+	g.Eventually(
+		testDeploymentLabelValueGetter(ns.Name, testDeploymentName),
+		30*time.Second,
+	).Should(BeEquivalentTo("initial-value"))
+
+	t.Log("Provider deploymnet deployed")
+
+	configSecret.Data["CONFIGURED_VALUE"] = []byte("updated-value")
+
+	g.Expect(env.Update(ctx, configSecret)).NotTo(HaveOccurred())
+
+	t.Log("Config secret updated")
+
+	g.Eventually(
+		testDeploymentLabelValueGetter(ns.Name, testDeploymentName),
+		30*time.Second,
+	).Should(BeEquivalentTo("updated-value"))
 }
 
 func TestReconcilerPreflightConditions(t *testing.T) {
@@ -379,7 +483,7 @@ releaseSeries:
 				// Ensure customization occurred
 				dep := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{
 					Namespace: provider.Namespace,
-					Name:      "capd-controller-manager",
+					Name:      testDeploymentName,
 				}}
 				if err := env.Get(ctx, client.ObjectKeyFromObject(dep), dep); err != nil {
 					return false
@@ -460,6 +564,10 @@ func TestProviderConfigSecretChanges(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			g := NewWithT(t)
+			objs := []client.Object{}
+			defer func() {
+				g.Expect(env.CleanupAndWait(ctx, objs...)).To(Succeed())
+			}()
 
 			dataHash, err := calculateHash(tc.cmData)
 			g.Expect(err).ToNot(HaveOccurred())
@@ -504,7 +612,9 @@ func TestProviderConfigSecretChanges(t *testing.T) {
 			t.Log("Ensure namespace exists", configNamespace.Name)
 			g.Expect(err).ToNot(HaveOccurred())
 
-			g.Expect(env.CreateAndWait(ctx, dummyConfigMap(providerNamespace.Name, testCurrentVersion))).To(Succeed())
+			cm := dummyConfigMap(providerNamespace.Name, testCurrentVersion)
+			g.Expect(env.CreateAndWait(ctx, cm)).To(Succeed())
+			objs = append(objs, cm)
 
 			provider.Namespace = providerNamespace.Name
 			provider.Spec.ConfigSecret.Namespace = configNamespace.Name
@@ -518,9 +628,11 @@ func TestProviderConfigSecretChanges(t *testing.T) {
 			}
 
 			g.Expect(env.CreateAndWait(ctx, secret.DeepCopy())).To(Succeed())
+			objs = append(objs, secret)
 
 			t.Log("creating test provider", provider.GetName())
 			g.Expect(env.CreateAndWait(ctx, provider.DeepCopy())).To(Succeed())
+			objs = append(objs, provider)
 
 			g.Eventually(generateExpectedResultChecker(provider, appliedConfigHashAnnotation, dataHash, corev1.ConditionTrue), timeout).Should(BeEquivalentTo(true))
 
@@ -553,9 +665,6 @@ func TestProviderConfigSecretChanges(t *testing.T) {
 			}).Should(Succeed())
 
 			g.Eventually(generateExpectedResultChecker(provider, appliedConfigHashAnnotation, updatedDataHash, corev1.ConditionTrue), timeout).Should(BeEquivalentTo(true))
-
-			// Clean up
-			g.Expect(env.Cleanup(ctx, provider, secret, providerNamespace, configNamespace)).To(Succeed())
 		})
 	}
 }

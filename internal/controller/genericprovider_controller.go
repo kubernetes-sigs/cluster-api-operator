@@ -23,7 +23,7 @@ import (
 	"errors"
 	"fmt"
 
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kerrors "k8s.io/apimachinery/pkg/util/errors"
@@ -37,14 +37,16 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 type GenericProviderReconciler struct {
-	Provider     genericprovider.GenericProvider
-	ProviderList genericprovider.GenericProviderList
-	Client       client.Client
-	Config       *rest.Config
+	Provider                 genericprovider.GenericProvider
+	ProviderList             genericprovider.GenericProviderList
+	Client                   client.Client
+	Config                   *rest.Config
+	WatchConfigSecretChanges bool
 }
 
 const (
@@ -53,9 +55,16 @@ const (
 )
 
 func (r *GenericProviderReconciler) SetupWithManager(mgr ctrl.Manager, options controller.Options) error {
-	return ctrl.NewControllerManagedBy(mgr).
-		For(r.Provider).
-		WithOptions(options).
+	builder := ctrl.NewControllerManagedBy(mgr).
+		For(r.Provider)
+	if r.WatchConfigSecretChanges {
+		builder.Watches(
+			&corev1.Secret{},
+			handler.EnqueueRequestsFromMapFunc(newSecretToProviderFuncMapForProviderList(r.Client, r.ProviderList)),
+		)
+	}
+
+	return builder.WithOptions(options).
 		Complete(r)
 }
 
@@ -244,7 +253,7 @@ func (r *GenericProviderReconciler) reconcileDelete(ctx context.Context, provide
 
 func (r *GenericProviderReconciler) getProviderConfigSecretHash(ctx context.Context) (string, error) {
 	if r.Provider.GetSpec().ConfigSecret != nil {
-		secret := &v1.Secret{
+		secret := &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: r.Provider.GetSpec().ConfigSecret.Namespace,
 				Name:      r.Provider.GetSpec().ConfigSecret.Name,
