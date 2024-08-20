@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"hash"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -50,8 +51,7 @@ type GenericProviderReconciler struct {
 }
 
 const (
-	appliedSpecHashAnnotation   = "operator.cluster.x-k8s.io/applied-spec-hash"
-	appliedConfigHashAnnotation = "operator.cluster.x-k8s.io/applied-config-hash"
+	appliedSpecHashAnnotation = "operator.cluster.x-k8s.io/applied-spec-hash"
 )
 
 func (r *GenericProviderReconciler) SetupWithManager(mgr ctrl.Manager, options controller.Options) error {
@@ -114,23 +114,12 @@ func (r *GenericProviderReconciler) Reconcile(ctx context.Context, req reconcile
 	}
 
 	// Check if spec hash stays the same and don't go further in this case.
-	specHash, err := calculateHash(r.Provider.GetSpec())
+	specHash, err := calculateHash(ctx, r.Client, r.Provider)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
-	upTodate := r.Provider.GetAnnotations()[appliedSpecHashAnnotation] == specHash
-
-	configHash, err := r.getProviderConfigSecretHash(ctx)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
-	if r.Provider.GetAnnotations()[appliedConfigHashAnnotation] != configHash {
-		upTodate = false
-	}
-
-	if upTodate {
+	if r.Provider.GetAnnotations()[appliedSpecHashAnnotation] == specHash {
 		log.Info("No changes detected, skipping further steps")
 		return ctrl.Result{}, nil
 	}
@@ -145,25 +134,14 @@ func (r *GenericProviderReconciler) Reconcile(ctx context.Context, req reconcile
 	// Set the spec hash annotation if reconciliation was successful or reset it otherwise.
 	if res.IsZero() && err == nil {
 		// Recalculate spec hash in case it was changed during reconciliation process.
-		specHash, err = calculateHash(r.Provider.GetSpec())
+		specHash, err := calculateHash(ctx, r.Client, r.Provider)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
 
 		annotations[appliedSpecHashAnnotation] = specHash
-
-		configHash, err := r.getProviderConfigSecretHash(ctx)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
-		if configHash != "" {
-			annotations[appliedConfigHashAnnotation] = configHash
-		} else {
-			delete(annotations, appliedConfigHashAnnotation)
-		}
 	} else {
 		annotations[appliedSpecHashAnnotation] = ""
-		delete(annotations, appliedConfigHashAnnotation)
 	}
 
 	r.Provider.SetAnnotations(annotations)
@@ -251,40 +229,52 @@ func (r *GenericProviderReconciler) reconcileDelete(ctx context.Context, provide
 	return res, nil
 }
 
-func (r *GenericProviderReconciler) getProviderConfigSecretHash(ctx context.Context) (string, error) {
-	if r.Provider.GetSpec().ConfigSecret != nil {
+func addConfigSecretToHash(ctx context.Context, k8sClient client.Client, hash hash.Hash, provider genericprovider.GenericProvider) error {
+	if provider.GetSpec().ConfigSecret != nil {
 		secret := &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
-				Namespace: r.Provider.GetSpec().ConfigSecret.Namespace,
-				Name:      r.Provider.GetSpec().ConfigSecret.Name,
+				Namespace: provider.GetSpec().ConfigSecret.Namespace,
+				Name:      provider.GetSpec().ConfigSecret.Name,
 			},
 		}
 		if secret.Namespace == "" {
-			secret.Namespace = r.Provider.GetNamespace()
+			secret.Namespace = provider.GetNamespace()
 		}
-		err := r.Client.Get(ctx, client.ObjectKeyFromObject(secret), secret)
+		err := k8sClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)
 		if err != nil {
-			return "", err
+			return err
 		}
-		configHash, err := calculateHash(secret.Data)
+		err = addObjectToHash(hash, secret.Data)
 		if err != nil {
-			return "", err
+			return err
 		}
-		return configHash, nil
+		return nil
 	}
-	return "", nil
+	return nil
 }
 
-func calculateHash(object interface{}) (string, error) {
+func addObjectToHash(hash hash.Hash, object interface{}) error {
 	jsonData, err := json.Marshal(object)
 	if err != nil {
-		return "", fmt.Errorf("cannot parse provider spec: %w", err)
+		return fmt.Errorf("cannot marshal object: %w", err)
 	}
 
+	if _, err = hash.Write(jsonData); err != nil {
+		return fmt.Errorf("cannot calculate object hash: %w", err)
+	}
+	return nil
+}
+
+func calculateHash(ctx context.Context, k8sClient client.Client, provider genericprovider.GenericProvider) (string, error) {
 	hash := sha256.New()
 
-	if _, err = hash.Write(jsonData); err != nil {
-		return "", fmt.Errorf("cannot calculate provider spec hash: %w", err)
+	err := addObjectToHash(hash, provider.GetSpec())
+	if err != nil {
+		return "", err
+	}
+
+	if err := addConfigSecretToHash(ctx, k8sClient, hash, provider); err != nil {
+		return "", err
 	}
 
 	return fmt.Sprintf("%x", hash.Sum(nil)), nil
