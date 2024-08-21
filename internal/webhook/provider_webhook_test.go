@@ -25,6 +25,12 @@ import (
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
 )
 
+const (
+	testNamespaceName  = "test-namespace"
+	testNamespaceName1 = "test-namespace-1"
+	testNamespaceName2 = "test-namespace-2"
+)
+
 func TestSetDefaultProviderSpec(t *testing.T) {
 	testCases := []struct {
 		name                 string
@@ -39,11 +45,11 @@ func TestSetDefaultProviderSpec(t *testing.T) {
 					Name: "test-secret",
 				},
 			},
-			namespace: "test-namespace",
+			namespace: testNamespaceName,
 			expectedProviderSpec: &operatorv1.ProviderSpec{
 				ConfigSecret: &operatorv1.SecretReference{
 					Name:      "test-secret",
-					Namespace: "test-namespace",
+					Namespace: testNamespaceName,
 				},
 			},
 		},
@@ -52,14 +58,14 @@ func TestSetDefaultProviderSpec(t *testing.T) {
 			providerSpec: &operatorv1.ProviderSpec{
 				ConfigSecret: &operatorv1.SecretReference{
 					Name:      "test-secret",
-					Namespace: "test-namespace-1",
+					Namespace: testNamespaceName1,
 				},
 			},
-			namespace: "test-namespace-2",
+			namespace: testNamespaceName2,
 			expectedProviderSpec: &operatorv1.ProviderSpec{
 				ConfigSecret: &operatorv1.SecretReference{
 					Name:      "test-secret",
-					Namespace: "test-namespace-1",
+					Namespace: testNamespaceName1,
 				},
 			},
 		},
@@ -70,11 +76,11 @@ func TestSetDefaultProviderSpec(t *testing.T) {
 					Name: "test-configmap",
 				},
 			},
-			namespace: "test-namespace",
+			namespace: testNamespaceName,
 			expectedProviderSpec: &operatorv1.ProviderSpec{
 				AdditionalManifestsRef: &operatorv1.ConfigmapReference{
 					Name:      "test-configmap",
-					Namespace: "test-namespace",
+					Namespace: testNamespaceName,
 				},
 			},
 		},
@@ -83,14 +89,14 @@ func TestSetDefaultProviderSpec(t *testing.T) {
 			providerSpec: &operatorv1.ProviderSpec{
 				AdditionalManifestsRef: &operatorv1.ConfigmapReference{
 					Name:      "test-configmap",
-					Namespace: "test-namespace-1",
+					Namespace: testNamespaceName1,
 				},
 			},
-			namespace: "test-namespace-2",
+			namespace: testNamespaceName2,
 			expectedProviderSpec: &operatorv1.ProviderSpec{
 				AdditionalManifestsRef: &operatorv1.ConfigmapReference{
 					Name:      "test-configmap",
-					Namespace: "test-namespace-1",
+					Namespace: testNamespaceName1,
 				},
 			},
 		},

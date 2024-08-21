@@ -24,7 +24,6 @@ import (
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -93,10 +92,10 @@ func insertDummyConfig(provider genericprovider.GenericProvider) {
 	provider.SetSpec(spec)
 }
 
-func dummyConfigMap(ns, name string) *corev1.ConfigMap {
+func dummyConfigMap(ns string) *corev1.ConfigMap {
 	return &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
+			Name:      testCurrentVersion,
 			Namespace: ns,
 			Labels: map[string]string{
 				"test": "dummy-config",
@@ -109,13 +108,15 @@ func dummyConfigMap(ns, name string) *corev1.ConfigMap {
 	}
 }
 
-func createDummyProviderWithConfigSecret(objs []client.Object, provider genericprovider.GenericProvider, configSecret *v1.Secret) ([]client.Object, error) {
-	cm := dummyConfigMap(provider.GetNamespace(), testCurrentVersion)
+func createDummyProviderWithConfigSecret(objs []client.Object, provider genericprovider.GenericProvider, configSecret *corev1.Secret) ([]client.Object, error) {
+	cm := dummyConfigMap(provider.GetNamespace())
 
 	if err := env.CreateAndWait(ctx, cm); err != nil {
 		return objs, err
 	}
+
 	objs = append(objs, cm)
+
 	provider.SetSpec(operatorv1.ProviderSpec{
 		Version: testCurrentVersion,
 		ConfigSecret: &operatorv1.SecretReference{
@@ -124,12 +125,16 @@ func createDummyProviderWithConfigSecret(objs []client.Object, provider genericp
 		},
 		ManifestPatches: []string{},
 	})
+
 	insertDummyConfig(provider)
+
 	err := env.CreateAndWait(ctx, provider)
 	if err != nil {
 		return objs, err
 	}
+
 	objs = append(objs, provider)
+
 	return objs, nil
 }
 
@@ -153,6 +158,7 @@ func testDeploymentLabelValueGetter(deploymentNS, deploymentName string) func() 
 func TestConfigSecretChangesAreAppliedTotheDeployment(t *testing.T) {
 	g := NewWithT(t)
 	objs := []client.Object{}
+
 	defer func() {
 		g.Expect(env.CleanupAndWait(ctx, objs...)).To(Succeed())
 	}()
@@ -277,7 +283,7 @@ func TestReconcilerPreflightConditions(t *testing.T) {
 			t.Log("Ensure namespace exists", tc.namespace)
 			g.Expect(env.EnsureNamespaceExists(ctx, tc.namespace)).To(Succeed())
 
-			g.Expect(env.CreateAndWait(ctx, dummyConfigMap(tc.namespace, testCurrentVersion))).To(Succeed())
+			g.Expect(env.CreateAndWait(ctx, dummyConfigMap(tc.namespace))).To(Succeed())
 
 			for _, p := range tc.providers {
 				insertDummyConfig(p)
@@ -566,6 +572,7 @@ func TestProviderConfigSecretChanges(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			g := NewWithT(t)
 			objs := []client.Object{}
+
 			defer func() {
 				g.Expect(env.CleanupAndWait(ctx, objs...)).To(Succeed())
 			}()
@@ -601,7 +608,7 @@ func TestProviderConfigSecretChanges(t *testing.T) {
 			t.Log("Ensure namespace exists", configNamespace.Name)
 			g.Expect(err).ToNot(HaveOccurred())
 
-			cm := dummyConfigMap(providerNamespace.Name, testCurrentVersion)
+			cm := dummyConfigMap(providerNamespace.Name)
 			g.Expect(env.CreateAndWait(ctx, cm)).To(Succeed())
 			objs = append(objs, cm)
 
@@ -640,16 +647,19 @@ func TestProviderConfigSecretChanges(t *testing.T) {
 			}).Should(Succeed())
 
 			var updatedDataHash string
+
 			if tc.expectSameHash {
 				g.Eventually(func() string {
 					updatedDataHash, err = calculateHash(ctx, env.Client, provider)
 					g.Expect(err).ToNot(HaveOccurred())
+
 					return updatedDataHash
 				}, 15*time.Second).Should(Equal(initialHash))
 			} else {
 				g.Eventually(func() string {
 					updatedDataHash, err = calculateHash(ctx, env.Client, provider)
 					g.Expect(err).ToNot(HaveOccurred())
+
 					return updatedDataHash
 				}, 15*time.Second).ShouldNot(Equal(initialHash))
 			}
@@ -789,7 +799,7 @@ func TestProviderSpecChanges(t *testing.T) {
 			t.Log("Ensure namespace exists", ns.Name)
 			g.Expect(err).ToNot(HaveOccurred())
 
-			g.Expect(env.CreateAndWait(ctx, dummyConfigMap(ns.Name, testCurrentVersion))).To(Succeed())
+			g.Expect(env.CreateAndWait(ctx, dummyConfigMap(ns.Name))).To(Succeed())
 
 			provider.SetNamespace(ns.Name)
 			t.Log("creating test provider", provider.GetName())

@@ -30,7 +30,8 @@ import (
 )
 
 const (
-	timeout = time.Second * 30
+	timeout           = time.Second * 30
+	testNamespaceName = "test-namespace"
 )
 
 var (

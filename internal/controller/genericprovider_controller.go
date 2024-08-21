@@ -240,16 +240,20 @@ func addConfigSecretToHash(ctx context.Context, k8sClient client.Client, hash ha
 		if secret.Namespace == "" {
 			secret.Namespace = provider.GetNamespace()
 		}
+
 		err := k8sClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)
 		if err != nil {
 			return err
 		}
+
 		err = addObjectToHash(hash, secret.Data)
 		if err != nil {
 			return err
 		}
+
 		return nil
 	}
+
 	return nil
 }
 
@@ -262,6 +266,7 @@ func addObjectToHash(hash hash.Hash, object interface{}) error {
 	if _, err = hash.Write(jsonData); err != nil {
 		return fmt.Errorf("cannot calculate object hash: %w", err)
 	}
+
 	return nil
 }
 
