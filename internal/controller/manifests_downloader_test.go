@@ -22,6 +22,8 @@ import (
 
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	clusterctlv1 "sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3"
+	configclient "sigs.k8s.io/cluster-api/cmd/clusterctl/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
@@ -34,14 +36,12 @@ func TestManifestsDownloader(t *testing.T) {
 
 	fakeclient := fake.NewClientBuilder().WithObjects().Build()
 
-	namespace := "test-namespace"
-
 	p := &phaseReconciler{
 		ctrlClient: fakeclient,
 		provider: &operatorv1.CoreProvider{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "cluster-api",
-				Namespace: namespace,
+				Namespace: "test-namespace",
 			},
 			Spec: operatorv1.CoreProviderSpec{
 				ProviderSpec: operatorv1.ProviderSpec{
@@ -66,4 +66,53 @@ func TestManifestsDownloader(t *testing.T) {
 	g.Expect(err).ToNot(HaveOccurred())
 
 	g.Expect(exists).To(BeTrue())
+}
+
+func TestProviderDownloadWithOverrides(t *testing.T) {
+	g := NewWithT(t)
+
+	ctx := context.Background()
+
+	fakeclient := fake.NewClientBuilder().WithObjects().Build()
+
+	namespace := "test-namespace"
+
+	reader := configclient.NewMemoryReader()
+	_, err := reader.AddProvider("cluster-api", clusterctlv1.CoreProviderType, "https://github.com/kubernetes-sigs/cluster-api/releases/v1.4.3/core-components.yaml")
+	g.Expect(err).ToNot(HaveOccurred())
+
+	overridesClient, err := configclient.New(ctx, "", configclient.InjectReader(reader))
+	g.Expect(err).ToNot(HaveOccurred())
+
+	overridesClient.Variables().Set("images", `
+all:
+  repository: "myorg.io/local-repo"
+`)
+
+	p := &phaseReconciler{
+		ctrlClient: fakeclient,
+		provider: &operatorv1.CoreProvider{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "cluster-api",
+				Namespace: namespace,
+			},
+			Spec: operatorv1.CoreProviderSpec{},
+		},
+		overridesClient: overridesClient,
+	}
+
+	_, err = p.initializePhaseReconciler(ctx)
+	g.Expect(err).ToNot(HaveOccurred())
+
+	_, err = p.downloadManifests(ctx)
+	g.Expect(err).ToNot(HaveOccurred())
+
+	_, err = p.load(ctx)
+	g.Expect(err).ToNot(HaveOccurred())
+
+	_, err = p.fetch(ctx)
+	g.Expect(err).ToNot(HaveOccurred())
+
+	g.Expect(p.components.Images()).To(HaveExactElements([]string{"myorg.io/local-repo/cluster-api-controller:v1.4.3"}))
+	g.Expect(p.components.Version()).To(Equal("v1.4.3"))
 }

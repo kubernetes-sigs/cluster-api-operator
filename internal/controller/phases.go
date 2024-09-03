@@ -65,6 +65,7 @@ type phaseReconciler struct {
 	options            repository.ComponentsOptions
 	providerConfig     configclient.Provider
 	configClient       configclient.Client
+	overridesClient    configclient.Client
 	components         repository.Components
 	clusterctlProvider *clusterctlv1.Provider
 }
@@ -126,16 +127,31 @@ func (p *phaseReconciler) initializePhaseReconciler(ctx context.Context) (reconc
 	initConfig, err := configclient.New(ctx, path)
 	if err != nil {
 		return reconcile.Result{}, err
+	} else if path != "" {
+		// Set the image and providers override client
+		p.overridesClient = initConfig
 	}
 
-	providers, err := initConfig.Providers().List()
+	overrideProviders := []configclient.Provider{}
+
+	if p.overridesClient != nil {
+		providers, err := p.overridesClient.Providers().List()
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+
+		overrideProviders = providers
+	}
+
+	reader, err := p.secretReader(ctx, overrideProviders...)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	reader, err := p.secretReader(ctx, providers...)
-	if err != nil {
-		return reconcile.Result{}, err
+	if p.overridesClient != nil {
+		if imageOverrides, err := p.overridesClient.Variables().Get("images"); err == nil {
+			reader.Set("images", imageOverrides)
+		}
 	}
 
 	// Load provider's secret and config url.
