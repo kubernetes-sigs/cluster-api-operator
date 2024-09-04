@@ -1,8 +1,13 @@
+name: PR verify
+
 on:
   pull_request_target:
     types: [opened, edited, synchronize, reopened]
     branches:    
     - main
+
+permissions:
+  checks: write # Allow access to checks to write check runs.
 
 jobs:
   verify:
@@ -11,6 +16,6 @@ jobs:
     steps:
     - name: Verifier action
       id: verifier
-      uses: kubernetes-sigs/kubebuilder-release-tools@v0.1
+      uses: kubernetes-sigs/kubebuilder-release-tools@012269a88fa4c034a0acf1ba84c26b195c0dbab4 # tag=v0.4.3
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
