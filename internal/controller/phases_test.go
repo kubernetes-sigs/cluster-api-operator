@@ -41,14 +41,13 @@ func TestSecretReader(t *testing.T) {
 
 	secretName := "test-secret"
 	secretNamespace := "test-secret-namespace"
-	namespace := "test-namespace"
 
 	p := &phaseReconciler{
 		ctrlClient: fakeclient,
 		provider: &operatorv1.CoreProvider{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "cluster-api",
-				Namespace: namespace,
+				Namespace: testNamespaceName,
 			},
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "CoreProvider",

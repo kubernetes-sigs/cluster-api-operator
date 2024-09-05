@@ -41,7 +41,7 @@ func TestManifestsDownloader(t *testing.T) {
 		provider: &operatorv1.CoreProvider{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "cluster-api",
-				Namespace: "test-namespace",
+				Namespace: testNamespaceName,
 			},
 			Spec: operatorv1.CoreProviderSpec{
 				ProviderSpec: operatorv1.ProviderSpec{
@@ -75,8 +75,6 @@ func TestProviderDownloadWithOverrides(t *testing.T) {
 
 	fakeclient := fake.NewClientBuilder().WithObjects().Build()
 
-	namespace := "test-namespace"
-
 	reader := configclient.NewMemoryReader()
 	_, err := reader.AddProvider("cluster-api", clusterctlv1.CoreProviderType, "https://github.com/kubernetes-sigs/cluster-api/releases/v1.4.3/core-components.yaml")
 	g.Expect(err).ToNot(HaveOccurred())
@@ -94,7 +92,7 @@ all:
 		provider: &operatorv1.CoreProvider{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "cluster-api",
-				Namespace: namespace,
+				Namespace: testNamespaceName,
 			},
 			Spec: operatorv1.CoreProviderSpec{},
 		},

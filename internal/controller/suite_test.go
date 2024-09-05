@@ -30,7 +30,8 @@ import (
 )
 
 const (
-	timeout = time.Second * 30
+	timeout           = time.Second * 30
+	testNamespaceName = "test-namespace"
 )
 
 var (
@@ -44,33 +45,37 @@ func TestMain(m *testing.M) {
 	env = envtest.New()
 
 	if err := (&GenericProviderReconciler{
-		Provider:     &operatorv1.CoreProvider{},
-		ProviderList: &operatorv1.CoreProviderList{},
-		Client:       env,
+		Provider:                 &operatorv1.CoreProvider{},
+		ProviderList:             &operatorv1.CoreProviderList{},
+		Client:                   env,
+		WatchConfigSecretChanges: true,
 	}).SetupWithManager(env.Manager, controller.Options{MaxConcurrentReconciles: 1}); err != nil {
 		panic(fmt.Sprintf("Failed to start CoreProviderReconciler: %v", err))
 	}
 
 	if err := (&GenericProviderReconciler{
-		Provider:     &operatorv1.InfrastructureProvider{},
-		ProviderList: &operatorv1.InfrastructureProviderList{},
-		Client:       env,
+		Provider:                 &operatorv1.InfrastructureProvider{},
+		ProviderList:             &operatorv1.InfrastructureProviderList{},
+		Client:                   env,
+		WatchConfigSecretChanges: true,
 	}).SetupWithManager(env.Manager, controller.Options{MaxConcurrentReconciles: 1}); err != nil {
 		panic(fmt.Sprintf("Failed to start InfrastructureProviderReconciler: %v", err))
 	}
 
 	if err := (&GenericProviderReconciler{
-		Provider:     &operatorv1.BootstrapProvider{},
-		ProviderList: &operatorv1.BootstrapProviderList{},
-		Client:       env,
+		Provider:                 &operatorv1.BootstrapProvider{},
+		ProviderList:             &operatorv1.BootstrapProviderList{},
+		Client:                   env,
+		WatchConfigSecretChanges: true,
 	}).SetupWithManager(env.Manager, controller.Options{MaxConcurrentReconciles: 1}); err != nil {
 		panic(fmt.Sprintf("Failed to start BootstrapProviderReconciler: %v", err))
 	}
 
 	if err := (&GenericProviderReconciler{
-		Provider:     &operatorv1.ControlPlaneProvider{},
-		ProviderList: &operatorv1.ControlPlaneProviderList{},
-		Client:       env,
+		Provider:                 &operatorv1.ControlPlaneProvider{},
+		ProviderList:             &operatorv1.ControlPlaneProviderList{},
+		Client:                   env,
+		WatchConfigSecretChanges: true,
 	}).SetupWithManager(env.Manager, controller.Options{MaxConcurrentReconciles: 1}); err != nil {
 		panic(fmt.Sprintf("Failed to start ControlPlaneProviderReconciler: %v", err))
 	}

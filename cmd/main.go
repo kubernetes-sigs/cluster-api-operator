@@ -67,6 +67,7 @@ var (
 	webhookPort                 int
 	webhookCertDir              string
 	healthAddr                  string
+	watchConfigSecretChanges    bool
 	diagnosticsOptions          = flags.DiagnosticsOptions{}
 )
 
@@ -97,6 +98,9 @@ func InitFlags(fs *pflag.FlagSet) {
 
 	fs.StringVar(&watchFilterValue, "watch-filter", "",
 		fmt.Sprintf("Label value that the controller watches to reconcile cluster-api objects. Label key is always %s. If unspecified, the controller watches for all cluster-api objects.", clusterv1.WatchLabel))
+
+	fs.BoolVar(&watchConfigSecretChanges, "watch-configsecret", false,
+		"Watch for changes to the ConfigSecret resource and reconcile all providers using it.")
 
 	fs.StringVar(&watchNamespace, "namespace", "",
 		"Namespace that the controller watches to reconcile cluster-api objects. If unspecified, the controller watches for cluster-api objects across all namespaces.")
@@ -185,7 +189,7 @@ func main() {
 	ctx := ctrl.SetupSignalHandler()
 
 	setupChecks(mgr)
-	setupReconcilers(mgr)
+	setupReconcilers(mgr, watchConfigSecretChanges)
 	setupWebhooks(mgr)
 
 	// +kubebuilder:scaffold:builder
@@ -209,72 +213,79 @@ func setupChecks(mgr ctrl.Manager) {
 	}
 }
 
-func setupReconcilers(mgr ctrl.Manager) {
+func setupReconcilers(mgr ctrl.Manager, watchConfigSecretChanges bool) {
 	if err := (&providercontroller.GenericProviderReconciler{
-		Provider:     &operatorv1.CoreProvider{},
-		ProviderList: &operatorv1.CoreProviderList{},
-		Client:       mgr.GetClient(),
-		Config:       mgr.GetConfig(),
+		Provider:                 &operatorv1.CoreProvider{},
+		ProviderList:             &operatorv1.CoreProviderList{},
+		Client:                   mgr.GetClient(),
+		Config:                   mgr.GetConfig(),
+		WatchConfigSecretChanges: watchConfigSecretChanges,
 	}).SetupWithManager(mgr, concurrency(concurrencyNumber)); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "CoreProvider")
 		os.Exit(1)
 	}
 
 	if err := (&providercontroller.GenericProviderReconciler{
-		Provider:     &operatorv1.InfrastructureProvider{},
-		ProviderList: &operatorv1.InfrastructureProviderList{},
-		Client:       mgr.GetClient(),
-		Config:       mgr.GetConfig(),
+		Provider:                 &operatorv1.InfrastructureProvider{},
+		ProviderList:             &operatorv1.InfrastructureProviderList{},
+		Client:                   mgr.GetClient(),
+		Config:                   mgr.GetConfig(),
+		WatchConfigSecretChanges: watchConfigSecretChanges,
 	}).SetupWithManager(mgr, concurrency(concurrencyNumber)); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "InfrastructureProvider")
 		os.Exit(1)
 	}
 
 	if err := (&providercontroller.GenericProviderReconciler{
-		Provider:     &operatorv1.BootstrapProvider{},
-		ProviderList: &operatorv1.BootstrapProviderList{},
-		Client:       mgr.GetClient(),
-		Config:       mgr.GetConfig(),
+		Provider:                 &operatorv1.BootstrapProvider{},
+		ProviderList:             &operatorv1.BootstrapProviderList{},
+		Client:                   mgr.GetClient(),
+		Config:                   mgr.GetConfig(),
+		WatchConfigSecretChanges: watchConfigSecretChanges,
 	}).SetupWithManager(mgr, concurrency(concurrencyNumber)); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "BootstrapProvider")
 		os.Exit(1)
 	}
 
 	if err := (&providercontroller.GenericProviderReconciler{
-		Provider:     &operatorv1.ControlPlaneProvider{},
-		ProviderList: &operatorv1.ControlPlaneProviderList{},
-		Client:       mgr.GetClient(),
-		Config:       mgr.GetConfig(),
+		Provider:                 &operatorv1.ControlPlaneProvider{},
+		ProviderList:             &operatorv1.ControlPlaneProviderList{},
+		Client:                   mgr.GetClient(),
+		Config:                   mgr.GetConfig(),
+		WatchConfigSecretChanges: watchConfigSecretChanges,
 	}).SetupWithManager(mgr, concurrency(concurrencyNumber)); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ControlPlaneProvider")
 		os.Exit(1)
 	}
 
 	if err := (&providercontroller.GenericProviderReconciler{
-		Provider:     &operatorv1.AddonProvider{},
-		ProviderList: &operatorv1.AddonProviderList{},
-		Client:       mgr.GetClient(),
-		Config:       mgr.GetConfig(),
+		Provider:                 &operatorv1.AddonProvider{},
+		ProviderList:             &operatorv1.AddonProviderList{},
+		Client:                   mgr.GetClient(),
+		Config:                   mgr.GetConfig(),
+		WatchConfigSecretChanges: watchConfigSecretChanges,
 	}).SetupWithManager(mgr, concurrency(concurrencyNumber)); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "AddonProvider")
 		os.Exit(1)
 	}
 
 	if err := (&providercontroller.GenericProviderReconciler{
-		Provider:     &operatorv1.IPAMProvider{},
-		ProviderList: &operatorv1.IPAMProviderList{},
-		Client:       mgr.GetClient(),
-		Config:       mgr.GetConfig(),
+		Provider:                 &operatorv1.IPAMProvider{},
+		ProviderList:             &operatorv1.IPAMProviderList{},
+		Client:                   mgr.GetClient(),
+		Config:                   mgr.GetConfig(),
+		WatchConfigSecretChanges: watchConfigSecretChanges,
 	}).SetupWithManager(mgr, concurrency(concurrencyNumber)); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "IPAMProvider")
 		os.Exit(1)
 	}
 
 	if err := (&providercontroller.GenericProviderReconciler{
-		Provider:     &operatorv1.RuntimeExtensionProvider{},
-		ProviderList: &operatorv1.RuntimeExtensionProviderList{},
-		Client:       mgr.GetClient(),
-		Config:       mgr.GetConfig(),
+		Provider:                 &operatorv1.RuntimeExtensionProvider{},
+		ProviderList:             &operatorv1.RuntimeExtensionProviderList{},
+		Client:                   mgr.GetClient(),
+		Config:                   mgr.GetConfig(),
+		WatchConfigSecretChanges: watchConfigSecretChanges,
 	}).SetupWithManager(mgr, concurrency(concurrencyNumber)); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "RuntimeExtensionProvider")
 		os.Exit(1)
