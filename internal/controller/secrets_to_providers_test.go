@@ -80,7 +80,7 @@ func TestProviderSecretMapper(t *testing.T) {
 			},
 			&operatorv1.InfrastructureProvider{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "infra-provider-with-other-secret",
+					Name:      "infra-provider-with-same-secret-different-namespace",
 					Namespace: otherInfraProviderNamespace,
 				},
 				Spec: operatorv1.InfrastructureProviderSpec{
