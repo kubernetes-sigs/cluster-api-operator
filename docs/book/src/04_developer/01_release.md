@@ -53,6 +53,8 @@ make update-helm-plugin-repo
 
 5. Create a PR with the changes.
 
+6. In case this is a minor or major version release, update `test-infra` jobs for the new `release-x.x` branch. This will require updating dashboard pointer to use updated presubmit spec per the detailed [description](#setup-jobs-and-dashboards-for-a-new-release-branch).
+
 ## Setup jobs and dashboards for a new release branch
 
 The goal of this task is to have test coverage for the new release branch and results in testgrid.
@@ -74,4 +76,6 @@ We are currently running CI jobs only in main and latest stable release branch (
     * For example, let's assume we just created tests for v0.5, then we can now drop test coverage for the release-0.4 branch.
 4. Verify the jobs and dashboards a day later by taking a look at: `https://testgrid.k8s.io/sig-cluster-lifecycle-cluster-api-operator-0.5`.
 
-Prior art: https://github.com/kubernetes/test-infra/pull/30372
+Prior art:
+- https://github.com/kubernetes/test-infra/pull/30372
+- https://github.com/kubernetes/test-infra/pull/33506
