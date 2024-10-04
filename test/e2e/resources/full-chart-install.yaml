@@ -1126,7 +1126,9 @@ spec:
                                   type: object
                                 type: array
                               imageUrl:
-                                description: Container Image URL
+                                description: Container Image URL. If container is
+                                  "manager" and version is not specified, it will
+                                  be set to the provider version.
                                 type: string
                               name:
                                 description: Name of the container. Cannot be updated.
@@ -2539,7 +2541,9 @@ spec:
                             type: object
                           type: array
                         imageUrl:
-                          description: Container Image URL
+                          description: Container Image URL. If container is "manager"
+                            and version is not specified, it will be set to the provider
+                            version.
                           type: string
                         name:
                           description: Name of the container. Cannot be updated.
@@ -5721,7 +5725,9 @@ spec:
                                   type: object
                                 type: array
                               imageUrl:
-                                description: Container Image URL
+                                description: Container Image URL. If container is
+                                  "manager" and version is not specified, it will
+                                  be set to the provider version.
                                 type: string
                               name:
                                 description: Name of the container. Cannot be updated.
@@ -7134,7 +7140,9 @@ spec:
                             type: object
                           type: array
                         imageUrl:
-                          description: Container Image URL
+                          description: Container Image URL. If container is "manager"
+                            and version is not specified, it will be set to the provider
+                            version.
                           type: string
                         name:
                           description: Name of the container. Cannot be updated.
@@ -10318,7 +10326,9 @@ spec:
                                   type: object
                                 type: array
                               imageUrl:
-                                description: Container Image URL
+                                description: Container Image URL. If container is
+                                  "manager" and version is not specified, it will
+                                  be set to the provider version.
                                 type: string
                               name:
                                 description: Name of the container. Cannot be updated.
@@ -11731,7 +11741,9 @@ spec:
                             type: object
                           type: array
                         imageUrl:
-                          description: Container Image URL
+                          description: Container Image URL. If container is "manager"
+                            and version is not specified, it will be set to the provider
+                            version.
                           type: string
                         name:
                           description: Name of the container. Cannot be updated.
@@ -14914,7 +14926,9 @@ spec:
                                   type: object
                                 type: array
                               imageUrl:
-                                description: Container Image URL
+                                description: Container Image URL. If container is
+                                  "manager" and version is not specified, it will
+                                  be set to the provider version.
                                 type: string
                               name:
                                 description: Name of the container. Cannot be updated.
@@ -16327,7 +16341,9 @@ spec:
                             type: object
                           type: array
                         imageUrl:
-                          description: Container Image URL
+                          description: Container Image URL. If container is "manager"
+                            and version is not specified, it will be set to the provider
+                            version.
                           type: string
                         name:
                           description: Name of the container. Cannot be updated.
@@ -19511,7 +19527,9 @@ spec:
                                   type: object
                                 type: array
                               imageUrl:
-                                description: Container Image URL
+                                description: Container Image URL. If container is
+                                  "manager" and version is not specified, it will
+                                  be set to the provider version.
                                 type: string
                               name:
                                 description: Name of the container. Cannot be updated.
@@ -20924,7 +20942,9 @@ spec:
                             type: object
                           type: array
                         imageUrl:
-                          description: Container Image URL
+                          description: Container Image URL. If container is "manager"
+                            and version is not specified, it will be set to the provider
+                            version.
                           type: string
                         name:
                           description: Name of the container. Cannot be updated.
@@ -22522,7 +22542,9 @@ spec:
                                   type: object
                                 type: array
                               imageUrl:
-                                description: Container Image URL
+                                description: Container Image URL. If container is
+                                  "manager" and version is not specified, it will
+                                  be set to the provider version.
                                 type: string
                               name:
                                 description: Name of the container. Cannot be updated.
@@ -23935,7 +23957,9 @@ spec:
                             type: object
                           type: array
                         imageUrl:
-                          description: Container Image URL
+                          description: Container Image URL. If container is "manager"
+                            and version is not specified, it will be set to the provider
+                            version.
                           type: string
                         name:
                           description: Name of the container. Cannot be updated.
@@ -25534,7 +25558,9 @@ spec:
                                   type: object
                                 type: array
                               imageUrl:
-                                description: Container Image URL
+                                description: Container Image URL. If container is
+                                  "manager" and version is not specified, it will
+                                  be set to the provider version.
                                 type: string
                               name:
                                 description: Name of the container. Cannot be updated.
@@ -26947,7 +26973,9 @@ spec:
                             type: object
                           type: array
                         imageUrl:
-                          description: Container Image URL
+                          description: Container Image URL. If container is "manager"
+                            and version is not specified, it will be set to the provider
+                            version.
                           type: string
                         name:
                           description: Name of the container. Cannot be updated.
