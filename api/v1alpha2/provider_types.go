@@ -184,7 +184,7 @@ type ContainerSpec struct {
 	// Name of the container. Cannot be updated.
 	Name string `json:"name"`
 
-	// Container Image URL
+	// Container Image URL. If container is "manager" and version is not specified, it will be set to the provider version.
 	// +optional
 	ImageURL *string `json:"imageUrl,omitempty"`
 

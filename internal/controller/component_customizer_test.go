@@ -51,7 +51,7 @@ func TestCustomizeDeployment(t *testing.T) {
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{{
 						Name:  "manager",
-						Image: "registry.k8s.io/a-manager:1.6.2",
+						Image: "registry.k8s.io/a-manager",
 						Env: []corev1.EnvVar{
 							{
 								Name:  "test1",
@@ -503,7 +503,7 @@ func TestCustomizeDeployment(t *testing.T) {
 							Containers: []corev1.Container{
 								{
 									Name:  "manager",
-									Image: "registry.k8s.io/a-manager:1.6.2",
+									Image: "registry.k8s.io/a-manager:v1.6.2",
 									Env: []corev1.EnvVar{
 										{
 											Name:  "test1",
@@ -557,7 +557,7 @@ func TestCustomizeDeployment(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			deployment := managerDepl.DeepCopy()
-			if err := customizeDeployment(tc.inputDeploymentSpec, tc.inputManagerSpec, deployment); err != nil {
+			if err := customizeDeployment(tc.inputDeploymentSpec, tc.inputManagerSpec, deployment, "v1.6.2"); err != nil {
 				t.Error(err)
 			}
 

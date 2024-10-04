@@ -82,6 +82,7 @@ func customizeObjectsFn(provider operatorv1.GenericProvider) func(objs []unstruc
 
 				providerDeployment := provider.GetSpec().Deployment
 				providerManager := provider.GetSpec().Manager
+				providerVersion := provider.GetSpec().Version
 
 				// If there are multiple deployments, check if we specify customizations for those deployments.
 				// We need to skip the deployment customization if there are several deployments available
@@ -107,7 +108,7 @@ func customizeObjectsFn(provider operatorv1.GenericProvider) func(objs []unstruc
 					providerManager = additionalProviderCustomization.Manager
 				}
 
-				if err := customizeDeployment(providerDeployment, providerManager, d); err != nil {
+				if err := customizeDeployment(providerDeployment, providerManager, d, providerVersion); err != nil {
 					return nil, err
 				}
 
@@ -124,7 +125,7 @@ func customizeObjectsFn(provider operatorv1.GenericProvider) func(objs []unstruc
 }
 
 // customizeDeployment customize provider deployment base on provider spec input.
-func customizeDeployment(dSpec *operatorv1.DeploymentSpec, mSpec *operatorv1.ManagerSpec, d *appsv1.Deployment) error {
+func customizeDeployment(dSpec *operatorv1.DeploymentSpec, mSpec *operatorv1.ManagerSpec, d *appsv1.Deployment, providerVersion string) error {
 	// Customize deployment spec first.
 	if dSpec != nil {
 		customizeDeploymentSpec(*dSpec, d)
@@ -137,7 +138,7 @@ func customizeDeployment(dSpec *operatorv1.DeploymentSpec, mSpec *operatorv1.Man
 			return fmt.Errorf("cannot find %q container in deployment %q", managerContainerName, d.Name)
 		}
 
-		customizeManagerContainer(mSpec, container)
+		customizeManagerContainer(mSpec, container, providerVersion)
 	}
 
 	return nil
@@ -183,7 +184,9 @@ func findManagerContainer(dSpec *appsv1.DeploymentSpec) *corev1.Container {
 }
 
 // customizeManagerContainer customize manager container base on provider spec input.
-func customizeManagerContainer(mSpec *operatorv1.ManagerSpec, c *corev1.Container) {
+func customizeManagerContainer(mSpec *operatorv1.ManagerSpec, c *corev1.Container, providerVersion string) {
+	c.Image = addImageVersionIfMissing(c.Image, providerVersion)
+
 	// ControllerManagerConfigurationSpec fields
 	if mSpec.Controller != nil {
 		// TODO can't find an arg for CacheSyncTimeout
@@ -377,4 +380,12 @@ func isMultipleDeployments(objs []unstructured.Unstructured) bool {
 // isProviderManagerDeploymentName checks that the provided follows the provider manager deployment name pattern: "ca*-controller-manager".
 func isProviderManagerDeploymentName(name string) bool {
 	return strings.HasPrefix(name, "ca") && strings.HasSuffix(name, "-controller-manager")
+}
+
+func addImageVersionIfMissing(image, version string) string {
+	if strings.Contains(image, ":") || strings.Contains(image, "@sha256:") {
+		return image
+	}
+
+	return fmt.Sprintf("%s:%s", image, version)
 }
