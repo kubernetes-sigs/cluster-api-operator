@@ -148,12 +148,6 @@ func (p *phaseReconciler) initializePhaseReconciler(ctx context.Context) (reconc
 		return reconcile.Result{}, err
 	}
 
-	if p.overridesClient != nil {
-		if imageOverrides, err := p.overridesClient.Variables().Get("images"); err == nil {
-			reader.Set("images", imageOverrides)
-		}
-	}
-
 	// Load provider's secret and config url.
 	p.configClient, err = configclient.New(ctx, "", configclient.InjectReader(reader))
 	if err != nil {
@@ -465,6 +459,11 @@ func (p *phaseReconciler) fetch(ctx context.Context) (reconcile.Result, error) {
 
 	// Apply patches to the provider components if specified.
 	if err := repository.AlterComponents(p.components, applyPatches(ctx, p.provider)); err != nil {
+		return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.ProviderInstalledCondition)
+	}
+
+	// Apply image overrides to the provider manifests.
+	if err := repository.AlterComponents(p.components, imageOverrides(p.components.ManifestLabel(), p.overridesClient)); err != nil {
 		return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.ProviderInstalledCondition)
 	}
 
