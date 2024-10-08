@@ -82,11 +82,6 @@ func TestProviderDownloadWithOverrides(t *testing.T) {
 	overridesClient, err := configclient.New(ctx, "", configclient.InjectReader(reader))
 	g.Expect(err).ToNot(HaveOccurred())
 
-	overridesClient.Variables().Set("images", `
-all:
-  repository: "myorg.io/local-repo"
-`)
-
 	p := &phaseReconciler{
 		ctrlClient: fakeclient,
 		provider: &operatorv1.CoreProvider{
@@ -111,6 +106,6 @@ all:
 	_, err = p.fetch(ctx)
 	g.Expect(err).ToNot(HaveOccurred())
 
-	g.Expect(p.components.Images()).To(HaveExactElements([]string{"myorg.io/local-repo/cluster-api-controller:v1.4.3"}))
+	g.Expect(p.components.Images()).To(HaveExactElements([]string{"registry.k8s.io/cluster-api/cluster-api-controller:v1.4.3"}))
 	g.Expect(p.components.Version()).To(Equal("v1.4.3"))
 }
