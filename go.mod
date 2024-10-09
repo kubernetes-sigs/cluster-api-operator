@@ -11,7 +11,7 @@ require (
 	github.com/google/go-github/v52 v52.0.0
 	github.com/google/gofuzz v1.2.0
 	github.com/onsi/gomega v1.33.1
-	github.com/spf13/cobra v1.8.0
+	github.com/spf13/cobra v1.8.1
 	github.com/spf13/pflag v1.0.5
 	golang.org/x/oauth2 v0.23.0
 	k8s.io/api v0.29.4
