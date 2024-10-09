@@ -7,17 +7,17 @@ toolchain go1.22.5
 replace sigs.k8s.io/cluster-api-operator => ../
 
 require (
-	github.com/onsi/ginkgo/v2 v2.19.1
-	github.com/onsi/gomega v1.34.0
+	github.com/onsi/ginkgo/v2 v2.20.1
+	github.com/onsi/gomega v1.34.2
 	golang.org/x/tools v0.26.0
 	k8s.io/api v0.29.9
 	k8s.io/apiextensions-apiserver v0.29.9
 	k8s.io/apimachinery v0.29.9
 	k8s.io/klog/v2 v2.110.1
 	k8s.io/utils v0.0.0-20231127182322-b307cd553661
-	sigs.k8s.io/cluster-api v1.7.1
+	sigs.k8s.io/cluster-api v1.7.7
 	sigs.k8s.io/cluster-api-operator v0.0.0-00010101000000-000000000000
-	sigs.k8s.io/cluster-api/test v1.7.1
+	sigs.k8s.io/cluster-api/test v1.7.7
 	sigs.k8s.io/controller-runtime v0.17.6
 	sigs.k8s.io/yaml v1.4.0
 )
@@ -65,7 +65,7 @@ require (
 	github.com/google/go-github/v53 v53.2.0 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
-	github.com/google/pprof v0.0.0-20240424215950-a892ee059fd6 // indirect
+	github.com/google/pprof v0.0.0-20240827171923-fa2c70bbbfe5 // indirect
 	github.com/google/safetext v0.0.0-20220905092116-b49f7bc46da2 // indirect
 	github.com/google/uuid v1.4.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
@@ -111,7 +111,7 @@ require (
 	go.opentelemetry.io/otel/trace v1.22.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/crypto v0.28.0 // indirect
-	golang.org/x/exp v0.0.0-20230905200255-921286631fa9 // indirect
+	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56 // indirect
 	golang.org/x/mod v0.21.0 // indirect
 	golang.org/x/net v0.30.0 // indirect
 	golang.org/x/oauth2 v0.23.0 // indirect
@@ -134,6 +134,6 @@ require (
 	k8s.io/component-base v0.29.9 // indirect
 	k8s.io/kube-openapi v0.0.0-20231010175941-2dd684a91f00 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
-	sigs.k8s.io/kind v0.22.0 // indirect
+	sigs.k8s.io/kind v0.23.0 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.1 // indirect
 )

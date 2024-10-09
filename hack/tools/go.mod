@@ -1,12 +1,12 @@
 module sigs.k8s.io/cluster-api-operator/hack/tools
 
-go 1.21
+go 1.22
 
-toolchain go1.21.3
+toolchain go1.22.5
 
 replace (
-	sigs.k8s.io/cluster-api => sigs.k8s.io/cluster-api v1.7.0
-	sigs.k8s.io/cluster-api/test => sigs.k8s.io/cluster-api/test v1.7.0
+	sigs.k8s.io/cluster-api => sigs.k8s.io/cluster-api v1.7.7
+	sigs.k8s.io/cluster-api/test => sigs.k8s.io/cluster-api/test v1.7.7
 )
 
 require (
