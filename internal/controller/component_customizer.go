@@ -272,12 +272,7 @@ func customizeContainer(cSpec operatorv1.ContainerSpec, d *appsv1.Deployment) {
 	for j, c := range d.Spec.Template.Spec.Containers {
 		if c.Name == cSpec.Name {
 			for an, av := range cSpec.Args {
-				// The `ContainerSpec.Args` will ignore the key `namespace` since the operator
-				// enforces a deployment model where all the providers should be configured to
-				// watch all the namespaces.
-				if an != "namespace" {
-					c.Args = setArgs(c.Args, an, av)
-				}
+				c.Args = setArgs(c.Args, an, av)
 			}
 
 			for _, se := range cSpec.Env {
