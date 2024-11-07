@@ -38,11 +38,20 @@ metadata:
   annotations:
     "helm.sh/hook": "post-install,post-upgrade"
     "helm.sh/hook-weight": "2"
-{{- if or $controlPlaneVersion $.Values.configSecret.name }}
+{{- if or $controlPlaneVersion $.Values.configSecret.name $.Values.manager }}
 spec:
 {{- end}}
 {{- if $controlPlaneVersion }}
   version: {{ $controlPlaneVersion }}
+{{- end }}
+{{- if $.Values.manager }}
+  manager:
+{{- if and $.Values.manager.featureGates $.Values.manager.featureGates.controlPlane }}
+    featureGates:
+    {{- range $key, $value := $.Values.manager.featureGates.controlPlane }}
+      {{ $key }}: {{ $value }}
+    {{- end }}
+{{- end }}
 {{- end }}
 {{- if $.Values.configSecret.name }}
   configSecret:
