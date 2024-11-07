@@ -6,7 +6,17 @@ bootstrap: ""
 controlPlane: ""
 infrastructure: ""
 addon: ""
-manager.featureGates: {}
+manager:
+  featureGates: {}
+# e.g. 
+# manager:
+#   featureGates:
+#     core:
+#       KubeadmBootstrapFormatIgnition: true 
+#     bootstrap:
+#       KubeadmBootstrapFormatIgnition: true 
+#     controlPlane:
+#       KubeadmBootstrapFormatIgnition: true 
 # ---
 # Common configuration secret options
 configSecret: {}
