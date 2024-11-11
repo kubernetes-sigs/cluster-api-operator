@@ -43,7 +43,7 @@ var _ = Describe("Install Core Provider in an air-gapped environment", func() {
 		bootstrapCluster := bootstrapClusterProxy.GetClient()
 		configMaps := []corev1.ConfigMap{}
 
-		for _, fileName := range []string{"core-cluster-api-v1.5.4.yaml", "core-cluster-api-v1.6.0.yaml"} {
+		for _, fileName := range []string{"core-cluster-api-v1.7.7.yaml", "core-cluster-api-v1.8.0.yaml"} {
 			coreProviderComponents, err := os.ReadFile(customManifestsFolder + fileName)
 			Expect(err).ToNot(HaveOccurred(), "Failed to read the core provider manifests file")
 
@@ -85,7 +85,7 @@ var _ = Describe("Install Core Provider in an air-gapped environment", func() {
 							},
 						},
 					},
-					Version: "v1.5.4",
+					Version: "v1.7.7",
 				},
 			},
 		}
@@ -109,7 +109,7 @@ var _ = Describe("Install Core Provider in an air-gapped environment", func() {
 		}), e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 	})
 
-	It("should successfully upgrade a CoreProvider (v1.5.4 -> latest)", func() {
+	It("should successfully upgrade a CoreProvider (v1.7.7 -> latest)", func() {
 		bootstrapCluster := bootstrapClusterProxy.GetClient()
 		coreProvider := &operatorv1.CoreProvider{}
 		key := client.ObjectKey{Namespace: capiSystemNamespace, Name: coreProviderName}
@@ -161,7 +161,7 @@ var _ = Describe("Install Core Provider in an air-gapped environment", func() {
 		bootstrapCluster := bootstrapClusterProxy.GetClient()
 		configMaps := []corev1.ConfigMap{}
 
-		for _, fileName := range []string{"core-cluster-api-v1.5.4.yaml", "core-cluster-api-v1.6.0.yaml"} {
+		for _, fileName := range []string{"core-cluster-api-v1.7.7.yaml", "core-cluster-api-v1.8.0.yaml"} {
 			coreProviderComponents, err := os.ReadFile(customManifestsFolder + fileName)
 			Expect(err).ToNot(HaveOccurred(), "Failed to read the core provider manifests file")
 
