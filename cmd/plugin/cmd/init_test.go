@@ -171,22 +171,22 @@ func TestInitProviders(t *testing.T) {
 		{
 			name: "core provider",
 			wantedProviders: []genericprovider.GenericProvider{
-				generateGenericProvider(clusterctlv1.CoreProviderType, "cluster-api", "capi-system", "v1.6.0", "", ""),
+				generateGenericProvider(clusterctlv1.CoreProviderType, "cluster-api", "capi-system", "v1.8.0", "", ""),
 			},
 			wantErr: false,
 			opts: &initOptions{
-				coreProvider:    "cluster-api:capi-system:v1.6.0",
+				coreProvider:    "cluster-api:capi-system:v1.8.0",
 				targetNamespace: "capi-operator-system",
 			},
 		},
 		{
 			name: "core provider in default target namespace",
 			wantedProviders: []genericprovider.GenericProvider{
-				generateGenericProvider(clusterctlv1.CoreProviderType, "cluster-api", "capi-operator-system", "v1.6.0", "", ""),
+				generateGenericProvider(clusterctlv1.CoreProviderType, "cluster-api", "capi-operator-system", "v1.8.0", "", ""),
 			},
 			wantErr: false,
 			opts: &initOptions{
-				coreProvider:    "cluster-api::v1.6.0",
+				coreProvider:    "cluster-api::v1.8.0",
 				targetNamespace: "capi-operator-system",
 			},
 		},
@@ -254,7 +254,7 @@ func TestInitProviders(t *testing.T) {
 		{
 			name: "all providers",
 			wantedProviders: []genericprovider.GenericProvider{
-				generateGenericProvider(clusterctlv1.CoreProviderType, "cluster-api", "capi-system", "v1.6.0", "", ""),
+				generateGenericProvider(clusterctlv1.CoreProviderType, "cluster-api", "capi-system", "v1.8.0", "", ""),
 				generateGenericProvider(clusterctlv1.InfrastructureProviderType, "aws", "capa-operator-system", "", "", ""),
 				generateGenericProvider(clusterctlv1.InfrastructureProviderType, "docker", "capd-operator-system", "", "", ""),
 				generateGenericProvider(clusterctlv1.ControlPlaneProviderType, "kubeadm", "kcp-system", "", "", ""),
@@ -263,9 +263,9 @@ func TestInitProviders(t *testing.T) {
 			},
 			wantErr: false,
 			opts: &initOptions{
-				coreProvider: "cluster-api:capi-system:v1.6.0",
+				coreProvider: "cluster-api:capi-system:v1.8.0",
 				infrastructureProviders: []string{
-					"cluster-api:capi-system:v1.6.0",
+					"cluster-api:capi-system:v1.8.0",
 					"aws:capa-operator-system",
 					"docker:capd-operator-system",
 				},

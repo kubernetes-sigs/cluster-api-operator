@@ -22,7 +22,6 @@ import (
 	apimachineryconversion "k8s.io/apimachinery/pkg/conversion"
 	"k8s.io/utils/ptr"
 	utilconversion "sigs.k8s.io/cluster-api/util/conversion"
-	ctrlconfigv1 "sigs.k8s.io/controller-runtime/pkg/config/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/conversion"
 
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
@@ -281,33 +280,33 @@ func Convert_v1alpha1_ManagerSpec_To_v1alpha2_ManagerSpec(in *ManagerSpec, out *
 		return nil
 	}
 
-	out.ControllerManagerConfiguration.SyncPeriod = in.ControllerManagerConfigurationSpec.SyncPeriod
-	out.ControllerManagerConfiguration.LeaderElection = in.ControllerManagerConfigurationSpec.LeaderElection
-	out.ControllerManagerConfiguration.CacheNamespace = in.ControllerManagerConfigurationSpec.CacheNamespace
-	out.ControllerManagerConfiguration.GracefulShutdownTimeout = in.ControllerManagerConfigurationSpec.GracefulShutdownTimeout
+	out.ControllerManagerConfiguration.SyncPeriod = in.ControllerManager.SyncPeriod
+	out.ControllerManagerConfiguration.LeaderElection = in.ControllerManager.LeaderElection
+	out.ControllerManagerConfiguration.CacheNamespace = in.ControllerManager.CacheNamespace
+	out.ControllerManagerConfiguration.GracefulShutdownTimeout = in.ControllerManager.GracefulShutdownTimeout
 
-	if in.ControllerManagerConfigurationSpec.Controller != nil {
+	if in.ControllerManager.Controller != nil {
 		out.ControllerManagerConfiguration.Controller = &operatorv1.ControllerConfigurationSpec{
-			GroupKindConcurrency: in.ControllerManagerConfigurationSpec.Controller.GroupKindConcurrency,
-			CacheSyncTimeout:     in.ControllerManagerConfigurationSpec.Controller.CacheSyncTimeout,
-			RecoverPanic:         in.ControllerManagerConfigurationSpec.Controller.RecoverPanic,
+			GroupKindConcurrency: in.ControllerManager.Controller.GroupKindConcurrency,
+			CacheSyncTimeout:     in.ControllerManager.Controller.CacheSyncTimeout,
+			RecoverPanic:         in.ControllerManager.Controller.RecoverPanic,
 		}
 	}
 
 	out.ControllerManagerConfiguration.Metrics = operatorv1.ControllerMetrics{
-		BindAddress: in.ControllerManagerConfigurationSpec.Metrics.BindAddress,
+		BindAddress: in.ControllerManager.Metrics.BindAddress,
 	}
 
 	out.ControllerManagerConfiguration.Health = operatorv1.ControllerHealth{
-		HealthProbeBindAddress: in.ControllerManagerConfigurationSpec.Health.HealthProbeBindAddress,
-		ReadinessEndpointName:  in.ControllerManagerConfigurationSpec.Health.ReadinessEndpointName,
-		LivenessEndpointName:   in.ControllerManagerConfigurationSpec.Health.LivenessEndpointName,
+		HealthProbeBindAddress: in.ControllerManager.Health.HealthProbeBindAddress,
+		ReadinessEndpointName:  in.ControllerManager.Health.ReadinessEndpointName,
+		LivenessEndpointName:   in.ControllerManager.Health.LivenessEndpointName,
 	}
 
 	out.ControllerManagerConfiguration.Webhook = operatorv1.ControllerWebhook{
-		Port:    in.ControllerManagerConfigurationSpec.Webhook.Port,
-		Host:    in.ControllerManagerConfigurationSpec.Webhook.Host,
-		CertDir: in.ControllerManagerConfigurationSpec.Webhook.CertDir,
+		Port:    in.ControllerManager.Webhook.Port,
+		Host:    in.ControllerManager.Webhook.Host,
+		CertDir: in.ControllerManager.Webhook.CertDir,
 	}
 
 	out.ProfilerAddress = in.ProfilerAddress
@@ -323,30 +322,30 @@ func Convert_v1alpha2_ManagerSpec_To_v1alpha1_ManagerSpec(in *operatorv1.Manager
 		return nil
 	}
 
-	out.ControllerManagerConfigurationSpec.SyncPeriod = in.ControllerManagerConfiguration.SyncPeriod
-	out.ControllerManagerConfigurationSpec.LeaderElection = in.ControllerManagerConfiguration.LeaderElection
-	out.ControllerManagerConfigurationSpec.CacheNamespace = in.ControllerManagerConfiguration.CacheNamespace
-	out.ControllerManagerConfigurationSpec.GracefulShutdownTimeout = in.ControllerManagerConfiguration.GracefulShutdownTimeout
+	out.ControllerManager.SyncPeriod = in.ControllerManagerConfiguration.SyncPeriod
+	out.ControllerManager.LeaderElection = in.ControllerManagerConfiguration.LeaderElection
+	out.ControllerManager.CacheNamespace = in.ControllerManagerConfiguration.CacheNamespace
+	out.ControllerManager.GracefulShutdownTimeout = in.ControllerManagerConfiguration.GracefulShutdownTimeout
 
 	if in.ControllerManagerConfiguration.Controller != nil {
-		out.ControllerManagerConfigurationSpec.Controller = &ctrlconfigv1.ControllerConfigurationSpec{
+		out.ControllerManager.Controller = &ControllerConfigurationSpec{
 			GroupKindConcurrency: in.ControllerManagerConfiguration.Controller.GroupKindConcurrency,
 			CacheSyncTimeout:     in.ControllerManagerConfiguration.Controller.CacheSyncTimeout,
 			RecoverPanic:         in.ControllerManagerConfiguration.Controller.RecoverPanic,
 		}
 	}
 
-	out.ControllerManagerConfigurationSpec.Metrics = ctrlconfigv1.ControllerMetrics{
+	out.ControllerManager.Metrics = ControllerMetrics{
 		BindAddress: in.ControllerManagerConfiguration.Metrics.BindAddress,
 	}
 
-	out.ControllerManagerConfigurationSpec.Health = ctrlconfigv1.ControllerHealth{
+	out.ControllerManager.Health = ControllerHealth{
 		HealthProbeBindAddress: in.ControllerManagerConfiguration.Health.HealthProbeBindAddress,
 		ReadinessEndpointName:  in.ControllerManagerConfiguration.Health.ReadinessEndpointName,
 		LivenessEndpointName:   in.ControllerManagerConfiguration.Health.LivenessEndpointName,
 	}
 
-	out.ControllerManagerConfigurationSpec.Webhook = ctrlconfigv1.ControllerWebhook{
+	out.ControllerManager.Webhook = ControllerWebhook{
 		Port:    in.ControllerManagerConfiguration.Webhook.Port,
 		Host:    in.ControllerManagerConfiguration.Webhook.Host,
 		CertDir: in.ControllerManagerConfiguration.Webhook.CertDir,

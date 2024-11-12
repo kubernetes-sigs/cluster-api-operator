@@ -103,7 +103,7 @@ metadata:
     "helm.sh/hook-weight": "2"
     "argocd.argoproj.io/sync-wave": "2"
 spec:
-  version: v1.5.4
+  version: v1.7.7
   configSecret:
     name: test-secret-name
     namespace: test-secret-namespace

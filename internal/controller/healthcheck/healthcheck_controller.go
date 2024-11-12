@@ -30,6 +30,7 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/util/errors"
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	"sigs.k8s.io/cluster-api/controllers/remote"
 	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/patch"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -59,7 +60,8 @@ const providerLabelKey = "cluster.x-k8s.io/provider"
 var deploymentPredicate predicate.Predicate
 
 type ProviderHealthCheckReconciler struct {
-	Client client.Client
+	Client  client.Client
+	Tracker *remote.ClusterCacheTracker
 }
 
 type GenericProviderHealthCheckReconciler struct {
