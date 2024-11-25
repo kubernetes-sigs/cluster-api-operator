@@ -35,5 +35,8 @@ spec:
 {{- if $.Values.secretNamespace }}
   secretNamespace: {{ $.Values.secretNamespace }}
 {{- end }}
+{{- if $addon.manifestPatches }}
+  manifestPatches: {{ toYaml $addon.manifestPatches | nindent 4 }}
+{{- end }}
 {{- end }} {{/* range $addon := .Values.addon */}}
 {{- end }} {{/* if .Values.addon */}}
