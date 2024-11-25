@@ -79,5 +79,5 @@ spec:
 {{- if $.Values.additionalDeployments }}
   additionalDeployments: {{ toYaml $.Values.additionalDeployments | nindent 4 }}
 {{- end }}
-{{- end }}
-{{- end }}
+{{- end }} {{/* range $infrastructure := $infrastructures */}}
+{{- end }} {{/* if .Values.infrastructure */}}
