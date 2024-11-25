@@ -1,26 +1,8 @@
 # IPAM providers
-{{- if .Values.ipam }}
-{{- $ipams := split ";" .Values.ipam }}
-{{- $ipamNamespace := "" }}
-{{- $ipamName := "" }}
-{{- $ipamVersion := "" }}
-{{- range $ipam := $ipams }}
-{{- $ipamArgs := split ":" $ipam }}
-{{- $ipamArgsLen := len $ipamArgs }}
-{{-  if eq $ipamArgsLen 3 }}
-  {{- $ipamNamespace = $ipamArgs._0 }}
-  {{- $ipamName = $ipamArgs._1 }}
-  {{- $ipamVersion = $ipamArgs._2 }}
-{{-  else if eq $ipamArgsLen 2 }}
-  {{- $ipamNamespace = print $ipamArgs._0 "-ipam-system" }}
-  {{- $ipamName = $ipamArgs._0 }}
-  {{- $ipamVersion = $ipamArgs._1 }}
-{{-  else if eq $ipamArgsLen 1 }}
-  {{- $ipamNamespace = print $ipamArgs._0 "-ipam-system" }}
-  {{- $ipamName = $ipamArgs._0 }}
-{{- else }}
-  {{- fail "ipam provider argument should have the following format in-cluster:v1.0.0 or mynamespace:in-cluster:v1.0.0" }}
-{{- end }}
+{{- range $name, $ipam := $.Values.ipam }}
+  {{- $ipamNamespace := default ( printf "%s-%s" $name "ipam-system" ) (get $ipam "namespace") }}
+  {{- $ipamName := $name }}
+  {{- $ipamVersion := get $ipam "version" }}
 ---
 apiVersion: v1
 kind: Namespace
@@ -69,5 +51,4 @@ spec:
 {{- if $.Values.additionalDeployments }}
   additionalDeployments: {{ toYaml $.Values.additionalDeployments | nindent 4 }}
 {{- end }}
-{{- end }} {{/* range $ipam := $ipams */}}
-{{- end }} {{/* if .Values.ipam */}}
+{{- end }} {{/* range $name, $ipam := .Values.ipam */}}

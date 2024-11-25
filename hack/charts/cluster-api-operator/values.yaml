@@ -1,12 +1,30 @@
 ---
 # ---
 # Cluster API provider options
-core: ""
-bootstrap: ""
-controlPlane: ""
-infrastructure: ""
-ipam: ""
-addon: ""
+core: {}
+# cluster-api: {}  # Name, required
+#   namespace: ""  # Optional
+#   version: ""    # Optional
+bootstrap: {}
+# kubeadm: {}      # Name, required
+#   namespace: ""  # Optional
+#   version: ""    # Optional
+controlPlane: {}
+# kubeadm: {}      # Name, required
+#   namespace: ""  # Optional
+#   version: ""    # Optional
+infrastructure: {}
+# docker: {}  # Name, required
+#   namespace: ""  # Optional
+#   version: ""    # Optional
+addon: {}
+# helm: {}         # Name, required
+#   namespace: ""  # Optional
+#   version: ""    # Optional
+ipam: {}
+# in-cluster: {}   # Name, required
+#   namespace: ""  # Optional
+#   version: ""    # Optional
 manager.featureGates: {}
 fetchConfig: {}
 # ---
