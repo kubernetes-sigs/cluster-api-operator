@@ -60,4 +60,4 @@ spec:
     namespace: {{ $.Values.configSecret.namespace }}
     {{- end }}
 {{- end }}
-{{- end }}
+{{- end }} {{/* if .Values.core */}}

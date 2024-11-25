@@ -52,5 +52,5 @@ spec:
 {{- if $.Values.secretNamespace }}
   secretNamespace: {{ $.Values.secretNamespace }}
 {{- end }}
-{{- end }}
-{{- end }}
+{{- end }} {{/* range $addon := $addons */}}
+{{- end }} {{/* if .Values.addon */}}

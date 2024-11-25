@@ -64,5 +64,5 @@ spec:
     namespace: {{ $.Values.configSecret.namespace }}
     {{- end }}
 {{- end }}
-{{- end }}
-{{- end }}
+{{- end }} {{/* range $controlPlane := $controlPlanes */}}
+{{- end }} {{/* if .Values.controlPlane */}}
