@@ -1,26 +1,9 @@
 # Bootstrap provider
 {{- if .Values.bootstrap }}
-{{- $bootstraps := split ";" .Values.bootstrap }}
-{{- $bootstrapNamespace := "" }}
-{{- $bootstrapName := "" }}
-{{- $bootstrapVersion := "" }}
-{{- range $bootstrap := $bootstraps }}
-{{- $bootstrapArgs := split ":" $bootstrap }}
-{{- $bootstrapArgsLen :=  len $bootstrapArgs }}
-{{-  if eq $bootstrapArgsLen 3 }}
-  {{- $bootstrapNamespace = $bootstrapArgs._0 }}
-  {{- $bootstrapName = $bootstrapArgs._1 }}
-  {{- $bootstrapVersion = $bootstrapArgs._2 }}
-{{-  else if eq $bootstrapArgsLen 2 }}
-  {{- $bootstrapNamespace = print $bootstrapArgs._0 "-bootstrap-system" }}
-  {{- $bootstrapName = $bootstrapArgs._0 }}
-  {{- $bootstrapVersion = $bootstrapArgs._1 }}
-{{-  else if eq $bootstrapArgsLen 1 }}
-  {{- $bootstrapNamespace = print $bootstrapArgs._0 "-bootstrap-system" }}
-  {{- $bootstrapName = $bootstrapArgs._0 }}
-{{- else }}
-  {{- fail "bootstrap provider argument should have the following format kubeadm:v1.0.0 or mynamespace:kubeadm:v1.0.0" }}
-{{- end }}
+{{- range $bootstrap := .Values.bootstrap }}
+  {{- $bootstrapNamespace := default ( printf "%s-%s" $bootstrap.name "bootstrap-system" ) $bootstrap.namespace }}
+  {{- $bootstrapName := $bootstrap.name }}
+  {{- $bootstrapVersion := $bootstrap.version }}
 ---
 apiVersion: v1
 kind: Namespace
@@ -51,5 +34,5 @@ spec:
     namespace: {{ $.Values.configSecret.namespace }}
     {{- end }}
 {{- end }}
-{{- end }} {{/* range $bootstrap := $bootstraps */}}
+{{- end }} {{/* range $bootstrap := .Values.bootstrap */}}
 {{- end }} {{/* if .Values.bootstrap */}}
