@@ -62,5 +62,8 @@ spec:
 {{- if $.Values.additionalDeployments }}
   additionalDeployments: {{ toYaml $.Values.additionalDeployments | nindent 4 }}
 {{- end }}
+{{- if $infra.manifestPatches }}
+  manifestPatches: {{- toYaml $infra.manifestPatches | nindent 4 }}
+{{- end }} {{/* if $infra.manifestPatches */}}
 {{- end }} {{/* range $infra := .Values.infrastructure */}}
 {{- end }} {{/* if .Values.infrastructure */}}
