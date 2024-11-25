@@ -63,5 +63,22 @@ spec:
 {{- end }}
 {{- if $infra.manifestPatches }}
   manifestPatches: {{- toYaml $infra.manifestPatches | nindent 4 }}
+{{- end }} {{/* if $infra.manifestPatches */}}
+{{- if $infra.additionalManifests }}
+  additionalManifests:
+    name: {{ $infra.additionalManifests.name }}
+    {{- if $infra.additionalManifests.namespace }}
+    namespace: {{ $infra.additionalManifests.namespace }}
+    {{- end }} {{/* if $infra.additionalManifests.namespace */}}
+{{- end }} {{/* if $infra.additionalManifests */}}
+{{- if $infra.additionalManifests }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $infra.additionalManifests.name }}
+  namespace: {{ default $infrastructureNamespace $infra.additionalManifests.namespace }}
+data:
+  manifests: {{- toYaml $infra.additionalManifests.manifests | nindent 4 }}
 {{- end }}
 {{- end }} {{/* range $name, $infra := .Values.infrastructure */}}

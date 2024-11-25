@@ -54,4 +54,21 @@ spec:
 {{- if $.Values.additionalDeployments }}
   additionalDeployments: {{ toYaml $.Values.additionalDeployments | nindent 4 }}
 {{- end }}
+{{- if $ipam.additionalManifests }}
+  additionalManifests:
+    name: {{ $ipam.additionalManifests.name }}
+    {{- if $ipam.additionalManifests.namespace }}
+    namespace: {{ $ipam.additionalManifests.namespace }}
+    {{- end }} {{/* if $ipam.additionalManifests.namespace */}}
+{{- end }}
+{{- if $ipam.additionalManifests }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $ipam.additionalManifests.name }}
+  namespace: {{ default $ipamNamespace $ipam.additionalManifests.namespace }}
+data:
+  manifests: {{- toYaml $ipam.additionalManifests.manifests | nindent 4 }}
+{{- end }}
 {{- end }} {{/* range $name, $ipam := .Values.ipam */}}

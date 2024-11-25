@@ -49,4 +49,21 @@ spec:
 {{- if $controlPlane.manifestPatches }}
   manifestPatches: {{ toYaml $controlPlane.manifestPatches | nindent 4 }}
 {{- end }}
+{{- if $controlPlane.additionalManifests }}
+  additionalManifests:
+    name: {{ $controlPlane.additionalManifests.name }}
+    {{- if $controlPlane.additionalManifests.namespace }}
+    namespace: {{ $controlPlane.additionalManifests.namespace }}
+    {{- end }} {{/* if $controlPlane.additionalManifests.namespace */}}
+{{- end }}
+{{- if $controlPlane.additionalManifests }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $controlPlane.additionalManifests.name }}
+  namespace: {{ default $controlPlaneNamespace $controlPlane.additionalManifests.namespace }}
+data:
+  manifests: {{- toYaml $controlPlane.additionalManifests.manifests | nindent 4 }}
+{{- end }}
 {{- end }} {{/* range $name, $controlPlane := .Values.controlPlane */}}

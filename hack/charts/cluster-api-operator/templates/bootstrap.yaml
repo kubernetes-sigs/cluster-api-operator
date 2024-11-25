@@ -36,4 +36,21 @@ spec:
 {{- if $bootstrap.manifestPatches }}
   manifestPatches: {{ toYaml $bootstrap.manifestPatches | nindent 4 }}
 {{- end }}
+{{- if $bootstrap.additionalManifests }}
+  additionalManifests:
+    name: {{ $bootstrap.additionalManifests.name }}
+    {{- if $bootstrap.additionalManifests.namespace }}
+    namespace: {{ $bootstrap.additionalManifests.namespace }}
+    {{- end }} {{/* if $bootstrap.additionalManifests.namespace */}}
+{{- end }}
+{{- if $bootstrap.additionalManifests }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $bootstrap.additionalManifests.name }}
+  namespace: {{ default $bootstrapNamespace $bootstrap.additionalManifests.namespace }}
+data:
+  manifests: {{- toYaml $bootstrap.additionalManifests.manifests | nindent 4 }}
+{{- end }}
 {{- end }} {{/* range $name, $bootstrap := .Values.bootstrap */}}

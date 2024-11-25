@@ -37,4 +37,21 @@ spec:
 {{- if $addon.manifestPatches }}
   manifestPatches: {{ toYaml $addon.manifestPatches | nindent 4 }}
 {{- end }}
+{{- if $addon.additionalManifests }}
+  additionalManifests:
+    name: {{ $addon.additionalManifests.name }}
+    {{- if $addon.additionalManifests.namespace }}
+    namespace: {{ $addon.additionalManifests.namespace }}
+    {{- end }} {{/* if $addon.additionalManifests.namespace */}}
+{{- end }}
+{{- if $addon.additionalManifests }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $addon.additionalManifests.name }}
+  namespace: {{ default $addonNamespace $addon.additionalManifests.namespace }}
+data:
+  manifests: {{- toYaml $addon.additionalManifests.manifests | nindent 4 }}
+{{- end }}
 {{- end }} {{/* range $name, $addon := .Values.addon */}}
