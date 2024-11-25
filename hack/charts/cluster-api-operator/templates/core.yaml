@@ -46,4 +46,21 @@ spec:
 {{- if .Values.core.manifestPatches }}
   manifestPatches: {{ toYaml .Values.core.manifestPatches | nindent 4 }}
 {{- end }}
+{{- if .Values.core.additionalManifests }}
+  additionalManifests:
+    name: {{ .Values.core.additionalManifests.name }}
+    {{- if .Values.core.additionalManifests.namespace }}
+    namespace: {{ .Values.core.additionalManifests.namespace }}
+    {{- end }} {{/* if .Values.core.additionalManifests.namespace */}}
+{{- end }}
+{{- if .Values.core.additionalManifests }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.core.additionalManifests.name }}
+  namespace: {{ default .Values.coreNamespace .Values.core.additionalManifests.namespace }}
+data:
+  manifests: {{- toYaml .Values.core.additionalManifests.manifests | nindent 4 }}
+{{- end }}
 {{- end }} {{/* if .Values.core */}}
