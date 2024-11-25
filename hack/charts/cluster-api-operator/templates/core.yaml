@@ -43,4 +43,7 @@ spec:
     namespace: {{ $.Values.configSecret.namespace }}
     {{- end }}
 {{- end }}
+{{- if $core.manifestPatches }}
+  manifestPatches: {{ toYaml $core.manifestPatches | nindent 4 }}
+{{- end }}
 {{- end }} {{/* range $name, $core := .Values.core */}}

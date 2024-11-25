@@ -33,4 +33,7 @@ spec:
     namespace: {{ $.Values.configSecret.namespace }}
     {{- end }}
 {{- end }}
+{{- if $bootstrap.manifestPatches }}
+  manifestPatches: {{ toYaml $bootstrap.manifestPatches | nindent 4 }}
+{{- end }}
 {{- end }} {{/* range $name, $bootstrap := .Values.bootstrap */}}

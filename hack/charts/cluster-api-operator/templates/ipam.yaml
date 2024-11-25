@@ -48,6 +48,9 @@ spec:
     namespace: {{ $.Values.configSecret.namespace }}
     {{- end }}
 {{- end }}
+{{- if $ipam.manifestPatches }}
+  manifestPatches: {{ toYaml $ipam.manifestPatches | nindent 4 }}
+{{- end }}
 {{- if $.Values.additionalDeployments }}
   additionalDeployments: {{ toYaml $.Values.additionalDeployments | nindent 4 }}
 {{- end }}
