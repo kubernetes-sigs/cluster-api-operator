@@ -1,26 +1,9 @@
 # Addon provider
 {{- if .Values.addon }}
-{{- $addons := split ";" .Values.addon }}
-{{- $addonNamespace := "" }}
-{{- $addonName := "" }}
-{{- $addonVersion := "" }}
-{{- range $addon := $addons }}
-{{- $addonArgs := split ":" $addon }}
-{{- $addonArgsLen :=  len $addonArgs }}
-{{-  if eq $addonArgsLen 3 }}
-  {{- $addonNamespace = $addonArgs._0 }}
-  {{- $addonName = $addonArgs._1 }}
-  {{- $addonVersion = $addonArgs._2 }}
-{{-  else if eq $addonArgsLen 2 }}
-  {{- $addonNamespace = print $addonArgs._0 "-addon-system" }}
-  {{- $addonName = $addonArgs._0 }}
-  {{- $addonVersion = $addonArgs._1 }}
-{{-  else if eq $addonArgsLen 1 }}
-  {{- $addonNamespace = print $addonArgs._0 "-addon-system" }}
-  {{- $addonName = $addonArgs._0 }}
-{{- else }}
-  {{- fail "addon provider argument should have the following format helm:v1.0.0 or mynamespace:helm:v1.0.0" }}
-{{- end }}
+{{- range $addon := .Values.addon }}
+  {{- $addonNamespace := default ( printf "%s-%s" $addon.name "addon-system" ) $addon.namespace }}
+  {{- $addonName := $addon.name }}
+  {{- $addonVersion := $addon.version }}
 ---
 apiVersion: v1
 kind: Namespace
@@ -52,5 +35,5 @@ spec:
 {{- if $.Values.secretNamespace }}
   secretNamespace: {{ $.Values.secretNamespace }}
 {{- end }}
-{{- end }} {{/* range $addon := $addons */}}
+{{- end }} {{/* range $addon := .Values.addon */}}
 {{- end }} {{/* if .Values.addon */}}
