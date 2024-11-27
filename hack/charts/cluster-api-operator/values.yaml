@@ -1,11 +1,26 @@
 ---
 # ---
 # Cluster API provider options
-core: ""
-bootstrap: ""
-controlPlane: ""
-infrastructure: ""
-addon: ""
+core:
+  name: ""
+  # namespace: ""  # Optional
+  # version: ""  # Optional
+bootstrap:
+  - name: ""
+#   namespace: ""  # Optional
+#   version: ""  # Optional
+controlPlane:
+  - name: ""
+#   namespace: ""  # Optional
+#   version: ""  # Optional
+infrastructure:
+  - name: ""
+#   namespace: ""  # Optional
+#   version: ""  # Optional
+addon:
+  - name: ""
+#   namespace: ""  # Optional
+#   version: ""  # Optional
 manager.featureGates: {}
 # ---
 # Common configuration secret options
