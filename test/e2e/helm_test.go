@@ -261,4 +261,20 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 		Expect(err).ToNot(HaveOccurred())
 		Expect(manifests).To(MatchYAML(string(expectedManifests)))
 	})
+	It("should deploy kubeadm control plane with manager specified", func() {
+		manifests, err := helmChart.Run(map[string]string{
+			"core":           "cluster-api",
+			"controlPlane":   "kubeadm",
+			"bootstrap":      "kubeadm",
+			"infrastructure": "docker",
+			"addon":          "helm",
+			"manager.featureGates.kubeadm.ClusterTopology": "true",
+			"manager.featureGates.kubeadm.MachinePool":     "true",
+		})
+		Expect(err).ToNot(HaveOccurred())
+		Expect(manifests).ToNot(BeEmpty())
+		expectedManifests, err := os.ReadFile(filepath.Join(customManifestsFolder, "kubeadm-manager-defined.yaml"))
+		Expect(err).ToNot(HaveOccurred())
+		Expect(manifests).To(MatchYAML(string(expectedManifests)))
+	})
 })
