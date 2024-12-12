@@ -18,6 +18,7 @@ package healthcheck
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -111,7 +112,12 @@ func (r *GenericProviderHealthCheckReconciler) SetupWithManager(mgr ctrl.Manager
 
 	r.providerGVK = kinds[0]
 
+	// Provide unique name for each HC controller to avoid naming conflicts on
+	// the generated name for the Deployment as a controller source.
+	name := fmt.Sprintf("healthcheck-%s", r.providerGVK)
+
 	return ctrl.NewControllerManagedBy(mgr).
+		Named(name).
 		For(&appsv1.Deployment{}, builder.WithPredicates(r.providerDeploymentPredicates())).
 		WithEventFilter(deploymentPredicate).
 		WithOptions(options).
