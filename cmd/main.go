@@ -34,7 +34,6 @@ import (
 	"sigs.k8s.io/cluster-api-operator/internal/webhook"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	clusterctlv1 "sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3"
-	"sigs.k8s.io/cluster-api/controllers/remote"
 	"sigs.k8s.io/cluster-api/util/flags"
 	"sigs.k8s.io/cluster-api/version"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -228,39 +227,11 @@ func setupChecks(mgr ctrl.Manager) {
 }
 
 func setupReconcilers(mgr ctrl.Manager, watchConfigSecretChanges bool) {
-	secretCachingClient, err := client.New(mgr.GetConfig(), client.Options{
-		HTTPClient: mgr.GetHTTPClient(),
-		Cache: &client.CacheOptions{
-			Reader: mgr.GetCache(),
-		},
-	})
-	if err != nil {
-		setupLog.Error(err, "unable to create secret caching client")
-		os.Exit(1)
-	}
-	// Set up a ClusterCacheTracker and ClusterCacheReconciler to provide to controllers
-	// requiring a connection to a remote cluster
-	tracker, err := remote.NewClusterCacheTracker(
-		mgr,
-		remote.ClusterCacheTrackerOptions{
-			SecretCachingClient: secretCachingClient,
-			ControllerName:      "cluster-api-operator-controller",
-			Log:                 &ctrl.Log,
-			ClientQPS:           clusterCacheTrackerClientQPS,
-			ClientBurst:         clusterCacheTrackerClientBurst,
-		},
-	)
-	if err != nil {
-		setupLog.Error(err, "Unable to create cluster cache tracker")
-		os.Exit(1)
-	}
-
 	if err := (&providercontroller.GenericProviderReconciler{
 		Provider:                 &operatorv1.CoreProvider{},
 		ProviderList:             &operatorv1.CoreProviderList{},
 		Client:                   mgr.GetClient(),
 		Config:                   mgr.GetConfig(),
-		Tracker:                  tracker,
 		WatchConfigSecretChanges: watchConfigSecretChanges,
 	}).SetupWithManager(mgr, concurrency(concurrencyNumber)); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "CoreProvider")
@@ -272,7 +243,6 @@ func setupReconcilers(mgr ctrl.Manager, watchConfigSecretChanges bool) {
 		ProviderList:             &operatorv1.InfrastructureProviderList{},
 		Client:                   mgr.GetClient(),
 		Config:                   mgr.GetConfig(),
-		Tracker:                  tracker,
 		WatchConfigSecretChanges: watchConfigSecretChanges,
 	}).SetupWithManager(mgr, concurrency(concurrencyNumber)); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "InfrastructureProvider")
@@ -284,7 +254,6 @@ func setupReconcilers(mgr ctrl.Manager, watchConfigSecretChanges bool) {
 		ProviderList:             &operatorv1.BootstrapProviderList{},
 		Client:                   mgr.GetClient(),
 		Config:                   mgr.GetConfig(),
-		Tracker:                  tracker,
 		WatchConfigSecretChanges: watchConfigSecretChanges,
 	}).SetupWithManager(mgr, concurrency(concurrencyNumber)); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "BootstrapProvider")
@@ -296,7 +265,6 @@ func setupReconcilers(mgr ctrl.Manager, watchConfigSecretChanges bool) {
 		ProviderList:             &operatorv1.ControlPlaneProviderList{},
 		Client:                   mgr.GetClient(),
 		Config:                   mgr.GetConfig(),
-		Tracker:                  tracker,
 		WatchConfigSecretChanges: watchConfigSecretChanges,
 	}).SetupWithManager(mgr, concurrency(concurrencyNumber)); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ControlPlaneProvider")
@@ -308,7 +276,6 @@ func setupReconcilers(mgr ctrl.Manager, watchConfigSecretChanges bool) {
 		ProviderList:             &operatorv1.AddonProviderList{},
 		Client:                   mgr.GetClient(),
 		Config:                   mgr.GetConfig(),
-		Tracker:                  tracker,
 		WatchConfigSecretChanges: watchConfigSecretChanges,
 	}).SetupWithManager(mgr, concurrency(concurrencyNumber)); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "AddonProvider")
@@ -320,7 +287,6 @@ func setupReconcilers(mgr ctrl.Manager, watchConfigSecretChanges bool) {
 		ProviderList:             &operatorv1.IPAMProviderList{},
 		Client:                   mgr.GetClient(),
 		Config:                   mgr.GetConfig(),
-		Tracker:                  tracker,
 		WatchConfigSecretChanges: watchConfigSecretChanges,
 	}).SetupWithManager(mgr, concurrency(concurrencyNumber)); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "IPAMProvider")
@@ -332,7 +298,6 @@ func setupReconcilers(mgr ctrl.Manager, watchConfigSecretChanges bool) {
 		ProviderList:             &operatorv1.RuntimeExtensionProviderList{},
 		Client:                   mgr.GetClient(),
 		Config:                   mgr.GetConfig(),
-		Tracker:                  tracker,
 		WatchConfigSecretChanges: watchConfigSecretChanges,
 	}).SetupWithManager(mgr, concurrency(concurrencyNumber)); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "RuntimeExtensionProvider")
@@ -340,8 +305,7 @@ func setupReconcilers(mgr ctrl.Manager, watchConfigSecretChanges bool) {
 	}
 
 	if err := (&healtchcheckcontroller.ProviderHealthCheckReconciler{
-		Client:  mgr.GetClient(),
-		Tracker: tracker,
+		Client: mgr.GetClient(),
 	}).SetupWithManager(mgr, concurrency(concurrencyNumber)); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Healthcheck")
 		os.Exit(1)

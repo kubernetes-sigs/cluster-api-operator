@@ -32,7 +32,6 @@ import (
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
 	"sigs.k8s.io/cluster-api-operator/internal/controller/genericprovider"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-	"sigs.k8s.io/cluster-api/controllers/remote"
 	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/patch"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -48,7 +47,6 @@ type GenericProviderReconciler struct {
 	ProviderList             genericprovider.GenericProviderList
 	Client                   client.Client
 	Config                   *rest.Config
-	Tracker                  *remote.ClusterCacheTracker
 	WatchConfigSecretChanges bool
 }
 
