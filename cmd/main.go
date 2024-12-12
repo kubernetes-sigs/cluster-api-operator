@@ -54,23 +54,21 @@ var (
 	setupLog = ctrl.Log.WithName("setup")
 
 	// flags.
-	enableLeaderElection           bool
-	leaderElectionLeaseDuration    time.Duration
-	leaderElectionRenewDeadline    time.Duration
-	leaderElectionRetryPeriod      time.Duration
-	watchFilterValue               string
-	watchNamespace                 string
-	profilerAddress                string
-	enableContentionProfiling      bool
-	concurrencyNumber              int
-	syncPeriod                     time.Duration
-	clusterCacheTrackerClientQPS   float32
-	clusterCacheTrackerClientBurst int
-	webhookPort                    int
-	webhookCertDir                 string
-	healthAddr                     string
-	watchConfigSecretChanges       bool
-	managerOptions                 = flags.ManagerOptions{}
+	enableLeaderElection        bool
+	leaderElectionLeaseDuration time.Duration
+	leaderElectionRenewDeadline time.Duration
+	leaderElectionRetryPeriod   time.Duration
+	watchFilterValue            string
+	watchNamespace              string
+	profilerAddress             string
+	enableContentionProfiling   bool
+	concurrencyNumber           int
+	syncPeriod                  time.Duration
+	webhookPort                 int
+	webhookCertDir              string
+	healthAddr                  string
+	watchConfigSecretChanges    bool
+	managerOptions              = flags.ManagerOptions{}
 )
 
 func init() {
@@ -118,12 +116,6 @@ func InitFlags(fs *pflag.FlagSet) {
 
 	fs.DurationVar(&syncPeriod, "sync-period", 10*time.Minute,
 		"The minimum interval at which watched resources are reconciled (e.g. 15m)")
-
-	fs.Float32Var(&clusterCacheTrackerClientQPS, "clustercachetracker-client-qps", 20,
-		"Maximum queries per second from the cluster cache tracker clients to the Kubernetes API server of workload clusters.")
-
-	fs.IntVar(&clusterCacheTrackerClientBurst, "clustercachetracker-client-burst", 30,
-		"Maximum number of queries that should be allowed in one burst from the cluster cache tracker clients to the Kubernetes API server of workload clusters.")
 
 	fs.IntVar(&webhookPort, "webhook-port", 9443, "Webhook Server port")
 
