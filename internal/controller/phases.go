@@ -65,6 +65,7 @@ type phaseReconciler struct {
 	options            repository.ComponentsOptions
 	providerConfig     configclient.Provider
 	configClient       configclient.Client
+	overridesClient    configclient.Client
 	components         repository.Components
 	clusterctlProvider *clusterctlv1.Provider
 }
@@ -126,14 +127,23 @@ func (p *phaseReconciler) initializePhaseReconciler(ctx context.Context) (reconc
 	initConfig, err := configclient.New(ctx, path)
 	if err != nil {
 		return reconcile.Result{}, err
+	} else if path != "" {
+		// Set the image and providers override client
+		p.overridesClient = initConfig
 	}
 
-	providers, err := initConfig.Providers().List()
-	if err != nil {
-		return reconcile.Result{}, err
+	overrideProviders := []configclient.Provider{}
+
+	if p.overridesClient != nil {
+		providers, err := p.overridesClient.Providers().List()
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+
+		overrideProviders = providers
 	}
 
-	reader, err := p.secretReader(ctx, providers...)
+	reader, err := p.secretReader(ctx, overrideProviders...)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -449,6 +459,11 @@ func (p *phaseReconciler) fetch(ctx context.Context) (reconcile.Result, error) {
 
 	// Apply patches to the provider components if specified.
 	if err := repository.AlterComponents(p.components, applyPatches(ctx, p.provider)); err != nil {
+		return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.ProviderInstalledCondition)
+	}
+
+	// Apply image overrides to the provider manifests.
+	if err := repository.AlterComponents(p.components, imageOverrides(p.components.ManifestLabel(), p.overridesClient)); err != nil {
 		return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.ProviderInstalledCondition)
 	}
 

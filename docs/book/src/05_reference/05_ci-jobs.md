@@ -27,9 +27,8 @@ Prow Presubmits:
 GitHub Presubmit Workflows:
 * PR golangci-lint: golangci/golangci-lint-action
   * Runs golangci-lint. Can be run locally via `make lint`.
-* PR verify: kubernetes-sigs/kubebuilder-release-tools verifier
+* PR verify: title verifier
   * Verifies the PR titles have a valid format, i.e. contains one of the valid icons.
-  * Verifies the PR description is valid, i.e. is long enough.
 * PR dependabot (run on dependabot PRs)
   * Regenerates Go modules and code.
   

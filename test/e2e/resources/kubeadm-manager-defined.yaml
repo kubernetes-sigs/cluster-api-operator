@@ -1,5 +1,33 @@
 ---
-# Source: cluster-api-operator/templates/core-conditions.yaml
+# Source: cluster-api-operator/templates/addon.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    "helm.sh/hook": "post-install,post-upgrade"
+    "helm.sh/hook-weight": "1"
+    "argocd.argoproj.io/sync-wave": "1"
+  name: helm-addon-system
+---
+# Source: cluster-api-operator/templates/bootstrap.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    "helm.sh/hook": "post-install,post-upgrade"
+    "helm.sh/hook-weight": "1"
+  name: kubeadm-bootstrap-system
+---
+# Source: cluster-api-operator/templates/control-plane.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    "helm.sh/hook": "post-install,post-upgrade"
+    "helm.sh/hook-weight": "1"
+  name: kubeadm-control-plane-system
+---
+# Source: cluster-api-operator/templates/core.yaml
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -8,26 +36,6 @@ metadata:
     "helm.sh/hook-weight": "1"
   name: capi-system
 ---
-# Source: cluster-api-operator/templates/infra-conditions.yaml
-apiVersion: v1
-kind: Namespace
-metadata:
-  annotations:
-    "helm.sh/hook": "post-install,post-upgrade"
-    "helm.sh/hook-weight": "1"
-    "argocd.argoproj.io/sync-wave": "1"
-  name: capi-kubeadm-bootstrap-system
----
-# Source: cluster-api-operator/templates/infra-conditions.yaml
-apiVersion: v1
-kind: Namespace
-metadata:
-  annotations:
-    "helm.sh/hook": "post-install,post-upgrade"
-    "helm.sh/hook-weight": "1"
-    "argocd.argoproj.io/sync-wave": "1"
-  name: capi-kubeadm-control-plane-system
----
 # Source: cluster-api-operator/templates/infra.yaml
 apiVersion: v1
 kind: Namespace
@@ -36,49 +44,45 @@ metadata:
     "helm.sh/hook": "post-install,post-upgrade"
     "helm.sh/hook-weight": "1"
     "argocd.argoproj.io/sync-wave": "1"
-  name: capd-custom-ns
+  name: docker-infrastructure-system
 ---
-# Source: cluster-api-operator/templates/infra.yaml
-apiVersion: v1
-kind: Namespace
+# Source: cluster-api-operator/templates/addon.yaml
+apiVersion: operator.cluster.x-k8s.io/v1alpha2
+kind: AddonProvider
 metadata:
+  name: helm
+  namespace: helm-addon-system
   annotations:
     "helm.sh/hook": "post-install,post-upgrade"
-    "helm.sh/hook-weight": "1"
-    "argocd.argoproj.io/sync-wave": "1"
-  name: capz-custom-ns
+    "helm.sh/hook-weight": "2"
+    "argocd.argoproj.io/sync-wave": "2"
 ---
-# Source: cluster-api-operator/templates/infra-conditions.yaml
+# Source: cluster-api-operator/templates/bootstrap.yaml
 apiVersion: operator.cluster.x-k8s.io/v1alpha2
 kind: BootstrapProvider
 metadata:
   name: kubeadm
-  namespace: capi-kubeadm-bootstrap-system
+  namespace: kubeadm-bootstrap-system
   annotations:
     "helm.sh/hook": "post-install,post-upgrade"
     "helm.sh/hook-weight": "2"
-    "argocd.argoproj.io/sync-wave": "2"
-spec:
-  configSecret:
-    name: test-secret-name
-    namespace: test-secret-namespace
 ---
-# Source: cluster-api-operator/templates/infra-conditions.yaml
+# Source: cluster-api-operator/templates/control-plane.yaml
 apiVersion: operator.cluster.x-k8s.io/v1alpha2
 kind: ControlPlaneProvider
 metadata:
   name: kubeadm
-  namespace: capi-kubeadm-control-plane-system
+  namespace: kubeadm-control-plane-system
   annotations:
     "helm.sh/hook": "post-install,post-upgrade"
     "helm.sh/hook-weight": "2"
-    "argocd.argoproj.io/sync-wave": "2"
 spec:
-  configSecret:
-    name: test-secret-name
-    namespace: test-secret-namespace
+  manager:
+    featureGates:
+      ClusterTopology: true
+      MachinePool: true
 ---
-# Source: cluster-api-operator/templates/core-conditions.yaml
+# Source: cluster-api-operator/templates/core.yaml
 apiVersion: operator.cluster.x-k8s.io/v1alpha2
 kind: CoreProvider
 metadata:
@@ -87,39 +91,18 @@ metadata:
   annotations:
     "helm.sh/hook": "post-install,post-upgrade"
     "helm.sh/hook-weight": "2"
-spec:
-  configSecret:
-    name: test-secret-name
-    namespace: test-secret-namespace
+    "argocd.argoproj.io/sync-wave": "2"
+  manager:
 ---
 # Source: cluster-api-operator/templates/infra.yaml
 apiVersion: operator.cluster.x-k8s.io/v1alpha2
 kind: InfrastructureProvider
 metadata:
   name: docker
-  namespace: capd-custom-ns
+  namespace: docker-infrastructure-system
   annotations:
     "helm.sh/hook": "post-install,post-upgrade"
     "helm.sh/hook-weight": "2"
     "argocd.argoproj.io/sync-wave": "2"
 spec:
-  version: v1.7.7
-  configSecret:
-    name: test-secret-name
-    namespace: test-secret-namespace
----
-# Source: cluster-api-operator/templates/infra.yaml
-apiVersion: operator.cluster.x-k8s.io/v1alpha2
-kind: InfrastructureProvider
-metadata:
-  name: azure
-  namespace: capz-custom-ns
-  annotations:
-    "helm.sh/hook": "post-install,post-upgrade"
-    "helm.sh/hook-weight": "2"
-    "argocd.argoproj.io/sync-wave": "2"
-spec:
-  version: v1.10.0
-  configSecret:
-    name: test-secret-name
-    namespace: test-secret-namespace
+  manager:

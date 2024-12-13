@@ -273,7 +273,7 @@ func initBootstrapCluster(bootstrapClusterProxy framework.ClusterProxy, config *
 	Expect(err).ToNot(HaveOccurred(), "Failed to read the operator components file")
 
 	By("Applying operator components to the bootstrap cluster")
-	Expect(bootstrapClusterProxy.Apply(ctx, operatorComponents)).To(Succeed(), "Failed to apply operator components to the bootstrap cluster")
+	Expect(bootstrapClusterProxy.CreateOrUpdate(ctx, operatorComponents)).To(Succeed(), "Failed to apply operator components to the bootstrap cluster")
 
 	By("Waiting for the controllers to be running")
 	framework.WaitForDeploymentsAvailable(ctx, framework.WaitForDeploymentsAvailableInput{

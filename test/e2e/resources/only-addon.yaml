@@ -4,7 +4,7 @@ apiVersion: v1
 kind: Namespace
 metadata:
   annotations:
-    "helm.sh/hook": "post-install"
+    "helm.sh/hook": "post-install,post-upgrade"
     "helm.sh/hook-weight": "1"
     "argocd.argoproj.io/sync-wave": "1"
   name: helm-addon-system
@@ -14,7 +14,7 @@ apiVersion: v1
 kind: Namespace
 metadata:
   annotations:
-    "helm.sh/hook": "post-install"
+    "helm.sh/hook": "post-install,post-upgrade"
     "helm.sh/hook-weight": "1"
   name: capi-system
 ---
@@ -25,7 +25,7 @@ metadata:
   name: helm
   namespace: helm-addon-system
   annotations:
-    "helm.sh/hook": "post-install"
+    "helm.sh/hook": "post-install,post-upgrade"
     "helm.sh/hook-weight": "2"
     "argocd.argoproj.io/sync-wave": "2"
 ---
@@ -36,7 +36,7 @@ metadata:
   name: cluster-api
   namespace: capi-system
   annotations:
-    "helm.sh/hook": "post-install"
+    "helm.sh/hook": "post-install,post-upgrade"
     "helm.sh/hook-weight": "2"
 spec:
   configSecret:

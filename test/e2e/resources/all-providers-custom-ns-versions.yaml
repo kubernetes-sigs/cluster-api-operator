@@ -4,7 +4,7 @@ apiVersion: v1
 kind: Namespace
 metadata:
   annotations:
-    "helm.sh/hook": "post-install"
+    "helm.sh/hook": "post-install,post-upgrade"
     "helm.sh/hook-weight": "1"
     "argocd.argoproj.io/sync-wave": "1"
   name: helm-custom-ns
@@ -14,7 +14,7 @@ apiVersion: v1
 kind: Namespace
 metadata:
   annotations:
-    "helm.sh/hook": "post-install"
+    "helm.sh/hook": "post-install,post-upgrade"
     "helm.sh/hook-weight": "1"
   name: kubeadm-bootstrap-custom-ns
 ---
@@ -23,7 +23,7 @@ apiVersion: v1
 kind: Namespace
 metadata:
   annotations:
-    "helm.sh/hook": "post-install"
+    "helm.sh/hook": "post-install,post-upgrade"
     "helm.sh/hook-weight": "1"
   name: kubeadm-control-plane-custom-ns
 ---
@@ -32,7 +32,7 @@ apiVersion: v1
 kind: Namespace
 metadata:
   annotations:
-    "helm.sh/hook": "post-install"
+    "helm.sh/hook": "post-install,post-upgrade"
     "helm.sh/hook-weight": "1"
   name: capi-custom-ns
 ---
@@ -41,7 +41,7 @@ apiVersion: v1
 kind: Namespace
 metadata:
   annotations:
-    "helm.sh/hook": "post-install"
+    "helm.sh/hook": "post-install,post-upgrade"
     "helm.sh/hook-weight": "1"
     "argocd.argoproj.io/sync-wave": "1"
   name: capd-custom-ns
@@ -53,7 +53,7 @@ metadata:
   name: helm
   namespace: helm-custom-ns
   annotations:
-    "helm.sh/hook": "post-install"
+    "helm.sh/hook": "post-install,post-upgrade"
     "helm.sh/hook-weight": "2"
     "argocd.argoproj.io/sync-wave": "2"
 spec:
@@ -66,10 +66,10 @@ metadata:
   name: kubeadm
   namespace: kubeadm-bootstrap-custom-ns
   annotations:
-    "helm.sh/hook": "post-install"
+    "helm.sh/hook": "post-install,post-upgrade"
     "helm.sh/hook-weight": "2"
 spec:
-  version: v1.5.4
+  version: v1.7.7
   configSecret:
     name: test-secret-name
     namespace: test-secret-namespace
@@ -81,10 +81,10 @@ metadata:
   name: kubeadm
   namespace: kubeadm-control-plane-custom-ns
   annotations:
-    "helm.sh/hook": "post-install"
+    "helm.sh/hook": "post-install,post-upgrade"
     "helm.sh/hook-weight": "2"
 spec:
-  version: v1.5.4
+  version: v1.7.7
   configSecret:
     name: test-secret-name
     namespace: test-secret-namespace
@@ -96,11 +96,11 @@ metadata:
   name: cluster-api
   namespace: capi-custom-ns
   annotations:
-    "helm.sh/hook": "post-install"
+    "helm.sh/hook": "post-install,post-upgrade"
     "helm.sh/hook-weight": "2"
     "argocd.argoproj.io/sync-wave": "2"
 spec:
-  version: v1.5.4
+  version: v1.7.7
   configSecret:
     name: test-secret-name
     namespace: test-secret-namespace
@@ -112,11 +112,11 @@ metadata:
   name: docker
   namespace: capd-custom-ns
   annotations:
-    "helm.sh/hook": "post-install"
+    "helm.sh/hook": "post-install,post-upgrade"
     "helm.sh/hook-weight": "2"
     "argocd.argoproj.io/sync-wave": "2"
 spec:
-  version: v1.5.4
+  version: v1.7.7
   configSecret:
     name: test-secret-name
     namespace: test-secret-namespace

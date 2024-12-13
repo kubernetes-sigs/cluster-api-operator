@@ -31,7 +31,7 @@ const (
 	operatorNamespace   = "capi-operator-system"
 	capiSystemNamespace = "capi-system"
 
-	previousCAPIVersion = "v1.5.4"
+	previousCAPIVersion = "v1.7.7"
 
 	coreProviderName           = "cluster-api"
 	coreProviderDeploymentName = "capi-controller-manager"
