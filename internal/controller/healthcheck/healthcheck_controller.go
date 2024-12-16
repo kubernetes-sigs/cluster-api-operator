@@ -18,6 +18,7 @@ package healthcheck
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -30,7 +31,6 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/util/errors"
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-	"sigs.k8s.io/cluster-api/controllers/remote"
 	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/patch"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -60,8 +60,7 @@ const providerLabelKey = "cluster.x-k8s.io/provider"
 var deploymentPredicate predicate.Predicate
 
 type ProviderHealthCheckReconciler struct {
-	Client  client.Client
-	Tracker *remote.ClusterCacheTracker
+	Client client.Client
 }
 
 type GenericProviderHealthCheckReconciler struct {
@@ -111,7 +110,12 @@ func (r *GenericProviderHealthCheckReconciler) SetupWithManager(mgr ctrl.Manager
 
 	r.providerGVK = kinds[0]
 
+	// Provide unique name for each HC controller to avoid naming conflicts on
+	// the generated name for the Deployment as a controller source.
+	name := fmt.Sprintf("healthcheck-%s", r.providerGVK)
+
 	return ctrl.NewControllerManagedBy(mgr).
+		Named(name).
 		For(&appsv1.Deployment{}, builder.WithPredicates(r.providerDeploymentPredicates())).
 		WithEventFilter(deploymentPredicate).
 		WithOptions(options).

@@ -66,7 +66,7 @@ IMAGE_REVIEWERS ?= $(shell ./hack/get-project-maintainers.sh)
 
 # Binaries.
 # Need to use abspath so we can invoke these from subdirectories
-CONTROLLER_GEN_VER := v0.15.0
+CONTROLLER_GEN_VER := v0.16.1
 CONTROLLER_GEN_BIN := controller-gen
 CONTROLLER_GEN := $(TOOLS_BIN_DIR)/$(CONTROLLER_GEN_BIN)-$(CONTROLLER_GEN_VER)
 
@@ -74,7 +74,7 @@ GOLANGCI_LINT_VER := v1.57.2
 GOLANGCI_LINT_BIN := golangci-lint
 GOLANGCI_LINT := $(TOOLS_BIN_DIR)/$(GOLANGCI_LINT_BIN)-$(GOLANGCI_LINT_VER)
 
-KUSTOMIZE_VER := v5.0.1
+KUSTOMIZE_VER := v5.3.0
 KUSTOMIZE_BIN := kustomize
 KUSTOMIZE := $(TOOLS_BIN_DIR)/$(KUSTOMIZE_BIN)-$(KUSTOMIZE_VER)
 
