@@ -70,4 +70,7 @@ spec:
   additionalDeployments: {{ toYaml $.Values.additionalDeployments | nindent 4 }}
 {{- end }}
 {{- end }}
+{{- if hasKey (default (dict) $.Values.deploymentOverride ) "infrastructure" }}
+  {{ .Values.deploymentOverride.infrastructure | toYaml | nindent 2 }}
+{{- end }}
 {{- end }}
