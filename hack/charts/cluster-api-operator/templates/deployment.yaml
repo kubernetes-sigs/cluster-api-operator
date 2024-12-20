@@ -100,10 +100,10 @@ spec:
           {{- if $.Values.diagnosticsAddress }}
           {{- $diagnosticsPort := $.Values.diagnosticsAddress }}
           {{- if contains ":" $diagnosticsPort -}}
-          {{ $diagnosticsPort = ( split ":" $.Values.diagnosticsAddress)._1 }}
+          {{ $diagnosticsPort = ( split ":" $.Values.diagnosticsAddress)._1 | int }}
           {{- end }}
         - containerPort: {{ $diagnosticsPort | int }}
-          name: diagnostics
+          name: metrics
           protocol: TCP
           {{- end }}
         {{- with .Values.resources.manager }}
