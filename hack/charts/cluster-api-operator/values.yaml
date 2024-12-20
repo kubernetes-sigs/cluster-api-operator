@@ -24,7 +24,7 @@ image:
 env:
   manager: []
 healthAddr: ":8081"
-diagnosticsAddress: "8443"
+diagnosticsAddress: ":8443"
 insecureDiagnostics: false
 watchConfigSecret: false
 imagePullSecrets: {}
