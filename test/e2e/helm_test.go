@@ -25,10 +25,103 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	appsv1 "k8s.io/api/apps/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
+	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
 	. "sigs.k8s.io/cluster-api-operator/test/framework"
+	"sigs.k8s.io/cluster-api/test/framework"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var _ = Describe("Create a proper set of manifests when using helm charts", func() {
+	It("should deploy a quick-start cluster-api-operator chart", func() {
+		clusterProxy := helmClusterProxy.GetClient()
+
+		fullHelmChart := &HelmChart{
+			BinaryPath:      helmBinaryPath,
+			Path:            chartPath,
+			Name:            "capi-operator",
+			Kubeconfig:      helmClusterProxy.GetKubeconfigPath(),
+			Wait:            true,
+			Output:          Full,
+			AdditionalFlags: Flags("--create-namespace", "--namespace", operatorNamespace),
+		}
+
+		defer func() {
+			fullHelmChart.Commands = Commands(Uninstall)
+			fullHelmChart.AdditionalFlags = Flags("--namespace", operatorNamespace)
+			fullHelmChart.Run(nil)
+
+			err := clusterProxy.DeleteAllOf(ctx, &apiextensionsv1.CustomResourceDefinition{}, client.MatchingLabels{
+				"clusterctl.cluster.x-k8s.io/core": "capi-operator",
+			})
+			Expect(err).ToNot(HaveOccurred())
+		}()
+
+		_, err := fullHelmChart.Run(nil)
+		Expect(err).ToNot(HaveOccurred())
+
+		coreProvider := &operatorv1.CoreProvider{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      coreProviderName,
+				Namespace: operatorNamespace,
+			},
+		}
+		Expect(clusterProxy.Create(ctx, coreProvider)).To(Succeed())
+
+		By("Waiting for the core provider deployment to be ready")
+		framework.WaitForDeploymentsAvailable(ctx, framework.WaitForDeploymentsAvailableInput{
+			Getter:     clusterProxy,
+			Deployment: &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: coreProviderDeploymentName, Namespace: operatorNamespace}},
+		}, e2eConfig.GetIntervals(helmClusterProxy.GetName(), "wait-controllers")...)
+
+		By("Waiting for core provider to be ready")
+		WaitFor(ctx, For(coreProvider).In(clusterProxy).ToSatisfy(
+			HaveStatusCondition(&coreProvider.Status.Conditions, operatorv1.ProviderInstalledCondition),
+		), e2eConfig.GetIntervals(helmClusterProxy.GetName(), "wait-controllers")...)
+
+		By("Waiting for status.IntalledVersion to be set")
+		WaitFor(ctx, For(coreProvider).In(clusterProxy).ToSatisfy(func() bool {
+			return ptr.Equal(coreProvider.Status.InstalledVersion, ptr.To(coreProvider.Spec.Version))
+		}), e2eConfig.GetIntervals(helmClusterProxy.GetName(), "wait-controllers")...)
+
+		bootstrapProvider := &operatorv1.BootstrapProvider{ObjectMeta: metav1.ObjectMeta{
+			Name:      bootstrapProviderName,
+			Namespace: operatorNamespace,
+		}}
+		deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{
+			Name:      bootstrapProviderDeploymentName,
+			Namespace: operatorNamespace,
+		}}
+
+		Expect(clusterProxy.Create(ctx, bootstrapProvider)).To(Succeed())
+
+		By("Waiting for the bootstrap provider deployment to be ready")
+		framework.WaitForDeploymentsAvailable(ctx, framework.WaitForDeploymentsAvailableInput{
+			Getter:     clusterProxy,
+			Deployment: deployment,
+		}, e2eConfig.GetIntervals(helmClusterProxy.GetName(), "wait-controllers")...)
+
+		By("Waiting for bootstrap provider to be ready")
+		WaitFor(ctx, For(bootstrapProvider).In(clusterProxy).ToSatisfy(
+			HaveStatusCondition(&bootstrapProvider.Status.Conditions, operatorv1.ProviderInstalledCondition)),
+			e2eConfig.GetIntervals(helmClusterProxy.GetName(), "wait-controllers")...)
+
+		By("Waiting for status.IntalledVersion to be set")
+		WaitFor(ctx, For(bootstrapProvider).In(clusterProxy).ToSatisfy(func() bool {
+			return ptr.Equal(bootstrapProvider.Status.InstalledVersion, &bootstrapProvider.Spec.Version)
+		}), e2eConfig.GetIntervals(helmClusterProxy.GetName(), "wait-controllers")...)
+		Expect(clusterProxy.Delete(ctx, bootstrapProvider)).To(Succeed())
+
+		By("Waiting for the bootstrap provider deployment to be deleted")
+		WaitForDelete(ctx, For(deployment).In(clusterProxy),
+			e2eConfig.GetIntervals(helmClusterProxy.GetName(), "wait-controllers")...)
+
+		Expect(clusterProxy.Delete(ctx, coreProvider)).To(Succeed())
+	})
+
 	It("should deploy default manifest set for quick-start process", func() {
 		fullRun := &HelmChart{
 			BinaryPath: helmChart.BinaryPath,
