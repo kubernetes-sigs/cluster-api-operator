@@ -23,8 +23,8 @@ image:
     pullPolicy: IfNotPresent
 env:
   manager: []
-healthAddr: ":8081"
 diagnosticsAddress: ":8443"
+healthAddr: ":9440"
 insecureDiagnostics: false
 watchConfigSecret: false
 imagePullSecrets: {}
