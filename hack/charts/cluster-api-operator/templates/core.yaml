@@ -1,25 +1,8 @@
 # Core provider
 {{- if .Values.core }}
-{{- $coreArgs := split ":" .Values.core }}
-{{- $coreArgsLen :=  len $coreArgs }}
-{{- $coreVersion := "" }}
-{{- $coreNamespace := "" }}
-{{- $coreName := "" }}
-{{- $coreVersion := "" }}
-{{-  if eq $coreArgsLen 3 }}
-  {{- $coreNamespace = $coreArgs._0 }}
-  {{- $coreName = $coreArgs._1 }}
-  {{- $coreVersion = $coreArgs._2 }}
-{{-  else if eq $coreArgsLen 2 }}
-  {{- $coreNamespace = "capi-system" }}
-  {{- $coreName = $coreArgs._0 }}
-  {{- $coreVersion = $coreArgs._1 }}
-{{-  else if eq $coreArgsLen 1 }}
-  {{- $coreNamespace = "capi-system" }}
-  {{- $coreName = $coreArgs._0 }}
-{{- else }}
-  {{- fail "core provider argument should have the following format cluster-api:v1.0.0 or mynamespace:cluster-api:v1.0.0" }}
-{{-  end }}
+  {{- $coreNamespace := default ( printf "%s-%s" .Values.core.name "capi-system" ) .Values.core.namespace }}
+  {{- $coreName := .Values.core.name }}
+  {{- $coreVersion := .Values.core.version }}
 ---
 apiVersion: v1
 kind: Namespace
@@ -60,4 +43,24 @@ spec:
     namespace: {{ $.Values.configSecret.namespace }}
     {{- end }}
 {{- end }}
+{{- if .Values.core.manifestPatches }}
+  manifestPatches: {{ toYaml .Values.core.manifestPatches | nindent 4 }}
 {{- end }}
+{{- if .Values.core.additionalManifests }}
+  additionalManifests:
+    name: {{ .Values.core.additionalManifests.name }}
+    {{- if .Values.core.additionalManifests.namespace }}
+    namespace: {{ .Values.core.additionalManifests.namespace }}
+    {{- end }} {{/* if .Values.core.additionalManifests.namespace */}}
+{{- end }}
+{{- if .Values.core.additionalManifests }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.core.additionalManifests.name }}
+  namespace: {{ default .Values.coreNamespace .Values.core.additionalManifests.namespace }}
+data:
+  manifests: {{- toYaml .Values.core.additionalManifests.manifests | nindent 4 }}
+{{- end }}
+{{- end }} {{/* if .Values.core */}}
