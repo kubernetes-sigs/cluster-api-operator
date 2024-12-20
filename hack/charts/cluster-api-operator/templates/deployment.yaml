@@ -97,6 +97,15 @@ spec:
         - containerPort: 9443
           name: webhook-server
           protocol: TCP
+          {{- if $.Values.diagnosticsAddress }}
+          {{- $diagnosticsPort := $.Values.diagnosticsAddress }}
+          {{- if contains ":" $diagnosticsPort -}}
+          {{ $diagnosticsPort = ( split ":" $.Values.diagnosticsAddress)._1 }}
+          {{- end }}
+        - containerPort: {{ $diagnosticsPort | int }}
+          name: diagnostics
+          protocol: TCP
+          {{- end }}
         {{- with .Values.resources.manager }}
         resources:
         {{- toYaml . | nindent 12 }}
