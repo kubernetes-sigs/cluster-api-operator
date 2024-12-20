@@ -28399,7 +28399,7 @@ spec:
           name: webhook-server
           protocol: TCP
         - containerPort: 8443
-          name: diagnostics
+          name: metrics
           protocol: TCP
         resources:
             limits:
