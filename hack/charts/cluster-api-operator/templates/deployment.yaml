@@ -65,9 +65,6 @@ spec:
         {{- if .Values.healthAddr }}
         - --health-addr={{ .Values.healthAddr }}
         {{- end }}
-        {{- if .Values.metricsBindAddr }}
-        - --metrics-bind-addr={{ .Values.metricsBindAddr }}
-        {{- end }}
         {{- if .Values.diagnosticsAddress }}
         - --diagnostics-address={{ .Values.diagnosticsAddress }}
         {{- end }}
@@ -100,9 +97,15 @@ spec:
         - containerPort: 9443
           name: webhook-server
           protocol: TCP
-        - containerPort: {{ ( split ":" $.Values.metricsBindAddr)._1 | int }}
+          {{- if $.Values.diagnosticsAddress }}
+          {{- $diagnosticsPort := $.Values.diagnosticsAddress }}
+          {{- if contains ":" $diagnosticsPort -}}
+          {{ $diagnosticsPort = ( split ":" $.Values.diagnosticsAddress)._1 | int }}
+          {{- end }}
+        - containerPort: {{ $diagnosticsPort | int }}
           name: metrics
           protocol: TCP
+          {{- end }}
         {{- with .Values.resources.manager }}
         resources:
         {{- toYaml . | nindent 12 }}
