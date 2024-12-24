@@ -123,6 +123,30 @@ spec:
         {{- toYaml . | nindent 12 }}
         {{- end }}
         terminationMessagePolicy: FallbackToLogsOnError
+        {{- $healthAddr := $.Values.healthAddr }}
+        {{- if contains ":" $healthAddr -}}
+        {{ $healthAddr = ( split ":" $.Values.healthAddr)._1 | int }}
+        {{- end }}
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /healthz
+            port: {{ $healthAddr | default 9440 }}
+            scheme: HTTP
+          initialDelaySeconds: 15
+          periodSeconds: 20
+          successThreshold: 1
+          timeoutSeconds: 1
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /readyz
+            port: {{ $healthAddr | default 9440 }}
+            scheme: HTTP
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
       terminationGracePeriodSeconds: 10
       {{- with .Values.volumes }}
       volumes:
