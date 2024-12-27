@@ -2,6 +2,16 @@ apiVersion: v1
 entries:
   cluster-api-operator:
   - apiVersion: v2
+    appVersion: 0.15.1
+    created: "2024-12-27T14:47:12.558309+02:00"
+    description: Cluster API Operator
+    digest: 054f9eb0e6dd156e740f7f9d5d90f5e6bd26cba5d003fde2acc00f63c2706a14
+    name: cluster-api-operator
+    type: application
+    urls:
+    - https://github.com/kubernetes-sigs/cluster-api-operator/releases/download/v0.15.1/cluster-api-operator-0.15.1.tgz
+    version: 0.15.1
+  - apiVersion: v2
     appVersion: 0.15.0
     created: "2024-12-18T15:41:02.023104281+01:00"
     description: Cluster API Operator
@@ -246,4 +256,4 @@ entries:
     urls:
     - https://github.com/kubernetes-sigs/cluster-api-operator/releases/download/v0.2.0/cluster-api-operator-0.2.0.tgz
     version: 0.2.0
-generated: "2024-12-18T15:41:02.023216652+01:00"
+generated: "2024-12-27T14:47:12.558429+02:00"
