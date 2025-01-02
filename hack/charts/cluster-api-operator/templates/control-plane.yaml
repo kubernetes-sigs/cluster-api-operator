@@ -45,8 +45,8 @@ spec:
   version: {{ $controlPlaneVersion }}
 {{- end }}
 {{- if $.Values.manager }}
-  manager:
 {{- if hasKey $.Values.manager.featureGates $controlPlaneName }}
+  manager:
 {{- range $key, $value := $.Values.manager.featureGates }}
   {{- if eq $key $controlPlaneName }}
     featureGates:
