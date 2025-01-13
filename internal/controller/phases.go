@@ -48,10 +48,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-const (
-	metadataFile = "metadata.yaml"
-)
-
 // phaseReconciler holds all required information for interacting with clusterctl code and
 // helps to iterate through provider reconciliation phases.
 type phaseReconciler struct {

@@ -46,6 +46,7 @@ func (src *BootstrapProvider) ConvertTo(dstRaw conversion.Hub) error {
 
 	dst.Spec.ManifestPatches = restored.Spec.ManifestPatches
 	dst.Spec.AdditionalDeployments = restored.Spec.AdditionalDeployments
+	dst.Spec.FetchConfig.OCI = restored.Spec.FetchConfig.OCI
 
 	return nil
 }
@@ -108,6 +109,7 @@ func (src *ControlPlaneProvider) ConvertTo(dstRaw conversion.Hub) error {
 
 	dst.Spec.ManifestPatches = restored.Spec.ManifestPatches
 	dst.Spec.AdditionalDeployments = restored.Spec.AdditionalDeployments
+	dst.Spec.FetchConfig.OCI = restored.Spec.FetchConfig.OCI
 
 	return nil
 }
@@ -170,6 +172,7 @@ func (src *CoreProvider) ConvertTo(dstRaw conversion.Hub) error {
 
 	dst.Spec.ManifestPatches = restored.Spec.ManifestPatches
 	dst.Spec.AdditionalDeployments = restored.Spec.AdditionalDeployments
+	dst.Spec.FetchConfig.OCI = restored.Spec.FetchConfig.OCI
 
 	return nil
 }
@@ -232,6 +235,7 @@ func (src *InfrastructureProvider) ConvertTo(dstRaw conversion.Hub) error {
 
 	dst.Spec.ManifestPatches = restored.Spec.ManifestPatches
 	dst.Spec.AdditionalDeployments = restored.Spec.AdditionalDeployments
+	dst.Spec.FetchConfig.OCI = restored.Spec.FetchConfig.OCI
 
 	return nil
 }
@@ -493,6 +497,10 @@ func Convert_v1alpha2_ContainerSpec_To_v1alpha1_ContainerSpec(in *operatorv1.Con
 	out.Command = in.Command
 
 	return nil
+}
+
+func Convert_v1alpha2_FetchConfiguration_To_v1alpha1_FetchConfiguration(in *operatorv1.FetchConfiguration, out *FetchConfiguration, s apimachineryconversion.Scope) error {
+	return autoConvert_v1alpha2_FetchConfiguration_To_v1alpha1_FetchConfiguration(in, out, s)
 }
 
 func toImageMeta(imageURL string) *ImageMeta {

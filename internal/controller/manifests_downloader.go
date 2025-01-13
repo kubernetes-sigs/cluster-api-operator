@@ -39,6 +39,7 @@ const (
 	configMapVersionLabel = "provider.cluster.x-k8s.io/version"
 	configMapTypeLabel    = "provider.cluster.x-k8s.io/type"
 	configMapNameLabel    = "provider.cluster.x-k8s.io/name"
+	configMapSourceLabel  = "provider.cluster.x-k8s.io/source"
 	operatorManagedLabel  = "managed-by.operator.cluster.x-k8s.io"
 
 	compressedAnnotation = "provider.cluster.x-k8s.io/compressed"
@@ -48,6 +49,7 @@ const (
 	additionalManifestsConfigMapKey = "manifests"
 
 	maxConfigMapSize = 1 * 1024 * 1024
+	ociSource        = "oci"
 )
 
 // downloadManifests downloads CAPI manifests from a url.
@@ -96,6 +98,12 @@ func (p *phaseReconciler) downloadManifests(ctx context.Context) (reconcile.Resu
 		p.provider.SetSpec(spec)
 	}
 
+	if p.provider.GetSpec().FetchConfig != nil && p.provider.GetSpec().FetchConfig.OCI != "" {
+		err := fetchOCI(ctx, p.ctrlClient, p.provider, ociAuthentication(p.configClient.Variables()))
+
+		return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.ProviderInstalledCondition)
+	}
+
 	// Fetch the provider metadata and components yaml files from the provided repository GitHub/GitLab.
 	metadataFile, err := repo.GetFile(ctx, spec.Version, metadataFile)
 	if err != nil {
@@ -113,7 +121,7 @@ func (p *phaseReconciler) downloadManifests(ctx context.Context) (reconcile.Resu
 
 	withCompression := needToCompress(metadataFile, componentsFile)
 
-	if err := p.createManifestsConfigMap(ctx, metadataFile, componentsFile, withCompression); err != nil {
+	if err := createManifestsConfigMap(ctx, p.ctrlClient, p.provider, p.prepareConfigMapLabels(), metadataFile, componentsFile, withCompression); err != nil {
 		err = fmt.Errorf("failed to create config map for provider %q: %w", p.provider.GetName(), err)
 
 		return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.ProviderInstalledCondition)
@@ -149,14 +157,14 @@ func (p *phaseReconciler) prepareConfigMapLabels() map[string]string {
 }
 
 // createManifestsConfigMap creates a config map with downloaded manifests.
-func (p *phaseReconciler) createManifestsConfigMap(ctx context.Context, metadata, components []byte, compress bool) error {
-	configMapName := fmt.Sprintf("%s-%s-%s", p.provider.GetType(), p.provider.GetName(), p.provider.GetSpec().Version)
+func createManifestsConfigMap(ctx context.Context, cl client.Client, provider operatorv1.GenericProvider, labels map[string]string, metadata, components []byte, compress bool) error {
+	configMapName := fmt.Sprintf("%s-%s-%s", provider.GetType(), provider.GetName(), provider.GetSpec().Version)
 
 	configMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      configMapName,
-			Namespace: p.provider.GetNamespace(),
-			Labels:    p.prepareConfigMapLabels(),
+			Namespace: provider.GetNamespace(),
+			Labels:    labels,
 		},
 		Data: map[string]string{
 			metadataConfigMapKey: string(metadata),
@@ -172,7 +180,7 @@ func (p *phaseReconciler) createManifestsConfigMap(ctx context.Context, metadata
 
 		_, err := zw.Write(components)
 		if err != nil {
-			return fmt.Errorf("cannot compress data for provider %s/%s: %w", p.provider.GetNamespace(), p.provider.GetName(), err)
+			return fmt.Errorf("cannot compress data for provider %s/%s: %w", provider.GetNamespace(), provider.GetName(), err)
 		}
 
 		if err := zw.Close(); err != nil {
@@ -187,18 +195,18 @@ func (p *phaseReconciler) createManifestsConfigMap(ctx context.Context, metadata
 		configMap.SetAnnotations(map[string]string{compressedAnnotation: "true"})
 	}
 
-	gvk := p.provider.GetObjectKind().GroupVersionKind()
+	gvk := provider.GetObjectKind().GroupVersionKind()
 
 	configMap.SetOwnerReferences([]metav1.OwnerReference{
 		{
 			APIVersion: gvk.GroupVersion().String(),
 			Kind:       gvk.Kind,
-			Name:       p.provider.GetName(),
-			UID:        p.provider.GetUID(),
+			Name:       provider.GetName(),
+			UID:        provider.GetUID(),
 		},
 	})
 
-	if err := p.ctrlClient.Create(ctx, configMap); err != nil && !apierrors.IsAlreadyExists(err) {
+	if err := cl.Create(ctx, configMap); err != nil && !apierrors.IsAlreadyExists(err) {
 		return err
 	}
 
@@ -211,17 +219,34 @@ func providerLabelSelector(provider operatorv1.GenericProvider) *metav1.LabelSel
 		return provider.GetSpec().FetchConfig.Selector
 	}
 
+	if provider.GetSpec().FetchConfig != nil && provider.GetSpec().FetchConfig.OCI != "" {
+		return &metav1.LabelSelector{
+			MatchLabels: ociLabels(provider),
+		}
+	}
+
 	return &metav1.LabelSelector{
 		MatchLabels: providerLabels(provider),
 	}
 }
 
-// prepareConfigMapLabels returns default set of labels that identify a config map with downloaded manifests.
+// providerLabels returns default set of labels that identify a config map with downloaded manifests.
 func providerLabels(provider operatorv1.GenericProvider) map[string]string {
 	return map[string]string{
 		configMapVersionLabel: provider.GetSpec().Version,
 		configMapTypeLabel:    provider.GetType(),
 		configMapNameLabel:    provider.GetName(),
+		operatorManagedLabel:  "true",
+	}
+}
+
+// ociLabels returns default set of labels that identify a config map created from OCI artifacts.
+func ociLabels(provider operatorv1.GenericProvider) map[string]string {
+	return map[string]string{
+		configMapVersionLabel: provider.GetSpec().Version,
+		configMapTypeLabel:    provider.GetType(),
+		configMapNameLabel:    provider.GetName(),
+		configMapSourceLabel:  ociSource,
 		operatorManagedLabel:  "true",
 	}
 }

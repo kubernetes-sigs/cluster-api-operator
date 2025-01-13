@@ -218,6 +218,12 @@ type FetchConfiguration struct {
 	// +optional
 	URL string `json:"url,omitempty"`
 
+	// OCI to be used for fetching the provider’s components and metadata from an OCI artifact.
+	// You must set `providerSpec.Version` field for operator to pick up desired version of the release from GitHub.
+	// If the providerSpec.Version is missing, latest provider version from clusterctl defaults is used.
+	// +optional
+	OCI string `json:"oci,omitempty"`
+
 	// Selector to be used for fetching provider’s components and metadata from
 	// ConfigMaps stored inside the cluster. Each ConfigMap is expected to contain
 	// components and metadata for a specific version only.

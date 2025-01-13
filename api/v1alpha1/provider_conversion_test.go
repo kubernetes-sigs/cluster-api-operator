@@ -40,28 +40,28 @@ func TestFuzzyConversion(t *testing.T) {
 		Scheme:      scheme,
 		Hub:         &operatorv1.CoreProvider{},
 		Spoke:       &CoreProvider{},
-		FuzzerFuncs: []fuzzer.FuzzerFuncs{imageMetaFuzzFunc, imageURLFuzzFunc, secretConfigFuzzFunc},
+		FuzzerFuncs: []fuzzer.FuzzerFuncs{imageMetaFuzzFunc, imageURLFuzzFunc, ociFuzzFunc, secretConfigFuzzFunc},
 	}))
 
 	t.Run("for ControlPlaneProvider", utilconversion.FuzzTestFunc(utilconversion.FuzzTestFuncInput{
 		Scheme:      scheme,
 		Hub:         &operatorv1.ControlPlaneProvider{},
 		Spoke:       &ControlPlaneProvider{},
-		FuzzerFuncs: []fuzzer.FuzzerFuncs{imageMetaFuzzFunc, imageURLFuzzFunc, secretConfigFuzzFunc},
+		FuzzerFuncs: []fuzzer.FuzzerFuncs{imageMetaFuzzFunc, imageURLFuzzFunc, ociFuzzFunc, secretConfigFuzzFunc},
 	}))
 
 	t.Run("for BootstrapProvider", utilconversion.FuzzTestFunc(utilconversion.FuzzTestFuncInput{
 		Scheme:      scheme,
 		Hub:         &operatorv1.BootstrapProvider{},
 		Spoke:       &BootstrapProvider{},
-		FuzzerFuncs: []fuzzer.FuzzerFuncs{imageMetaFuzzFunc, imageURLFuzzFunc, secretConfigFuzzFunc},
+		FuzzerFuncs: []fuzzer.FuzzerFuncs{imageMetaFuzzFunc, imageURLFuzzFunc, ociFuzzFunc, secretConfigFuzzFunc},
 	}))
 
 	t.Run("for InfrastructureProvider", utilconversion.FuzzTestFunc(utilconversion.FuzzTestFuncInput{
 		Scheme:      scheme,
 		Hub:         &operatorv1.InfrastructureProvider{},
 		Spoke:       &InfrastructureProvider{},
-		FuzzerFuncs: []fuzzer.FuzzerFuncs{imageMetaFuzzFunc, imageURLFuzzFunc, secretConfigFuzzFunc},
+		FuzzerFuncs: []fuzzer.FuzzerFuncs{imageMetaFuzzFunc, imageURLFuzzFunc, ociFuzzFunc, secretConfigFuzzFunc},
 	}))
 }
 
@@ -78,6 +78,18 @@ func secretConfigFuzzer(in *operatorv1.SecretReference, c fuzz.Continue) {
 	if in != nil && in.Name == "" {
 		in.Name = c.RandString() + "name"
 	}
+}
+
+func ociFuzzFunc(_ runtimeserializer.CodecFactory) []interface{} {
+	return []interface{}{
+		ociFuzzer,
+	}
+}
+
+func ociFuzzer(in *operatorv1.FetchConfiguration, c fuzz.Continue) {
+	c.FuzzNoCustom(in)
+
+	in.OCI = ""
 }
 
 func imageURLFuzzFunc(_ runtimeserializer.CodecFactory) []interface{} {
