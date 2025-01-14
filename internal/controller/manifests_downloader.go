@@ -23,7 +23,6 @@ import (
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 
@@ -98,33 +97,68 @@ func (p *phaseReconciler) downloadManifests(ctx context.Context) (reconcile.Resu
 		p.provider.SetSpec(spec)
 	}
 
+	var metadata, components []byte
+	var labels map[string]string
+
+	// Fetch the provider metadata and components yaml files from the provided repository GitHub/GitLab or OCI source
 	if p.provider.GetSpec().FetchConfig != nil && p.provider.GetSpec().FetchConfig.OCI != "" {
-		err := fetchOCI(ctx, p.ctrlClient, p.provider, ociAuthentication(p.configClient.Variables()))
+		store, err := FetchOCI(ctx, p.provider, OCIAuthentication(p.configClient.Variables()))
+		if err != nil {
+			return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.ProviderInstalledCondition)
+		}
 
-		return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.ProviderInstalledCondition)
+		metadata, err = store.GetMetadata(p.provider)
+		if err != nil {
+			return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.ProviderInstalledCondition)
+		}
+
+		components, err = store.GetComponents(p.provider)
+		if err != nil {
+			return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.ProviderInstalledCondition)
+		}
+
+		labels = OCILabels(p.provider)
+	} else {
+		metadata, err = repo.GetFile(ctx, spec.Version, metadataFile)
+		if err != nil {
+			err = fmt.Errorf("failed to read %q from the repository for provider %q: %w", metadataFile, p.provider.GetName(), err)
+
+			return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.ProviderInstalledCondition)
+		}
+
+		components, err = repo.GetFile(ctx, spec.Version, repo.ComponentsPath())
+		if err != nil {
+			err = fmt.Errorf("failed to read %q from the repository for provider %q: %w", componentsFile, p.provider.GetName(), err)
+
+			return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.ProviderInstalledCondition)
+		}
+
+		labels = p.prepareConfigMapLabels()
 	}
 
-	// Fetch the provider metadata and components yaml files from the provided repository GitHub/GitLab.
-	metadataFile, err := repo.GetFile(ctx, spec.Version, metadataFile)
+	withCompression := needToCompress(metadata, components)
+
+	configMap, err := TemplateManifestsConfigMap(p.provider, labels, metadata, components, withCompression)
 	if err != nil {
-		err = fmt.Errorf("failed to read %q from the repository for provider %q: %w", metadataFile, p.provider.GetName(), err)
-
-		return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.ProviderInstalledCondition)
-	}
-
-	componentsFile, err := repo.GetFile(ctx, spec.Version, repo.ComponentsPath())
-	if err != nil {
-		err = fmt.Errorf("failed to read %q from the repository for provider %q: %w", componentsFile, p.provider.GetName(), err)
-
-		return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.ProviderInstalledCondition)
-	}
-
-	withCompression := needToCompress(metadataFile, componentsFile)
-
-	if err := createManifestsConfigMap(ctx, p.ctrlClient, p.provider, p.prepareConfigMapLabels(), metadataFile, componentsFile, withCompression); err != nil {
 		err = fmt.Errorf("failed to create config map for provider %q: %w", p.provider.GetName(), err)
 
 		return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.ProviderInstalledCondition)
+	}
+
+	if err := p.ctrlClient.Create(ctx, configMap); client.IgnoreAlreadyExists(err) != nil {
+		return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.ProviderInstalledCondition)
+	} else if err != nil {
+		cm := &corev1.ConfigMap{}
+		if err := p.ctrlClient.Get(ctx, client.ObjectKeyFromObject(configMap), cm); err != nil {
+			return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.ProviderInstalledCondition)
+		}
+
+		patchBase := client.MergeFrom(cm)
+		cm.OwnerReferences = configMap.OwnerReferences
+
+		if err := p.ctrlClient.Patch(ctx, cm, patchBase); err != nil {
+			return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.ProviderInstalledCondition)
+		}
 	}
 
 	return reconcile.Result{}, nil
@@ -153,11 +187,11 @@ func (p *phaseReconciler) checkConfigMapExists(ctx context.Context, labelSelecto
 
 // prepareConfigMapLabels returns labels that identify a config map with downloaded manifests.
 func (p *phaseReconciler) prepareConfigMapLabels() map[string]string {
-	return providerLabels(p.provider)
+	return ProviderLabels(p.provider)
 }
 
-// createManifestsConfigMap creates a config map with downloaded manifests.
-func createManifestsConfigMap(ctx context.Context, cl client.Client, provider operatorv1.GenericProvider, labels map[string]string, metadata, components []byte, compress bool) error {
+// TemplateManifestsConfigMap prepares a config map with downloaded manifests.
+func TemplateManifestsConfigMap(provider operatorv1.GenericProvider, labels map[string]string, metadata, components []byte, compress bool) (*corev1.ConfigMap, error) {
 	configMapName := fmt.Sprintf("%s-%s-%s", provider.GetType(), provider.GetName(), provider.GetSpec().Version)
 
 	configMap := &corev1.ConfigMap{
@@ -180,11 +214,11 @@ func createManifestsConfigMap(ctx context.Context, cl client.Client, provider op
 
 		_, err := zw.Write(components)
 		if err != nil {
-			return fmt.Errorf("cannot compress data for provider %s/%s: %w", provider.GetNamespace(), provider.GetName(), err)
+			return nil, fmt.Errorf("cannot compress data for provider %s/%s: %w", provider.GetNamespace(), provider.GetName(), err)
 		}
 
 		if err := zw.Close(); err != nil {
-			return err
+			return nil, err
 		}
 
 		configMap.BinaryData = map[string][]byte{
@@ -206,11 +240,7 @@ func createManifestsConfigMap(ctx context.Context, cl client.Client, provider op
 		},
 	})
 
-	if err := cl.Create(ctx, configMap); err != nil && !apierrors.IsAlreadyExists(err) {
-		return err
-	}
-
-	return nil
+	return configMap, nil
 }
 
 func providerLabelSelector(provider operatorv1.GenericProvider) *metav1.LabelSelector {
@@ -221,17 +251,17 @@ func providerLabelSelector(provider operatorv1.GenericProvider) *metav1.LabelSel
 
 	if provider.GetSpec().FetchConfig != nil && provider.GetSpec().FetchConfig.OCI != "" {
 		return &metav1.LabelSelector{
-			MatchLabels: ociLabels(provider),
+			MatchLabels: OCILabels(provider),
 		}
 	}
 
 	return &metav1.LabelSelector{
-		MatchLabels: providerLabels(provider),
+		MatchLabels: ProviderLabels(provider),
 	}
 }
 
-// providerLabels returns default set of labels that identify a config map with downloaded manifests.
-func providerLabels(provider operatorv1.GenericProvider) map[string]string {
+// ProviderLabels returns default set of labels that identify a config map with downloaded manifests.
+func ProviderLabels(provider operatorv1.GenericProvider) map[string]string {
 	return map[string]string{
 		configMapVersionLabel: provider.GetSpec().Version,
 		configMapTypeLabel:    provider.GetType(),
@@ -240,13 +270,13 @@ func providerLabels(provider operatorv1.GenericProvider) map[string]string {
 	}
 }
 
-// ociLabels returns default set of labels that identify a config map created from OCI artifacts.
-func ociLabels(provider operatorv1.GenericProvider) map[string]string {
+// OCILabels returns default set of labels that identify a config map created from OCI artifact.
+func OCILabels(provider operatorv1.GenericProvider) map[string]string {
 	return map[string]string{
 		configMapVersionLabel: provider.GetSpec().Version,
 		configMapTypeLabel:    provider.GetType(),
 		configMapNameLabel:    provider.GetName(),
-		configMapSourceLabel:  ociSource,
+		configMapSourceLabel:  provider.GetSpec().FetchConfig.OCI,
 		operatorManagedLabel:  "true",
 	}
 }

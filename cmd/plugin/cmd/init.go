@@ -453,8 +453,7 @@ func deployCAPIOperator(ctx context.Context, opts *initOptions) error {
 	return nil
 }
 
-// createGenericProvider creates a generic provider.
-func createGenericProvider(ctx context.Context, client ctrlclient.Client, providerType clusterctlv1.ProviderType, providerInput, defaultNamespace, configSecretName, configSecretNamespace string) (operatorv1.GenericProvider, error) {
+func templateGenericProvider(providerType clusterctlv1.ProviderType, providerInput, defaultNamespace, configSecretName, configSecretNamespace string) (operatorv1.GenericProvider, error) {
 	// Parse the provider string
 	// Format is <provider-name>:<optional-namespace>:<optional-version>
 	// Example: aws:capa-system:v2.1.5 -> name: aws, namespace: capa-system, version: v2.1.5
@@ -517,19 +516,29 @@ func createGenericProvider(ctx context.Context, client ctrlclient.Client, provid
 		provider.SetSpec(spec)
 	}
 
+	return provider, nil
+}
+
+// createGenericProvider creates a generic provider.
+func createGenericProvider(ctx context.Context, client ctrlclient.Client, providerType clusterctlv1.ProviderType, providerInput, defaultNamespace, configSecretName, configSecretNamespace string) (operatorv1.GenericProvider, error) {
+	provider, err := templateGenericProvider(providerType, providerInput, defaultNamespace, configSecretName, configSecretNamespace)
+	if err != nil {
+		return nil, err
+	}
+
 	// Ensure that desired namespace exists
-	if err := EnsureNamespaceExists(ctx, client, namespace); err != nil {
+	if err := EnsureNamespaceExists(ctx, client, provider.GetNamespace()); err != nil {
 		return nil, fmt.Errorf("cannot ensure that namespace exists: %w", err)
 	}
 
-	log.Info("Installing provider", "Type", provider.GetType(), "Name", name, "Version", version, "Namespace", namespace)
+	log.Info("Installing provider", "Type", provider.GetType(), "Name", provider.GetName(), "Version", provider.GetSpec().Version, "Namespace", provider.GetNamespace())
 
 	// Create the provider
 	if err := wait.ExponentialBackoff(backoffOpts, func() (bool, error) {
 		if err := client.Create(ctx, provider); err != nil {
 			// If the provider already exists, return immediately and do not retry.
 			if apierrors.IsAlreadyExists(err) {
-				log.Info("Provider already exists, skipping creation", "Type", provider.GetType(), "Name", name, "Version", version, "Namespace", namespace)
+				log.Info("Provider already exists, skipping creation", "Type", provider.GetType(), "Name", provider.GetName(), "Version", provider.GetSpec().Version, "Namespace", provider.GetNamespace())
 
 				return true, err
 			}

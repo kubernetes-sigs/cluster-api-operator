@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"strings"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"oras.land/oras-go/v2"
@@ -28,7 +29,6 @@ import (
 	"oras.land/oras-go/v2/registry/remote/retry"
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
 	configclient "sigs.k8s.io/cluster-api/cmd/clusterctl/client/config"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
@@ -144,9 +144,14 @@ func (m mapStore) Tag(ctx context.Context, desc ocispec.Descriptor, reference st
 
 var _ oras.Target = &mapStore{}
 
-// copyOCIStore collects artifacts from the provider OCI url and creates a map of file contents.
-func copyOCIStore(ctx context.Context, url string, version string, store *mapStore, credential *auth.Credential) error {
+// CopyOCIStore collects artifacts from the provider OCI url and creates a map of file contents.
+func CopyOCIStore(ctx context.Context, url string, version string, store *mapStore, credential *auth.Credential) error {
 	log := log.FromContext(ctx)
+
+	if parts := strings.SplitN(url, ":", 2); len(parts) == 2 {
+		url = parts[0]
+		version = parts[1]
+	}
 
 	repo, err := remote.NewRepository(url)
 	if err != nil {
@@ -177,8 +182,8 @@ func copyOCIStore(ctx context.Context, url string, version string, store *mapSto
 	return nil
 }
 
-// ociAuthentication returns user supplied credentials from provider variables.
-func ociAuthentication(c configclient.VariablesClient) *auth.Credential {
+// OCIAuthentication returns user supplied credentials from provider variables.
+func OCIAuthentication(c configclient.VariablesClient) *auth.Credential {
 	username, _ := c.Get(ociUsernameKey)
 	password, _ := c.Get(ociPasswordKey)
 	accessToken, _ := c.Get(ociAccessTokenKey)
@@ -196,8 +201,8 @@ func ociAuthentication(c configclient.VariablesClient) *auth.Credential {
 	return nil
 }
 
-// fetchOCI copies the content of OCI.
-func fetchOCI(ctx context.Context, cl client.Client, provider operatorv1.GenericProvider, cred *auth.Credential) error {
+// FetchOCI copies the content of OCI.
+func FetchOCI(ctx context.Context, provider operatorv1.GenericProvider, cred *auth.Credential) (mapStore, error) {
 	log := log.FromContext(ctx)
 
 	log.Info("Custom fetch configuration OCI url was provided")
@@ -205,24 +210,12 @@ func fetchOCI(ctx context.Context, cl client.Client, provider operatorv1.Generic
 	// Prepare components store for the provider type.
 	store := NewMapStore(provider)
 
-	err := copyOCIStore(ctx, provider.GetSpec().FetchConfig.OCI, provider.GetSpec().Version, &store, cred)
+	err := CopyOCIStore(ctx, provider.GetSpec().FetchConfig.OCI, provider.GetSpec().Version, &store, cred)
 	if err != nil {
 		log.Error(err, "Unable to copy OCI content")
 
-		return err
+		return nil, err
 	}
 
-	metadata, err := store.GetMetadata(provider)
-	if err != nil {
-		return err
-	}
-
-	components, err := store.GetComponents(provider)
-	if err != nil {
-		return err
-	}
-
-	withCompression := needToCompress(metadata, components)
-
-	return createManifestsConfigMap(ctx, cl, provider, ociLabels(provider), metadata, components, withCompression)
+	return store, nil
 }
