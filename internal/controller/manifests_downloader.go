@@ -26,6 +26,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 
+	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/repository"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -97,52 +98,21 @@ func (p *phaseReconciler) downloadManifests(ctx context.Context) (reconcile.Resu
 		p.provider.SetSpec(spec)
 	}
 
-	var metadata, components []byte
-	var labels map[string]string
+	var configMap *corev1.ConfigMap
 
 	// Fetch the provider metadata and components yaml files from the provided repository GitHub/GitLab or OCI source
 	if p.provider.GetSpec().FetchConfig != nil && p.provider.GetSpec().FetchConfig.OCI != "" {
-		store, err := FetchOCI(ctx, p.provider, OCIAuthentication(p.configClient.Variables()))
+		configMap, err = OCIConfigMap(ctx, p.provider)
 		if err != nil {
 			return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.ProviderInstalledCondition)
 		}
-
-		metadata, err = store.GetMetadata(p.provider)
-		if err != nil {
-			return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.ProviderInstalledCondition)
-		}
-
-		components, err = store.GetComponents(p.provider)
-		if err != nil {
-			return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.ProviderInstalledCondition)
-		}
-
-		labels = OCILabels(p.provider)
 	} else {
-		metadata, err = repo.GetFile(ctx, spec.Version, metadataFile)
+		configMap, err = RepositoryConfigMap(ctx, p.provider, repo)
 		if err != nil {
-			err = fmt.Errorf("failed to read %q from the repository for provider %q: %w", metadataFile, p.provider.GetName(), err)
+			err = fmt.Errorf("failed to create config map for provider %q: %w", p.provider.GetName(), err)
 
 			return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.ProviderInstalledCondition)
 		}
-
-		components, err = repo.GetFile(ctx, spec.Version, repo.ComponentsPath())
-		if err != nil {
-			err = fmt.Errorf("failed to read %q from the repository for provider %q: %w", componentsFile, p.provider.GetName(), err)
-
-			return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.ProviderInstalledCondition)
-		}
-
-		labels = p.prepareConfigMapLabels()
-	}
-
-	withCompression := needToCompress(metadata, components)
-
-	configMap, err := TemplateManifestsConfigMap(p.provider, labels, metadata, components, withCompression)
-	if err != nil {
-		err = fmt.Errorf("failed to create config map for provider %q: %w", p.provider.GetName(), err)
-
-		return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.ProviderInstalledCondition)
 	}
 
 	if err := p.ctrlClient.Create(ctx, configMap); client.IgnoreAlreadyExists(err) != nil {
@@ -243,16 +213,73 @@ func TemplateManifestsConfigMap(provider operatorv1.GenericProvider, labels map[
 	return configMap, nil
 }
 
+// OCIConfigMap templates config from the OCI source.
+func OCIConfigMap(ctx context.Context, provider operatorv1.GenericProvider) (*corev1.ConfigMap, error) {
+	store, err := FetchOCI(ctx, provider, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	metadata, err := store.GetMetadata(provider)
+	if err != nil {
+		return nil, err
+	}
+
+	components, err := store.GetComponents(provider)
+	if err != nil {
+		return nil, err
+	}
+
+	configMap, err := TemplateManifestsConfigMap(provider, ProviderLabels(provider), metadata, components, needToCompress(metadata, components))
+	if err != nil {
+		err = fmt.Errorf("failed to create config map for provider %q: %w", provider.GetName(), err)
+
+		return nil, err
+	}
+
+	if provider.GetUID() == "" {
+		// Unset owner references due to lack of existing provider owner object
+		configMap.OwnerReferences = nil
+	}
+
+	return configMap, nil
+}
+
+// RepositoryConfigMap templates ConfigMap resource from the provider repository.
+func RepositoryConfigMap(ctx context.Context, provider operatorv1.GenericProvider, repo repository.Repository) (*corev1.ConfigMap, error) {
+	metadata, err := repo.GetFile(ctx, provider.GetSpec().Version, "metadata.yaml")
+	if err != nil {
+		err = fmt.Errorf("failed to read metadata.yaml from the repository for provider %q: %w", provider.GetName(), err)
+
+		return nil, err
+	}
+
+	components, err := repo.GetFile(ctx, provider.GetSpec().Version, repo.ComponentsPath())
+	if err != nil {
+		err = fmt.Errorf("failed to read %q from the repository for provider %q: %w", repo.ComponentsPath(), provider.GetName(), err)
+
+		return nil, err
+	}
+
+	configMap, err := TemplateManifestsConfigMap(provider, ProviderLabels(provider), metadata, components, needToCompress(metadata, components))
+	if err != nil {
+		err = fmt.Errorf("failed to create config map for provider %q: %w", provider.GetName(), err)
+
+		return nil, err
+	}
+
+	if provider.GetUID() == "" {
+		// Unset owner references due to lack of existing provider owner object
+		configMap.OwnerReferences = nil
+	}
+
+	return configMap, nil
+}
+
 func providerLabelSelector(provider operatorv1.GenericProvider) *metav1.LabelSelector {
 	// Replace label selector if user wants to use custom config map
 	if provider.GetSpec().FetchConfig != nil && provider.GetSpec().FetchConfig.Selector != nil {
 		return provider.GetSpec().FetchConfig.Selector
-	}
-
-	if provider.GetSpec().FetchConfig != nil && provider.GetSpec().FetchConfig.OCI != "" {
-		return &metav1.LabelSelector{
-			MatchLabels: OCILabels(provider),
-		}
 	}
 
 	return &metav1.LabelSelector{
@@ -262,23 +289,18 @@ func providerLabelSelector(provider operatorv1.GenericProvider) *metav1.LabelSel
 
 // ProviderLabels returns default set of labels that identify a config map with downloaded manifests.
 func ProviderLabels(provider operatorv1.GenericProvider) map[string]string {
-	return map[string]string{
+	labels := map[string]string{
 		configMapVersionLabel: provider.GetSpec().Version,
 		configMapTypeLabel:    provider.GetType(),
 		configMapNameLabel:    provider.GetName(),
 		operatorManagedLabel:  "true",
 	}
-}
 
-// OCILabels returns default set of labels that identify a config map created from OCI artifact.
-func OCILabels(provider operatorv1.GenericProvider) map[string]string {
-	return map[string]string{
-		configMapVersionLabel: provider.GetSpec().Version,
-		configMapTypeLabel:    provider.GetType(),
-		configMapNameLabel:    provider.GetName(),
-		configMapSourceLabel:  provider.GetSpec().FetchConfig.OCI,
-		operatorManagedLabel:  "true",
+	if provider.GetSpec().FetchConfig != nil && provider.GetSpec().FetchConfig.OCI != "" {
+		labels[configMapSourceLabel] = provider.GetSpec().FetchConfig.OCI
 	}
+
+	return labels
 }
 
 // needToCompress checks whether the input data exceeds the maximum configmap

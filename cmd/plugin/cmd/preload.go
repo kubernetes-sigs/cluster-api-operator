@@ -22,12 +22,12 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	kerrors "k8s.io/apimachinery/pkg/util/errors"
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
-	"sigs.k8s.io/cluster-api-operator/internal/controller"
+	providercontroller "sigs.k8s.io/cluster-api-operator/internal/controller"
 	"sigs.k8s.io/cluster-api-operator/util"
 	clusterctlv1 "sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3"
 	configclient "sigs.k8s.io/cluster-api/cmd/clusterctl/client/config"
@@ -56,32 +56,39 @@ var loadCmd = &cobra.Command{
 	GroupID: groupManagement,
 	Short:   "Preload providers to a management cluster",
 	Long: LongDesc(`
-		Preload provider manifests from an OCI image to a management cluster.
+		Preload provider manifests to a management cluster.
 
-		To prepare an image you can use oras CLI: https://oras.land/docs/installation
+		To prepare an OCI image you can use oras CLI: https://oras.land/docs/installation
 
 		oras push ttl.sh/infrastructure-provider:v2.3.0 --artifact-type application/vnd.acme.config metadata.yaml:text/plain infrastructure-components.yaml:text/plain
+
+		Alternatively, for multi-provider OCI artifact, a fully specified name can be used for both metadata and components:
+
+		oras push ttl.sh/infrastructure-provider:tag --artifact-type application/vnd.acme.config infrastructure-docker-v1.9.3-metadata.yaml:text/plain infrastructure-docker-v1.9.3-components.yaml:text/plain
 	`),
 	Example: Examples(`
-		# Load CAPI operator manifests from OCI source.
-		# capioperator preload -u ttl.sh/infrastructure-provider
+		# Load CAPI operator manifests from OCI source
+		# capioperator preload --core cluster-api
 
-		# Prepare provider ConfigMap, from the given infrastructure provider.
+		# Load CAPI operator manifests from any provider source in the cluster
+		# capioperator preload -e
+
+		# Prepare provider ConfigMap from OCI, from the given infrastructure provider.
 		capioperator preload --infrastructure=aws -u ttl.sh/infrastructure-provider
 
-		# Prepare provider ConfigMap with a specific version of the given infrastructure provider in the default namespace.
+		# Prepare provider ConfigMap from OCI with a specific version of the given infrastructure provider in the default namespace.
 		capioperator preload --infrastructure=aws::v2.3.0 -u ttl.sh/infrastructure-provider
 
-		# Prepare provider ConfigMap with a specific namespace and the latest version of the given infrastructure provider.
+		# Prepare provider ConfigMap from OCI with a specific namespace and the latest version of the given infrastructure provider.
 		capioperator preload --infrastructure=aws:custom-namespace -u ttl.sh/infrastructure-provider
 
-		# Prepare provider ConfigMap with a specific version and namespace of the given infrastructure provider.
+		# Prepare provider ConfigMap from OCI with a specific version and namespace of the given infrastructure provider.
 		capioperator preload --infrastructure=aws:custom-namespace:v2.3.0 -u ttl.sh/infrastructure-provider
 
-		# Prepare provider ConfigMap with multiple infrastructure providers.
+		# Prepare provider ConfigMap from OCI with multiple infrastructure providers.
 		capioperator preload --infrastructure=aws --infrastructure=vsphere -u ttl.sh/infrastructure-provider
 
-		# Prepare provider ConfigMap with a custom target namespace for the operator.
+		# Prepare provider ConfigMap from OCI with a custom target namespace for the operator.
 		capioperator preload --infrastructure aws --target-namespace foo -u ttl.sh/infrastructure-provider`),
 	Args: cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -123,7 +130,7 @@ func runPreLoad() error {
 		return fmt.Errorf("missing configMap artifacts url")
 	}
 
-	configMaps := []*v1.ConfigMap{}
+	configMaps := []*corev1.ConfigMap{}
 
 	// Load Core Provider.
 	if loadOpts.coreProvider != "" {
@@ -234,8 +241,8 @@ func runPreLoad() error {
 	return kerrors.NewAggregate(errors)
 }
 
-func fetchProviders(ctx context.Context, cl client.Client, providerList genericProviderList) ([]*v1.ConfigMap, error) {
-	configMaps := []*v1.ConfigMap{}
+func fetchProviders(ctx context.Context, cl client.Client, providerList genericProviderList) ([]*corev1.ConfigMap, error) {
+	configMaps := []*corev1.ConfigMap{}
 
 	if err := cl.List(ctx, providerList, client.InNamespace("")); meta.IsNoMatchError(err) || apierrors.IsNotFound(err) {
 		return configMaps, nil
@@ -246,15 +253,15 @@ func fetchProviders(ctx context.Context, cl client.Client, providerList genericP
 	}
 
 	for _, provider := range providerList.GetItems() {
-		if provider.GetSpec().FetchConfig == nil || provider.GetSpec().FetchConfig.Selector == nil {
-			cm, err := providerConfigMap(ctx, provider)
+		if provider.GetSpec().FetchConfig != nil && provider.GetSpec().FetchConfig.OCI != "" {
+			cm, err := providercontroller.OCIConfigMap(ctx, provider)
 			if err != nil {
 				return configMaps, err
 			}
 
 			configMaps = append(configMaps, cm)
-		} else if provider.GetSpec().FetchConfig != nil && provider.GetSpec().FetchConfig.OCI != "" {
-			cm, err := ociConfigMap(ctx, provider)
+		} else if provider.GetSpec().FetchConfig == nil || provider.GetSpec().FetchConfig.Selector == nil {
+			cm, err := providerConfigMap(ctx, provider)
 			if err != nil {
 				return configMaps, err
 			}
@@ -266,7 +273,7 @@ func fetchProviders(ctx context.Context, cl client.Client, providerList genericP
 	return configMaps, nil
 }
 
-func templateConfigMap(ctx context.Context, providerType clusterctlv1.ProviderType, url, providerInput, defaultNamespace string) (*v1.ConfigMap, error) {
+func templateConfigMap(ctx context.Context, providerType clusterctlv1.ProviderType, url, providerInput, defaultNamespace string) (*corev1.ConfigMap, error) {
 	provider, err := templateGenericProvider(providerType, providerInput, defaultNamespace, "", "")
 	if err != nil {
 		return nil, err
@@ -277,34 +284,38 @@ func templateConfigMap(ctx context.Context, providerType clusterctlv1.ProviderTy
 		OCI: url,
 	}
 
-	// User didn't set the version, try to get repository default.
-	if spec.Version == "" {
-		configClient, err := configclient.New(ctx, "")
-		if err != nil {
-			return nil, fmt.Errorf("cannot create config client: %w", err)
-		}
+	provider.SetSpec(spec)
 
-		providerConfig, err := configClient.Providers().Get(provider.GetName(), util.ClusterctlProviderType(provider))
-		if err != nil {
-			if !strings.Contains(err.Error(), "failed to get configuration") {
-				return nil, err
-			}
-		}
-
-		repo, err := util.RepositoryFactory(ctx, providerConfig, configClient.Variables())
-		if err != nil {
-			return nil, fmt.Errorf("cannot create repository: %w", err)
-		}
-
-		spec.Version = repo.DefaultVersion()
+	if spec.Version != "" {
+		return providercontroller.OCIConfigMap(ctx, provider)
 	}
+
+	// User didn't set the version, try to get repository default.
+	configClient, err := configclient.New(ctx, "")
+	if err != nil {
+		return nil, fmt.Errorf("cannot create config client: %w", err)
+	}
+
+	providerConfig, err := configClient.Providers().Get(provider.GetName(), util.ClusterctlProviderType(provider))
+	if err != nil {
+		if !strings.Contains(err.Error(), "failed to get configuration") {
+			return nil, err
+		}
+	}
+
+	repo, err := util.RepositoryFactory(ctx, providerConfig, configClient.Variables())
+	if err != nil {
+		return nil, fmt.Errorf("cannot create repository: %w", err)
+	}
+
+	spec.Version = repo.DefaultVersion()
 
 	provider.SetSpec(spec)
 
-	return ociConfigMap(ctx, provider)
+	return providercontroller.OCIConfigMap(ctx, provider)
 }
 
-func providerConfigMap(ctx context.Context, provider operatorv1.GenericProvider) (*v1.ConfigMap, error) {
+func providerConfigMap(ctx context.Context, provider operatorv1.GenericProvider) (*corev1.ConfigMap, error) {
 	mr := configclient.NewMemoryReader()
 	if err := mr.Init(ctx, ""); err != nil {
 		return nil, fmt.Errorf("unable to init memory reader: %w", err)
@@ -335,58 +346,5 @@ func providerConfigMap(ctx context.Context, provider operatorv1.GenericProvider)
 		return nil, fmt.Errorf("cannot create repository: %w", err)
 	}
 
-	metadata, err := repo.GetFile(ctx, provider.GetSpec().Version, "metadata.yaml")
-	if err != nil {
-		err = fmt.Errorf("failed to read metadata.yaml from the repository for provider %q: %w", provider.GetName(), err)
-
-		return nil, err
-	}
-
-	components, err := repo.GetFile(ctx, provider.GetSpec().Version, repo.ComponentsPath())
-	if err != nil {
-		err = fmt.Errorf("failed to read %q from the repository for provider %q: %w", repo.ComponentsPath(), provider.GetName(), err)
-
-		return nil, err
-	}
-
-	configMap, err := controller.TemplateManifestsConfigMap(provider, controller.ProviderLabels(provider), metadata, components, true)
-	if err != nil {
-		err = fmt.Errorf("failed to create config map for provider %q: %w", provider.GetName(), err)
-
-		return nil, err
-	}
-
-	// Unset owner references due to lack of existing provider owner object
-	configMap.OwnerReferences = nil
-
-	return configMap, nil
-}
-
-func ociConfigMap(ctx context.Context, provider operatorv1.GenericProvider) (*v1.ConfigMap, error) {
-	store, err := controller.FetchOCI(ctx, provider, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	metadata, err := store.GetMetadata(provider)
-	if err != nil {
-		return nil, err
-	}
-
-	components, err := store.GetComponents(provider)
-	if err != nil {
-		return nil, err
-	}
-
-	configMap, err := controller.TemplateManifestsConfigMap(provider, controller.OCILabels(provider), metadata, components, true)
-	if err != nil {
-		err = fmt.Errorf("failed to create config map for provider %q: %w", provider.GetName(), err)
-
-		return nil, err
-	}
-
-	// Unset owner references due to lack of existing provider owner object
-	configMap.OwnerReferences = nil
-
-	return configMap, nil
+	return providercontroller.RepositoryConfigMap(ctx, provider, repo)
 }

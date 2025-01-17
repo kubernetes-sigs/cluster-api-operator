@@ -497,8 +497,6 @@ func templateGenericProvider(providerType clusterctlv1.ProviderType, providerInp
 		spec := provider.GetSpec()
 		spec.Version = version
 		provider.SetSpec(spec)
-	} else {
-		version = latestVersion
 	}
 
 	// Set config secret
