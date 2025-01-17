@@ -33,10 +33,10 @@ import (
 )
 
 const (
-	ociUsernameKey     = "OCI_USERNAME"
-	ociPasswordKey     = "OCI_PASSWORD"
-	ociAccessTokenKey  = "OCI_ACCESS_TOKEN"
-	ociRefreshTokenKey = "OCI_REFRESH_TOKEN" // #nosec G101
+	OCIUsernameKey     = "OCI_USERNAME"
+	OCIPasswordKey     = "OCI_PASSWORD"
+	OCIAccessTokenKey  = "OCI_ACCESS_TOKEN"
+	OCIRefreshTokenKey = "OCI_REFRESH_TOKEN" // #nosec G101
 
 	metadataFile     = "metadata.yaml"
 	fullMetadataFile = "%s-%s-%s-metadata.yaml"
@@ -184,10 +184,10 @@ func CopyOCIStore(ctx context.Context, url string, version string, store *mapSto
 
 // OCIAuthentication returns user supplied credentials from provider variables.
 func OCIAuthentication(c configclient.VariablesClient) *auth.Credential {
-	username, _ := c.Get(ociUsernameKey)
-	password, _ := c.Get(ociPasswordKey)
-	accessToken, _ := c.Get(ociAccessTokenKey)
-	refreshToken, _ := c.Get(ociRefreshTokenKey)
+	username, _ := c.Get(OCIUsernameKey)
+	password, _ := c.Get(OCIPasswordKey)
+	accessToken, _ := c.Get(OCIAccessTokenKey)
+	refreshToken, _ := c.Get(OCIRefreshTokenKey)
 
 	if username != "" || password != "" || accessToken != "" || refreshToken != "" {
 		return &auth.Credential{

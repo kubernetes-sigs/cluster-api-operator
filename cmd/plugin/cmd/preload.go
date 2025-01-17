@@ -19,6 +19,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -26,6 +27,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	kerrors "k8s.io/apimachinery/pkg/util/errors"
+	"oras.land/oras-go/v2/registry/remote/auth"
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
 	providercontroller "sigs.k8s.io/cluster-api-operator/internal/controller"
 	"sigs.k8s.io/cluster-api-operator/util"
@@ -58,13 +60,15 @@ var loadCmd = &cobra.Command{
 	Long: LongDesc(`
 		Preload provider manifests to a management cluster.
 
-		To prepare an OCI image you can use oras CLI: https://oras.land/docs/installation
+		To publish provider manifests, "capioperator publish" subcommand can be used.
 
-		oras push ttl.sh/infrastructure-provider:v2.3.0 --artifact-type application/vnd.acme.config metadata.yaml:text/plain infrastructure-components.yaml:text/plain
+		You can also use oras CLI: https://oras.land/docs/installation
+
+		oras push ttl.sh/infrastructure-provider:v2.3.0 metadata.yaml infrastructure-components.yaml
 
 		Alternatively, for multi-provider OCI artifact, a fully specified name can be used for both metadata and components:
 
-		oras push ttl.sh/infrastructure-provider:tag --artifact-type application/vnd.acme.config infrastructure-docker-v1.9.3-metadata.yaml:text/plain infrastructure-docker-v1.9.3-components.yaml:text/plain
+		oras push ttl.sh/infrastructure-provider:tag infrastructure-docker-v1.9.3-metadata.yaml infrastructure-docker-v1.9.3-components.yaml
 	`),
 	Example: Examples(`
 		# Load CAPI operator manifests from OCI source
@@ -254,7 +258,7 @@ func fetchProviders(ctx context.Context, cl client.Client, providerList genericP
 
 	for _, provider := range providerList.GetItems() {
 		if provider.GetSpec().FetchConfig != nil && provider.GetSpec().FetchConfig.OCI != "" {
-			cm, err := providercontroller.OCIConfigMap(ctx, provider)
+			cm, err := providercontroller.OCIConfigMap(ctx, provider, ociAuthentication())
 			if err != nil {
 				return configMaps, err
 			}
@@ -287,7 +291,7 @@ func templateConfigMap(ctx context.Context, providerType clusterctlv1.ProviderTy
 	provider.SetSpec(spec)
 
 	if spec.Version != "" {
-		return providercontroller.OCIConfigMap(ctx, provider)
+		return providercontroller.OCIConfigMap(ctx, provider, ociAuthentication())
 	}
 
 	// User didn't set the version, try to get repository default.
@@ -312,7 +316,7 @@ func templateConfigMap(ctx context.Context, providerType clusterctlv1.ProviderTy
 
 	provider.SetSpec(spec)
 
-	return providercontroller.OCIConfigMap(ctx, provider)
+	return providercontroller.OCIConfigMap(ctx, provider, ociAuthentication())
 }
 
 func providerConfigMap(ctx context.Context, provider operatorv1.GenericProvider) (*corev1.ConfigMap, error) {
@@ -347,4 +351,23 @@ func providerConfigMap(ctx context.Context, provider operatorv1.GenericProvider)
 	}
 
 	return providercontroller.RepositoryConfigMap(ctx, provider, repo)
+}
+
+// ociAuthentication returns user supplied credentials from provider variables.
+func ociAuthentication() *auth.Credential {
+	username := os.Getenv(providercontroller.OCIUsernameKey)
+	password := os.Getenv(providercontroller.OCIPasswordKey)
+	accessToken := os.Getenv(providercontroller.OCIAccessTokenKey)
+	refreshToken := os.Getenv(providercontroller.OCIRefreshTokenKey)
+
+	if username != "" || password != "" || accessToken != "" || refreshToken != "" {
+		return &auth.Credential{
+			Username:     username,
+			Password:     password,
+			AccessToken:  accessToken,
+			RefreshToken: refreshToken,
+		}
+	}
+
+	return nil
 }

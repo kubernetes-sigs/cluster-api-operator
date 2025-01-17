@@ -27,6 +27,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	"oras.land/oras-go/v2/registry/remote/auth"
 
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/repository"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -104,7 +105,7 @@ func (p *phaseReconciler) downloadManifests(ctx context.Context) (reconcile.Resu
 
 	// Fetch the provider metadata and components yaml files from the provided repository GitHub/GitLab or OCI source
 	if p.provider.GetSpec().FetchConfig != nil && p.provider.GetSpec().FetchConfig.OCI != "" {
-		configMap, err = OCIConfigMap(ctx, p.provider)
+		configMap, err = OCIConfigMap(ctx, p.provider, OCIAuthentication(p.configClient.Variables()))
 		if err != nil {
 			return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.ProviderInstalledCondition)
 		}
@@ -225,7 +226,7 @@ func TemplateManifestsConfigMap(provider operatorv1.GenericProvider, labels map[
 }
 
 // OCIConfigMap templates config from the OCI source.
-func OCIConfigMap(ctx context.Context, provider operatorv1.GenericProvider) (*corev1.ConfigMap, error) {
+func OCIConfigMap(ctx context.Context, provider operatorv1.GenericProvider, auth *auth.Credential) (*corev1.ConfigMap, error) {
 	store, err := FetchOCI(ctx, provider, nil)
 	if err != nil {
 		return nil, err
