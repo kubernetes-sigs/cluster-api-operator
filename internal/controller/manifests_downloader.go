@@ -21,10 +21,12 @@ import (
 	"compress/gzip"
 	"context"
 	"fmt"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/repository"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -164,7 +166,16 @@ func (p *phaseReconciler) prepareConfigMapLabels() map[string]string {
 func TemplateManifestsConfigMap(provider operatorv1.GenericProvider, labels map[string]string, metadata, components []byte, compress bool) (*corev1.ConfigMap, error) {
 	configMapName := fmt.Sprintf("%s-%s-%s", provider.GetType(), provider.GetName(), provider.GetSpec().Version)
 
+	kinds, _, err := clientgoscheme.Scheme.ObjectKinds(&corev1.ConfigMap{})
+	if err != nil || len(kinds) == 0 {
+		return nil, fmt.Errorf("cannot fetch kind of the ConfigMap resource: %w", err)
+	}
+
 	configMap := &corev1.ConfigMap{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       kinds[0].Kind,
+			APIVersion: kinds[0].GroupVersion().String(),
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      configMapName,
 			Namespace: provider.GetNamespace(),
@@ -297,7 +308,7 @@ func ProviderLabels(provider operatorv1.GenericProvider) map[string]string {
 	}
 
 	if provider.GetSpec().FetchConfig != nil && provider.GetSpec().FetchConfig.OCI != "" {
-		labels[configMapSourceLabel] = provider.GetSpec().FetchConfig.OCI
+		labels[configMapSourceLabel] = strings.ReplaceAll(provider.GetSpec().FetchConfig.OCI, "/", "_")
 	}
 
 	return labels
