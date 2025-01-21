@@ -210,19 +210,17 @@ type ContainerSpec struct {
 }
 
 // FetchConfiguration determines the way to fetch the components and metadata for the provider.
+// +kubebuilder:validation:XValidation:rule="[has(self.oci), has(self.url), has(self.selector)].exists_one(x,x)", message="Must specify one and only one of {oci, url, selector}"
 type FetchConfiguration struct {
+	// OCI configurations to be used for fetching the provider’s components and metadata from an OCI artifact.
+	OCIConfiguration `json:",inline"`
+
 	// URL to be used for fetching the provider’s components and metadata from a remote Github repository.
 	// For example, https://github.com/{owner}/{repository}/releases
 	// You must set `providerSpec.Version` field for operator to pick up
 	// desired version of the release from GitHub.
 	// +optional
 	URL string `json:"url,omitempty"`
-
-	// OCI to be used for fetching the provider’s components and metadata from an OCI artifact.
-	// You must set `providerSpec.Version` field for operator to pick up desired version of the release from GitHub.
-	// If the providerSpec.Version is missing, latest provider version from clusterctl defaults is used.
-	// +optional
-	OCI string `json:"oci,omitempty"`
 
 	// Selector to be used for fetching provider’s components and metadata from
 	// ConfigMaps stored inside the cluster. Each ConfigMap is expected to contain
@@ -231,6 +229,14 @@ type FetchConfiguration struct {
 	// add a label like the following: provider.cluster.x-k8s.io/version=v1.4.3
 	// +optional
 	Selector *metav1.LabelSelector `json:"selector,omitempty"`
+}
+
+type OCIConfiguration struct {
+	// OCI to be used for fetching the provider’s components and metadata from an OCI artifact.
+	// You must set `providerSpec.Version` field for operator to pick up desired version of the release from GitHub.
+	// If the providerSpec.Version is missing, latest provider version from clusterctl defaults is used.
+	// +optional
+	OCI string `json:"oci,omitempty"`
 }
 
 // ProviderStatus defines the observed state of the Provider.

@@ -453,6 +453,7 @@ func deployCAPIOperator(ctx context.Context, opts *initOptions) error {
 	return nil
 }
 
+// templateGenericProvider prepares the provider manifest based on provided provider string.
 func templateGenericProvider(providerType clusterctlv1.ProviderType, providerInput, defaultNamespace, configSecretName, configSecretNamespace string) (operatorv1.GenericProvider, error) {
 	// Parse the provider string
 	// Format is <provider-name>:<optional-namespace>:<optional-version>

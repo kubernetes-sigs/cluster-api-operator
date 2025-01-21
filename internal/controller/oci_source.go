@@ -24,6 +24,7 @@ import (
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"oras.land/oras-go/v2"
+	"oras.land/oras-go/v2/content"
 	"oras.land/oras-go/v2/registry/remote"
 	"oras.land/oras-go/v2/registry/remote/auth"
 	"oras.land/oras-go/v2/registry/remote/retry"
@@ -47,16 +48,21 @@ const (
 )
 
 // mapStore is a pre-initialized map with expected file names to copy from OCI artifact.
-type mapStore map[string][]byte
+type mapStore struct {
+	data   map[string][]byte
+	source oras.Target
+}
 
 // NewMapStore initializes mapStore for the provider resource.
 func NewMapStore(p operatorv1.GenericProvider) mapStore {
 	return mapStore{
-		metadataFile:   nil,
-		componentsFile: nil,
-		fmt.Sprintf(typedComponentsFile, p.GetType()):                                  nil,
-		fmt.Sprintf(fullMetadataFile, p.GetType(), p.GetName(), p.GetSpec().Version):   nil,
-		fmt.Sprintf(fullComponentsFile, p.GetType(), p.GetName(), p.GetSpec().Version): nil,
+		data: map[string][]byte{
+			metadataFile:   nil,
+			componentsFile: nil,
+			fmt.Sprintf(typedComponentsFile, p.GetType()):                                  nil,
+			fmt.Sprintf(fullMetadataFile, p.GetType(), p.GetName(), p.GetSpec().Version):   nil,
+			fmt.Sprintf(fullComponentsFile, p.GetType(), p.GetName(), p.GetSpec().Version): nil,
+		},
 	}
 }
 
@@ -64,12 +70,12 @@ func NewMapStore(p operatorv1.GenericProvider) mapStore {
 func (m mapStore) GetMetadata(p operatorv1.GenericProvider) ([]byte, error) {
 	fullMetadataKey := fmt.Sprintf(fullMetadataFile, p.GetType(), p.GetName(), p.GetSpec().Version)
 
-	data := m[fullMetadataKey]
+	data := m.data[fullMetadataKey]
 	if len(data) != 0 {
 		return data, nil
 	}
 
-	data = m[metadataFile]
+	data = m.data[metadataFile]
 	if len(data) != 0 {
 		return data, nil
 	}
@@ -81,19 +87,19 @@ func (m mapStore) GetMetadata(p operatorv1.GenericProvider) ([]byte, error) {
 func (m mapStore) GetComponents(p operatorv1.GenericProvider) ([]byte, error) {
 	fullComponentsKey := fmt.Sprintf(fullComponentsFile, p.GetType(), p.GetName(), p.GetSpec().Version)
 
-	data := m[fullComponentsKey]
+	data := m.data[fullComponentsKey]
 	if len(data) != 0 {
 		return data, nil
 	}
 
 	typedComponentsKey := fmt.Sprintf(typedComponentsFile, p.GetType())
 
-	data = m[typedComponentsKey]
+	data = m.data[typedComponentsKey]
 	if len(data) != 0 {
 		return data, nil
 	}
 
-	data = m[componentsFile]
+	data = m.data[componentsFile]
 	if len(data) != 0 {
 		return data, nil
 	}
@@ -102,9 +108,10 @@ func (m mapStore) GetComponents(p operatorv1.GenericProvider) ([]byte, error) {
 }
 
 // selector is a PreCopy implementation for the oras.Target which fetches only expected files.
+// This helps to reduce the load on the source registry in case required item was added via restoreDuplicates.
 func (m mapStore) selector(_ context.Context, desc ocispec.Descriptor) error {
 	file := desc.Annotations[ocispec.AnnotationTitle]
-	if _, expected := m[file]; expected {
+	if data := m.data[file]; len(data) == 0 {
 		return nil
 	}
 
@@ -125,11 +132,55 @@ func (m mapStore) Fetch(ctx context.Context, target ocispec.Descriptor) (io.Read
 func (m mapStore) Push(ctx context.Context, expected ocispec.Descriptor, content io.Reader) (err error) {
 	// Verify we only store expected artifact names
 	file := expected.Annotations[ocispec.AnnotationTitle]
-	if _, expected := m[file]; expected {
-		m[file], err = io.ReadAll(content)
+	if _, expected := m.data[file]; expected {
+		m.data[file], err = io.ReadAll(content)
+	}
+
+	if err := m.restoreDuplicates(ctx, expected); err != nil {
+		return fmt.Errorf("failed to restore duplicated file: %w", err)
 	}
 
 	return err
+}
+
+func (m mapStore) restoreDuplicates(ctx context.Context, desc ocispec.Descriptor) (err error) {
+	successors, err := content.Successors(ctx, m.source, desc)
+	if err != nil {
+		return err
+	}
+
+	for _, successor := range successors {
+		file := successor.Annotations[ocispec.AnnotationTitle]
+		if _, expected := m.data[file]; !expected {
+			continue
+		}
+
+		if err := func() error {
+			desc := ocispec.Descriptor{
+				MediaType: successor.MediaType,
+				Digest:    successor.Digest,
+				Size:      successor.Size,
+			}
+			rc, err := m.source.Fetch(ctx, desc)
+			if err != nil {
+				return fmt.Errorf("%q: %s: %w", file, desc.MediaType, err)
+			}
+
+			defer func() {
+				err = rc.Close()
+			}()
+
+			if err := m.Push(ctx, successor, rc); err != nil {
+				return fmt.Errorf("%q: %s: %w", file, desc.MediaType, err)
+			}
+
+			return nil
+		}(); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // Resolve implements oras.Target.
@@ -148,9 +199,14 @@ var _ oras.Target = &mapStore{}
 func CopyOCIStore(ctx context.Context, url string, version string, store *mapStore, credential *auth.Credential) error {
 	log := log.FromContext(ctx)
 
-	if parts := strings.SplitN(url, ":", 2); len(parts) == 2 {
+	url, plainHTTP := strings.CutPrefix(url, "http://")
+
+	if parts := strings.SplitN(url, ":", 3); len(parts) == 2 {
 		url = parts[0]
 		version = parts[1]
+	} else if len(parts) == 3 {
+		version = parts[2]
+		url, _ = strings.CutSuffix(url, version)
 	}
 
 	repo, err := remote.NewRepository(url)
@@ -167,6 +223,11 @@ func CopyOCIStore(ctx context.Context, url string, version string, store *mapSto
 			Credential: auth.StaticCredential(repo.Reference.Registry, *credential),
 		}
 	}
+
+	repo.PlainHTTP = plainHTTP
+
+	// Set the source repository for restoring duplicated content inside the artifact
+	store.source = repo
 
 	_, err = oras.Copy(ctx, repo, version, store, version, oras.CopyOptions{
 		CopyGraphOptions: oras.CopyGraphOptions{
@@ -202,7 +263,7 @@ func OCIAuthentication(c configclient.VariablesClient) *auth.Credential {
 }
 
 // FetchOCI copies the content of OCI.
-func FetchOCI(ctx context.Context, provider operatorv1.GenericProvider, cred *auth.Credential) (mapStore, error) {
+func FetchOCI(ctx context.Context, provider operatorv1.GenericProvider, cred *auth.Credential) (*mapStore, error) {
 	log := log.FromContext(ctx)
 
 	log.Info("Custom fetch configuration OCI url was provided")
@@ -217,5 +278,5 @@ func FetchOCI(ctx context.Context, provider operatorv1.GenericProvider, cred *au
 		return nil, err
 	}
 
-	return store, nil
+	return &store, nil
 }

@@ -877,8 +877,8 @@ func Convert_v1alpha1_FetchConfiguration_To_v1alpha2_FetchConfiguration(in *Fetc
 }
 
 func autoConvert_v1alpha2_FetchConfiguration_To_v1alpha1_FetchConfiguration(in *v1alpha2.FetchConfiguration, out *FetchConfiguration, s conversion.Scope) error {
+	// WARNING: in.OCIConfiguration requires manual conversion: does not exist in peer-type
 	out.URL = in.URL
-	// WARNING: in.OCI requires manual conversion: does not exist in peer-type
 	out.Selector = (*metav1.LabelSelector)(unsafe.Pointer(in.Selector))
 	return nil
 }

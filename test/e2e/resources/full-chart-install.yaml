@@ -2840,6 +2840,9 @@ spec:
                       desired version of the release from GitHub.
                     type: string
                 type: object
+                x-kubernetes-validations:
+                - message: Must specify one and only one of {oci, url, selector}
+                  rule: '[has(self.oci), has(self.url), has(self.selector)].exists_one(x,x)'
               manager:
                 description: Manager defines the properties that can be enabled on
                   the controller manager for the provider.
@@ -7576,6 +7579,9 @@ spec:
                       desired version of the release from GitHub.
                     type: string
                 type: object
+                x-kubernetes-validations:
+                - message: Must specify one and only one of {oci, url, selector}
+                  rule: '[has(self.oci), has(self.url), has(self.selector)].exists_one(x,x)'
               manager:
                 description: Manager defines the properties that can be enabled on
                   the controller manager for the provider.
@@ -12314,6 +12320,9 @@ spec:
                       desired version of the release from GitHub.
                     type: string
                 type: object
+                x-kubernetes-validations:
+                - message: Must specify one and only one of {oci, url, selector}
+                  rule: '[has(self.oci), has(self.url), has(self.selector)].exists_one(x,x)'
               manager:
                 description: Manager defines the properties that can be enabled on
                   the controller manager for the provider.
@@ -17051,6 +17060,9 @@ spec:
                       desired version of the release from GitHub.
                     type: string
                 type: object
+                x-kubernetes-validations:
+                - message: Must specify one and only one of {oci, url, selector}
+                  rule: '[has(self.oci), has(self.url), has(self.selector)].exists_one(x,x)'
               manager:
                 description: Manager defines the properties that can be enabled on
                   the controller manager for the provider.
@@ -21789,6 +21801,9 @@ spec:
                       desired version of the release from GitHub.
                     type: string
                 type: object
+                x-kubernetes-validations:
+                - message: Must specify one and only one of {oci, url, selector}
+                  rule: '[has(self.oci), has(self.url), has(self.selector)].exists_one(x,x)'
               manager:
                 description: Manager defines the properties that can be enabled on
                   the controller manager for the provider.
@@ -24896,6 +24911,9 @@ spec:
                       desired version of the release from GitHub.
                     type: string
                 type: object
+                x-kubernetes-validations:
+                - message: Must specify one and only one of {oci, url, selector}
+                  rule: '[has(self.oci), has(self.url), has(self.selector)].exists_one(x,x)'
               manager:
                 description: Manager defines the properties that can be enabled on
                   the controller manager for the provider.
@@ -28004,6 +28022,9 @@ spec:
                       desired version of the release from GitHub.
                     type: string
                 type: object
+                x-kubernetes-validations:
+                - message: Must specify one and only one of {oci, url, selector}
+                  rule: '[has(self.oci), has(self.url), has(self.selector)].exists_one(x,x)'
               manager:
                 description: Manager defines the properties that can be enabled on
                   the controller manager for the provider.

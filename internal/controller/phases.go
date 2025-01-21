@@ -48,6 +48,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
+// fakeURL is the stub url for custom providers, missing from clusterctl repository.
+const fakeURL = "https://example.com/my-provider"
+
 // phaseReconciler holds all required information for interacting with clusterctl code and
 // helps to iterate through provider reconciliation phases.
 type phaseReconciler struct {
@@ -246,9 +249,15 @@ func (p *phaseReconciler) secretReader(ctx context.Context, providers ...configc
 		log.Info("No configuration secret was specified")
 	}
 
+	isCustom := true
+
 	for _, provider := range providers {
 		if _, err := mr.AddProvider(provider.Name(), provider.Type(), provider.URL()); err != nil {
 			return nil, err
+		}
+
+		if provider.Type() == clusterctlv1.ProviderType(p.provider.GetType()) && provider.Name() == p.provider.GetName() {
+			isCustom = false
 		}
 	}
 
@@ -265,9 +274,10 @@ func (p *phaseReconciler) secretReader(ctx context.Context, providers ...configc
 			// To register a new provider from the config map, we need to specify a URL with a valid
 			// format. However, since we're using data from a local config map, URLs are not needed.
 			// As a workaround, we add a fake but well-formatted URL.
+			return mr.AddProvider(p.provider.GetName(), util.ClusterctlProviderType(p.provider), fakeURL)
+		}
 
-			fakeURL := "https://example.com/my-provider"
-
+		if isCustom && p.provider.GetSpec().FetchConfig.OCI != "" {
 			return mr.AddProvider(p.provider.GetName(), util.ClusterctlProviderType(p.provider), fakeURL)
 		}
 	}

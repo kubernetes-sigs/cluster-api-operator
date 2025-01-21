@@ -42,7 +42,7 @@ var publishOpts = &publishManifestsOptions{}
 var publishCmd = &cobra.Command{
 	Use:     "publish",
 	GroupID: groupManagement,
-	Short:   "publish provider manifests to OCI registry",
+	Short:   "publish provider manifests to an OCI registry",
 	Long: LongDesc(`
 		Publishes provider manifests to an OCI registry.
 	`),
@@ -69,27 +69,32 @@ func init() {
 }
 
 func runPublish() (err error) {
+	ctx := context.Background()
+
+	return publish(ctx, publishOpts.dir, publishOpts.ociUrl, publishOpts.files...)
+}
+
+func publish(ctx context.Context, dir, ociUrl string, files ...string) error {
 	// 0. Create a file store
-	fs, err := file.New(publishOpts.dir)
+	fs, err := file.New(dir)
 	if err != nil {
 		return err
 	}
+
 	defer func() {
 		err = fs.Close()
 	}()
-
-	ctx := context.Background()
 
 	// 1. Add files to the file store
 	mediaType := "application/vnd.test.file"
 	fileDescriptors := []v1.Descriptor{}
 
-	files, err := os.ReadDir(publishOpts.dir)
+	manifestFiles, err := os.ReadDir(dir)
 	if err != nil {
 		return err
 	}
 
-	for _, file := range files {
+	for _, file := range manifestFiles {
 		if !file.Type().IsRegular() {
 			continue
 		}
@@ -104,7 +109,7 @@ func runPublish() (err error) {
 		fmt.Printf("Added file: %s\n", file.Name())
 	}
 
-	for _, file := range publishOpts.files {
+	for _, file := range files {
 		fileDescriptor, err := fs.Add(ctx, file, mediaType, "")
 		if err != nil {
 			return err
@@ -128,20 +133,31 @@ func runPublish() (err error) {
 
 	fmt.Println("Packaged manifests")
 
-	parts := strings.Split(publishOpts.ociUrl, ":")
+	ociUrl, plainHTTP := strings.CutPrefix(ociUrl, "http://")
 
-	tag := parts[len(parts)-1]
-	if err = fs.Tag(ctx, manifestDescriptor, tag); err != nil {
+	version := ""
+
+	if parts := strings.SplitN(ociUrl, ":", 3); len(parts) == 2 {
+		ociUrl = parts[0]
+		version = parts[1]
+	} else if len(parts) == 3 {
+		version = parts[2]
+		ociUrl, _ = strings.CutSuffix(ociUrl, version)
+	}
+
+	if err = fs.Tag(ctx, manifestDescriptor, version); err != nil {
 		return err
 	}
 
 	// 3. Connect to a remote repository
-	reg := strings.Split(publishOpts.ociUrl, "/")[0]
+	reg := strings.Split(ociUrl, "/")[0]
 
-	repo, err := remote.NewRepository(publishOpts.ociUrl)
+	repo, err := remote.NewRepository(ociUrl)
 	if err != nil {
 		return err
 	}
+
+	repo.PlainHTTP = plainHTTP
 
 	if creds := ociAuthentication(); creds != nil {
 		repo.Client = &auth.Client{
@@ -152,7 +168,7 @@ func runPublish() (err error) {
 	}
 
 	// 4. Copy from the file store to the remote repository
-	_, err = oras.Copy(ctx, fs, tag, repo, tag, oras.DefaultCopyOptions)
+	_, err = oras.Copy(ctx, fs, version, repo, version, oras.DefaultCopyOptions)
 	if err != nil {
 		return err
 	}

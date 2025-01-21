@@ -84,18 +84,20 @@ func (p *phaseReconciler) downloadManifests(ctx context.Context) (reconcile.Resu
 
 	log.Info("Downloading provider manifests")
 
-	repo, err := util.RepositoryFactory(ctx, p.providerConfig, p.configClient.Variables())
-	if err != nil {
-		err = fmt.Errorf("failed to create repo from provider url for provider %q: %w", p.provider.GetName(), err)
+	if p.providerConfig.URL() != fakeURL {
+		p.repo, err = util.RepositoryFactory(ctx, p.providerConfig, p.configClient.Variables())
+		if err != nil {
+			err = fmt.Errorf("failed to create repo from provider url for provider %q: %w", p.provider.GetName(), err)
 
-		return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.ProviderInstalledCondition)
+			return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.ProviderInstalledCondition)
+		}
 	}
 
 	spec := p.provider.GetSpec()
 
-	if spec.Version == "" {
+	if spec.Version == "" && p.repo != nil {
 		// User didn't set the version, try to get repository default.
-		spec.Version = repo.DefaultVersion()
+		spec.Version = p.repo.DefaultVersion()
 
 		// Add version to the provider spec.
 		p.provider.SetSpec(spec)
@@ -110,7 +112,7 @@ func (p *phaseReconciler) downloadManifests(ctx context.Context) (reconcile.Resu
 			return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.ProviderInstalledCondition)
 		}
 	} else {
-		configMap, err = RepositoryConfigMap(ctx, p.provider, repo)
+		configMap, err = RepositoryConfigMap(ctx, p.provider, p.repo)
 		if err != nil {
 			err = fmt.Errorf("failed to create config map for provider %q: %w", p.provider.GetName(), err)
 
@@ -120,18 +122,6 @@ func (p *phaseReconciler) downloadManifests(ctx context.Context) (reconcile.Resu
 
 	if err := p.ctrlClient.Create(ctx, configMap); client.IgnoreAlreadyExists(err) != nil {
 		return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.ProviderInstalledCondition)
-	} else if err != nil {
-		cm := &corev1.ConfigMap{}
-		if err := p.ctrlClient.Get(ctx, client.ObjectKeyFromObject(configMap), cm); err != nil {
-			return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.ProviderInstalledCondition)
-		}
-
-		patchBase := client.MergeFrom(cm)
-		cm.OwnerReferences = configMap.OwnerReferences
-
-		if err := p.ctrlClient.Patch(ctx, cm, patchBase); err != nil {
-			return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.ProviderInstalledCondition)
-		}
 	}
 
 	return reconcile.Result{}, nil
@@ -227,7 +217,7 @@ func TemplateManifestsConfigMap(provider operatorv1.GenericProvider, labels map[
 
 // OCIConfigMap templates config from the OCI source.
 func OCIConfigMap(ctx context.Context, provider operatorv1.GenericProvider, auth *auth.Credential) (*corev1.ConfigMap, error) {
-	store, err := FetchOCI(ctx, provider, nil)
+	store, err := FetchOCI(ctx, provider, auth)
 	if err != nil {
 		return nil, err
 	}
@@ -309,7 +299,9 @@ func ProviderLabels(provider operatorv1.GenericProvider) map[string]string {
 	}
 
 	if provider.GetSpec().FetchConfig != nil && provider.GetSpec().FetchConfig.OCI != "" {
-		labels[configMapSourceLabel] = strings.ReplaceAll(provider.GetSpec().FetchConfig.OCI, "/", "_")
+		image := strings.ReplaceAll(provider.GetSpec().FetchConfig.OCI, "/", "_")
+		image = strings.ReplaceAll(image, ":", "_")
+		labels[configMapSourceLabel] = image
 	}
 
 	return labels

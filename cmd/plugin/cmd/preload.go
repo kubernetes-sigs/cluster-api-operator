@@ -24,8 +24,6 @@ import (
 
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/meta"
 	kerrors "k8s.io/apimachinery/pkg/util/errors"
 	"oras.land/oras-go/v2/registry/remote/auth"
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
@@ -207,30 +205,18 @@ func runPreLoad() error {
 		configMaps = append(configMaps, configMap)
 	}
 
-	errors := []error{}
-
-	if !loadOpts.existing {
-		for _, cm := range configMaps {
-			out, err := yaml.Marshal(cm)
-			if err != nil {
-				return fmt.Errorf("cannot serialize provider config map: %w", err)
-			}
-
-			fmt.Printf("---\n%s", string(out))
+	if loadOpts.existing {
+		client, err := CreateKubeClient(loadOpts.kubeconfig, "")
+		if err != nil {
+			return fmt.Errorf("cannot create a client: %w", err)
 		}
 
-		return nil
-	}
+		existing, err := preloadExisting(ctx, client)
+		if err != nil {
+			return err
+		}
 
-	client, err := CreateKubeClient(loadOpts.kubeconfig, "")
-	if err != nil {
-		return fmt.Errorf("cannot create a client: %w", err)
-	}
-
-	for _, list := range operatorv1.ProviderLists {
-		maps, err := fetchProviders(ctx, client, list.(genericProviderList))
-		configMaps = append(configMaps, maps...)
-		errors = append(errors, err)
+		configMaps = append(configMaps, existing...)
 	}
 
 	for _, cm := range configMaps {
@@ -242,15 +228,41 @@ func runPreLoad() error {
 		fmt.Printf("---\n%s", string(out))
 	}
 
-	return kerrors.NewAggregate(errors)
+	return nil
+}
+
+// preloadExisting uses existing cluster kubeconfig to list providers and create configmaps with components for each provider.
+func preloadExisting(ctx context.Context, cl client.Client) ([]*corev1.ConfigMap, error) {
+	errors := []error{}
+	configMaps := []*corev1.ConfigMap{}
+
+	for _, list := range operatorv1.ProviderLists {
+		list, ok := list.(genericProviderList)
+		if !ok {
+			log.V(5).Info("Expected to get GenericProviderList")
+			continue
+		}
+
+		list, ok = list.DeepCopyObject().(genericProviderList)
+		if !ok {
+			log.V(5).Info("Expected to get GenericProviderList")
+			continue
+		}
+
+		maps, err := fetchProviders(ctx, cl, list)
+		configMaps = append(configMaps, maps...)
+		errors = append(errors, err)
+	}
+
+	return configMaps, kerrors.NewAggregate(errors)
 }
 
 func fetchProviders(ctx context.Context, cl client.Client, providerList genericProviderList) ([]*corev1.ConfigMap, error) {
 	configMaps := []*corev1.ConfigMap{}
 
-	if err := cl.List(ctx, providerList, client.InNamespace("")); meta.IsNoMatchError(err) || apierrors.IsNotFound(err) {
-		return configMaps, nil
-	} else if err != nil {
+	if err := retryWithExponentialBackoff(ctx, newReadBackoff(), func(ctx context.Context) error {
+		return cl.List(ctx, providerList, client.InNamespace(""))
+	}); err != nil {
 		log.Error(err, fmt.Sprintf("Unable to list providers, %#v", err))
 
 		return configMaps, err
@@ -285,9 +297,10 @@ func templateConfigMap(ctx context.Context, providerType clusterctlv1.ProviderTy
 
 	spec := provider.GetSpec()
 	spec.FetchConfig = &operatorv1.FetchConfiguration{
-		OCI: url,
+		OCIConfiguration: operatorv1.OCIConfiguration{
+			OCI: url,
+		},
 	}
-
 	provider.SetSpec(spec)
 
 	if spec.Version != "" {
