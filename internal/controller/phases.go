@@ -316,7 +316,7 @@ func (p *phaseReconciler) configmapRepository(ctx context.Context, labelSelector
 			return nil, fmt.Errorf("ConfigMap %s/%s has invalid version:%s (%s)", cm.Namespace, cm.Name, version, errMsg)
 		}
 
-		metadata, ok := cm.Data[metadataConfigMapKey]
+		metadata, ok := cm.Data[operatorv1.MetadataConfigMapKey]
 		if !ok {
 			return nil, fmt.Errorf("ConfigMap %s/%s has no metadata", cm.Namespace, cm.Name)
 		}
@@ -349,14 +349,14 @@ func (p *phaseReconciler) fetchAddionalManifests(ctx context.Context) (string, e
 		}
 	}
 
-	return cm.Data[additionalManifestsConfigMapKey], nil
+	return cm.Data[operatorv1.AdditionalManifestsConfigMapKey], nil
 }
 
 // getComponentsData returns components data based on if it's compressed or not.
 func getComponentsData(cm corev1.ConfigMap) (string, error) {
 	// Data is not compressed, return it immediately.
-	if cm.GetAnnotations()[compressedAnnotation] != "true" {
-		components, ok := cm.Data[componentsConfigMapKey]
+	if cm.GetAnnotations()[operatorv1.CompressedAnnotation] != "true" {
+		components, ok := cm.Data[operatorv1.ComponentsConfigMapKey]
 		if !ok {
 			return "", fmt.Errorf("ConfigMap %s/%s Data has no components", cm.Namespace, cm.Name)
 		}
@@ -365,7 +365,7 @@ func getComponentsData(cm corev1.ConfigMap) (string, error) {
 	}
 
 	// Otherwise we have to decompress the data first.
-	compressedComponents, ok := cm.BinaryData[componentsConfigMapKey]
+	compressedComponents, ok := cm.BinaryData[operatorv1.ComponentsConfigMapKey]
 	if !ok {
 		return "", fmt.Errorf("ConfigMap %s/%s BinaryData has no components", cm.Namespace, cm.Name)
 	}
