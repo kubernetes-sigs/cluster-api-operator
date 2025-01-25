@@ -5,6 +5,7 @@ core: ""
 bootstrap: ""
 controlPlane: ""
 infrastructure: ""
+ipam: ""
 addon: ""
 manager.featureGates: {}
 fetchConfig: {}
