@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"os"
 	"sort"
+	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -30,6 +31,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/version"
+	"k8s.io/apimachinery/pkg/util/wait"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/clientcmd"
 	clusterctlv1 "sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3"
@@ -81,8 +83,13 @@ var errNotFound = errors.New("404 Not Found")
 // CreateKubeClient creates a kubernetes client from provided kubeconfig and kubecontext.
 func CreateKubeClient(kubeconfigPath, kubeconfigContext string) (ctrlclient.Client, error) {
 	// Use specified kubeconfig path and context
+	loader := &clientcmd.ClientConfigLoadingRules{}
+	if kubeconfigPath != "" {
+		loader.ExplicitPath = kubeconfigPath
+	}
+
 	config, err := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
-		&clientcmd.ClientConfigLoadingRules{ExplicitPath: kubeconfigPath},
+		loader,
 		&clientcmd.ConfigOverrides{
 			CurrentContext: kubeconfigContext,
 		}).ClientConfig()
@@ -266,4 +273,39 @@ func GetLatestRelease(ctx context.Context, repo repository.Repository) (string, 
 
 	// If we reached this point, it means we didn't find any release.
 	return "", errors.New("failed to find releases tagged with a valid semantic version number")
+}
+
+// retryWithExponentialBackoff repeats an operation until it passes or the exponential backoff times out.
+func retryWithExponentialBackoff(ctx context.Context, opts wait.Backoff, operation func(ctx context.Context) error) error {
+	i := 0
+	if err := wait.ExponentialBackoffWithContext(ctx, opts, func(ctx context.Context) (bool, error) {
+		i++
+		if err := operation(ctx); err != nil {
+			if i < opts.Steps {
+				log.V(5).Info("Retrying with backoff", "cause", err.Error())
+				return false, nil
+			}
+
+			return false, err
+		}
+
+		return true, nil
+	}); err != nil {
+		return fmt.Errorf("action failed after %d attempts: %w", i, err)
+	}
+
+	return nil
+}
+
+// newReadBackoff creates a new API Machinery backoff parameter set suitable for use with CLI cluster operations.
+func newReadBackoff() wait.Backoff {
+	// Return a exponential backoff configuration which returns durations for a total time of ~15s.
+	// Example: 0, .25s, .6s, 1.2, 2.1s, 3.4s, 5.5s, 8s, 12s
+	// Jitter is added as a random fraction of the duration multiplied by the jitter factor.
+	return wait.Backoff{
+		Duration: 250 * time.Millisecond,
+		Factor:   1.5,
+		Steps:    9,
+		Jitter:   0.1,
+	}
 }

@@ -22,10 +22,15 @@ package e2e
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	v1 "github.com/opencontainers/image-spec/specs-go/v1"
+
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
+	"oras.land/oras-go/v2"
+	"oras.land/oras-go/v2/content/file"
+	"oras.land/oras-go/v2/registry/remote"
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
 	"sigs.k8s.io/cluster-api/test/framework"
 
@@ -267,7 +272,7 @@ metadata:
 			e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 	})
 
-	PIt("should successfully create and delete an IPAMProvider", func() {
+	It("should successfully create and delete an IPAMProvider", func() {
 		bootstrapCluster := bootstrapClusterProxy.GetClient()
 		ipamProvider := &operatorv1.IPAMProvider{
 			ObjectMeta: metav1.ObjectMeta{
@@ -338,6 +343,287 @@ metadata:
 		WaitFor(ctx, For(coreProvider).In(bootstrapCluster).ToSatisfy(func() bool {
 			return ptr.Equal(coreProvider.Status.InstalledVersion, &coreProvider.Spec.Version)
 		}), e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
+	})
+
+	It("should successfully create and delete custom provider with OCI override", func() {
+		fs, err := file.New(customManifestsFolder)
+		Expect(err).ToNot(HaveOccurred())
+
+		defer func() {
+			Expect(fs.Close()).To(Succeed())
+		}()
+
+		mediaType := "application/vnd.test.file"
+		fds := []v1.Descriptor{}
+
+		fileDescriptor, err := fs.Add(ctx, "infrastructure-custom-v0.0.1-metadata.yaml", mediaType, "")
+		Expect(err).ToNot(HaveOccurred())
+		fds = append(fds, fileDescriptor)
+
+		fileDescriptor, err = fs.Add(ctx, "infrastructure-custom-v0.0.1-components.yaml", mediaType, "")
+		Expect(err).ToNot(HaveOccurred())
+		fds = append(fds, fileDescriptor)
+
+		fileDescriptor, err = fs.Add(ctx, "infrastructure-docker-v0.0.1-metadata.yaml", mediaType, "")
+		Expect(err).ToNot(HaveOccurred())
+		fds = append(fds, fileDescriptor)
+
+		fileDescriptor, err = fs.Add(ctx, "infrastructure-docker-v0.0.1-components.yaml", mediaType, "")
+		Expect(err).ToNot(HaveOccurred())
+		fds = append(fds, fileDescriptor)
+
+		artifactType := "application/vnd.acme.config"
+		opts := oras.PackManifestOptions{
+			Layers: fds,
+		}
+
+		manifestDescriptor, err := oras.PackManifest(ctx, fs, oras.PackManifestVersion1_1, artifactType, opts)
+		Expect(err).ToNot(HaveOccurred())
+
+		Expect(fs.Tag(ctx, manifestDescriptor, "v0.0.1")).ToNot(HaveOccurred())
+
+		repo, err := remote.NewRepository("ttl.sh/cluster-api-operator-custom")
+		Expect(err).ToNot(HaveOccurred())
+
+		_, err = oras.Copy(ctx, fs, "v0.0.1", repo, "5m", oras.DefaultCopyOptions)
+		Expect(err).ToNot(HaveOccurred())
+
+		bootstrapCluster := bootstrapClusterProxy.GetClient()
+		provider := &operatorv1.InfrastructureProvider{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "custom",
+				Namespace: operatorNamespace,
+			},
+			Spec: operatorv1.InfrastructureProviderSpec{
+				ProviderSpec: operatorv1.ProviderSpec{
+					Version: "v0.0.1",
+					FetchConfig: &operatorv1.FetchConfiguration{
+						OCIConfiguration: operatorv1.OCIConfiguration{
+							OCI: "ttl.sh/cluster-api-operator-custom:5m",
+						},
+					},
+				},
+			},
+		}
+		deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{
+			Name:      "busybox",
+			Namespace: operatorNamespace,
+		}}
+		Expect(bootstrapCluster.Create(ctx, provider)).To(Succeed())
+
+		By("Waiting for the custom provider deployment to be ready")
+		framework.WaitForDeploymentsAvailable(ctx, framework.WaitForDeploymentsAvailableInput{
+			Getter:     bootstrapCluster,
+			Deployment: deployment,
+		}, e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
+
+		By("Waiting for the custom provider to be ready")
+		WaitFor(ctx, For(provider).In(bootstrapCluster).ToSatisfy(
+			HaveStatusCondition(&provider.Status.Conditions, operatorv1.ProviderInstalledCondition)),
+			e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
+
+		By("Waiting for status.IntalledVersion to be set")
+		WaitFor(ctx, For(provider).In(bootstrapCluster).ToSatisfy(func() bool {
+			return ptr.Equal(provider.Status.InstalledVersion, &provider.Spec.Version)
+		}), e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
+
+		Expect(bootstrapCluster.Delete(ctx, provider)).To(Succeed())
+
+		By("Waiting for the custom provider deployment to be deleted")
+		WaitForDelete(ctx, For(deployment).In(bootstrapCluster),
+			e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
+	})
+
+	It("should successfully create and delete docker provider with OCI override", func() {
+		fs, err := file.New(customManifestsFolder)
+		Expect(err).ToNot(HaveOccurred())
+
+		defer func() {
+			Expect(fs.Close()).To(Succeed())
+		}()
+
+		mediaType := "application/vnd.test.file"
+		fds := []v1.Descriptor{}
+
+		fileDescriptor, err := fs.Add(ctx, "infrastructure-custom-v0.0.1-metadata.yaml", mediaType, "")
+		Expect(err).ToNot(HaveOccurred())
+		fds = append(fds, fileDescriptor)
+
+		fileDescriptor, err = fs.Add(ctx, "infrastructure-custom-v0.0.1-components.yaml", mediaType, "")
+		Expect(err).ToNot(HaveOccurred())
+		fds = append(fds, fileDescriptor)
+
+		fileDescriptor, err = fs.Add(ctx, "infrastructure-docker-v0.0.1-metadata.yaml", mediaType, "")
+		Expect(err).ToNot(HaveOccurred())
+		fds = append(fds, fileDescriptor)
+
+		fileDescriptor, err = fs.Add(ctx, "infrastructure-docker-v0.0.1-components.yaml", mediaType, "")
+		Expect(err).ToNot(HaveOccurred())
+		fds = append(fds, fileDescriptor)
+
+		artifactType := "application/vnd.acme.config"
+		opts := oras.PackManifestOptions{
+			Layers: fds,
+		}
+
+		manifestDescriptor, err := oras.PackManifest(ctx, fs, oras.PackManifestVersion1_1, artifactType, opts)
+		Expect(err).ToNot(HaveOccurred())
+
+		Expect(fs.Tag(ctx, manifestDescriptor, "v0.0.1")).ToNot(HaveOccurred())
+
+		repo, err := remote.NewRepository("ttl.sh/cluster-api-operator-custom")
+		Expect(err).ToNot(HaveOccurred())
+
+		_, err = oras.Copy(ctx, fs, "v0.0.1", repo, "5m", oras.DefaultCopyOptions)
+		Expect(err).ToNot(HaveOccurred())
+
+		bootstrapCluster := bootstrapClusterProxy.GetClient()
+		provider := &operatorv1.InfrastructureProvider{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "docker",
+				Namespace: operatorNamespace,
+			},
+			Spec: operatorv1.InfrastructureProviderSpec{
+				ProviderSpec: operatorv1.ProviderSpec{
+					Version: "v0.0.1",
+					FetchConfig: &operatorv1.FetchConfiguration{
+						OCIConfiguration: operatorv1.OCIConfiguration{
+							OCI: "ttl.sh/cluster-api-operator-custom:5m",
+						},
+					},
+				},
+			},
+		}
+		deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{
+			Name:      "busybox",
+			Namespace: operatorNamespace,
+		}}
+		Expect(bootstrapCluster.Create(ctx, provider)).To(Succeed())
+
+		By("Waiting for the docker provider deployment to be ready")
+		framework.WaitForDeploymentsAvailable(ctx, framework.WaitForDeploymentsAvailableInput{
+			Getter:     bootstrapCluster,
+			Deployment: deployment,
+		}, e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
+
+		By("Waiting for the docker provider to be ready")
+		WaitFor(ctx, For(provider).In(bootstrapCluster).ToSatisfy(
+			HaveStatusCondition(&provider.Status.Conditions, operatorv1.ProviderInstalledCondition)),
+			e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
+
+		By("Waiting for status.IntalledVersion to be set")
+		WaitFor(ctx, For(provider).In(bootstrapCluster).ToSatisfy(func() bool {
+			return ptr.Equal(provider.Status.InstalledVersion, &provider.Spec.Version)
+		}), e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
+
+		Expect(bootstrapCluster.Delete(ctx, provider)).To(Succeed())
+
+		By("Waiting for the custom docker provider deployment to be deleted")
+		WaitForDelete(ctx, For(deployment).In(bootstrapCluster),
+			e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
+	})
+
+	It("should successfully upgrade docker provider with OCI override", func() {
+		fs, err := file.New(customManifestsFolder)
+		Expect(err).ToNot(HaveOccurred())
+
+		defer func() {
+			Expect(fs.Close()).To(Succeed())
+		}()
+
+		mediaType := "application/vnd.test.file"
+		fds := []v1.Descriptor{}
+
+		fileDescriptor, err := fs.Add(ctx, "infrastructure-docker-v0.0.1-metadata.yaml", mediaType, "")
+		Expect(err).ToNot(HaveOccurred())
+		fds = append(fds, fileDescriptor)
+
+		fileDescriptor, err = fs.Add(ctx, "infrastructure-docker-v0.0.1-components.yaml", mediaType, "")
+		Expect(err).ToNot(HaveOccurred())
+		fds = append(fds, fileDescriptor)
+
+		fileDescriptor, err = fs.Add(ctx, "infrastructure-docker-v0.0.2-metadata.yaml", mediaType, "")
+		Expect(err).ToNot(HaveOccurred())
+		fds = append(fds, fileDescriptor)
+
+		fileDescriptor, err = fs.Add(ctx, "infrastructure-docker-v0.0.2-components.yaml", mediaType, "")
+		Expect(err).ToNot(HaveOccurred())
+		fds = append(fds, fileDescriptor)
+
+		artifactType := "application/vnd.acme.config"
+		opts := oras.PackManifestOptions{
+			Layers: fds,
+		}
+
+		manifestDescriptor, err := oras.PackManifest(ctx, fs, oras.PackManifestVersion1_1, artifactType, opts)
+		Expect(err).ToNot(HaveOccurred())
+
+		Expect(fs.Tag(ctx, manifestDescriptor, "5m")).ToNot(HaveOccurred())
+
+		repo, err := remote.NewRepository("ttl.sh/cluster-api-operator-upgrade")
+		Expect(err).ToNot(HaveOccurred())
+
+		_, err = oras.Copy(ctx, fs, "5m", repo, "5m", oras.DefaultCopyOptions)
+		Expect(err).ToNot(HaveOccurred())
+
+		bootstrapCluster := bootstrapClusterProxy.GetClient()
+		provider := &operatorv1.InfrastructureProvider{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "docker",
+				Namespace: operatorNamespace,
+			},
+			Spec: operatorv1.InfrastructureProviderSpec{
+				ProviderSpec: operatorv1.ProviderSpec{
+					Version: "v0.0.1",
+					FetchConfig: &operatorv1.FetchConfiguration{
+						OCIConfiguration: operatorv1.OCIConfiguration{
+							OCI: "ttl.sh/cluster-api-operator-upgrade:5m",
+						},
+					},
+				},
+			},
+		}
+		deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{
+			Name:      "busybox",
+			Namespace: operatorNamespace,
+		}}
+		Expect(bootstrapCluster.Create(ctx, provider)).To(Succeed())
+
+		By("Waiting for the docker provider deployment to be ready")
+		framework.WaitForDeploymentsAvailable(ctx, framework.WaitForDeploymentsAvailableInput{
+			Getter:     bootstrapCluster,
+			Deployment: deployment,
+		}, e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
+
+		By("Waiting for the docker provider to be ready")
+		WaitFor(ctx, For(provider).In(bootstrapCluster).ToSatisfy(
+			HaveStatusCondition(&provider.Status.Conditions, operatorv1.ProviderInstalledCondition)),
+			e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
+
+		By("Waiting for status.IntalledVersion to be set")
+		WaitFor(ctx, For(provider).In(bootstrapCluster).ToSatisfy(func() bool {
+			return ptr.Equal(provider.Status.InstalledVersion, &provider.Spec.Version)
+		}), e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
+
+		By("Updating verion to v0.0.2 to initiate upgrade")
+		provider.Spec.Version = "v0.0.2"
+		Expect(bootstrapCluster.Update(ctx, provider)).To(Succeed())
+
+		By("Waiting for status.IntalledVersion to be set")
+		WaitFor(ctx, For(provider).In(bootstrapCluster).ToSatisfy(func() bool {
+			return ptr.Equal(provider.Status.InstalledVersion, &provider.Spec.Version)
+		}), e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
+
+		By("Waiting for the docker provider to be ready")
+		WaitFor(ctx, For(provider).In(bootstrapCluster).ToSatisfy(
+			HaveStatusCondition(&provider.Status.Conditions, operatorv1.ProviderInstalledCondition)),
+			e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
+
+		Expect(bootstrapCluster.Delete(ctx, provider)).To(Succeed())
+
+		By("Waiting for the custom docker provider deployment to be deleted")
+		WaitForDelete(ctx, For(deployment).In(bootstrapCluster),
+			e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 	})
 
 	It("should successfully delete a CoreProvider", func() {

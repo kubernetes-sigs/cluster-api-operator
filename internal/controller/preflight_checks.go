@@ -87,15 +87,15 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 	}
 
 	if !isPredefinedProvider {
-		if spec.FetchConfig == nil || spec.FetchConfig.Selector == nil && spec.FetchConfig.URL == "" {
+		if spec.FetchConfig == nil || spec.FetchConfig.Selector == nil && spec.FetchConfig.URL == "" && spec.FetchConfig.OCI == "" {
 			conditions.Set(provider, conditions.FalseCondition(
 				operatorv1.PreflightCheckCondition,
 				operatorv1.FetchConfigValidationErrorReason,
 				clusterv1.ConditionSeverityError,
-				"Either Selector or URL must be provided for a not predefined provider",
+				"Either Selector, OCI URL or provider URL must be provided for a not predefined provider",
 			))
 
-			return ctrl.Result{}, fmt.Errorf("either selector or URL must be provided for a not predefined provider %s", provider.GetName())
+			return ctrl.Result{}, fmt.Errorf("either selector, OCI URL or provider URL must be provided for a not predefined provider %s", provider.GetName())
 		}
 	}
 

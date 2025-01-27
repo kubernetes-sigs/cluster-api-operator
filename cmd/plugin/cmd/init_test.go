@@ -265,7 +265,6 @@ func TestInitProviders(t *testing.T) {
 			opts: &initOptions{
 				coreProvider: "cluster-api:capi-system:v1.8.0",
 				infrastructureProviders: []string{
-					"cluster-api:capi-system:v1.8.0",
 					"aws:capa-operator-system",
 					"docker:capd-operator-system",
 				},

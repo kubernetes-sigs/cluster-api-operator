@@ -13,6 +13,7 @@ require (
 	github.com/google/go-github/v52 v52.0.0
 	github.com/google/gofuzz v1.2.0
 	github.com/onsi/gomega v1.36.1
+	github.com/opencontainers/image-spec v1.1.0
 	github.com/spf13/cobra v1.8.1
 	github.com/spf13/pflag v1.0.5
 	golang.org/x/oauth2 v0.24.0
@@ -23,6 +24,7 @@ require (
 	k8s.io/component-base v0.31.4
 	k8s.io/klog/v2 v2.130.1
 	k8s.io/utils v0.0.0-20240711033017-18e509b52bc8
+	oras.land/oras-go/v2 v2.5.0
 	sigs.k8s.io/cluster-api v1.9.4
 	sigs.k8s.io/controller-runtime v0.19.4
 	sigs.k8s.io/yaml v1.4.0

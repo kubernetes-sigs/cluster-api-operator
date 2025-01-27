@@ -2775,6 +2775,12 @@ spec:
                   For example, the infrastructure name `aws` will fetch artifacts from
                   https://github.com/kubernetes-sigs/cluster-api-provider-aws/releases.
                 properties:
+                  oci:
+                    description: |-
+                      OCI to be used for fetching the provider’s components and metadata from an OCI artifact.
+                      You must set `providerSpec.Version` field for operator to pick up desired version of the release from GitHub.
+                      If the providerSpec.Version is missing, latest provider version from clusterctl defaults is used.
+                    type: string
                   selector:
                     description: |-
                       Selector to be used for fetching provider’s components and metadata from
@@ -2834,6 +2840,9 @@ spec:
                       desired version of the release from GitHub.
                     type: string
                 type: object
+                x-kubernetes-validations:
+                - message: Must specify one and only one of {oci, url, selector}
+                  rule: '[has(self.oci), has(self.url), has(self.selector)].exists_one(x,x)'
               manager:
                 description: Manager defines the properties that can be enabled on
                   the controller manager for the provider.
@@ -7505,6 +7514,12 @@ spec:
                   For example, the infrastructure name `aws` will fetch artifacts from
                   https://github.com/kubernetes-sigs/cluster-api-provider-aws/releases.
                 properties:
+                  oci:
+                    description: |-
+                      OCI to be used for fetching the provider’s components and metadata from an OCI artifact.
+                      You must set `providerSpec.Version` field for operator to pick up desired version of the release from GitHub.
+                      If the providerSpec.Version is missing, latest provider version from clusterctl defaults is used.
+                    type: string
                   selector:
                     description: |-
                       Selector to be used for fetching provider’s components and metadata from
@@ -7564,6 +7579,9 @@ spec:
                       desired version of the release from GitHub.
                     type: string
                 type: object
+                x-kubernetes-validations:
+                - message: Must specify one and only one of {oci, url, selector}
+                  rule: '[has(self.oci), has(self.url), has(self.selector)].exists_one(x,x)'
               manager:
                 description: Manager defines the properties that can be enabled on
                   the controller manager for the provider.
@@ -12237,6 +12255,12 @@ spec:
                   For example, the infrastructure name `aws` will fetch artifacts from
                   https://github.com/kubernetes-sigs/cluster-api-provider-aws/releases.
                 properties:
+                  oci:
+                    description: |-
+                      OCI to be used for fetching the provider’s components and metadata from an OCI artifact.
+                      You must set `providerSpec.Version` field for operator to pick up desired version of the release from GitHub.
+                      If the providerSpec.Version is missing, latest provider version from clusterctl defaults is used.
+                    type: string
                   selector:
                     description: |-
                       Selector to be used for fetching provider’s components and metadata from
@@ -12296,6 +12320,9 @@ spec:
                       desired version of the release from GitHub.
                     type: string
                 type: object
+                x-kubernetes-validations:
+                - message: Must specify one and only one of {oci, url, selector}
+                  rule: '[has(self.oci), has(self.url), has(self.selector)].exists_one(x,x)'
               manager:
                 description: Manager defines the properties that can be enabled on
                   the controller manager for the provider.
@@ -16968,6 +16995,12 @@ spec:
                   For example, the infrastructure name `aws` will fetch artifacts from
                   https://github.com/kubernetes-sigs/cluster-api-provider-aws/releases.
                 properties:
+                  oci:
+                    description: |-
+                      OCI to be used for fetching the provider’s components and metadata from an OCI artifact.
+                      You must set `providerSpec.Version` field for operator to pick up desired version of the release from GitHub.
+                      If the providerSpec.Version is missing, latest provider version from clusterctl defaults is used.
+                    type: string
                   selector:
                     description: |-
                       Selector to be used for fetching provider’s components and metadata from
@@ -17027,6 +17060,9 @@ spec:
                       desired version of the release from GitHub.
                     type: string
                 type: object
+                x-kubernetes-validations:
+                - message: Must specify one and only one of {oci, url, selector}
+                  rule: '[has(self.oci), has(self.url), has(self.selector)].exists_one(x,x)'
               manager:
                 description: Manager defines the properties that can be enabled on
                   the controller manager for the provider.
@@ -21700,6 +21736,12 @@ spec:
                   For example, the infrastructure name `aws` will fetch artifacts from
                   https://github.com/kubernetes-sigs/cluster-api-provider-aws/releases.
                 properties:
+                  oci:
+                    description: |-
+                      OCI to be used for fetching the provider’s components and metadata from an OCI artifact.
+                      You must set `providerSpec.Version` field for operator to pick up desired version of the release from GitHub.
+                      If the providerSpec.Version is missing, latest provider version from clusterctl defaults is used.
+                    type: string
                   selector:
                     description: |-
                       Selector to be used for fetching provider’s components and metadata from
@@ -21759,6 +21801,9 @@ spec:
                       desired version of the release from GitHub.
                     type: string
                 type: object
+                x-kubernetes-validations:
+                - message: Must specify one and only one of {oci, url, selector}
+                  rule: '[has(self.oci), has(self.url), has(self.selector)].exists_one(x,x)'
               manager:
                 description: Manager defines the properties that can be enabled on
                   the controller manager for the provider.
@@ -24801,6 +24846,12 @@ spec:
                   For example, the infrastructure name `aws` will fetch artifacts from
                   https://github.com/kubernetes-sigs/cluster-api-provider-aws/releases.
                 properties:
+                  oci:
+                    description: |-
+                      OCI to be used for fetching the provider’s components and metadata from an OCI artifact.
+                      You must set `providerSpec.Version` field for operator to pick up desired version of the release from GitHub.
+                      If the providerSpec.Version is missing, latest provider version from clusterctl defaults is used.
+                    type: string
                   selector:
                     description: |-
                       Selector to be used for fetching provider’s components and metadata from
@@ -24860,6 +24911,9 @@ spec:
                       desired version of the release from GitHub.
                     type: string
                 type: object
+                x-kubernetes-validations:
+                - message: Must specify one and only one of {oci, url, selector}
+                  rule: '[has(self.oci), has(self.url), has(self.selector)].exists_one(x,x)'
               manager:
                 description: Manager defines the properties that can be enabled on
                   the controller manager for the provider.
@@ -27903,6 +27957,12 @@ spec:
                   For example, the infrastructure name `aws` will fetch artifacts from
                   https://github.com/kubernetes-sigs/cluster-api-provider-aws/releases.
                 properties:
+                  oci:
+                    description: |-
+                      OCI to be used for fetching the provider’s components and metadata from an OCI artifact.
+                      You must set `providerSpec.Version` field for operator to pick up desired version of the release from GitHub.
+                      If the providerSpec.Version is missing, latest provider version from clusterctl defaults is used.
+                    type: string
                   selector:
                     description: |-
                       Selector to be used for fetching provider’s components and metadata from
@@ -27962,6 +28022,9 @@ spec:
                       desired version of the release from GitHub.
                     type: string
                 type: object
+                x-kubernetes-validations:
+                - message: Must specify one and only one of {oci, url, selector}
+                  rule: '[has(self.oci), has(self.url), has(self.selector)].exists_one(x,x)'
               manager:
                 description: Manager defines the properties that can be enabled on
                   the controller manager for the provider.
