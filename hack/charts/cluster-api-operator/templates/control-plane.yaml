@@ -65,4 +65,8 @@ spec:
     {{- end }}
 {{- end }}
 {{- end }}
+{{- if hasKey (default (dict) $.Values.deploymentOverride) "controlPlane" }}
+  {{ .Values.deploymentOverride.controlPlane | toYaml | nindent 2 }}
 {{- end }}
+{{- end }}
+

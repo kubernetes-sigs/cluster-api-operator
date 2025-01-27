@@ -69,5 +69,8 @@ spec:
     {{- end }}
 {{- end }}
 {{- end }}
-
+{{- if hasKey (default (dict) $.Values.deploymentOverride ) "infraCondition" }}
+  {{ .Values.deploymentOverride.infraCondition | toYaml | nindent 2 }}
 {{- end }}
+{{- end }}
+
