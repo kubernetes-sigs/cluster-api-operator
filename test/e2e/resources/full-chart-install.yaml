@@ -28475,6 +28475,9 @@ spec:
 # Source: cluster-api-operator/templates/infra.yaml
 # Infrastructure providers
 ---
+# Source: cluster-api-operator/templates/ipam.yaml
+# IPAM providers
+---
 # Source: cluster-api-operator/templates/operator-components.yaml
 apiVersion: cert-manager.io/v1
 kind: Certificate
