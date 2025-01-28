@@ -2,7 +2,7 @@
 
 ## Overview
 
-The `preload` subcommand allows users to preload provider `ConfigMaps` into a management cluster from an OCI (Open Container Initiative) artifact, known provider source, or URL override. User can supply any number of provider stings or discover and use existing provider manifests from the cluster.
+The `preload` subcommand allows users to preload provider `ConfigMaps` into a management cluster from an OCI (Open Container Initiative) artifact, known provider source, or URL override. Users can supply any number of provider stings or discover and use existing provider manifests from the cluster.
 
 ## Command Syntax
 The basic syntax for using the `preload` command is:

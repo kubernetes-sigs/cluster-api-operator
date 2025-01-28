@@ -67,7 +67,7 @@ When working with metadata and component files within OCI artifacts, the files s
   - Typed: `fmt.Sprintf("%s-components.yaml", p.GetType())`, Example: `infrastructure-components.yaml`
   - Versioned: `fmt.Sprintf("%s-%s-%s-components.yaml", p.GetType(), p.GetName(), p.GetSpec().Version)`, Example: `infrastructure-azure-v1.9.3-components.yaml`
 
-Versioned files allow to use single image for hosting multiple provider manifests and versions simulaniously, without overlapping each other.
+Versioned files allow to use single image for hosting multiple provider manifests and versions simultaneously, without overlapping each other.
 
 Typed allow to store multiple provider types inside single image, which is needed for example for `bootstrap` and `control-plane` providers.
 
