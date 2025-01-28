@@ -16,13 +16,7 @@ limitations under the License.
 
 package controller
 
-import "time"
-
 const (
-	// preflightFailedRequeueAfter is how long to wait before trying to reconcile
-	// if some preflight check has failed.
-	preflightFailedRequeueAfter = 30 * time.Second
-
 	// configPath is the path to the clusterctl config file.
 	configPath = "/config/clusterctl.yaml"
 )

@@ -607,7 +607,7 @@ func TestPreflightChecks(t *testing.T) {
 				gs.Expect(fakeclient.Create(ctx, c)).To(Succeed())
 			}
 
-			_, err := preflightChecks(context.Background(), fakeclient, tc.providers[0], tc.providerList)
+			err := preflightChecks(context.Background(), fakeclient, tc.providers[0], tc.providerList)
 			if tc.expectedError {
 				gs.Expect(err).To(HaveOccurred())
 			} else {
@@ -704,7 +704,7 @@ func TestPreflightChecksUpgradesDowngrades(t *testing.T) {
 
 			gs.Expect(fakeclient.Create(ctx, provider)).To(Succeed())
 
-			_, err := preflightChecks(context.Background(), fakeclient, provider, &operatorv1.CoreProviderList{})
+			err := preflightChecks(context.Background(), fakeclient, provider, &operatorv1.CoreProviderList{})
 			if tc.expectedError {
 				gs.Expect(err).To(HaveOccurred())
 			} else {

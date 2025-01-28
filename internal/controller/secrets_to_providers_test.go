@@ -36,6 +36,8 @@ func TestProviderSecretMapper(t *testing.T) {
 
 	k8sClient := fake.NewClientBuilder().
 		WithScheme(setupScheme()).
+		WithIndex(&operatorv1.InfrastructureProvider{}, configSecretNameField, configSecretNameIndexFunc).
+		WithIndex(&operatorv1.InfrastructureProvider{}, configSecretNamespaceField, configSecretNamespaceIndexFunc).
 		WithObjects(
 			&operatorv1.InfrastructureProvider{
 				ObjectMeta: metav1.ObjectMeta{

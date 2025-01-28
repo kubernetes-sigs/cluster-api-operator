@@ -48,7 +48,7 @@ func TestMain(m *testing.M) {
 		Provider:     &operatorv1.CoreProvider{},
 		ProviderList: &operatorv1.CoreProviderList{},
 		Client:       env,
-	}).SetupWithManager(env.Manager, controller.Options{MaxConcurrentReconciles: 1}); err != nil {
+	}).SetupWithManager(ctx, env.Manager, controller.Options{MaxConcurrentReconciles: 1}); err != nil {
 		panic(fmt.Sprintf("Failed to start CoreProviderReconciler: %v", err))
 	}
 
