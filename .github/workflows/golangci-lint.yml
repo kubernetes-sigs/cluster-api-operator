@@ -7,16 +7,21 @@ jobs:
     name: lint
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         working-directory:
           - ""
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # tag=v4.2.2
+      - name: Calculate go version
+        id: vars
+        run: echo "go_version=$(make go-version)" >> $GITHUB_OUTPUT
+      - name: Set up Go
+        uses: actions/setup-go@41dfa10bad2bb2ae585af6ee5bb4d7d973ad74ed # tag=v5.1.0
         with:
-          go-version: '1.23'
+          go-version: ${{ steps.vars.outputs.go_version }}
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v6
+        uses: golangci/golangci-lint-action@971e284b6050e8a5849b72094c50ab08da042db8 # tag=v6.1.1
         with:
-          version: v1.57.2
-          args: --timeout 15m 
+          version: v1.60.2
+          args: --timeout 15m
