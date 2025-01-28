@@ -85,6 +85,7 @@ metadata:
     "helm.sh/hook-weight": "2"
     "argocd.argoproj.io/sync-wave": "2"
 spec:
+  manager:
   configSecret:
     name: aws-variables
     namespace: default
