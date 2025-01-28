@@ -182,7 +182,7 @@ func (r *GenericProviderReconciler) reconcile(ctx context.Context, provider gene
 		if err != nil {
 			var pe *PhaseError
 			if errors.As(err, &pe) {
-				conditions.Set(provider, conditions.FalseCondition(pe.Type, pe.Reason, pe.Severity, err.Error()))
+				conditions.Set(provider, conditions.FalseCondition(pe.Type, pe.Reason, pe.Severity, "%s", err.Error()))
 			}
 		}
 
@@ -214,7 +214,7 @@ func (r *GenericProviderReconciler) reconcileDelete(ctx context.Context, provide
 		if err != nil {
 			var pe *PhaseError
 			if errors.As(err, &pe) {
-				conditions.Set(provider, conditions.FalseCondition(pe.Type, pe.Reason, pe.Severity, err.Error()))
+				conditions.Set(provider, conditions.FalseCondition(pe.Type, pe.Reason, pe.Severity, "%s", err.Error()))
 			}
 		}
 

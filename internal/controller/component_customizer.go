@@ -145,7 +145,8 @@ func customizeDeployment(dSpec *operatorv1.DeploymentSpec, mSpec *operatorv1.Man
 
 func customizeDeploymentSpec(dSpec operatorv1.DeploymentSpec, d *appsv1.Deployment) {
 	if dSpec.Replicas != nil {
-		d.Spec.Replicas = ptr.To(int32(*dSpec.Replicas))
+		replicas := int32(*dSpec.Replicas) //nolint:gosec
+		d.Spec.Replicas = ptr.To(replicas)
 	}
 
 	if dSpec.Affinity != nil {

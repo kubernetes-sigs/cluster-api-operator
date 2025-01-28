@@ -125,7 +125,7 @@ func (m mapStore) Exists(ctx context.Context, target ocispec.Descriptor) (bool, 
 
 // Fetch implements oras.Target.
 func (m mapStore) Fetch(ctx context.Context, target ocispec.Descriptor) (io.ReadCloser, error) {
-	return nil, nil
+	return nil, nil //nolint:nilnil
 }
 
 // Push implements oras.Target.
