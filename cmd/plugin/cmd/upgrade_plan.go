@@ -178,10 +178,14 @@ func runUpgradePlan() error {
 
 	w := tabwriter.NewWriter(os.Stdout, 10, 4, 3, ' ', 0)
 
-	fmt.Fprintln(w, "NAME\tNAMESPACE\tTYPE\tCURRENT VERSION\tNEXT VERSION")
+	if _, err := fmt.Fprintln(w, "NAME\tNAMESPACE\tTYPE\tCURRENT VERSION\tNEXT VERSION"); err != nil {
+		return err
+	}
 
 	for _, upgradeItem := range upgradePlan.Providers {
-		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n", upgradeItem.Name, upgradeItem.Namespace, upgradeItem.Type, upgradeItem.CurrentVersion, prettifyTargetVersion(upgradeItem.NextVersion))
+		if _, err := fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n", upgradeItem.Name, upgradeItem.Namespace, upgradeItem.Type, upgradeItem.CurrentVersion, prettifyTargetVersion(upgradeItem.NextVersion)); err != nil {
+			return err
+		}
 
 		if upgradeItem.NextVersion != "" {
 			upgradeAvailable = true

@@ -23,7 +23,7 @@ ROOT:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 
 .DEFAULT_GOAL:=help
 
-GO_VERSION ?= 1.22.11
+GO_VERSION ?= 1.23.0
 GO_CONTAINER_IMAGE ?= docker.io/library/golang:$(GO_VERSION)
 
 # Use GOPROXY environment variable if set
@@ -70,7 +70,7 @@ CONTROLLER_GEN_VER := v0.16.1
 CONTROLLER_GEN_BIN := controller-gen
 CONTROLLER_GEN := $(TOOLS_BIN_DIR)/$(CONTROLLER_GEN_BIN)-$(CONTROLLER_GEN_VER)
 
-GOLANGCI_LINT_VER := v1.57.2
+GOLANGCI_LINT_VER := v1.60.2
 GOLANGCI_LINT_BIN := golangci-lint
 GOLANGCI_LINT := $(TOOLS_BIN_DIR)/$(GOLANGCI_LINT_BIN)-$(GOLANGCI_LINT_VER)
 

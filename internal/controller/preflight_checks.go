@@ -73,7 +73,7 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 				operatorv1.PreflightCheckCondition,
 				operatorv1.IncorrectCoreProviderNameReason,
 				clusterv1.ConditionSeverityError,
-				fmt.Sprintf(incorrectCoreProviderNameMessage, provider.GetName(), configclient.ClusterAPIProviderName),
+				"%s", fmt.Sprintf(incorrectCoreProviderNameMessage, provider.GetName(), configclient.ClusterAPIProviderName),
 			))
 
 			return ctrl.Result{}, fmt.Errorf("incorrect CoreProvider name: %s, it should be %s", provider.GetName(), configclient.ClusterAPIProviderName)
@@ -129,7 +129,7 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 					operatorv1.PreflightCheckCondition,
 					operatorv1.InvalidGithubTokenReason,
 					clusterv1.ConditionSeverityError,
-					invalidGithubTokenMessage,
+					"%s", invalidGithubTokenMessage,
 				))
 
 				return ctrl.Result{}, fmt.Errorf("failed to validate provided github token: %w", err)
@@ -187,7 +187,7 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 				operatorv1.PreflightCheckCondition,
 				operatorv1.WaitingForCoreProviderReadyReason,
 				clusterv1.ConditionSeverityInfo,
-				waitingForCoreProviderReadyMessage,
+				"%s", waitingForCoreProviderReadyMessage,
 			))
 
 			return ctrl.Result{RequeueAfter: preflightFailedRequeueAfter}, nil
@@ -213,7 +213,7 @@ func checkProviderVersion(ctx context.Context, providerVersion string, provider 
 			operatorv1.PreflightCheckCondition,
 			operatorv1.IncorrectVersionFormatReason,
 			clusterv1.ConditionSeverityError,
-			err.Error(),
+			"%s", err.Error(),
 		))
 
 		return fmt.Errorf("version contains invalid value for provider %q", provider.GetName())
@@ -231,7 +231,7 @@ func checkProviderVersion(ctx context.Context, providerVersion string, provider 
 				operatorv1.PreflightCheckCondition,
 				operatorv1.UnsupportedProviderDowngradeReason,
 				clusterv1.ConditionSeverityError,
-				fmt.Sprintf(unsupportedProviderDowngradeMessage, provider.GetName()),
+				"%s", unsupportedProviderDowngradeMessage,
 			))
 
 			return fmt.Errorf("downgrade is not supported for provider %q", provider.GetName())
