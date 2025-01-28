@@ -167,16 +167,16 @@ For example, you have two files: `components.yaml` and `metadata.yaml`. To creat
 gzip -c components.yaml > components.gz
 ```
 
-2. Create a ConfigMap manifest from the archived data:
+2. Create a ConfigMap in your Kubernetes cluster from the archived data:
 
 ```sh
-kubectl create configmap v1.9.3 --namespace=capz-system --from-file=components=components.gz --from-file=metadata=metadata.yaml --dry-run=client -o yaml > configmap.yaml
+kubectl create configmap v1.9.3 -n capz-system --from-file=components=components.gz --from-file=metadata=metadata.yaml
 ```
 
-3. Edit the file by adding "provider.cluster.x-k8s.io/compressed: true" annotation:
+3. Add "provider.cluster.x-k8s.io/compressed: true" annotation to the ConfigMap:
 
 ```sh
-yq eval -i '.metadata.annotations += {"provider.cluster.x-k8s.io/compressed": "true"}' configmap.yaml
+kubectl annotate configmap v1.9.3 -n capz-system provider.cluster.x-k8s.io/compressed=true
 ```
 
 **Note**: Without this annotation, the operator won't be able to determine if the data is compressed or not.
@@ -184,11 +184,5 @@ yq eval -i '.metadata.annotations += {"provider.cluster.x-k8s.io/compressed": "t
 4. Add labels that will be used to match the ConfigMap in the `fetchConfig` section of the provider:
 
 ```sh
-yq eval -i '.metadata.labels += {"my-label": "label-value"}' configmap.yaml
-```
-
-5. Create the ConfigMap in your Kubernetes cluster using kubectl:
-
-```sh
-kubectl create -f configmap.yaml
+kubectl label configmap v1.9.3 -n capz-system provider-components=azure
 ```
