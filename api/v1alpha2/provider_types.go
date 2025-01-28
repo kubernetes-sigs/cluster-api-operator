@@ -25,6 +25,12 @@ import (
 const (
 	ProviderFinalizer         = "provider.cluster.x-k8s.io"
 	ConfigMapVersionLabelName = "provider.cluster.x-k8s.io/version"
+
+	CompressedAnnotation = "provider.cluster.x-k8s.io/compressed"
+
+	MetadataConfigMapKey            = "metadata"
+	ComponentsConfigMapKey          = "components"
+	AdditionalManifestsConfigMapKey = "manifests"
 )
 
 // ProviderSpec is the desired state of the Provider.

@@ -45,12 +45,6 @@ const (
 	configMapSourceLabel  = "provider.cluster.x-k8s.io/source"
 	operatorManagedLabel  = "managed-by.operator.cluster.x-k8s.io"
 
-	compressedAnnotation = "provider.cluster.x-k8s.io/compressed"
-
-	metadataConfigMapKey            = "metadata"
-	componentsConfigMapKey          = "components"
-	additionalManifestsConfigMapKey = "manifests"
-
 	maxConfigMapSize = 1 * 1024 * 1024
 	ociSource        = "oci"
 )
@@ -173,13 +167,13 @@ func TemplateManifestsConfigMap(provider operatorv1.GenericProvider, labels map[
 			Labels:    labels,
 		},
 		Data: map[string]string{
-			metadataConfigMapKey: string(metadata),
+			operatorv1.MetadataConfigMapKey: string(metadata),
 		},
 	}
 
 	// Components manifests data can exceed the configmap size limit. In this case we have to compress it.
 	if !compress {
-		configMap.Data[componentsConfigMapKey] = string(components)
+		configMap.Data[operatorv1.ComponentsConfigMapKey] = string(components)
 	} else {
 		var componentsBuf bytes.Buffer
 		zw := gzip.NewWriter(&componentsBuf)
@@ -194,11 +188,11 @@ func TemplateManifestsConfigMap(provider operatorv1.GenericProvider, labels map[
 		}
 
 		configMap.BinaryData = map[string][]byte{
-			componentsConfigMapKey: componentsBuf.Bytes(),
+			operatorv1.ComponentsConfigMapKey: componentsBuf.Bytes(),
 		}
 
 		// Setting the annotation to mark these manifests as compressed.
-		configMap.SetAnnotations(map[string]string{compressedAnnotation: "true"})
+		configMap.SetAnnotations(map[string]string{operatorv1.CompressedAnnotation: "true"})
 	}
 
 	gvk := provider.GetObjectKind().GroupVersionKind()
