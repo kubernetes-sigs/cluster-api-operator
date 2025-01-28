@@ -20,7 +20,7 @@ def build_image():
         "SECURITY_CONTACTS"
         ],
        build_args = {
-        "builder_image": "docker.io/library/golang:1.22.5",
+        "builder_image": "docker.io/library/golang:1.22.11",
         }
     )
 
