@@ -8,7 +8,7 @@ kind create cluster
 ```
 
 ## Run Tilt
-Once the cluster is live and you've confirmed you're using the correct context, you can simply run:
+Once the cluster is live, and you've confirmed you're using the correct context, you can simply run:
 ```bash
 tilt up
 ```
