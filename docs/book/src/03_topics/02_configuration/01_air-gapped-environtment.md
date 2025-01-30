@@ -6,8 +6,12 @@ To install Cluster API providers in an air-gapped environment using the operator
    - Manually fetch and store a helm chart for the operator.
    - Provide image overrides for the operator from an accessible image repository.
 2. Configure providers for an air-gapped environment:
-   - Provide fetch configuration for each provider from an accessible location: e.g., an OCI artifact, internal Github/Gitlab repository URL or from pre-created ConfigMaps within the cluster.
+   - Provide fetch configuration for each provider from an accessible location: e.g., an OCI artifact, internal GitHub/GitLab repository URL or from pre-created ConfigMaps within the cluster.
    - Provide image overrides for each provider to pull images from an accessible image repository.
+
+Please note that the operator generates a list of metadata versions from the ConfigMaps by the provider selector based (in priority) on:
+- Value in the `provider.cluster.x-k8s.io/version` label
+- Its name (see usage example below)
 
 **Example Usage:**
 
@@ -135,9 +139,15 @@ data:
   OCI_PASSWORD: <secret>
   OCI_ACCESS_TOKEN: <secret>
   OCI_REFRESH_TOKEN: <secret>
+stringData:
+  images: |
+    all:
+      repository: quay.io/foobar
 ```
 
-### Using Github/Gitlab URL
+This example also demonstrates how to override the repository for all images in the provider metadata.
+
+### Using GitHub/GitLab URL
 
 If the provider components are hosted at a specific repository URL, you can use `fetchConfig.url` to retrieve them directly.
 
