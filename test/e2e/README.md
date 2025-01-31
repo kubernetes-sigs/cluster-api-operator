@@ -1,5 +1,13 @@
 # Test
 
+## Run e2e tests locally
+
+To run e2e  tests locally, run the following command
+
+```bash
+make test-e2e-local
+```
+
 ## Compatibility notice
 
 This package is not subject to deprecation notices or compatibility guarantees.
