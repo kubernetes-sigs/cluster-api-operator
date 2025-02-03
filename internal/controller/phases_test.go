@@ -27,6 +27,7 @@ import (
 	clusterctlv1 "sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3"
 	configclient "sigs.k8s.io/cluster-api/cmd/clusterctl/client/config"
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/repository"
+	utilyaml "sigs.k8s.io/cluster-api/util/yaml"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -401,7 +402,7 @@ metadata:
 			g.Expect(err).To(Succeed())
 
 			if tt.additionalManifests != "" {
-				g.Expect(string(gotComponents)).To(Equal(components + "\n---\n" + additionalManifests))
+				g.Expect(gotComponents).To(Equal(utilyaml.JoinYaml([]byte(components), []byte(additionalManifests))))
 			} else {
 				g.Expect(string(gotComponents)).To(Equal(components))
 			}
@@ -529,10 +530,10 @@ releaseSeries:
 						Name:      testCurrentVersion,
 						Namespace: "default",
 						Labels: map[string]string{
-							configMapVersionLabel: testCurrentVersion,
-							configMapTypeLabel:    core.GetType(),
-							configMapNameLabel:    core.GetName(),
-							operatorManagedLabel:  "true",
+							operatorv1.ConfigMapVersionLabelName: testCurrentVersion,
+							configMapTypeLabel:                   core.GetType(),
+							configMapNameLabel:                   core.GetName(),
+							operatorManagedLabel:                 "true",
 						},
 					},
 					Data: map[string]string{"metadata": metadata, "components": ""},

@@ -21,20 +21,22 @@ import (
 	"compress/gzip"
 	"context"
 	"fmt"
+	"strings"
 
+	"github.com/stoewer/go-strcase"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"oras.land/oras-go/v2/registry/remote/auth"
-
+	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
+	"sigs.k8s.io/cluster-api-operator/util"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/repository"
+	utilyaml "sigs.k8s.io/cluster-api/util/yaml"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-
-	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
-	"sigs.k8s.io/cluster-api-operator/util"
 )
 
 const (
@@ -45,11 +47,12 @@ const (
 	configMapSourceAnnotation = "provider.cluster.x-k8s.io/source"
 	operatorManagedLabel      = "managed-by.operator.cluster.x-k8s.io"
 
-	maxConfigMapSize = 1 * 1024 * 1024
+	maxConfigMapSize   = 1 * 1024 * 1024
 	ociSource        = "oci"
+	providerTypeSuffix = "provider"
 )
 
-// downloadManifests downloads CAPI manifests from a url.
+// downloadManifests downloads CAPI manifests from a URL.
 func (p *phaseReconciler) downloadManifests(ctx context.Context) (reconcile.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 
@@ -292,10 +295,10 @@ func providerLabelSelector(provider operatorv1.GenericProvider) *metav1.LabelSel
 // ProviderLabels returns default set of labels that identify a config map with downloaded manifests.
 func ProviderLabels(provider operatorv1.GenericProvider) map[string]string {
 	labels := map[string]string{
-		configMapVersionLabel: provider.GetSpec().Version,
-		configMapTypeLabel:    provider.GetType(),
-		configMapNameLabel:    provider.GetName(),
-		operatorManagedLabel:  "true",
+		operatorv1.ConfigMapVersionLabelName: provider.GetSpec().Version,
+		configMapTypeLabel:                   provider.GetType(),
+		configMapNameLabel:                   provider.GetName(),
+		operatorManagedLabel:                 "true",
 	}
 
 	if provider.GetSpec().FetchConfig != nil && provider.GetSpec().FetchConfig.OCI != "" {
@@ -303,6 +306,35 @@ func ProviderLabels(provider operatorv1.GenericProvider) map[string]string {
 	}
 
 	return labels
+}
+
+// fetchProviderName extracts existing provider name from the yaml manifest looking for the clusterv1.ProviderNameLabel label.
+func fetchProviderName(input repository.ComponentsInput) (string, error) {
+	processedYaml, err := input.Processor.Process(input.RawYaml, input.ConfigClient.Variables().Get)
+	if err != nil {
+		return "", err
+	}
+
+	objs, err := utilyaml.ToUnstructured(processedYaml)
+	if err != nil {
+		return "", err
+	}
+
+	var providerName string
+	for _, obj := range objs {
+		if providerName = obj.GetLabels()[clusterv1.ProviderNameLabel]; providerName != "" {
+			break
+		}
+	}
+
+	if providerName == "" {
+		return "", fmt.Errorf("provider name label %s is not found for %s manifests", clusterv1.ProviderNameLabel, input.Provider.Name())
+	}
+
+	providerType, _ := strings.CutSuffix(strings.ToLower(strcase.KebabCase(string(input.Provider.Type()))), providerTypeSuffix)
+	providerName, _ = strings.CutPrefix(providerName, providerType)
+
+	return providerName, nil
 }
 
 // needToCompress checks whether the input data exceeds the maximum configmap

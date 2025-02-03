@@ -22,8 +22,11 @@ import (
 
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/cluster-api-operator/internal/controller/genericprovider"
 	clusterctlv1 "sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3"
 	configclient "sigs.k8s.io/cluster-api/cmd/clusterctl/client/config"
+	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/repository"
+	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/yamlprocessor"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
@@ -31,14 +34,9 @@ import (
 
 func TestManifestsDownloader(t *testing.T) {
 	g := NewWithT(t)
-
 	ctx := context.Background()
-
-	fakeclient := fake.NewClientBuilder().WithObjects().Build()
-
-	p := &phaseReconciler{
-		ctrlClient: fakeclient,
-		provider: &operatorv1.CoreProvider{
+	p := prepareReconciler(ctx, g, clusterctlv1.CoreProviderType, "",
+		&operatorv1.CoreProvider{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "cluster-api",
 				Namespace: testNamespaceName,
@@ -49,13 +47,7 @@ func TestManifestsDownloader(t *testing.T) {
 				},
 			},
 		},
-	}
-
-	_, err := p.initializePhaseReconciler(ctx)
-	g.Expect(err).ToNot(HaveOccurred())
-
-	_, err = p.downloadManifests(ctx)
-	g.Expect(err).ToNot(HaveOccurred())
+	)
 
 	// Ensure that config map was created
 	labelSelector := metav1.LabelSelector{
@@ -70,37 +62,18 @@ func TestManifestsDownloader(t *testing.T) {
 
 func TestProviderDownloadWithOverrides(t *testing.T) {
 	g := NewWithT(t)
-
 	ctx := context.Background()
-
-	fakeclient := fake.NewClientBuilder().WithObjects().Build()
-
-	reader := configclient.NewMemoryReader()
-	_, err := reader.AddProvider("cluster-api", clusterctlv1.CoreProviderType, "https://github.com/kubernetes-sigs/cluster-api/releases/v1.4.3/core-components.yaml")
-	g.Expect(err).ToNot(HaveOccurred())
-
-	overridesClient, err := configclient.New(ctx, "", configclient.InjectReader(reader))
-	g.Expect(err).ToNot(HaveOccurred())
-
-	p := &phaseReconciler{
-		ctrlClient: fakeclient,
-		provider: &operatorv1.CoreProvider{
+	p := prepareReconciler(ctx, g, clusterctlv1.CoreProviderType, "https://github.com/kubernetes-sigs/cluster-api/releases/v1.4.3/core-components.yaml",
+		&operatorv1.CoreProvider{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "cluster-api",
 				Namespace: testNamespaceName,
 			},
 			Spec: operatorv1.CoreProviderSpec{},
 		},
-		overridesClient: overridesClient,
-	}
+	)
 
-	_, err = p.initializePhaseReconciler(ctx)
-	g.Expect(err).ToNot(HaveOccurred())
-
-	_, err = p.downloadManifests(ctx)
-	g.Expect(err).ToNot(HaveOccurred())
-
-	_, err = p.load(ctx)
+	_, err := p.load(ctx)
 	g.Expect(err).ToNot(HaveOccurred())
 
 	_, err = p.fetch(ctx)
@@ -108,4 +81,104 @@ func TestProviderDownloadWithOverrides(t *testing.T) {
 
 	g.Expect(p.components.Images()).To(HaveExactElements([]string{"registry.k8s.io/cluster-api/cluster-api-controller:v1.4.3"}))
 	g.Expect(p.components.Version()).To(Equal("v1.4.3"))
+}
+
+func TestFetchProviderName(t *testing.T) {
+	testCases := []struct {
+		name         string
+		providerType clusterctlv1.ProviderType
+		provider     genericprovider.GenericProvider
+		variables    map[string]string
+		url          string
+		expected     string
+	}{
+		{
+			name:         "Helm addon provider manifest",
+			providerType: clusterctlv1.AddonProviderType,
+			provider: &operatorv1.AddonProvider{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "addon-helm",
+					Namespace: testNamespaceName,
+				},
+				Spec: operatorv1.AddonProviderSpec{},
+			},
+			url:      "https://github.com/kubernetes-sigs/cluster-api-addon-provider-helm/releases/v0.2.6/addon-components.yaml",
+			expected: "helm",
+		},
+		{
+			name:         "vSphere infrastructure provider manifest",
+			providerType: clusterctlv1.InfrastructureProviderType,
+			provider: &operatorv1.InfrastructureProvider{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "infrastructure-vsphere",
+					Namespace: testNamespaceName,
+				},
+				Spec: operatorv1.InfrastructureProviderSpec{},
+			},
+			variables: map[string]string{
+				"VSPHERE_PASSWORD": "password",
+				"VSPHERE_USERNAME": "username",
+			},
+			url:      "https://github.com/kubernetes-sigs/cluster-api-provider-vsphere/releases/v1.12.0/infrastructure-components.yaml",
+			expected: "vsphere",
+		},
+	}
+	g := NewWithT(t)
+
+	ctx := context.Background()
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			p := prepareReconciler(ctx, g, tc.providerType, tc.url, tc.provider)
+			_, err := p.load(ctx)
+			g.Expect(err).ToNot(HaveOccurred())
+
+			componentsFile, err := p.repo.GetFile(ctx, p.options.Version, p.repo.ComponentsPath())
+			g.Expect(err).ToNot(HaveOccurred())
+			g.Expect(componentsFile).ToNot(BeNil())
+
+			for k, v := range tc.variables {
+				p.configClient.Variables().Set(k, v)
+			}
+
+			input := repository.ComponentsInput{
+				Provider:     p.providerConfig,
+				ConfigClient: p.configClient,
+				Processor:    yamlprocessor.NewSimpleProcessor(),
+				RawYaml:      componentsFile,
+				Options:      p.options,
+			}
+
+			providerName, err := fetchProviderName(input)
+			g.Expect(err).ToNot(HaveOccurred())
+			g.Expect(providerName).To(Equal(tc.expected))
+		})
+	}
+}
+
+func prepareReconciler(ctx context.Context, g *WithT, providerType clusterctlv1.ProviderType, url string, provider genericprovider.GenericProvider) *phaseReconciler {
+	var overridesClient configclient.Client
+
+	if url != "" {
+		reader := configclient.NewMemoryReader()
+		_, err := reader.AddProvider(provider.GetName(), providerType, url)
+		g.Expect(err).ToNot(HaveOccurred())
+
+		overridesClient, err = configclient.New(ctx, "", configclient.InjectReader(reader))
+		g.Expect(err).ToNot(HaveOccurred())
+	}
+
+	p := &phaseReconciler{
+		ctrlClient:      fake.NewClientBuilder().WithObjects().Build(),
+		provider:        provider,
+		overridesClient: overridesClient,
+	}
+
+	_, err := p.initializePhaseReconciler(ctx)
+	g.Expect(err).ToNot(HaveOccurred())
+
+	_, err = p.downloadManifests(ctx)
+	g.Expect(err).ToNot(HaveOccurred())
+
+	return p
 }

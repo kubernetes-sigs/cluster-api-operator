@@ -45,27 +45,27 @@ releaseSeries:
     minor: 4
     contract: v1beta1
 `
-	testDeploymentName = "capd-controller-manager"
+	testDeploymentName = "capi-controller-manager"
 	testComponents     = `
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    cluster.x-k8s.io/provider: infrastructure-docker
+    cluster.x-k8s.io/provider: cluster-api
     control-plane: controller-manager
     value-from-config: ${CONFIGURED_VALUE:=default-value}
-  name: capd-controller-manager
-  namespace: capd-system
+  name: capi-controller-manager
+  namespace: capi-system
 spec:
   replicas: 1
   selector:
     matchLabels:
-      cluster.x-k8s.io/provider: infrastructure-docker
+      cluster.x-k8s.io/provider: cluster-api
       control-plane: controller-manager
   template:
     metadata:
       labels:
-        cluster.x-k8s.io/provider: infrastructure-docker
+        cluster.x-k8s.io/provider: cluster-api
         control-plane: controller-manager
     spec:
       containers:
@@ -156,7 +156,7 @@ func testDeploymentLabelValueGetter(deploymentNS, deploymentName string) func() 
 	}
 }
 
-func TestConfigSecretChangesAreAppliedTotheDeployment(t *testing.T) {
+func TestConfigSecretChangesAreAppliedToTheDeployment(t *testing.T) {
 	g := NewWithT(t)
 	objs := []client.Object{}
 
@@ -203,7 +203,7 @@ func TestConfigSecretChangesAreAppliedTotheDeployment(t *testing.T) {
 		30*time.Second,
 	).Should(BeEquivalentTo("initial-value"))
 
-	t.Log("Provider deploymnet deployed")
+	t.Log("Provider deployment deployed")
 
 	configSecret.Data["CONFIGURED_VALUE"] = []byte("updated-value")
 

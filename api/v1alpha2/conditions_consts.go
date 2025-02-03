@@ -29,13 +29,16 @@ const (
 	// IncorrectVersionFormatReason documents that the provider version is in the incorrect format.
 	IncorrectVersionFormatReason = "IncorrectVersionFormat"
 
-	// IncorrectCoreProviderNameReason documents that the provider name is incorrect.
+	// IncorrectCoreProviderNameReason documents that the Core provider name is incorrect.
 	IncorrectCoreProviderNameReason = "IncorrectCoreProviderNameReason"
+
+	// IncorrectProviderNameReason documents that the provider name is incorrect.
+	IncorrectProviderNameReason = "IncorrectProviderNameReason"
 
 	// EmptyVersionReason documents that the provider version is in the incorrect format.
 	EmptyVersionReason = "EmptyVersionReason"
 
-	// FetchConfigValidationError documents that the FetchConfig is configured incorrectly.
+	// FetchConfigValidationErrorReason documents that the FetchConfig is configured incorrectly.
 	FetchConfigValidationErrorReason = "FetchConfigValidationError"
 
 	// UnknownProviderReason documents that the provider name is not the name of a known provider.

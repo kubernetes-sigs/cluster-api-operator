@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"reflect"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -43,6 +44,7 @@ import (
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/repository"
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/yamlprocessor"
 	"sigs.k8s.io/cluster-api/util/conditions"
+	utilyaml "sigs.k8s.io/cluster-api/util/yaml"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -182,7 +184,7 @@ func (p *phaseReconciler) load(ctx context.Context) (reconcile.Result, error) {
 		labelSelector = p.provider.GetSpec().FetchConfig.Selector
 	}
 
-	additionalManifests, err := p.fetchAddionalManifests(ctx)
+	additionalManifests, err := p.fetchAdditionalManifests(ctx)
 	if err != nil {
 		return reconcile.Result{}, wrapPhaseError(err, "failed to load additional manifests", operatorv1.ProviderInstalledCondition)
 	}
@@ -334,17 +336,19 @@ func (p *phaseReconciler) configmapRepository(ctx context.Context, labelSelector
 			return nil, err
 		}
 
+		rawComponents := []byte(components)
+
 		if additionalManifests != "" {
-			components = components + "\n---\n" + additionalManifests
+			rawComponents = utilyaml.JoinYaml(rawComponents, []byte(additionalManifests))
 		}
 
-		mr.WithFile(version, mr.ComponentsPath(), []byte(components))
+		mr.WithFile(version, mr.ComponentsPath(), rawComponents)
 	}
 
 	return mr, nil
 }
 
-func (p *phaseReconciler) fetchAddionalManifests(ctx context.Context) (string, error) {
+func (p *phaseReconciler) fetchAdditionalManifests(ctx context.Context) (string, error) {
 	cm := &corev1.ConfigMap{}
 
 	if p.provider.GetSpec().AdditionalManifestsRef != nil {
@@ -446,19 +450,30 @@ func (p *phaseReconciler) fetch(ctx context.Context) (reconcile.Result, error) {
 	// Generate a set of new objects using the clusterctl library. NewComponents() will do the yaml processing,
 	// like ensure all the provider components are in proper namespace, replace variables, etc. See the clusterctl
 	// documentation for more details.
-	p.components, err = repository.NewComponents(repository.ComponentsInput{
+	input := repository.ComponentsInput{
 		Provider:     p.providerConfig,
 		ConfigClient: p.configClient,
 		Processor:    yamlprocessor.NewSimpleProcessor(),
 		RawYaml:      componentsFile,
 		Options:      p.options,
-	})
+	}
+
+	providerName, err := fetchProviderName(input)
 	if err != nil {
 		return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.ProviderInstalledCondition)
 	}
 
+	// Verifies that the provider resource has the correct name that matches the provider type and manifest.
+	if providerName != p.provider.GetName() {
+		return reconcile.Result{}, wrapPhaseError(fmt.Errorf("incorrect %s name: %s, it should be %s", reflect.TypeOf(p.provider).Name(), p.provider.GetName(), providerName), operatorv1.IncorrectProviderNameReason, operatorv1.ProviderInstalledCondition)
+	}
+
+	if p.components, err = repository.NewComponents(input); err != nil {
+		return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.ProviderInstalledCondition)
+	}
+
 	// ProviderSpec provides fields for customizing the provider deployment options.
-	// We can use clusterctl library to apply this customizations.
+	// We can use clusterctl library to apply these customizations.
 	if err := repository.AlterComponents(p.components, customizeObjectsFn(p.provider)); err != nil {
 		return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.ProviderInstalledCondition)
 	}
@@ -536,7 +551,7 @@ func (p *phaseReconciler) install(ctx context.Context) (reconcile.Result, error)
 	return reconcile.Result{}, nil
 }
 
-func (p *phaseReconciler) reportStatus(ctx context.Context) (reconcile.Result, error) {
+func (p *phaseReconciler) reportStatus(_ context.Context) (reconcile.Result, error) {
 	status := p.provider.GetStatus()
 	status.Contract = &p.contract
 	installedVersion := p.components.Version()
