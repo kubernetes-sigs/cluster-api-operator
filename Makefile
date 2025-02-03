@@ -541,6 +541,9 @@ clean-release: ## Remove the release folder
 ## E2E
 ## --------------------------------------
 
+.PHONY: test-e2e-local ## Run e2e tests locally
+test-e2e-local: docker-build-e2e test-e2e
+
 .PHONY: test-e2e
 test-e2e: $(KUSTOMIZE)
 	$(MAKE) release-manifests
