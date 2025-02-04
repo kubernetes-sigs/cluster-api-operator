@@ -1,5 +1,4 @@
 //go:build e2e
-// +build e2e
 
 /*
 Copyright 2022 The Kubernetes Authors.
@@ -21,19 +20,20 @@ package e2e
 
 import (
 	"context"
+
+	configclient "sigs.k8s.io/cluster-api/cmd/clusterctl/client/config"
 )
 
-var (
-	ctx = context.Background()
-)
+var ctx = context.Background()
 
 const (
 	operatorNamespace   = "capi-operator-system"
 	capiSystemNamespace = "capi-system"
+	capiOperatorRelease = "capi-operator"
 
 	previousCAPIVersion = "v1.7.7"
 
-	coreProviderName           = "cluster-api"
+	coreProviderName           = configclient.ClusterAPIProviderName
 	coreProviderDeploymentName = "capi-controller-manager"
 
 	bootstrapProviderName           = "kubeadm"

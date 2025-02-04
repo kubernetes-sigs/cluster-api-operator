@@ -1,5 +1,4 @@
 //go:build e2e
-// +build e2e
 
 /*
 Copyright 2023 The Kubernetes Authors.
@@ -25,9 +24,8 @@ import (
 	"os/exec"
 	"strings"
 
-	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/ginkgo/v2" //nolint:stylecheck
 	. "github.com/onsi/gomega"
-
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -42,7 +40,7 @@ type Condition = func() bool
 
 type ConditionalInterface interface {
 	GetterInterface
-	Satifies() bool
+	Satisfies() bool
 }
 
 type ConditionalInput struct {
@@ -67,12 +65,13 @@ func (in *ConditionalInput) ToSatisfy(condition Condition) *ConditionalInput {
 	return in
 }
 
-func (in ConditionalInput) Satifies() bool {
+func (in ConditionalInput) Satisfies() bool {
 	if in.Condition == nil {
 		return true
 	}
 
 	By("Waiting for the object to satisfy condition...")
+
 	return in.Condition()
 }
 
@@ -84,7 +83,7 @@ func (in ConditionalInput) GetObject() client.Object {
 	return in.Object
 }
 
-// WaitForDelete will wait for object removal
+// WaitForDelete will wait for object removal.
 func WaitForDelete(ctx context.Context, input GetterInterface, intervals ...interface{}) {
 	By(fmt.Sprintf("Waiting for the %s object to be removed...", client.ObjectKeyFromObject(input.GetObject())))
 	Eventually(func() bool {
@@ -94,11 +93,12 @@ func WaitForDelete(ctx context.Context, input GetterInterface, intervals ...inte
 			}
 			klog.Infof("Failed to get an object: %+v", err)
 		}
+
 		return false
 	}, intervals...).Should(BeTrue(), "Failed to wait until object deletion %s", klog.KObj(input.GetObject()))
 }
 
-// WaitFor will wait for condition match on existing object
+// WaitFor will wait for condition match on existing object.
 func WaitFor(ctx context.Context, input ConditionalInterface, intervals ...interface{}) {
 	Eventually(func() bool {
 		By(fmt.Sprintf("Waiting for %s...", client.ObjectKeyFromObject(input.GetObject())))
@@ -106,7 +106,8 @@ func WaitFor(ctx context.Context, input ConditionalInterface, intervals ...inter
 			klog.Infof("Failed to get an object: %+v", err)
 			return false
 		}
-		return input.Satifies()
+
+		return input.Satisfies()
 	}, intervals...).Should(BeTrue(), "Failed to wait until object condition match %s", klog.KObj(input.GetObject()))
 }
 
@@ -137,32 +138,35 @@ func (c HelmCommands) Strings() []string {
 	for _, command := range c {
 		commands = append(commands, strings.ToLower(command.String()))
 	}
+
 	return commands
 }
 
-// Commands generate a valid list of helm commands from input or defaults to install
+// Commands generate a valid list of helm commands from input or defaults to install.
 func Commands(commands ...HelmCommand) HelmCommands {
 	return commands
 }
 
 type HelmFlags []string
 
-// Flags returns a list of additional flags for helm chart
+// Flags returns a list of additional flags for helm chart.
 func Flags(flags ...string) HelmFlags {
 	f := HelmFlags{}
 	return *f.Flags(flags...)
 }
 
-// Flags extends existing list with additional flags for helm chart
+// Flags extends existing list with additional flags for helm chart.
 func (h *HelmFlags) Flags(flags ...string) *HelmFlags {
 	if flags == nil {
 		return h
 	}
+
 	for _, flag := range flags {
 		if flag != "" {
 			*h = append(*h, flag)
 		}
 	}
+
 	return h
 }
 
@@ -170,6 +174,7 @@ func (h *HelmFlags) Set(set bool, flag string) *HelmFlags {
 	if set {
 		h.Flags(flag)
 	}
+
 	return h
 }
 
@@ -191,28 +196,42 @@ type HelmChart struct {
 // marked as post install hooks.
 func (h *HelmChart) Run(values map[string]string) (string, error) {
 	args := Flags()
+
 	if h.Commands == nil {
 		h.Commands = Commands(Install)
 	}
+
+	path := h.Path
+	if len(h.Commands) == 1 && h.Commands[0] == Uninstall {
+		// Helm chart path doesn't make sense for Uninstall command, skipping it.
+		path = ""
+	}
+
 	args.Flags(h.Commands.Strings()...)
-	args.Flags("--kubeconfig", h.Kubeconfig, h.Name, h.Path)
+	args.Flags("--kubeconfig", h.Kubeconfig, h.Name, path)
 	args.Set(h.DryRun, "--dry-run")
 	args.Set(h.Wait, "--wait")
+
 	for key, value := range values {
 		args.Flags("--set", fmt.Sprintf("%s=%s", key, value))
 	}
+
 	args.Flags(h.AdditionalFlags...)
+
 	if h.BinaryPath == "" {
 		h.BinaryPath = "helm"
 	}
+
 	fullCommand := append([]string{h.BinaryPath}, args...)
 	klog.Infof("Executing: %s", fullCommand)
-	out, err := exec.Command(h.BinaryPath, args...).CombinedOutput()
+
+	out, err := exec.Command(h.BinaryPath, args...).CombinedOutput() //nolint:gosec
 	if err != nil {
 		return "", fmt.Errorf("failed to run helm %s: %w, output: %s", strings.Join(h.Commands.Strings(), " "), err, string(out))
 	}
 
 	outString := string(out)
+
 	switch h.Output {
 	case Full:
 		return outString, nil
@@ -224,6 +243,7 @@ func (h *HelmChart) Run(values map[string]string) (string, error) {
 			res := outString[startIndex+len("HOOKS:") : endIndex]
 			res = strings.TrimPrefix(res, "\n")
 			res = strings.TrimSuffix(res, "\n")
+
 			return res, nil
 		}
 	case Manifests:
@@ -232,6 +252,7 @@ func (h *HelmChart) Run(values map[string]string) (string, error) {
 			res := outString[startIndex+len("MANIFEST:"):]
 			res = strings.TrimPrefix(res, "\n")
 			res = strings.TrimSuffix(res, "\n")
+
 			return res, nil
 		}
 	}

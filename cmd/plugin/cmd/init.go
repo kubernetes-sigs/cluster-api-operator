@@ -128,7 +128,7 @@ func init() {
 		"Context to be used within the kubeconfig file. If empty, current context will be used.")
 	initCmd.PersistentFlags().StringVar(&initOpts.operatorVersion, "operator-version", latestVersion,
 		"CAPI Operator version (e.g. v0.7.0) to install on the management cluster. If unspecified, the latest release is used.")
-	initCmd.PersistentFlags().StringVar(&initOpts.coreProvider, "core", "cluster-api",
+	initCmd.PersistentFlags().StringVar(&initOpts.coreProvider, "core", configclient.ClusterAPIProviderName,
 		"Core provider version (e.g. cluster-api:v1.1.5) to add to the management cluster. If unspecified, Cluster API's latest release is used.")
 	initCmd.PersistentFlags().StringSliceVarP(&initOpts.infrastructureProviders, "infrastructure", "i", []string{},
 		"Infrastructure providers and versions (e.g. aws:v0.5.0) to add to the management cluster.")
