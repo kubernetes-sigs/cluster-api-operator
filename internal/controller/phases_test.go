@@ -642,6 +642,10 @@ func TestRepositoryFactory(t *testing.T) {
 			fetchURL: "https://gitlab.example.org/api/v4/projects/group%2Fproject/packages/generic/cluster-api-proviver-aws/v1.4.1/path",
 		},
 		{
+			name:     "gitlab hyphenated repo",
+			fetchURL: "https://gitlab-test.example.org/api/v4/projects/group%2Fproject/packages/generic/cluster-api-proviver-aws/v1.4.1/path",
+		},
+		{
 			name:          "unsupported url",
 			fetchURL:      "https://unsupported.xyz/kubernetes-sigs/cluster-api-provider-aws/releases/v1.4.1/infrastructure-components.yaml",
 			expectedError: true,

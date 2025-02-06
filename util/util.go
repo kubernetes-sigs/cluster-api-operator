@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"regexp"
 	"strings"
 
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
@@ -33,7 +34,7 @@ import (
 const (
 	httpsScheme             = "https"
 	githubDomain            = "github.com"
-	gitlabHostPrefix        = "gitlab."
+	gitlabHostPrefix        = "gitlab"
 	gitlabPackagesAPIPrefix = "/api/v4/projects/"
 )
 
@@ -128,8 +129,9 @@ func RepositoryFactory(ctx context.Context, providerConfig configclient.Provider
 		return repo, err
 	}
 
-	// if the url is a GitLab repository
-	if strings.HasPrefix(rURL.Host, gitlabHostPrefix) && strings.HasPrefix(rURL.Path, gitlabPackagesAPIPrefix) {
+	// if the url is a GitLab repository starting with gitlab- or gitlab.
+	gitlabHostRegex := regexp.MustCompile(`^` + regexp.QuoteMeta(gitlabHostPrefix) + `(-.*)?\.`) // ^gitlab(-.*)?\. to match gitlab- or gitlab.
+	if gitlabHostRegex.MatchString(rURL.Host) && strings.HasPrefix(rURL.Path, gitlabPackagesAPIPrefix) {
 		repo, err := repository.NewGitLabRepository(providerConfig, configVariablesClient)
 		if err != nil {
 			return nil, fmt.Errorf("error creating the GitLab repository client: %w", err)
