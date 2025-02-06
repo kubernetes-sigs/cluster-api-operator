@@ -23,5 +23,11 @@ jobs:
       - name: golangci-lint
         uses: golangci/golangci-lint-action@971e284b6050e8a5849b72094c50ab08da042db8 # tag=v6.1.1
         with:
-          version: v1.60.2
+          version: v1.63.3
           args: --timeout 15m
+      - name: golangci-lint-test
+        uses: golangci/golangci-lint-action@971e284b6050e8a5849b72094c50ab08da042db8 # tag=v6.1.1
+        with:
+          version: v1.63.3
+          args: --build-tags e2e --timeout 15m
+          working-directory: test

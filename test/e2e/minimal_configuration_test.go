@@ -1,5 +1,4 @@
 //go:build e2e
-// +build e2e
 
 /*
 Copyright 2022 The Kubernetes Authors.
@@ -36,6 +35,11 @@ import (
 
 	. "sigs.k8s.io/cluster-api-operator/test/framework"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+)
+
+const (
+	mediaType    = "application/vnd.test.file"
+	artifactType = "application/vnd.acme.config"
 )
 
 var _ = Describe("Create, upgrade, downgrade and delete providers with minimal specified configuration", func() {
@@ -99,6 +103,7 @@ metadata:
 			if v, ok := deployment.Labels["test-label"]; ok {
 				return v == "test-value"
 			}
+
 			return false
 		}), e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
@@ -117,7 +122,8 @@ metadata:
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test-config-map",
 				Namespace: operatorNamespace,
-			}}
+			},
+		}
 		WaitFor(ctx, For(cm).In(bootstrapCluster).ToSatisfy(func() bool {
 			value, ok := cm.Data["test"]
 			return ok && value == "test"
@@ -353,7 +359,6 @@ metadata:
 			Expect(fs.Close()).To(Succeed())
 		}()
 
-		mediaType := "application/vnd.test.file"
 		fds := []v1.Descriptor{}
 
 		fileDescriptor, err := fs.Add(ctx, "infrastructure-custom-v0.0.1-metadata.yaml", mediaType, "")
@@ -372,7 +377,6 @@ metadata:
 		Expect(err).ToNot(HaveOccurred())
 		fds = append(fds, fileDescriptor)
 
-		artifactType := "application/vnd.acme.config"
 		opts := oras.PackManifestOptions{
 			Layers: fds,
 		}
@@ -442,7 +446,6 @@ metadata:
 			Expect(fs.Close()).To(Succeed())
 		}()
 
-		mediaType := "application/vnd.test.file"
 		fds := []v1.Descriptor{}
 
 		fileDescriptor, err := fs.Add(ctx, "infrastructure-custom-v0.0.1-metadata.yaml", mediaType, "")
@@ -461,7 +464,6 @@ metadata:
 		Expect(err).ToNot(HaveOccurred())
 		fds = append(fds, fileDescriptor)
 
-		artifactType := "application/vnd.acme.config"
 		opts := oras.PackManifestOptions{
 			Layers: fds,
 		}
@@ -531,7 +533,6 @@ metadata:
 			Expect(fs.Close()).To(Succeed())
 		}()
 
-		mediaType := "application/vnd.test.file"
 		fds := []v1.Descriptor{}
 
 		fileDescriptor, err := fs.Add(ctx, "infrastructure-docker-v0.0.1-metadata.yaml", mediaType, "")
@@ -550,7 +551,6 @@ metadata:
 		Expect(err).ToNot(HaveOccurred())
 		fds = append(fds, fileDescriptor)
 
-		artifactType := "application/vnd.acme.config"
 		opts := oras.PackManifestOptions{
 			Layers: fds,
 		}

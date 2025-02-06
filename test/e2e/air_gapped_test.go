@@ -1,5 +1,4 @@
 //go:build e2e
-// +build e2e
 
 /*
 Copyright 2023 The Kubernetes Authors.
@@ -85,7 +84,7 @@ var _ = Describe("Install Core Provider in an air-gapped environment", func() {
 							},
 						},
 					},
-					Version: "v1.7.7",
+					Version: previousCAPIVersion,
 				},
 			},
 		}

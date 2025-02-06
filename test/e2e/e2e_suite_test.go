@@ -1,5 +1,4 @@
 //go:build e2e
-// +build e2e
 
 /*
 Copyright 2022 The Kubernetes Authors.
@@ -32,6 +31,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	configclient "sigs.k8s.io/cluster-api/cmd/clusterctl/client/config"
 
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -147,7 +147,7 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 
 	Expect(componentsPath).To(BeAnExistingFile(), "Invalid test suite argument. e2e.components should be an existing file.")
 	Expect(configPath).To(BeAnExistingFile(), "Invalid test suite argument. e2e.config should be an existing file.")
-	Expect(os.MkdirAll(artifactFolder, 0755)).To(Succeed(), "Invalid test suite argument. Can't create e2e.artifacts-folder %q", artifactFolder)
+	Expect(os.MkdirAll(artifactFolder, 0o755)).To(Succeed(), "Invalid test suite argument. Can't create e2e.artifacts-folder %q", artifactFolder)
 	Expect(helmBinaryPath).To(BeAnExistingFile(), "Invalid test suite argument. helm-binary-path should be an existing file.")
 	Expect(chartPath).To(BeAnExistingFile(), "Invalid test suite argument. chart-path should be an existing file.")
 
@@ -212,6 +212,7 @@ func initScheme() *runtime.Scheme {
 	framework.TryAddDefaultSchemes(scheme)
 	Expect(operatorv1.AddToScheme(scheme)).To(Succeed())
 	Expect(operatorv1alpha1.AddToScheme(scheme)).To(Succeed())
+
 	return scheme
 }
 
@@ -238,12 +239,15 @@ func createClusterctlLocalRepository(config *clusterctl.E2EConfig, repositoryFol
 
 	clusterctlConfig := clusterctl.CreateRepository(ctx, createRepositoryInput)
 	Expect(clusterctlConfig).To(BeAnExistingFile(), "The clusterctl config file does not exists in the local repository %s", repositoryFolder)
+
 	return clusterctlConfig
 }
 
 func setupCluster(config *clusterctl.E2EConfig, scheme *runtime.Scheme, useExistingCluster bool, clusterProxyName string) (bootstrap.ClusterProvider, framework.ClusterProxy) {
 	var clusterProvider bootstrap.ClusterProvider
+
 	kubeconfigPath := ""
+
 	if !useExistingCluster {
 		clusterProvider = bootstrap.CreateKindBootstrapClusterAndLoadImages(ctx, bootstrap.CreateKindBootstrapClusterAndLoadImagesInput{
 			Name:               config.ManagementClusterName,
@@ -264,8 +268,9 @@ func setupCluster(config *clusterctl.E2EConfig, scheme *runtime.Scheme, useExist
 func initBootstrapCluster(bootstrapClusterProxy framework.ClusterProxy, config *clusterctl.E2EConfig, clusterctlConfigPath, artifactFolder string) {
 	Expect(bootstrapClusterProxy).ToNot(BeNil(), "Invalid argument. bootstrapClusterProxy can't be nil when calling initBootstrapCluster")
 	Expect(clusterctlConfigPath).To(BeAnExistingFile(), "Invalid argument. clusterctlConfigPath must be an existing file when calling initBootstrapCluster")
+
 	logFolder := filepath.Join(artifactFolder, "clusters", bootstrapClusterProxy.GetName())
-	Expect(os.MkdirAll(logFolder, 0750)).To(Succeed(), "Invalid argument. Log folder can't be created for initBootstrapCluster")
+	Expect(os.MkdirAll(logFolder, 0o750)).To(Succeed(), "Invalid argument. Log folder can't be created for initBootstrapCluster")
 
 	ensureCertManager(bootstrapClusterProxy, config)
 
@@ -295,13 +300,15 @@ func initBootstrapCluster(bootstrapClusterProxy framework.ClusterProxy, config *
 
 func initHelmCluster(clusterProxy framework.ClusterProxy, config *clusterctl.E2EConfig) {
 	Expect(clusterProxy).ToNot(BeNil(), "Invalid argument. bootstrapClusterProxy can't be nil when calling initHelmCluster")
+
 	logFolder := filepath.Join(artifactFolder, "clusters", helmClusterProxy.GetName())
-	Expect(os.MkdirAll(logFolder, 0750)).To(Succeed(), "Invalid argument. Log folder can't be created for initHelmCluster")
+	Expect(os.MkdirAll(logFolder, 0o750)).To(Succeed(), "Invalid argument. Log folder can't be created for initHelmCluster")
 	ensureCertManager(clusterProxy, config)
 }
 
 func ensureCertManager(clusterProxy framework.ClusterProxy, config *clusterctl.E2EConfig) {
 	By("Deploying cert-manager")
+
 	addCertChart := &HelmChart{
 		BinaryPath:      helmBinaryPath,
 		Name:            "jetstack",
@@ -336,6 +343,7 @@ func ensureCertManager(clusterProxy framework.ClusterProxy, config *clusterctl.E
 	_, err = certChart.Run(map[string]string{
 		"installCRDs": "true",
 	})
+	Expect(err).ToNot(HaveOccurred())
 }
 
 func deleteClusterAPICRDs(clusterProxy framework.ClusterProxy) {
@@ -346,7 +354,7 @@ func deleteClusterAPICRDs(clusterProxy framework.ClusterProxy) {
 	Expect(clusterProxy.GetClient().List(ctx, crds, &client.ListOptions{
 		LabelSelector: labels.SelectorFromSet(
 			map[string]string{
-				"cluster.x-k8s.io/provider":   "cluster-api",
+				clusterv1.ProviderNameLabel:   configclient.ClusterAPIProviderName,
 				"clusterctl.cluster.x-k8s.io": "",
 			},
 		),
@@ -361,7 +369,7 @@ func initHelmChart() {
 	helmChart = &HelmChart{
 		BinaryPath: helmBinaryPath,
 		Path:       chartPath,
-		Name:       "capi-operator",
+		Name:       capiOperatorRelease,
 		Kubeconfig: helmClusterProxy.GetKubeconfigPath(),
 		DryRun:     true,
 		Output:     Hooks,
@@ -389,6 +397,7 @@ func tearDown(clusterProvider bootstrap.ClusterProvider, clusterProxy framework.
 	if clusterProxy != nil {
 		clusterProxy.Dispose(ctx)
 	}
+
 	if clusterProvider != nil {
 		clusterProvider.Dispose(ctx)
 	}
@@ -412,7 +421,7 @@ func dumpClusterLogs(clusterProxy framework.ClusterProxy) {
 
 	for i := range nodes.Items {
 		nodeName := nodes.Items[i].GetName()
-		err = clusterLogCollector.CollectMachineLog(
+		if err = clusterLogCollector.CollectMachineLog(
 			ctx,
 			clusterProxy.GetClient(),
 			// The bootstrap cluster is not expected to be a CAPI cluster, so in order to re-use the logCollector,
@@ -424,8 +433,7 @@ func dumpClusterLogs(clusterProxy framework.ClusterProxy) {
 				ObjectMeta: metav1.ObjectMeta{Name: nodeName},
 			},
 			filepath.Join(artifactFolder, "clusters", bootstrapClusterProxy.GetName(), "machines", nodeName),
-		)
-		if err != nil {
+		); err != nil {
 			fmt.Printf("Failed to get logs for the bootstrap cluster node %s: %v\n", nodeName, err)
 		}
 	}

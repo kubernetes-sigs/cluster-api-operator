@@ -1,5 +1,4 @@
 //go:build e2e
-// +build e2e
 
 /*
 Copyright 2023 The Kubernetes Authors.
@@ -45,7 +44,7 @@ const (
 )
 
 var _ = Describe("Create and delete a provider with manifests that don't fit the configmap", func() {
-	var ociInfrastructureConfigMap = &corev1.ConfigMap{}
+	ociInfrastructureConfigMap := &corev1.ConfigMap{}
 
 	It("should successfully create a CoreProvider", func() {
 		bootstrapCluster := bootstrapClusterProxy.GetClient()
@@ -152,7 +151,8 @@ var _ = Describe("Create and delete a provider with manifests that don't fit the
 						},
 					},
 				},
-			}}
+			},
+		}
 
 		// Re-use configmap created on the previous step.
 		ociInfrastructureConfigMap.ObjectMeta.UID = ""

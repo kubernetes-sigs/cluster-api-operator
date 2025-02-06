@@ -1,5 +1,4 @@
 //go:build e2e
-// +build e2e
 
 /*
 Copyright 2023 The Kubernetes Authors.
@@ -31,6 +30,7 @@ import (
 	"k8s.io/utils/ptr"
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
 	. "sigs.k8s.io/cluster-api-operator/test/framework"
+	clusterctlv1 "sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3"
 	"sigs.k8s.io/cluster-api/test/framework"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -42,7 +42,7 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 		fullHelmChart := &HelmChart{
 			BinaryPath:      helmBinaryPath,
 			Path:            chartPath,
-			Name:            "capi-operator",
+			Name:            capiOperatorRelease,
 			Kubeconfig:      helmClusterProxy.GetKubeconfigPath(),
 			Wait:            true,
 			Output:          Full,
@@ -52,10 +52,11 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 		defer func() {
 			fullHelmChart.Commands = Commands(Uninstall)
 			fullHelmChart.AdditionalFlags = Flags("--namespace", operatorNamespace)
-			fullHelmChart.Run(nil)
+			_, err := fullHelmChart.Run(nil)
+			Expect(err).ToNot(HaveOccurred())
 
-			err := clusterProxy.DeleteAllOf(ctx, &apiextensionsv1.CustomResourceDefinition{}, client.MatchingLabels{
-				"clusterctl.cluster.x-k8s.io/core": "capi-operator",
+			err = clusterProxy.DeleteAllOf(ctx, &apiextensionsv1.CustomResourceDefinition{}, client.MatchingLabels{
+				clusterctlv1.ClusterctlCoreLabel: capiOperatorRelease,
 			})
 			Expect(err).ToNot(HaveOccurred())
 		}()
@@ -82,7 +83,7 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 			HaveStatusCondition(&coreProvider.Status.Conditions, operatorv1.ProviderInstalledCondition),
 		), e2eConfig.GetIntervals(helmClusterProxy.GetName(), "wait-controllers")...)
 
-		By("Waiting for status.IntalledVersion to be set")
+		By("Waiting for status.InstalledVersion to be set")
 		WaitFor(ctx, For(coreProvider).In(clusterProxy).ToSatisfy(func() bool {
 			return ptr.Equal(coreProvider.Status.InstalledVersion, ptr.To(coreProvider.Spec.Version))
 		}), e2eConfig.GetIntervals(helmClusterProxy.GetName(), "wait-controllers")...)
@@ -109,7 +110,7 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 			HaveStatusCondition(&bootstrapProvider.Status.Conditions, operatorv1.ProviderInstalledCondition)),
 			e2eConfig.GetIntervals(helmClusterProxy.GetName(), "wait-controllers")...)
 
-		By("Waiting for status.IntalledVersion to be set")
+		By("Waiting for status.InstalledVersion to be set")
 		WaitFor(ctx, For(bootstrapProvider).In(clusterProxy).ToSatisfy(func() bool {
 			return ptr.Equal(bootstrapProvider.Status.InstalledVersion, &bootstrapProvider.Spec.Version)
 		}), e2eConfig.GetIntervals(helmClusterProxy.GetName(), "wait-controllers")...)
@@ -135,6 +136,7 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 		manifests, err := fullRun.Run(nil)
 		Expect(err).ToNot(HaveOccurred())
 		fullChartInstall, err := os.ReadFile(filepath.Join(customManifestsFolder, "full-chart-install.yaml"))
+		Expect(err).ToNot(HaveOccurred())
 		Expect(manifests).To(Equal(string(fullChartInstall)))
 	})
 

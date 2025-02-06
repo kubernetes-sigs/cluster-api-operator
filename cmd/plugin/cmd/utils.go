@@ -51,8 +51,8 @@ const (
 )
 
 var capiOperatorLabels = map[string]string{
-	"clusterctl.cluster.x-k8s.io/core": "capi-operator",
-	"control-plane":                    "controller-manager",
+	clusterctlv1.ClusterctlCoreLabel: capiOperatorProviderName,
+	"control-plane":                  "controller-manager",
 }
 
 var (
