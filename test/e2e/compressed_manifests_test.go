@@ -39,8 +39,6 @@ const (
 	ociInfrastructureProviderCustomName     = "my-oci"
 	ociInfrastructureProviderVersion        = "v0.12.0"
 	ociInfrastructureProviderDeploymentName = "capoci-controller-manager"
-	compressedAnnotation                    = "provider.cluster.x-k8s.io/compressed"
-	componentsConfigMapKey                  = "components"
 )
 
 var _ = Describe("Create and delete a provider with manifests that don't fit the configmap", func() {
@@ -67,7 +65,7 @@ var _ = Describe("Create and delete a provider with manifests that don't fit the
 			HaveStatusCondition(&coreProvider.Status.Conditions, operatorv1.ProviderInstalledCondition),
 		), e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
-		By("Waiting for status.IntalledVersion to be set")
+		By("Waiting for status.InstalledVersion to be set")
 		WaitFor(ctx, For(coreProvider).In(bootstrapCluster).ToSatisfy(func() bool {
 			return ptr.Equal(coreProvider.Status.InstalledVersion, ptr.To(coreProvider.Spec.Version))
 		}), e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
@@ -94,7 +92,7 @@ var _ = Describe("Create and delete a provider with manifests that don't fit the
 			HaveStatusCondition(&infraProvider.Status.Conditions, operatorv1.ProviderInstalledCondition),
 		), e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
-		By("Waiting for status.IntalledVersion to be set")
+		By("Waiting for status.InstalledVersion to be set")
 		WaitFor(ctx, For(infraProvider).In(bootstrapCluster).ToSatisfy(func() bool {
 			return ptr.Equal(infraProvider.Status.InstalledVersion, ptr.To(infraProvider.Spec.Version))
 		}), e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
@@ -106,9 +104,9 @@ var _ = Describe("Create and delete a provider with manifests that don't fit the
 		// Save config map contents to be used later.
 		Expect(bootstrapCluster.Get(ctx, key, ociInfrastructureConfigMap)).To(Succeed())
 
-		Expect(ociInfrastructureConfigMap.GetAnnotations()[compressedAnnotation]).To(Equal("true"))
+		Expect(ociInfrastructureConfigMap.GetAnnotations()[operatorv1.CompressedAnnotation]).To(Equal("true"))
 
-		Expect(ociInfrastructureConfigMap.BinaryData[componentsConfigMapKey]).ToNot(BeEmpty())
+		Expect(ociInfrastructureConfigMap.BinaryData[operatorv1.ComponentsConfigMapKey]).ToNot(BeEmpty())
 
 		deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{
 			Namespace: operatorNamespace,
@@ -168,7 +166,7 @@ var _ = Describe("Create and delete a provider with manifests that don't fit the
 			HaveStatusCondition(&infraProvider.Status.Conditions, operatorv1.ProviderInstalledCondition)),
 			e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
-		By("Waiting for status.IntalledVersion to be set")
+		By("Waiting for status.InstalledVersion to be set")
 		WaitFor(ctx, For(infraProvider).In(bootstrapCluster).ToSatisfy(func() bool {
 			return ptr.Equal(infraProvider.Status.InstalledVersion, ptr.To(infraProvider.Spec.Version))
 		}), e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
@@ -179,9 +177,9 @@ var _ = Describe("Create and delete a provider with manifests that don't fit the
 		key := client.ObjectKey{Namespace: operatorNamespace, Name: cmName}
 		Expect(bootstrapCluster.Get(ctx, key, cm)).To(Succeed())
 
-		Expect(cm.GetAnnotations()[compressedAnnotation]).To(Equal("true"))
+		Expect(cm.GetAnnotations()[operatorv1.CompressedAnnotation]).To(Equal("true"))
 
-		Expect(cm.BinaryData[componentsConfigMapKey]).ToNot(BeEmpty())
+		Expect(cm.BinaryData[operatorv1.ComponentsConfigMapKey]).ToNot(BeEmpty())
 
 		deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{
 			Namespace: operatorNamespace,

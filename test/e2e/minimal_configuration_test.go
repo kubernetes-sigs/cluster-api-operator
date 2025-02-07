@@ -112,7 +112,7 @@ metadata:
 			HaveStatusCondition(&coreProvider.Status.Conditions, operatorv1.ProviderInstalledCondition)),
 			e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
-		By("Waiting for status.IntalledVersion to be set")
+		By("Waiting for status.InstalledVersion to be set")
 		WaitFor(ctx, For(coreProvider).In(bootstrapCluster).ToSatisfy(func() bool {
 			return ptr.Equal(coreProvider.Status.InstalledVersion, &coreProvider.Spec.Version)
 		}), e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
@@ -154,7 +154,7 @@ metadata:
 			HaveStatusCondition(&bootstrapProvider.Status.Conditions, operatorv1.ProviderInstalledCondition)),
 			e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
-		By("Waiting for status.IntalledVersion to be set")
+		By("Waiting for status.InstalledVersion to be set")
 		WaitFor(ctx, For(bootstrapProvider).In(bootstrapCluster).ToSatisfy(func() bool {
 			return ptr.Equal(bootstrapProvider.Status.InstalledVersion, &bootstrapProvider.Spec.Version)
 		}), e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
@@ -189,7 +189,7 @@ metadata:
 			HaveStatusCondition(&cpProvider.Status.Conditions, operatorv1.ProviderInstalledCondition)),
 			e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
-		By("Waiting for status.IntalledVersion to be set")
+		By("Waiting for status.InstalledVersion to be set")
 		WaitFor(ctx, For(cpProvider).In(bootstrapCluster).ToSatisfy(func() bool {
 			return ptr.Equal(cpProvider.Status.InstalledVersion, &cpProvider.Spec.Version)
 		}), e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
@@ -224,7 +224,7 @@ metadata:
 			HaveStatusCondition(&infraProvider.Status.Conditions, operatorv1.ProviderInstalledCondition)),
 			e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
-		By("Waiting for status.IntalledVersion to be set")
+		By("Waiting for status.InstalledVersion to be set")
 		WaitFor(ctx, For(infraProvider).In(bootstrapCluster).ToSatisfy(func() bool {
 			return ptr.Equal(infraProvider.Status.InstalledVersion, &infraProvider.Spec.Version)
 		}), e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
@@ -266,7 +266,7 @@ metadata:
 			HaveStatusCondition(&addonProvider.Status.Conditions, operatorv1.ProviderInstalledCondition)),
 			e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
-		By("Waiting for status.IntalledVersion to be set")
+		By("Waiting for status.InstalledVersion to be set")
 		WaitFor(ctx, For(addonProvider).In(bootstrapCluster).ToSatisfy(func() bool {
 			return ptr.Equal(addonProvider.Status.InstalledVersion, &addonProvider.Spec.Version)
 		}), e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
@@ -310,7 +310,7 @@ metadata:
 			HaveStatusCondition(&ipamProvider.Status.Conditions, operatorv1.ProviderInstalledCondition)),
 			e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
-		By("Waiting for status.IntalledVersion to be set")
+		By("Waiting for status.InstalledVersion to be set")
 		WaitFor(ctx, For(ipamProvider).In(bootstrapCluster).ToSatisfy(func() bool {
 			return ptr.Equal(ipamProvider.Status.InstalledVersion, &ipamProvider.Spec.Version)
 		}), e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
@@ -426,7 +426,7 @@ metadata:
 			HaveStatusCondition(&provider.Status.Conditions, operatorv1.ProviderInstalledCondition)),
 			e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
-		By("Waiting for status.IntalledVersion to be set")
+		By("Waiting for status.InstalledVersion to be set")
 		WaitFor(ctx, For(provider).In(bootstrapCluster).ToSatisfy(func() bool {
 			return ptr.Equal(provider.Status.InstalledVersion, &provider.Spec.Version)
 		}), e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
@@ -513,7 +513,7 @@ metadata:
 			HaveStatusCondition(&provider.Status.Conditions, operatorv1.ProviderInstalledCondition)),
 			e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
-		By("Waiting for status.IntalledVersion to be set")
+		By("Waiting for status.InstalledVersion to be set")
 		WaitFor(ctx, For(provider).In(bootstrapCluster).ToSatisfy(func() bool {
 			return ptr.Equal(provider.Status.InstalledVersion, &provider.Spec.Version)
 		}), e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
@@ -600,16 +600,16 @@ metadata:
 			HaveStatusCondition(&provider.Status.Conditions, operatorv1.ProviderInstalledCondition)),
 			e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
-		By("Waiting for status.IntalledVersion to be set")
+		By("Waiting for status.InstalledVersion to be set")
 		WaitFor(ctx, For(provider).In(bootstrapCluster).ToSatisfy(func() bool {
 			return ptr.Equal(provider.Status.InstalledVersion, &provider.Spec.Version)
 		}), e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
-		By("Updating verion to v0.0.2 to initiate upgrade")
+		By("Updating version to v0.0.2 to initiate upgrade")
 		provider.Spec.Version = "v0.0.2"
 		Expect(bootstrapCluster.Update(ctx, provider)).To(Succeed())
 
-		By("Waiting for status.IntalledVersion to be set")
+		By("Waiting for status.InstalledVersion to be set")
 		WaitFor(ctx, For(provider).In(bootstrapCluster).ToSatisfy(func() bool {
 			return ptr.Equal(provider.Status.InstalledVersion, &provider.Spec.Version)
 		}), e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
