@@ -461,6 +461,7 @@ func (p *phaseReconciler) fetch(ctx context.Context) (reconcile.Result, error) {
 	if err != nil {
 		return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.ProviderInstalledCondition)
 	}
+
 	if !isEmbedded {
 		providerName, err := fetchProviderName(input)
 		if err != nil {
