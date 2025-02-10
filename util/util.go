@@ -106,6 +106,22 @@ func GetGenericProvider(ctx context.Context, cl ctrlclient.Client, provider conf
 	return nil, fmt.Errorf("unable to find provider manifest with name %s", provider.Name())
 }
 
+// IsEmbeddedProvider check that the provider name and type are built into the clusterctl provider list.
+func IsEmbeddedProvider(configClient configclient.Client, providerConfig configclient.Provider) (bool, error) {
+	providerList, err := configClient.Providers().List()
+	if err != nil {
+		return false, err
+	}
+
+	for _, provider := range providerList {
+		if provider.SameAs(providerConfig) {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
 // RepositoryFactory returns the repository implementation corresponding to the provider URL.
 // inspired by https://github.com/kubernetes-sigs/cluster-api/blob/124d9be7035e492f027cdc7a701b6b179451190a/cmd/clusterctl/client/repository/client.go#L170
 func RepositoryFactory(ctx context.Context, providerConfig configclient.Provider, configVariablesClient configclient.VariablesClient) (repository.Repository, error) {

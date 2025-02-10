@@ -457,14 +457,16 @@ func (p *phaseReconciler) fetch(ctx context.Context) (reconcile.Result, error) {
 		Options:      p.options,
 	}
 
-	providerName, err := fetchProviderName(input)
+	isEmbedded, err := util.IsEmbeddedProvider(p.configClient, p.providerConfig)
 	if err != nil {
 		return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.ProviderInstalledCondition)
 	}
+	if !isEmbedded {
+		providerName, err := fetchProviderName(input)
+		if err != nil {
+			return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.ProviderInstalledCondition)
+		}
 
-	// Check that the provider resource has the same name as the name extracted from the manifest.
-	if providerName != p.provider.GetName() {
-		// If the names are not equal, replace the name with the value from the manifest.
 		p.providerConfig, err = p.configClient.Providers().Get(providerName, util.ClusterctlProviderType(p.provider))
 		if err != nil {
 			return reconcile.Result{}, wrapPhaseError(err, operatorv1.UnknownProviderReason, operatorv1.ProviderInstalledCondition)
