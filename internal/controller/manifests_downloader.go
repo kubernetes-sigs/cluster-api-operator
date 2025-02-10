@@ -21,7 +21,6 @@ import (
 	"compress/gzip"
 	"context"
 	"fmt"
-	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -39,11 +38,12 @@ import (
 )
 
 const (
-	configMapVersionLabel = "provider.cluster.x-k8s.io/version"
-	configMapTypeLabel    = "provider.cluster.x-k8s.io/type"
-	configMapNameLabel    = "provider.cluster.x-k8s.io/name"
-	configMapSourceLabel  = "provider.cluster.x-k8s.io/source"
-	operatorManagedLabel  = "managed-by.operator.cluster.x-k8s.io"
+	configMapVersionLabel     = "provider.cluster.x-k8s.io/version"
+	configMapTypeLabel        = "provider.cluster.x-k8s.io/type"
+	configMapNameLabel        = "provider.cluster.x-k8s.io/name"
+	configMapSourceLabel      = "provider.cluster.x-k8s.io/source"
+	configMapSourceAnnotation = "provider.cluster.x-k8s.io/source"
+	operatorManagedLabel      = "managed-by.operator.cluster.x-k8s.io"
 
 	maxConfigMapSize = 1 * 1024 * 1024
 	ociSource        = "oci"
@@ -171,6 +171,12 @@ func TemplateManifestsConfigMap(provider operatorv1.GenericProvider, labels map[
 		},
 	}
 
+	if provider.GetSpec().FetchConfig != nil && provider.GetSpec().FetchConfig.OCI != "" {
+		configMap.ObjectMeta.Annotations = map[string]string{
+			configMapSourceAnnotation: provider.GetSpec().FetchConfig.OCI,
+		}
+	}
+
 	// Components manifests data can exceed the configmap size limit. In this case we have to compress it.
 	if !compress {
 		configMap.Data[operatorv1.ComponentsConfigMapKey] = string(components)
@@ -293,9 +299,7 @@ func ProviderLabels(provider operatorv1.GenericProvider) map[string]string {
 	}
 
 	if provider.GetSpec().FetchConfig != nil && provider.GetSpec().FetchConfig.OCI != "" {
-		image := strings.ReplaceAll(provider.GetSpec().FetchConfig.OCI, "/", "_")
-		image = strings.ReplaceAll(image, ":", "_")
-		labels[configMapSourceLabel] = image
+		labels[configMapSourceLabel] = ociSource
 	}
 
 	return labels
