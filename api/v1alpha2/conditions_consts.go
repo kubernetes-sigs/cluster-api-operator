@@ -32,9 +32,6 @@ const (
 	// IncorrectCoreProviderNameReason documents that the Core provider name is incorrect.
 	IncorrectCoreProviderNameReason = "IncorrectCoreProviderNameReason"
 
-	// IncorrectProviderNameReason documents that the provider name is incorrect.
-	IncorrectProviderNameReason = "IncorrectProviderNameReason"
-
 	// EmptyVersionReason documents that the provider version is in the incorrect format.
 	EmptyVersionReason = "EmptyVersionReason"
 

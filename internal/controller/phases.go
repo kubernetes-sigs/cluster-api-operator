@@ -23,7 +23,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"reflect"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -463,9 +462,13 @@ func (p *phaseReconciler) fetch(ctx context.Context) (reconcile.Result, error) {
 		return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.ProviderInstalledCondition)
 	}
 
-	// Verifies that the provider resource has the correct name that matches the provider type and manifest.
+	// Check that the provider resource has the same name as the name extracted from the manifest.
 	if providerName != p.provider.GetName() {
-		return reconcile.Result{}, wrapPhaseError(fmt.Errorf("incorrect %s name: %s, it should be %s", reflect.TypeOf(p.provider).Name(), p.provider.GetName(), providerName), operatorv1.IncorrectProviderNameReason, operatorv1.ProviderInstalledCondition)
+		// If the names are not equal, replace the name with the value from the manifest.
+		p.providerConfig, err = p.configClient.Providers().Get(providerName, util.ClusterctlProviderType(p.provider))
+		if err != nil {
+			return reconcile.Result{}, wrapPhaseError(err, operatorv1.UnknownProviderReason, operatorv1.ProviderInstalledCondition)
+		}
 	}
 
 	if p.components, err = repository.NewComponents(input); err != nil {
