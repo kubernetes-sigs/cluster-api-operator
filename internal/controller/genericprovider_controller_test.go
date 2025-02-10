@@ -30,6 +30,7 @@ import (
 	"k8s.io/utils/ptr"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	clusterctlv1 "sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3"
+	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
@@ -298,13 +299,8 @@ func TestReconcilerPreflightConditions(t *testing.T) {
 						return false
 					}
 
-					for _, cond := range p.GetStatus().Conditions {
-						if cond.Type == operatorv1.PreflightCheckCondition {
-							t.Log(t.Name(), p.GetName(), cond)
-							if cond.Status == corev1.ConditionTrue {
-								return true
-							}
-						}
+					if conditions.IsTrue(p, operatorv1.PreflightCheckCondition) {
+						return true
 					}
 				}
 

@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"os"
@@ -37,7 +38,7 @@ import (
 	"sigs.k8s.io/cluster-api/util/flags"
 	"sigs.k8s.io/cluster-api/version"
 	ctrl "sigs.k8s.io/controller-runtime"
-	cache "sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
@@ -194,7 +195,7 @@ func main() {
 	ctx := ctrl.SetupSignalHandler()
 
 	setupChecks(mgr)
-	setupReconcilers(mgr, watchConfigSecretChanges)
+	setupReconcilers(ctx, mgr, watchConfigSecretChanges)
 	setupWebhooks(mgr)
 
 	// +kubebuilder:scaffold:builder
@@ -218,14 +219,14 @@ func setupChecks(mgr ctrl.Manager) {
 	}
 }
 
-func setupReconcilers(mgr ctrl.Manager, watchConfigSecretChanges bool) {
+func setupReconcilers(ctx context.Context, mgr ctrl.Manager, watchConfigSecretChanges bool) {
 	if err := (&providercontroller.GenericProviderReconciler{
 		Provider:                 &operatorv1.CoreProvider{},
 		ProviderList:             &operatorv1.CoreProviderList{},
 		Client:                   mgr.GetClient(),
 		Config:                   mgr.GetConfig(),
 		WatchConfigSecretChanges: watchConfigSecretChanges,
-	}).SetupWithManager(mgr, concurrency(concurrencyNumber)); err != nil {
+	}).SetupWithManager(ctx, mgr, concurrency(concurrencyNumber)); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "CoreProvider")
 		os.Exit(1)
 	}
@@ -236,7 +237,7 @@ func setupReconcilers(mgr ctrl.Manager, watchConfigSecretChanges bool) {
 		Client:                   mgr.GetClient(),
 		Config:                   mgr.GetConfig(),
 		WatchConfigSecretChanges: watchConfigSecretChanges,
-	}).SetupWithManager(mgr, concurrency(concurrencyNumber)); err != nil {
+	}).SetupWithManager(ctx, mgr, concurrency(concurrencyNumber)); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "InfrastructureProvider")
 		os.Exit(1)
 	}
@@ -247,7 +248,7 @@ func setupReconcilers(mgr ctrl.Manager, watchConfigSecretChanges bool) {
 		Client:                   mgr.GetClient(),
 		Config:                   mgr.GetConfig(),
 		WatchConfigSecretChanges: watchConfigSecretChanges,
-	}).SetupWithManager(mgr, concurrency(concurrencyNumber)); err != nil {
+	}).SetupWithManager(ctx, mgr, concurrency(concurrencyNumber)); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "BootstrapProvider")
 		os.Exit(1)
 	}
@@ -258,7 +259,7 @@ func setupReconcilers(mgr ctrl.Manager, watchConfigSecretChanges bool) {
 		Client:                   mgr.GetClient(),
 		Config:                   mgr.GetConfig(),
 		WatchConfigSecretChanges: watchConfigSecretChanges,
-	}).SetupWithManager(mgr, concurrency(concurrencyNumber)); err != nil {
+	}).SetupWithManager(ctx, mgr, concurrency(concurrencyNumber)); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ControlPlaneProvider")
 		os.Exit(1)
 	}
@@ -269,7 +270,7 @@ func setupReconcilers(mgr ctrl.Manager, watchConfigSecretChanges bool) {
 		Client:                   mgr.GetClient(),
 		Config:                   mgr.GetConfig(),
 		WatchConfigSecretChanges: watchConfigSecretChanges,
-	}).SetupWithManager(mgr, concurrency(concurrencyNumber)); err != nil {
+	}).SetupWithManager(ctx, mgr, concurrency(concurrencyNumber)); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "AddonProvider")
 		os.Exit(1)
 	}
@@ -280,7 +281,7 @@ func setupReconcilers(mgr ctrl.Manager, watchConfigSecretChanges bool) {
 		Client:                   mgr.GetClient(),
 		Config:                   mgr.GetConfig(),
 		WatchConfigSecretChanges: watchConfigSecretChanges,
-	}).SetupWithManager(mgr, concurrency(concurrencyNumber)); err != nil {
+	}).SetupWithManager(ctx, mgr, concurrency(concurrencyNumber)); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "IPAMProvider")
 		os.Exit(1)
 	}
@@ -291,7 +292,7 @@ func setupReconcilers(mgr ctrl.Manager, watchConfigSecretChanges bool) {
 		Client:                   mgr.GetClient(),
 		Config:                   mgr.GetConfig(),
 		WatchConfigSecretChanges: watchConfigSecretChanges,
-	}).SetupWithManager(mgr, concurrency(concurrencyNumber)); err != nil {
+	}).SetupWithManager(ctx, mgr, concurrency(concurrencyNumber)); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "RuntimeExtensionProvider")
 		os.Exit(1)
 	}

@@ -96,9 +96,9 @@ func TestSecretReader(t *testing.T) {
 	g.Expect(err).ToNot(HaveOccurred())
 	g.Expect(expectedValue2).To(Equal(testValue2))
 
-	exptectedProviderData, err := configreader.Get("providers")
+	expectedProviderData, err := configreader.Get("providers")
 	g.Expect(err).ToNot(HaveOccurred())
-	g.Expect(exptectedProviderData).To(Equal(`- name: test-key3
+	g.Expect(expectedProviderData).To(Equal(`- name: test-key3
   type: CoreProvider
   url: test-value3
 - name: cluster-api

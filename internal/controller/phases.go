@@ -110,7 +110,7 @@ func newPhaseReconciler(r GenericProviderReconciler, provider genericprovider.Ge
 
 // preflightChecks a wrapper around the preflight checks.
 func (p *phaseReconciler) preflightChecks(ctx context.Context) (reconcile.Result, error) {
-	return preflightChecks(ctx, p.ctrlClient, p.provider, p.providerList)
+	return reconcile.Result{}, preflightChecks(ctx, p.ctrlClient, p.provider, p.providerList)
 }
 
 // initializePhaseReconciler initializes phase reconciler.

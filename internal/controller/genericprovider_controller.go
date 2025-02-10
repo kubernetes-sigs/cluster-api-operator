@@ -23,6 +23,7 @@ import (
 	"errors"
 	"fmt"
 	"hash"
+	"reflect"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -54,13 +55,30 @@ const (
 	appliedSpecHashAnnotation = "operator.cluster.x-k8s.io/applied-spec-hash"
 )
 
-func (r *GenericProviderReconciler) SetupWithManager(mgr ctrl.Manager, options controller.Options) error {
+func (r *GenericProviderReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager, options controller.Options) error {
 	builder := ctrl.NewControllerManagedBy(mgr).
 		For(r.Provider)
+
 	if r.WatchConfigSecretChanges {
+		if err := mgr.GetFieldIndexer().IndexField(ctx, r.Provider, configSecretNameField, configSecretNameIndexFunc); err != nil {
+			return err
+		}
+
+		if err := mgr.GetFieldIndexer().IndexField(ctx, r.Provider, configSecretNamespaceField, configSecretNamespaceIndexFunc); err != nil {
+			return err
+		}
+
 		builder.Watches(
 			&corev1.Secret{},
 			handler.EnqueueRequestsFromMapFunc(newSecretToProviderFuncMapForProviderList(r.Client, r.ProviderList)),
+		)
+	}
+
+	// We don't want to receive secondary events from the CoreProvider for itself.
+	if reflect.TypeOf(r.Provider) != reflect.TypeOf(genericprovider.GenericProvider(&operatorv1.CoreProvider{})) {
+		builder.Watches(
+			&operatorv1.CoreProvider{},
+			handler.EnqueueRequestsFromMapFunc(newCoreProviderToProviderFuncMapForProviderList(r.Client, r.ProviderList)),
 		)
 	}
 
