@@ -320,21 +320,14 @@ func fetchProviderName(input repository.ComponentsInput) (string, error) {
 		return "", err
 	}
 
-	var providerName string
 	for _, obj := range objs {
-		if providerName = obj.GetLabels()[clusterv1.ProviderNameLabel]; providerName != "" {
-			break
+		if providerName, exists := obj.GetLabels()[clusterv1.ProviderNameLabel]; exists && providerName != "" {
+			providerType := strings.ToLower(strcase.KebabCase(string(input.Provider.Type())))
+			providerName = strings.TrimPrefix(providerName, providerType+providerTypeSuffix)
+			return providerName, nil
 		}
 	}
-
-	if providerName == "" {
-		return "", fmt.Errorf("provider name label %s is not found for %s manifests", clusterv1.ProviderNameLabel, input.Provider.Name())
-	}
-
-	providerType, _ := strings.CutSuffix(strings.ToLower(strcase.KebabCase(string(input.Provider.Type()))), providerTypeSuffix)
-	providerName, _ = strings.CutPrefix(providerName, providerType)
-
-	return providerName, nil
+	return "", fmt.Errorf("provider name label %s not found in %s manifests", clusterv1.ProviderNameLabel, input.Provider.Name())
 }
 
 // needToCompress checks whether the input data exceeds the maximum configmap
