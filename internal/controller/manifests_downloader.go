@@ -48,7 +48,7 @@ const (
 	operatorManagedLabel      = "managed-by.operator.cluster.x-k8s.io"
 
 	maxConfigMapSize   = 1 * 1024 * 1024
-	ociSource        = "oci"
+	ociSource          = "oci"
 	providerTypeSuffix = "provider"
 )
 
