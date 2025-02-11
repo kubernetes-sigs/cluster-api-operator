@@ -32,6 +32,7 @@ import (
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
 	"sigs.k8s.io/cluster-api-operator/util"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	clusterctlv1 "sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3"
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/repository"
 	utilyaml "sigs.k8s.io/cluster-api/util/yaml"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -321,8 +322,13 @@ func fetchProviderName(input repository.ComponentsInput) (string, error) {
 
 	for _, obj := range objs {
 		if providerName, exists := obj.GetLabels()[clusterv1.ProviderNameLabel]; exists && providerName != "" {
-			providerType := strings.ToLower(strcase.KebabCase(string(input.Provider.Type())))
-			providerName = strings.TrimPrefix(providerName, providerType+providerTypeSuffix)
+			providerType := strings.TrimSuffix(strcase.KebabCase(string(input.Provider.Type())), providerTypeSuffix)
+			if input.Provider.Type() == clusterctlv1.InfrastructureProviderType && !strings.HasPrefix(providerName, providerType) {
+				return "", fmt.Errorf("incorrect %s label format for %s. Prefix should be started with %s", clusterv1.ProviderNameLabel, input.Provider.Type(),
+					strings.TrimSuffix(strcase.KebabCase(string(clusterctlv1.InfrastructureProviderType)), providerTypeSuffix))
+			}
+
+			providerName = strings.TrimPrefix(providerName, providerType)
 
 			return providerName, nil
 		}

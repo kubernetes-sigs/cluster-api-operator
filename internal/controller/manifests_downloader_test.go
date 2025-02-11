@@ -85,12 +85,13 @@ func TestProviderDownloadWithOverrides(t *testing.T) {
 
 func TestFetchProviderName(t *testing.T) {
 	testCases := []struct {
-		name         string
-		providerType clusterctlv1.ProviderType
-		provider     genericprovider.GenericProvider
-		variables    map[string]string
-		url          string
-		expected     string
+		name          string
+		providerType  clusterctlv1.ProviderType
+		provider      genericprovider.GenericProvider
+		variables     map[string]string
+		url           string
+		expected      string
+		expectedError string
 	}{
 		{
 			name:         "Helm addon provider manifest",
@@ -122,6 +123,19 @@ func TestFetchProviderName(t *testing.T) {
 			url:      "https://github.com/kubernetes-sigs/cluster-api-provider-vsphere/releases/v1.12.0/infrastructure-components.yaml",
 			expected: "vsphere",
 		},
+		{
+			name:         "incorrect vSphere infrastructure provider with Helm addon manifest",
+			providerType: clusterctlv1.InfrastructureProviderType,
+			provider: &operatorv1.InfrastructureProvider{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "incorrect-vsphere",
+					Namespace: testNamespaceName,
+				},
+				Spec: operatorv1.InfrastructureProviderSpec{},
+			},
+			url:           "https://github.com/kubernetes-sigs/cluster-api-addon-provider-helm/releases/v0.2.6/addon-components.yaml",
+			expectedError: "incorrect cluster.x-k8s.io/provider label format for InfrastructureProvider. Prefix should be started with infrastructure-",
+		},
 	}
 	g := NewWithT(t)
 
@@ -150,8 +164,13 @@ func TestFetchProviderName(t *testing.T) {
 			}
 
 			providerName, err := fetchProviderName(input)
-			g.Expect(err).ToNot(HaveOccurred())
-			g.Expect(providerName).To(Equal(tc.expected))
+			if tc.expectedError == "" {
+				g.Expect(err).ToNot(HaveOccurred())
+				g.Expect(providerName).To(Equal(tc.expected))
+			} else {
+				g.Expect(err).To(HaveOccurred())
+				g.Expect(err).To(MatchError(tc.expectedError))
+			}
 		})
 	}
 }
