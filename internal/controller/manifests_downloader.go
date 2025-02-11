@@ -40,7 +40,6 @@ import (
 )
 
 const (
-	configMapVersionLabel     = "provider.cluster.x-k8s.io/version"
 	configMapTypeLabel        = "provider.cluster.x-k8s.io/type"
 	configMapNameLabel        = "provider.cluster.x-k8s.io/name"
 	configMapSourceLabel      = "provider.cluster.x-k8s.io/source"
@@ -324,9 +323,11 @@ func fetchProviderName(input repository.ComponentsInput) (string, error) {
 		if providerName, exists := obj.GetLabels()[clusterv1.ProviderNameLabel]; exists && providerName != "" {
 			providerType := strings.ToLower(strcase.KebabCase(string(input.Provider.Type())))
 			providerName = strings.TrimPrefix(providerName, providerType+providerTypeSuffix)
+
 			return providerName, nil
 		}
 	}
+
 	return "", fmt.Errorf("provider name label %s not found in %s manifests", clusterv1.ProviderNameLabel, input.Provider.Name())
 }
 
