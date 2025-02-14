@@ -1,0 +1,7 @@
+resources:
+  - ../default
+
+labels:
+  - includeSelectors: false
+    pairs:
+      cluster.x-k8s.io/provider: capi-operator
