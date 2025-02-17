@@ -1,8 +1,6 @@
 run:
   timeout: 5m
   go: "1.23"
-  skip-files:
-    - "zz_generated.*\\.go$"
   allow-parallel-runners: true
 
 linters:
@@ -145,6 +143,8 @@ issues:
     # supported will be caught by the default case in the switches.
     - "missing cases in switch of type v1.PlatformType: (\\.*)"
   exclude-use-default: false
+  exclude-files:
+    - "zz_generated.*\\.go$"
   exclude-rules:
     - linters:
       - staticcheck

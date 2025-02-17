@@ -23,8 +23,11 @@ import (
 )
 
 const (
-	ProviderFinalizer         = "provider.cluster.x-k8s.io"
+	ProviderFinalizer = "provider.cluster.x-k8s.io"
+
 	ConfigMapVersionLabelName = "provider.cluster.x-k8s.io/version"
+	ConfigMapTypeLabel        = "provider.cluster.x-k8s.io/type"
+	ConfigMapNameLabel        = "provider.cluster.x-k8s.io/name"
 
 	CompressedAnnotation = "provider.cluster.x-k8s.io/compressed"
 

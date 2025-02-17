@@ -35,7 +35,7 @@ import (
 	"sigs.k8s.io/cluster-api-operator/util"
 )
 
-func TestCheckCAPIOpearatorAvailability(t *testing.T) {
+func TestCheckCAPIOperatorAvailability(t *testing.T) {
 	tests := []struct {
 		name    string
 		want    bool
@@ -425,7 +425,7 @@ func getGenericProvider(ctx context.Context, client ctrlclient.Client, providerK
 		}
 
 		return provider, nil
-	case "RuntimExtensionProvider":
+	case "RuntimeExtensionProvider":
 		provider := &operatorv1.RuntimeExtensionProvider{}
 		if err := client.Get(ctx, types.NamespacedName{Name: providerName, Namespace: providerNamespace}, provider); err != nil {
 			return nil, err

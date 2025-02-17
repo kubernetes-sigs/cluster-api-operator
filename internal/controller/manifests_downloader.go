@@ -38,9 +38,6 @@ import (
 )
 
 const (
-	configMapVersionLabel     = "provider.cluster.x-k8s.io/version"
-	configMapTypeLabel        = "provider.cluster.x-k8s.io/type"
-	configMapNameLabel        = "provider.cluster.x-k8s.io/name"
 	configMapSourceLabel      = "provider.cluster.x-k8s.io/source"
 	configMapSourceAnnotation = "provider.cluster.x-k8s.io/source"
 	operatorManagedLabel      = "managed-by.operator.cluster.x-k8s.io"
@@ -292,10 +289,10 @@ func providerLabelSelector(provider operatorv1.GenericProvider) *metav1.LabelSel
 // ProviderLabels returns default set of labels that identify a config map with downloaded manifests.
 func ProviderLabels(provider operatorv1.GenericProvider) map[string]string {
 	labels := map[string]string{
-		configMapVersionLabel: provider.GetSpec().Version,
-		configMapTypeLabel:    provider.GetType(),
-		configMapNameLabel:    provider.GetName(),
-		operatorManagedLabel:  "true",
+		operatorv1.ConfigMapVersionLabelName: provider.GetSpec().Version,
+		operatorv1.ConfigMapTypeLabel:        provider.GetType(),
+		operatorv1.ConfigMapNameLabel:        provider.GetName(),
+		operatorManagedLabel:                 "true",
 	}
 
 	if provider.GetSpec().FetchConfig != nil && provider.GetSpec().FetchConfig.OCI != "" {
