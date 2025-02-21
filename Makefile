@@ -24,7 +24,8 @@ ROOT:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 .DEFAULT_GOAL:=help
 
 GO_VERSION ?= 1.23.0
-GO_CONTAINER_IMAGE ?= docker.io/library/golang:$(GO_VERSION)
+GO_BASE_CONTAINER ?= docker.io/library/golang
+GO_CONTAINER_IMAGE = $(GO_BASE_CONTAINER):$(GO_VERSION)
 
 # Use GOPROXY environment variable if set
 GOPROXY := $(shell go env GOPROXY)
@@ -33,8 +34,20 @@ GOPROXY := https://proxy.golang.org
 endif
 export GOPROXY
 
+# Use GOPRIVATE environment variable if set
+GOPRIVATE := $(shell go env GOPRIVATE)
+export GOPRIVATE
+
+# Base docker images
+
+DOCKERFILE_CONTAINER_IMAGE ?= docker.io/docker/dockerfile:1.4
+DEPLOYMENT_BASE_IMAGE ?= gcr.io/distroless/static
+DEPLOYMENT_BASE_IMAGE_TAG ?= nonroot-${ARCH}
+
 # Active module mode, as we use go modules to manage dependencies
 export GO111MODULE=on
+
+BUILD_CONTAINER_ADDITIONAL_ARGS ?=
 
 # This option is for running docker manifest command
 export DOCKER_CLI_EXPERIMENTAL := enabled
@@ -372,13 +385,13 @@ modules: ## Runs go mod to ensure modules are up to date.
 
 .PHONY: docker-pull-prerequisites
 docker-pull-prerequisites:
-	docker pull docker.io/docker/dockerfile:1.4
+	docker pull $(DOCKERFILE_CONTAINER_IMAGE)
 	docker pull $(GO_CONTAINER_IMAGE)
-	docker pull gcr.io/distroless/static:latest
+	docker pull $(DEPLOYMENT_BASE_IMAGE):$(DEPLOYMENT_BASE_IMAGE_TAG)
 
 .PHONY: docker-build
 docker-build: docker-pull-prerequisites ## Build the docker image for controller-manager
-	docker build --build-arg builder_image=$(GO_CONTAINER_IMAGE) --build-arg goproxy=$(GOPROXY) --build-arg ARCH=$(ARCH) --build-arg LDFLAGS="$(LDFLAGS)" . -t $(CONTROLLER_IMG_TAG)
+	docker build $(BUILD_CONTAINER_ADDITIONAL_ARGS) --build-arg builder_image=$(GO_CONTAINER_IMAGE) --build-arg deployment_base_image=$(DEPLOYMENT_BASE_IMAGE) --build-arg deployment_base_image_tag=$(DEPLOYMENT_BASE_IMAGE_TAG) --build-arg goproxy=$(GOPROXY) --build-arg goprivate=$(GOPRIVATE) --build-arg ARCH=$(ARCH) --build-arg LDFLAGS="$(LDFLAGS)" . -t $(CONTROLLER_IMG_TAG)
 
 .PHONY: docker-push
 docker-push: ## Push the docker image
