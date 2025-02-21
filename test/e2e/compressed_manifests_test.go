@@ -67,7 +67,7 @@ var _ = Describe("Create and delete a provider with manifests that don't fit the
 			HaveStatusCondition(&coreProvider.Status.Conditions, operatorv1.ProviderInstalledCondition),
 		), e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
-		By("Waiting for status.IntalledVersion to be set")
+		By("Waiting for status.InstalledVersion to be set")
 		WaitFor(ctx, For(coreProvider).In(bootstrapCluster).ToSatisfy(func() bool {
 			return ptr.Equal(coreProvider.Status.InstalledVersion, ptr.To(coreProvider.Spec.Version))
 		}), e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
@@ -94,7 +94,7 @@ var _ = Describe("Create and delete a provider with manifests that don't fit the
 			HaveStatusCondition(&infraProvider.Status.Conditions, operatorv1.ProviderInstalledCondition),
 		), e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
-		By("Waiting for status.IntalledVersion to be set")
+		By("Waiting for status.InstalledVersion to be set")
 		WaitFor(ctx, For(infraProvider).In(bootstrapCluster).ToSatisfy(func() bool {
 			return ptr.Equal(infraProvider.Status.InstalledVersion, ptr.To(infraProvider.Spec.Version))
 		}), e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
@@ -168,7 +168,7 @@ var _ = Describe("Create and delete a provider with manifests that don't fit the
 			HaveStatusCondition(&infraProvider.Status.Conditions, operatorv1.ProviderInstalledCondition)),
 			e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
-		By("Waiting for status.IntalledVersion to be set")
+		By("Waiting for status.InstalledVersion to be set")
 		WaitFor(ctx, For(infraProvider).In(bootstrapCluster).ToSatisfy(func() bool {
 			return ptr.Equal(infraProvider.Status.InstalledVersion, ptr.To(infraProvider.Spec.Version))
 		}), e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
