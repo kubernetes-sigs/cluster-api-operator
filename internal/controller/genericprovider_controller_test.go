@@ -324,7 +324,7 @@ func TestReconcilerPreflightConditions(t *testing.T) {
 	}
 }
 
-func TestAirGappedUpgradeDowngradeProvider(t *testing.T) {
+func TestAirGappedUpgradeDowngradeProviders(t *testing.T) {
 	currentVersion := "v999.9.2"
 	futureMetadata := `
 apiVersion: clusterctl.cluster.x-k8s.io/v1alpha3
@@ -333,7 +333,6 @@ releaseSeries:
     minor: 9
     contract: v1beta1
 `
-
 	dummyFutureConfigMap := func(ns, name string) *corev1.ConfigMap {
 		return &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
@@ -372,7 +371,7 @@ releaseSeries:
 		t.Run(tc.name, func(t *testing.T) {
 			g := NewWithT(t)
 
-			provider := &operatorv1.CoreProvider{
+			coreProvider := &operatorv1.CoreProvider{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "cluster-api",
 				},
@@ -383,30 +382,48 @@ releaseSeries:
 				},
 			}
 
-			namespace := "test-upgrades-downgrades"
+			controlPlaneProvider := &operatorv1.ControlPlaneProvider{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "kcp-custom-provider",
+				},
+				Spec: operatorv1.ControlPlaneProviderSpec{
+					ProviderSpec: operatorv1.ProviderSpec{
+						Version: currentVersion,
+					},
+				},
+			}
 
-			t.Log("Ensure namespace exists", namespace)
-			g.Expect(env.EnsureNamespaceExists(ctx, namespace)).To(Succeed())
+			coreProviderNamespace := "cluster-api-system"
+			controlplaneProviderNamespace := "kcp-system"
 
-			g.Expect(env.CreateAndWait(ctx, dummyFutureConfigMap(namespace, currentVersion))).To(Succeed())
+			t.Log("Ensure namespaces exist", coreProviderNamespace, controlplaneProviderNamespace)
+			g.Expect(env.EnsureNamespaceExists(ctx, coreProviderNamespace)).To(Succeed())
+			g.Expect(env.EnsureNamespaceExists(ctx, controlplaneProviderNamespace)).To(Succeed())
 
-			insertDummyConfig(provider)
-			provider.SetNamespace(namespace)
-			t.Log("creating test provider", provider.GetName())
-			g.Expect(env.CreateAndWait(ctx, provider)).To(Succeed())
+			g.Expect(env.CreateAndWait(ctx, dummyFutureConfigMap(coreProviderNamespace, currentVersion))).To(Succeed())
+			g.Expect(env.CreateAndWait(ctx, dummyFutureConfigMap(controlplaneProviderNamespace, currentVersion))).To(Succeed())
+
+			insertDummyConfig(coreProvider)
+			insertDummyConfig(controlPlaneProvider)
+			coreProvider.SetNamespace(coreProviderNamespace)
+			controlPlaneProvider.SetNamespace(controlplaneProviderNamespace)
+
+			t.Log("creating test provider", coreProvider.GetName())
+			g.Expect(env.CreateAndWait(ctx, coreProvider)).To(Succeed())
+			g.Expect(env.CreateAndWait(ctx, controlPlaneProvider)).To(Succeed())
 
 			g.Eventually(func() bool {
-				if err := env.Get(ctx, client.ObjectKeyFromObject(provider), provider); err != nil {
+				if err := env.Get(ctx, client.ObjectKeyFromObject(coreProvider), coreProvider); err != nil {
 					return false
 				}
 
-				if provider.GetStatus().InstalledVersion == nil || *provider.GetStatus().InstalledVersion != currentVersion {
+				if coreProvider.GetStatus().InstalledVersion == nil || *coreProvider.GetStatus().InstalledVersion != currentVersion {
 					return false
 				}
 
-				for _, cond := range provider.GetStatus().Conditions {
+				for _, cond := range coreProvider.GetStatus().Conditions {
 					if cond.Type == operatorv1.PreflightCheckCondition {
-						t.Log(t.Name(), provider.GetName(), cond)
+						t.Log(t.Name(), coreProvider.GetName(), cond)
 						if cond.Status == corev1.ConditionTrue {
 							return true
 						}
@@ -418,45 +435,45 @@ releaseSeries:
 
 			// creating another configmap with another version
 			if tc.newVersion != currentVersion {
-				g.Expect(env.CreateAndWait(ctx, dummyFutureConfigMap(namespace, tc.newVersion))).To(Succeed())
+				g.Expect(env.CreateAndWait(ctx, dummyFutureConfigMap(coreProviderNamespace, tc.newVersion))).To(Succeed())
 			}
 
 			// Change provider version
-			providerSpec := provider.GetSpec()
+			providerSpec := coreProvider.GetSpec()
 			providerSpec.Version = tc.newVersion
 			providerSpec.Deployment = &operatorv1.DeploymentSpec{
 				Replicas: ptr.To(2),
 			}
-			provider.SetSpec(providerSpec)
+			coreProvider.SetSpec(providerSpec)
 
 			// Set label (needed to start a reconciliation of the provider)
-			labels := provider.GetLabels()
+			labels := coreProvider.GetLabels()
 			if labels == nil {
 				labels = map[string]string{}
 			}
 
 			labels["provider-version"] = tc.newVersion
-			provider.SetLabels(labels)
+			coreProvider.SetLabels(labels)
 
-			g.Expect(env.Client.Update(ctx, provider)).To(Succeed())
+			g.Expect(env.Client.Update(ctx, coreProvider)).To(Succeed())
 
 			g.Eventually(func() bool {
-				if err := env.Get(ctx, client.ObjectKeyFromObject(provider), provider); err != nil {
+				if err := env.Get(ctx, client.ObjectKeyFromObject(coreProvider), coreProvider); err != nil {
 					return false
 				}
 
-				if provider.GetStatus().InstalledVersion == nil || *provider.GetStatus().InstalledVersion != tc.newVersion {
+				if coreProvider.GetStatus().InstalledVersion == nil || *coreProvider.GetStatus().InstalledVersion != tc.newVersion {
 					return false
 				}
 
-				if provider.GetLabels()["provider-version"] != tc.newVersion {
+				if coreProvider.GetLabels()["provider-version"] != tc.newVersion {
 					return false
 				}
 
 				allFound := false
-				for _, cond := range provider.GetStatus().Conditions {
+				for _, cond := range coreProvider.GetStatus().Conditions {
 					if cond.Type == operatorv1.PreflightCheckCondition {
-						t.Log(t.Name(), provider.GetName(), cond)
+						t.Log(t.Name(), coreProvider.GetName(), cond)
 						if cond.Status == corev1.ConditionTrue {
 							allFound = true
 							break
@@ -469,9 +486,9 @@ releaseSeries:
 				}
 
 				allFound = tc.newVersion == currentVersion
-				for _, cond := range provider.GetStatus().Conditions {
+				for _, cond := range coreProvider.GetStatus().Conditions {
 					if cond.Type == operatorv1.ProviderUpgradedCondition {
-						t.Log(t.Name(), provider.GetName(), cond)
+						t.Log(t.Name(), coreProvider.GetName(), cond)
 						if cond.Status == corev1.ConditionTrue {
 							allFound = tc.newVersion != currentVersion
 							break
@@ -485,7 +502,7 @@ releaseSeries:
 
 				// Ensure customization occurred
 				dep := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{
-					Namespace: provider.Namespace,
+					Namespace: coreProvider.Namespace,
 					Name:      testDeploymentName,
 				}}
 				if err := env.Get(ctx, client.ObjectKeyFromObject(dep), dep); err != nil {
@@ -497,9 +514,9 @@ releaseSeries:
 
 			g.Consistently(func() bool {
 				allSet := tc.newVersion == currentVersion
-				for _, cond := range provider.GetStatus().Conditions {
+				for _, cond := range coreProvider.GetStatus().Conditions {
 					if cond.Type == operatorv1.ProviderUpgradedCondition {
-						t.Log(t.Name(), provider.GetName(), cond)
+						t.Log(t.Name(), coreProvider.GetName(), cond)
 						if cond.Status == corev1.ConditionTrue {
 							allSet = tc.newVersion != currentVersion
 							break
@@ -511,18 +528,32 @@ releaseSeries:
 			}, 2*time.Second).Should(BeTrue())
 
 			// Clean up
-			objs := []client.Object{provider}
+			objs := []client.Object{coreProvider, controlPlaneProvider}
 			objs = append(objs, &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      currentVersion,
-					Namespace: namespace,
+					Namespace: coreProviderNamespace,
 				},
 			})
 
 			objs = append(objs, &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      tc.newVersion,
-					Namespace: namespace,
+					Namespace: coreProviderNamespace,
+				},
+			})
+
+			objs = append(objs, &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      currentVersion,
+					Namespace: controlplaneProviderNamespace,
+				},
+			})
+
+			objs = append(objs, &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      tc.newVersion,
+					Namespace: controlplaneProviderNamespace,
 				},
 			})
 
