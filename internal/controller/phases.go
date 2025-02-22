@@ -595,6 +595,7 @@ func (p *phaseReconciler) listCustomProvidersExcluding(ctx context.Context, curr
 		if provider.GetName() == currentProvider.GetName() || provider.Spec.FetchConfig == nil {
 			continue
 		}
+
 		customProviders = append(customProviders, &coreProviderList.Items[i])
 	}
 
@@ -609,6 +610,7 @@ func (p *phaseReconciler) listCustomProvidersExcluding(ctx context.Context, curr
 		if provider.GetName() == currentProvider.GetName() || provider.Spec.FetchConfig == nil {
 			continue
 		}
+
 		customProviders = append(customProviders, &bootstrapProviderList.Items[i])
 	}
 
@@ -623,6 +625,7 @@ func (p *phaseReconciler) listCustomProvidersExcluding(ctx context.Context, curr
 		if provider.GetName() == currentProvider.GetName() || provider.Spec.FetchConfig == nil {
 			continue
 		}
+
 		customProviders = append(customProviders, &controlPlaneProviderList.Items[i])
 	}
 
@@ -637,6 +640,7 @@ func (p *phaseReconciler) listCustomProvidersExcluding(ctx context.Context, curr
 		if provider.GetName() == currentProvider.GetName() || provider.Spec.FetchConfig == nil {
 			continue
 		}
+
 		customProviders = append(customProviders, &infrastructureProviderList.Items[i])
 	}
 
@@ -651,6 +655,7 @@ func (p *phaseReconciler) listCustomProvidersExcluding(ctx context.Context, curr
 		if provider.GetName() == currentProvider.GetName() || provider.Spec.FetchConfig == nil {
 			continue
 		}
+
 		customProviders = append(customProviders, &addonProviderList.Items[i])
 	}
 
@@ -665,6 +670,7 @@ func (p *phaseReconciler) listCustomProvidersExcluding(ctx context.Context, curr
 		if provider.GetName() == currentProvider.GetName() || provider.Spec.FetchConfig == nil {
 			continue
 		}
+
 		customProviders = append(customProviders, &ipamProviderList.Items[i])
 	}
 
@@ -679,6 +685,7 @@ func (p *phaseReconciler) listCustomProvidersExcluding(ctx context.Context, curr
 		if provider.GetName() == currentProvider.GetName() || provider.Spec.FetchConfig == nil {
 			continue
 		}
+
 		customProviders = append(customProviders, &runtimeExtensionProviderList.Items[i])
 	}
 
