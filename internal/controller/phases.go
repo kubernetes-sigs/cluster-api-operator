@@ -261,6 +261,24 @@ func (p *phaseReconciler) secretReader(ctx context.Context, providers ...configc
 		}
 	}
 
+	// Store all custom provider repositories (excluding current provider) in memory reader so that clusterctl will pass the lagging provider check.
+	customProviders, err := p.listCustomProvidersExcluding(ctx, p.provider)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, provider := range customProviders {
+		if provider.GetSpec().FetchConfig.URL == "" {
+			if _, err := mr.AddProvider(provider.GetName(), util.ClusterctlProviderType(provider), fakeURL); err != nil {
+				return nil, err
+			}
+		} else {
+			if _, err := mr.AddProvider(provider.GetName(), util.ClusterctlProviderType(provider), provider.GetSpec().FetchConfig.URL); err != nil {
+				return nil, err
+			}
+		}
+	}
+
 	// If provided store fetch config url in memory reader.
 	if p.provider.GetSpec().FetchConfig != nil {
 		if p.provider.GetSpec().FetchConfig.URL != "" {
@@ -560,6 +578,118 @@ func getProvider(provider operatorv1.GenericProvider, defaultVersion string) clu
 	}
 
 	return *clusterctlProvider
+}
+
+// listCustomProvidersExcluding returns a list of all custom providers installed in the cluster excluding the currentProvider.
+func (p *phaseReconciler) listCustomProvidersExcluding(ctx context.Context, currentProvider operatorv1.GenericProvider) ([]operatorv1.GenericProvider, error) {
+	customProviders := []operatorv1.GenericProvider{}
+
+	// Get Core Providers.
+	var coreProviderList operatorv1.CoreProviderList
+
+	if err := p.ctrlClient.List(ctx, &coreProviderList); err != nil {
+		return nil, fmt.Errorf("cannot get a list of core providers from the server: %w", err)
+	}
+
+	for i, provider := range coreProviderList.Items {
+		if provider.GetName() == currentProvider.GetName() || provider.Spec.FetchConfig == nil {
+			continue
+		}
+
+		customProviders = append(customProviders, &coreProviderList.Items[i])
+	}
+
+	// Get Bootstrap Providers.
+	var bootstrapProviderList operatorv1.BootstrapProviderList
+
+	if err := p.ctrlClient.List(ctx, &bootstrapProviderList); err != nil {
+		return nil, fmt.Errorf("cannot get a list of bootstrap providers from the server: %w", err)
+	}
+
+	for i, provider := range bootstrapProviderList.Items {
+		if provider.GetName() == currentProvider.GetName() || provider.Spec.FetchConfig == nil {
+			continue
+		}
+
+		customProviders = append(customProviders, &bootstrapProviderList.Items[i])
+	}
+
+	// Get Control Plane Providers.
+	var controlPlaneProviderList operatorv1.ControlPlaneProviderList
+
+	if err := p.ctrlClient.List(ctx, &controlPlaneProviderList); err != nil {
+		return nil, fmt.Errorf("cannot get a list of control plane providers from the server: %w", err)
+	}
+
+	for i, provider := range controlPlaneProviderList.Items {
+		if provider.GetName() == currentProvider.GetName() || provider.Spec.FetchConfig == nil {
+			continue
+		}
+
+		customProviders = append(customProviders, &controlPlaneProviderList.Items[i])
+	}
+
+	// Get Infrastructure Providers.
+	var infrastructureProviderList operatorv1.InfrastructureProviderList
+
+	if err := p.ctrlClient.List(ctx, &infrastructureProviderList); err != nil {
+		return nil, fmt.Errorf("cannot get a list of infrastructure providers from the server: %w", err)
+	}
+
+	for i, provider := range infrastructureProviderList.Items {
+		if provider.GetName() == currentProvider.GetName() || provider.Spec.FetchConfig == nil {
+			continue
+		}
+
+		customProviders = append(customProviders, &infrastructureProviderList.Items[i])
+	}
+
+	// Get Addon Providers.
+	var addonProviderList operatorv1.AddonProviderList
+
+	if err := p.ctrlClient.List(ctx, &addonProviderList); err != nil {
+		return nil, fmt.Errorf("cannot get a list of addon providers from the server: %w", err)
+	}
+
+	for i, provider := range addonProviderList.Items {
+		if provider.GetName() == currentProvider.GetName() || provider.Spec.FetchConfig == nil {
+			continue
+		}
+
+		customProviders = append(customProviders, &addonProviderList.Items[i])
+	}
+
+	// Get IPAM Providers.
+	var ipamProviderList operatorv1.IPAMProviderList
+
+	if err := p.ctrlClient.List(ctx, &ipamProviderList); err != nil {
+		return nil, fmt.Errorf("cannot get a list of ipam providers from the server: %w", err)
+	}
+
+	for i, provider := range ipamProviderList.Items {
+		if provider.GetName() == currentProvider.GetName() || provider.Spec.FetchConfig == nil {
+			continue
+		}
+
+		customProviders = append(customProviders, &ipamProviderList.Items[i])
+	}
+
+	// Get Runtime Extension Providers.
+	var runtimeExtensionProviderList operatorv1.RuntimeExtensionProviderList
+
+	if err := p.ctrlClient.List(ctx, &runtimeExtensionProviderList); err != nil {
+		return nil, fmt.Errorf("cannot get a list of runtime extension providers from the server: %w", err)
+	}
+
+	for i, provider := range runtimeExtensionProviderList.Items {
+		if provider.GetName() == currentProvider.GetName() || provider.Spec.FetchConfig == nil {
+			continue
+		}
+
+		customProviders = append(customProviders, &runtimeExtensionProviderList.Items[i])
+	}
+
+	return customProviders, nil
 }
 
 // delete deletes the provider components using clusterctl library.
