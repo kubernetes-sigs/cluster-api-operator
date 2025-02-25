@@ -147,6 +147,16 @@ func (p *phaseReconciler) initializePhaseReconciler(ctx context.Context) (reconc
 		return reconcile.Result{}, err
 	}
 
+	customProviders, err := p.getCustomProviders(ctx)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	reader, err = loadCustomProviders(customProviders, reader)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
 	// Load provider's secret and config url.
 	p.configClient, err = configclient.New(ctx, "", configclient.InjectReader(reader))
 	if err != nil {
@@ -560,6 +570,69 @@ func getProvider(provider operatorv1.GenericProvider, defaultVersion string) clu
 	}
 
 	return *clusterctlProvider
+}
+
+func (p *phaseReconciler) getCustomProviders(ctx context.Context) ([]operatorv1.GenericProvider, error) {
+	log := ctrl.LoggerFrom(ctx)
+
+	customProviders := []operatorv1.GenericProvider{}
+	currProviderName := p.provider.GetName()
+	currProviderType := p.provider.GetType()
+
+	providerLists := []client.ObjectList{
+		&operatorv1.CoreProviderList{},
+		&operatorv1.BootstrapProviderList{},
+		&operatorv1.ControlPlaneProviderList{},
+		&operatorv1.InfrastructureProviderList{},
+		&operatorv1.AddonProviderList{},
+		&operatorv1.IPAMProviderList{},
+		&operatorv1.RuntimeExtensionProviderList{},
+	}
+
+	for _, providerList := range providerLists {
+		if err := p.ctrlClient.List(ctx, providerList); err != nil {
+			return nil, fmt.Errorf("cannot get a list of providers from the server: %w", err)
+		}
+
+		genericProviderList, ok := providerList.(operatorv1.GenericProviderList)
+		if !ok {
+			return nil, fmt.Errorf("cannot cast providers list to GenericProviderList")
+		}
+
+		genericProviderListItems := genericProviderList.GetItems()
+		for i, provider := range genericProviderListItems {
+			if provider.GetName() == currProviderName && provider.GetType() == currProviderType || provider.GetSpec().FetchConfig == nil {
+				continue
+			}
+
+			log.Info("custom provider found", provider.GetName(), provider.GetType(), provider.GetNamespace())
+
+			customProviders = append(customProviders, genericProviderListItems[i])
+		}
+	}
+
+	return customProviders, nil
+}
+
+func loadCustomProviders(providers []operatorv1.GenericProvider, reader configclient.Reader) (configclient.Reader, error) {
+	mr, ok := reader.(*configclient.MemoryReader)
+	if !ok {
+		return nil, fmt.Errorf("unable to load custom providers, invalid reader passed")
+	}
+
+	for _, provider := range providers {
+		if provider.GetSpec().FetchConfig.URL == "" {
+			if _, err := mr.AddProvider(provider.GetName(), util.ClusterctlProviderType(provider), fakeURL); err != nil {
+				return nil, err
+			}
+		} else {
+			if _, err := mr.AddProvider(provider.GetName(), util.ClusterctlProviderType(provider), provider.GetSpec().FetchConfig.URL); err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	return mr, nil
 }
 
 // delete deletes the provider components using clusterctl library.
