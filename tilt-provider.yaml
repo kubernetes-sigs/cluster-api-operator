@@ -1,0 +1,14 @@
+name: capi-operator
+config:
+  image: gcr.io/k8s-staging-capi-operator/cluster-api-operator
+  live_reload_deps:
+    - cmd
+    - go.mod
+    - go.sum
+    - api
+    - internal
+    - util
+  label: CAPIO
+  kustomize_folder: config/tilt
+  go_main: cmd/main.go
+  manager_name: capi-operator-controller-manager
