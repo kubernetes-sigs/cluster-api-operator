@@ -27,12 +27,14 @@ import (
 var ctx = context.Background()
 
 const (
-	operatorNamespace   = "capi-operator-system"
-	capiSystemNamespace = "capi-system"
-	capiOperatorRelease = "capi-operator"
+	operatorNamespace     = "capi-operator-system"
+	capkbSystemNamespace  = "capi-kubeadm-bootstrap-system"
+	capkcpSystemNamespace = "capi-kubeadm-control-plane-system"
+	capiSystemNamespace   = "capi-system"
+	capiOperatorRelease   = "capi-operator"
 
-	previousCAPIVersion = "v1.7.7"
-
+	previousCAPIVersion        = "v1.7.7"
+	nextCAPIVersion            = "v1.8.0"
 	coreProviderName           = configclient.ClusterAPIProviderName
 	coreProviderDeploymentName = "capi-controller-manager"
 
@@ -53,4 +55,5 @@ const (
 	ipamProviderDeploymentName = "capi-ipam-in-cluster-controller-manager"
 
 	customManifestsFolder = "resources/"
+	customProviderName    = "kubeadm-custom"
 )
