@@ -77,18 +77,13 @@ func GetCustomProviders(ctx context.Context, cl ctrlclient.Client, currProvider 
 	currProviderType := currProvider.GetType()
 
 	for _, providerList := range operatorv1.ProviderLists {
-		providerList, ok := providerList.(ctrlclient.ObjectList)
+		genericProviderList, ok := providerList.(genericProviderList)
 		if !ok {
-			return nil, fmt.Errorf("cannot cast providers list to ObjectList")
+			return nil, fmt.Errorf("cannot cast providers list to genericProviderList")
 		}
 
-		if err := cl.List(ctx, providerList); err != nil {
+		if err := cl.List(ctx, genericProviderList); err != nil {
 			return nil, fmt.Errorf("cannot get a list of providers from the server: %w", err)
-		}
-
-		genericProviderList, ok := providerList.(operatorv1.GenericProviderList)
-		if !ok {
-			return nil, fmt.Errorf("cannot cast providers list to GenericProviderList")
 		}
 
 		genericProviderListItems := genericProviderList.GetItems()
