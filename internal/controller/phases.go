@@ -573,8 +573,6 @@ func getProvider(provider operatorv1.GenericProvider, defaultVersion string) clu
 }
 
 func (p *phaseReconciler) getCustomProviders(ctx context.Context) ([]operatorv1.GenericProvider, error) {
-	log := ctrl.LoggerFrom(ctx)
-
 	customProviders := []operatorv1.GenericProvider{}
 	currProviderName := p.provider.GetName()
 	currProviderType := p.provider.GetType()
@@ -604,8 +602,6 @@ func (p *phaseReconciler) getCustomProviders(ctx context.Context) ([]operatorv1.
 			if provider.GetName() == currProviderName && provider.GetType() == currProviderType || provider.GetSpec().FetchConfig == nil {
 				continue
 			}
-
-			log.Info("custom provider found", provider.GetName(), provider.GetType(), provider.GetNamespace())
 
 			customProviders = append(customProviders, genericProviderListItems[i])
 		}
