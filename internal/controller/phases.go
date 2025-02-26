@@ -147,11 +147,13 @@ func (p *phaseReconciler) initializePhaseReconciler(ctx context.Context) (reconc
 		return reconcile.Result{}, err
 	}
 
-	customProviders, err := p.getCustomProviders(ctx)
+	// Get all providers using fetchConfig that aren't the current provider.
+	customProviders, err := util.GetCustomProviders(ctx, p.ctrlClient, p.provider)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
+	// Load all custom providers into MemoryReader.
 	reader, err = loadCustomProviders(customProviders, reader)
 	if err != nil {
 		return reconcile.Result{}, err
@@ -572,44 +574,7 @@ func getProvider(provider operatorv1.GenericProvider, defaultVersion string) clu
 	return *clusterctlProvider
 }
 
-func (p *phaseReconciler) getCustomProviders(ctx context.Context) ([]operatorv1.GenericProvider, error) {
-	customProviders := []operatorv1.GenericProvider{}
-	currProviderName := p.provider.GetName()
-	currProviderType := p.provider.GetType()
-
-	providerLists := []client.ObjectList{
-		&operatorv1.CoreProviderList{},
-		&operatorv1.BootstrapProviderList{},
-		&operatorv1.ControlPlaneProviderList{},
-		&operatorv1.InfrastructureProviderList{},
-		&operatorv1.AddonProviderList{},
-		&operatorv1.IPAMProviderList{},
-		&operatorv1.RuntimeExtensionProviderList{},
-	}
-
-	for _, providerList := range providerLists {
-		if err := p.ctrlClient.List(ctx, providerList); err != nil {
-			return nil, fmt.Errorf("cannot get a list of providers from the server: %w", err)
-		}
-
-		genericProviderList, ok := providerList.(operatorv1.GenericProviderList)
-		if !ok {
-			return nil, fmt.Errorf("cannot cast providers list to GenericProviderList")
-		}
-
-		genericProviderListItems := genericProviderList.GetItems()
-		for i, provider := range genericProviderListItems {
-			if provider.GetName() == currProviderName && provider.GetType() == currProviderType || provider.GetSpec().FetchConfig == nil {
-				continue
-			}
-
-			customProviders = append(customProviders, genericProviderListItems[i])
-		}
-	}
-
-	return customProviders, nil
-}
-
+// loadCustomProviders loads the passed providers list into the clusterctl configuration via the MemoryReader.
 func loadCustomProviders(providers []operatorv1.GenericProvider, reader configclient.Reader) (configclient.Reader, error) {
 	mr, ok := reader.(*configclient.MemoryReader)
 	if !ok {
