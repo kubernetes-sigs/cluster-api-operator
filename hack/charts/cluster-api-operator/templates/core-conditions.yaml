@@ -1,4 +1,4 @@
-{{- if or .Values.addon .Values.bootstrap .Values.controlPlane .Values.infrastructure }}
+{{- if or .Values.addon .Values.bootstrap .Values.controlPlane .Values.infrastructure .Values.ipam }}
 # Deploy core components if not specified
 {{- if not .Values.core }}
 ---

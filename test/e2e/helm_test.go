@@ -154,6 +154,7 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 			"controlPlane":           "kubeadm-control-plane-custom-ns:kubeadm:v1.7.7",
 			"bootstrap":              "kubeadm-bootstrap-custom-ns:kubeadm:v1.7.7",
 			"infrastructure":         "capd-custom-ns:docker:v1.7.7",
+			"ipam":                   "in-cluster-custom-ns:in-cluster:v1.0.0",
 			"addon":                  "helm-custom-ns:helm:v0.2.6",
 		})
 		Expect(err).ToNot(HaveOccurred())
@@ -171,6 +172,7 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 			"controlPlane":           "kubeadm:v1.7.7",
 			"bootstrap":              "kubeadm:v1.7.7",
 			"infrastructure":         "docker:v1.7.7",
+			"ipam":                   "in-cluster:v1.0.0",
 			"addon":                  "helm:v0.2.6",
 		})
 		Expect(err).ToNot(HaveOccurred())
@@ -188,6 +190,7 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 			"controlPlane":           "kubeadm",
 			"bootstrap":              "kubeadm",
 			"infrastructure":         "docker",
+			"ipam":                   "in-cluster",
 			"addon":                  "helm",
 		})
 		Expect(err).ToNot(HaveOccurred())
@@ -232,6 +235,33 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 		Expect(err).ToNot(HaveOccurred())
 		Expect(manifests).ToNot(BeEmpty())
 		expectedManifests, err := os.ReadFile(filepath.Join(customManifestsFolder, "only-control-plane.yaml"))
+		Expect(err).ToNot(HaveOccurred())
+		Expect(manifests).To(Equal(string(expectedManifests)))
+	})
+
+	It("should deploy core when only ipam is specified", func() {
+		manifests, err := helmChart.Run(map[string]string{
+			"configSecret.name":      "test-secret-name",
+			"configSecret.namespace": "test-secret-namespace",
+			"ipam":                   "in-cluster",
+		})
+		Expect(err).ToNot(HaveOccurred())
+		Expect(manifests).ToNot(BeEmpty())
+		expectedManifests, err := os.ReadFile(filepath.Join(customManifestsFolder, "only-ipam.yaml"))
+		Expect(err).ToNot(HaveOccurred())
+		Expect(manifests).To(Equal(string(expectedManifests)))
+	})
+
+	It("should deploy core, bootstrap, control plane when only infra and ipam is specified", func() {
+		manifests, err := helmChart.Run(map[string]string{
+			"configSecret.name":      "test-secret-name",
+			"configSecret.namespace": "test-secret-namespace",
+			"infrastructure":         "docker",
+			"ipam":                   "in-cluster",
+		})
+		Expect(err).ToNot(HaveOccurred())
+		Expect(manifests).ToNot(BeEmpty())
+		expectedManifests, err := os.ReadFile(filepath.Join(customManifestsFolder, "only-infra-and-ipam.yaml"))
 		Expect(err).ToNot(HaveOccurred())
 		Expect(manifests).To(Equal(string(expectedManifests)))
 	})
@@ -306,6 +336,7 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 			"configSecret.name":        "aws-variables",
 			"configSecret.namespace":   "default",
 			"infrastructure":           "aws:v2.4.0",
+			"ipam":                     "in-cluster:",
 			"addon":                    "helm:",
 			"image.manager.tag":        "v0.9.1",
 			"cert-manager.enabled":     "false",
@@ -330,6 +361,7 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 			"configSecret.namespace":           "test-secret-namespace",
 			"core":                             "cluster-api",
 			"infrastructure":                   "azure",
+			"ipam":                             "in-cluster",
 			"addon":                            "helm",
 			"manager.cert-manager.enabled":     "false",
 			"manager.cert-manager.installCRDs": "false",
@@ -346,6 +378,7 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 			"controlPlane":   "kubeadm",
 			"bootstrap":      "kubeadm",
 			"infrastructure": "docker",
+			"ipam":           "in-cluster",
 			"addon":          "helm",
 			"manager.featureGates.core.ClusterTopology": "true",
 			"manager.featureGates.core.MachinePool":     "true",
@@ -362,6 +395,7 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 			"controlPlane":   "kubeadm",
 			"bootstrap":      "kubeadm",
 			"infrastructure": "docker",
+			"ipam":           "in-cluster",
 			"addon":          "helm",
 			"manager.featureGates.kubeadm.ClusterTopology": "true",
 			"manager.featureGates.kubeadm.MachinePool":     "true",
