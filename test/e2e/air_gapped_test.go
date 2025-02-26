@@ -35,7 +35,7 @@ import (
 )
 
 var _ = Describe("Install Controlplane, Core, Bootstrap Providers in an air-gapped environment", func() {
-	It("should successfully create config maps with Core and Bootstrap Provider manifests", func() {
+	It("should successfully create config maps with Controlplane, Core, and Bootstrap Provider manifests", func() {
 		// Ensure that there are no Cluster API installed
 		deleteClusterAPICRDs(bootstrapClusterProxy)
 
@@ -62,7 +62,7 @@ var _ = Describe("Install Controlplane, Core, Bootstrap Providers in an air-gapp
 		}
 
 		By("Creating provider namespaces")
-		for _, namespaceName := range []string{capkbSystemNamespace, capkcpSystemNamespace, capiSystemNamespace} {
+		for _, namespaceName := range []string{cabpkSystemNamespace, cacpkSystemNamespace, capiSystemNamespace} {
 			namespace := &corev1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: namespaceName,
@@ -82,7 +82,7 @@ var _ = Describe("Install Controlplane, Core, Bootstrap Providers in an air-gapp
 		bootstrapProvider := &operatorv1.BootstrapProvider{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      customProviderName,
-				Namespace: capkbSystemNamespace,
+				Namespace: cabpkSystemNamespace,
 			},
 			Spec: operatorv1.BootstrapProviderSpec{
 				ProviderSpec: operatorv1.ProviderSpec{
@@ -105,7 +105,7 @@ var _ = Describe("Install Controlplane, Core, Bootstrap Providers in an air-gapp
 		By("Waiting for the bootstrap provider deployment to be ready")
 		framework.WaitForDeploymentsAvailable(ctx, framework.WaitForDeploymentsAvailableInput{
 			Getter:     bootstrapClusterProxy.GetClient(),
-			Deployment: &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: bootstrapProviderDeploymentName, Namespace: capkbSystemNamespace}},
+			Deployment: &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: bootstrapProviderDeploymentName, Namespace: cabpkSystemNamespace}},
 		}, e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
 		By("Waiting for bootstrap provider to be ready")
@@ -166,7 +166,7 @@ var _ = Describe("Install Controlplane, Core, Bootstrap Providers in an air-gapp
 		controlPlaneProvider := &operatorv1.ControlPlaneProvider{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      customProviderName,
-				Namespace: capkcpSystemNamespace,
+				Namespace: cacpkSystemNamespace,
 			},
 			Spec: operatorv1.ControlPlaneProviderSpec{
 				ProviderSpec: operatorv1.ProviderSpec{
@@ -189,7 +189,7 @@ var _ = Describe("Install Controlplane, Core, Bootstrap Providers in an air-gapp
 		By("Waiting for the controlplane provider deployment to be ready")
 		framework.WaitForDeploymentsAvailable(ctx, framework.WaitForDeploymentsAvailableInput{
 			Getter:     bootstrapClusterProxy.GetClient(),
-			Deployment: &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: cpProviderDeploymentName, Namespace: capkcpSystemNamespace}},
+			Deployment: &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: cpProviderDeploymentName, Namespace: cacpkSystemNamespace}},
 		}, e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
 		By("Waiting for controlplane provider to be ready")
@@ -210,13 +210,13 @@ var _ = Describe("Install Controlplane, Core, Bootstrap Providers in an air-gapp
 		coreProvider := &operatorv1.CoreProvider{}
 		controlPlaneProvider := &operatorv1.ControlPlaneProvider{}
 
-		bootstrapKey := client.ObjectKey{Namespace: capkbSystemNamespace, Name: customProviderName}
+		bootstrapKey := client.ObjectKey{Namespace: cabpkSystemNamespace, Name: customProviderName}
 		Expect(bootstrapCluster.Get(ctx, bootstrapKey, bootstrapProvider)).To(Succeed())
 
 		coreKey := client.ObjectKey{Namespace: capiSystemNamespace, Name: coreProviderName}
 		Expect(bootstrapCluster.Get(ctx, coreKey, coreProvider)).To(Succeed())
 
-		cpKey := client.ObjectKey{Namespace: capkcpSystemNamespace, Name: customProviderName}
+		cpKey := client.ObjectKey{Namespace: cacpkSystemNamespace, Name: customProviderName}
 		Expect(bootstrapCluster.Get(ctx, cpKey, controlPlaneProvider)).To(Succeed())
 
 		bootstrapProvider.Spec.Version = nextCAPIVersion
@@ -233,7 +233,7 @@ var _ = Describe("Install Controlplane, Core, Bootstrap Providers in an air-gapp
 		By("Waiting for the bootstrap provider deployment to be ready")
 		framework.WaitForDeploymentsAvailable(ctx, framework.WaitForDeploymentsAvailableInput{
 			Getter:     bootstrapClusterProxy.GetClient(),
-			Deployment: &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: bootstrapProviderDeploymentName, Namespace: capkbSystemNamespace}},
+			Deployment: &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: bootstrapProviderDeploymentName, Namespace: cabpkSystemNamespace}},
 		}, e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
 		By("Waiting for bootstrap provider to be ready")
@@ -265,7 +265,7 @@ var _ = Describe("Install Controlplane, Core, Bootstrap Providers in an air-gapp
 		By("Waiting for the controlplane provider deployment to be ready")
 		framework.WaitForDeploymentsAvailable(ctx, framework.WaitForDeploymentsAvailableInput{
 			Getter:     bootstrapClusterProxy.GetClient(),
-			Deployment: &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: cpProviderDeploymentName, Namespace: capkcpSystemNamespace}},
+			Deployment: &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: cpProviderDeploymentName, Namespace: cacpkSystemNamespace}},
 		}, e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
 		By("Waiting for controlplane provider to be ready")
@@ -283,7 +283,7 @@ var _ = Describe("Install Controlplane, Core, Bootstrap Providers in an air-gapp
 		bootstrapCluster := bootstrapClusterProxy.GetClient()
 		bootstrapProvider := &operatorv1.BootstrapProvider{ObjectMeta: metav1.ObjectMeta{
 			Name:      customProviderName,
-			Namespace: capkbSystemNamespace,
+			Namespace: cabpkSystemNamespace,
 		}}
 
 		Expect(bootstrapCluster.Delete(ctx, bootstrapProvider)).To(Succeed())
@@ -291,7 +291,7 @@ var _ = Describe("Install Controlplane, Core, Bootstrap Providers in an air-gapp
 		By("Waiting for the bootstrap provider deployment to be deleted")
 		WaitForDelete(ctx, For(&appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{
 			Name:      bootstrapProviderDeploymentName,
-			Namespace: capkbSystemNamespace,
+			Namespace: cabpkSystemNamespace,
 		}}).In(bootstrapCluster), e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
 		By("Waiting for the bootstrap provider object to be deleted")
@@ -323,7 +323,7 @@ var _ = Describe("Install Controlplane, Core, Bootstrap Providers in an air-gapp
 		By("Deleting capkb-system namespace")
 		namespace := &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: capkbSystemNamespace,
+				Name: cabpkSystemNamespace,
 			},
 		}
 		Expect(bootstrapCluster.Delete(ctx, namespace)).To(Succeed())
@@ -383,7 +383,7 @@ var _ = Describe("Install Controlplane, Core, Bootstrap Providers in an air-gapp
 		bootstrapCluster := bootstrapClusterProxy.GetClient()
 		ControlPlaneProvider := &operatorv1.ControlPlaneProvider{ObjectMeta: metav1.ObjectMeta{
 			Name:      customProviderName,
-			Namespace: capkcpSystemNamespace,
+			Namespace: cacpkSystemNamespace,
 		}}
 
 		Expect(bootstrapCluster.Delete(ctx, ControlPlaneProvider)).To(Succeed())
@@ -391,7 +391,7 @@ var _ = Describe("Install Controlplane, Core, Bootstrap Providers in an air-gapp
 		By("Waiting for the controlplane provider deployment to be deleted")
 		WaitForDelete(ctx, For(&appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{
 			Name:      cpProviderDeploymentName,
-			Namespace: capkcpSystemNamespace,
+			Namespace: cacpkSystemNamespace,
 		}}).In(bootstrapCluster), e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
 		By("Waiting for the controlplane provider object to be deleted")
@@ -423,7 +423,7 @@ var _ = Describe("Install Controlplane, Core, Bootstrap Providers in an air-gapp
 		By("Deleting capkcp-system namespace")
 		namespace := &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: capkcpSystemNamespace,
+				Name: cacpkSystemNamespace,
 			},
 		}
 		Expect(bootstrapCluster.Delete(ctx, namespace)).To(Succeed())
