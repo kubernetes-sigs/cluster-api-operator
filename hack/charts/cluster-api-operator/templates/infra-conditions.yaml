@@ -54,8 +54,8 @@ metadata:
 {{- with .Values.configSecret }}
 spec:
 {{- if $.Values.manager }}
-  manager:
 {{- if and $.Values.manager.featureGates $.Values.manager.featureGates.kubeadm }}
+  manager:
     featureGates:
     {{- range $key, $value := $.Values.manager.featureGates.kubeadm }}
       {{ $key }}: {{ $value }}
