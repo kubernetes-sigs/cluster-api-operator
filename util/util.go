@@ -70,6 +70,35 @@ func ClusterctlProviderType(genericProvider operatorv1.GenericProvider) clusterc
 	return clusterctlv1.ProviderTypeUnknown
 }
 
+// GetCustomProviders retrieves all custom providers using `FetchConfig` that aren't the current provider name / type.
+func GetCustomProviders(ctx context.Context, cl ctrlclient.Client, currProvider genericprovider.GenericProvider) ([]operatorv1.GenericProvider, error) {
+	customProviders := []operatorv1.GenericProvider{}
+	currProviderName := currProvider.GetName()
+	currProviderType := currProvider.GetType()
+
+	for _, providerList := range operatorv1.ProviderLists {
+		genProviderList, ok := providerList.(genericProviderList)
+		if !ok {
+			return nil, fmt.Errorf("cannot cast providers list to genericProviderList")
+		}
+
+		if err := cl.List(ctx, genProviderList); err != nil {
+			return nil, fmt.Errorf("cannot get a list of providers from the server: %w", err)
+		}
+
+		genProviderListItems := genProviderList.GetItems()
+		for i, provider := range genProviderListItems {
+			if provider.GetName() == currProviderName && provider.GetType() == currProviderType || provider.GetSpec().FetchConfig == nil {
+				continue
+			}
+
+			customProviders = append(customProviders, genProviderListItems[i])
+		}
+	}
+
+	return customProviders, nil
+}
+
 // GetGenericProvider returns the first of generic providers matching the type and the name from the configclient.Provider.
 func GetGenericProvider(ctx context.Context, cl ctrlclient.Client, provider configclient.Provider) (operatorv1.GenericProvider, error) {
 	var list genericProviderList
