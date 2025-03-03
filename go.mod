@@ -1,6 +1,8 @@
 module sigs.k8s.io/cluster-api-operator
 
-go 1.23
+go 1.23.0
+
+toolchain go1.23.6
 
 require (
 	github.com/MakeNowJust/heredoc v1.0.0
@@ -15,7 +17,7 @@ require (
 	github.com/opencontainers/image-spec v1.1.0
 	github.com/spf13/cobra v1.9.1
 	github.com/spf13/pflag v1.0.6
-	golang.org/x/oauth2 v0.26.0
+	golang.org/x/oauth2 v0.27.0
 	k8s.io/api v0.31.6
 	k8s.io/apiextensions-apiserver v0.31.6
 	k8s.io/apimachinery v0.31.6
