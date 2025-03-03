@@ -1,6 +1,9 @@
 module sigs.k8s.io/cluster-api-operator
 
-go 1.23
+go 1.23.0
+
+toolchain go1.23.6
+
 require (
 	github.com/MakeNowJust/heredoc v1.0.0
 	github.com/Masterminds/goutils v1.1.1
