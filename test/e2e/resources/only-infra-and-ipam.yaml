@@ -1,33 +1,5 @@
 ---
-# Source: cluster-api-operator/templates/addon.yaml
-apiVersion: v1
-kind: Namespace
-metadata:
-  annotations:
-    "helm.sh/hook": "post-install,post-upgrade"
-    "helm.sh/hook-weight": "1"
-    "argocd.argoproj.io/sync-wave": "1"
-  name: helm-addon-system
----
-# Source: cluster-api-operator/templates/bootstrap.yaml
-apiVersion: v1
-kind: Namespace
-metadata:
-  annotations:
-    "helm.sh/hook": "post-install,post-upgrade"
-    "helm.sh/hook-weight": "1"
-  name: kubeadm-bootstrap-system
----
-# Source: cluster-api-operator/templates/control-plane.yaml
-apiVersion: v1
-kind: Namespace
-metadata:
-  annotations:
-    "helm.sh/hook": "post-install,post-upgrade"
-    "helm.sh/hook-weight": "1"
-  name: kubeadm-control-plane-system
----
-# Source: cluster-api-operator/templates/core.yaml
+# Source: cluster-api-operator/templates/core-conditions.yaml
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -35,6 +7,26 @@ metadata:
     "helm.sh/hook": "post-install,post-upgrade"
     "helm.sh/hook-weight": "1"
   name: capi-system
+---
+# Source: cluster-api-operator/templates/infra-conditions.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    "helm.sh/hook": "post-install,post-upgrade"
+    "helm.sh/hook-weight": "1"
+    "argocd.argoproj.io/sync-wave": "1"
+  name: capi-kubeadm-bootstrap-system
+---
+# Source: cluster-api-operator/templates/infra-conditions.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    "helm.sh/hook": "post-install,post-upgrade"
+    "helm.sh/hook-weight": "1"
+    "argocd.argoproj.io/sync-wave": "1"
+  name: capi-kubeadm-control-plane-system
 ---
 # Source: cluster-api-operator/templates/infra.yaml
 apiVersion: v1
@@ -56,50 +48,37 @@ metadata:
     "argocd.argoproj.io/sync-wave": "1"
   name: in-cluster-ipam-system
 ---
-# Source: cluster-api-operator/templates/addon.yaml
+# Source: cluster-api-operator/templates/infra-conditions.yaml
 apiVersion: operator.cluster.x-k8s.io/v1alpha2
-kind: AddonProvider
+kind: BootstrapProvider
 metadata:
-  name: helm
-  namespace: helm-addon-system
+  name: kubeadm
+  namespace: capi-kubeadm-bootstrap-system
   annotations:
     "helm.sh/hook": "post-install,post-upgrade"
     "helm.sh/hook-weight": "2"
     "argocd.argoproj.io/sync-wave": "2"
 spec:
-  version: v0.2.6
----
-# Source: cluster-api-operator/templates/bootstrap.yaml
-apiVersion: operator.cluster.x-k8s.io/v1alpha2
-kind: BootstrapProvider
-metadata:
-  name: kubeadm
-  namespace: kubeadm-bootstrap-system
-  annotations:
-    "helm.sh/hook": "post-install,post-upgrade"
-    "helm.sh/hook-weight": "2"
-spec:
-  version: v1.7.7
   configSecret:
     name: test-secret-name
     namespace: test-secret-namespace
 ---
-# Source: cluster-api-operator/templates/control-plane.yaml
+# Source: cluster-api-operator/templates/infra-conditions.yaml
 apiVersion: operator.cluster.x-k8s.io/v1alpha2
 kind: ControlPlaneProvider
 metadata:
   name: kubeadm
-  namespace: kubeadm-control-plane-system
+  namespace: capi-kubeadm-control-plane-system
   annotations:
     "helm.sh/hook": "post-install,post-upgrade"
     "helm.sh/hook-weight": "2"
+    "argocd.argoproj.io/sync-wave": "2"
 spec:
-  version: v1.7.7
   configSecret:
     name: test-secret-name
     namespace: test-secret-namespace
 ---
-# Source: cluster-api-operator/templates/core.yaml
+# Source: cluster-api-operator/templates/core-conditions.yaml
 apiVersion: operator.cluster.x-k8s.io/v1alpha2
 kind: CoreProvider
 metadata:
@@ -108,9 +87,7 @@ metadata:
   annotations:
     "helm.sh/hook": "post-install,post-upgrade"
     "helm.sh/hook-weight": "2"
-    "argocd.argoproj.io/sync-wave": "2"
 spec:
-  version: v1.7.7
   configSecret:
     name: test-secret-name
     namespace: test-secret-namespace
@@ -126,7 +103,6 @@ metadata:
     "helm.sh/hook-weight": "2"
     "argocd.argoproj.io/sync-wave": "2"
 spec:
-  version: v1.0.0
   configSecret:
     name: test-secret-name
     namespace: test-secret-namespace
@@ -142,7 +118,6 @@ metadata:
     "helm.sh/hook-weight": "2"
     "argocd.argoproj.io/sync-wave": "2"
 spec:
-  version: v1.7.7
   configSecret:
     name: test-secret-name
     namespace: test-secret-namespace
