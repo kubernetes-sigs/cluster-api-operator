@@ -147,7 +147,7 @@ func (p *phaseReconciler) initializePhaseReconciler(ctx context.Context) (reconc
 		return reconcile.Result{}, err
 	}
 
-	// Get all providers using fetchConfig that aren't the current provider.
+	// Get all custom providers using fetchConfig that aren't the current provider.
 	customProviders, err := util.GetCustomProviders(ctx, p.ctrlClient, p.provider)
 	if err != nil {
 		return reconcile.Result{}, err
