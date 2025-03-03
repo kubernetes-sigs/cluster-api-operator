@@ -8,7 +8,7 @@ require (
 	github.com/evanphx/json-patch/v5 v5.9.11
 	github.com/go-errors/errors v1.5.1
 	github.com/go-logr/logr v1.4.2
-	github.com/google/go-cmp v0.6.0
+	github.com/google/go-cmp v0.7.0
 	github.com/google/go-github/v52 v52.0.0
 	github.com/google/gofuzz v1.2.0
 	github.com/onsi/gomega v1.36.2
