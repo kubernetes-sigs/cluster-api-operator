@@ -1,0 +1,73 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "definitions": {
+    "nameNamespaceVersion": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "namespace": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "properties": {
+    "core": {
+      "oneOf": [
+        { "$ref": "#/definitions/nameNamespaceVersion" },
+        { "type": "null" }
+      ]
+    },
+    "bootstrap": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          { "$ref": "#/definitions/nameNamespaceVersion" },
+          { "type": "null" }
+        ]
+      }
+    },
+    "controlPlane": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          { "$ref": "#/definitions/nameNamespaceVersion" },
+          { "type": "null" }
+        ]
+      }
+    },
+    "infrastructure": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          { "$ref": "#/definitions/nameNamespaceVersion" },
+          { "type": "null" }
+        ]
+      }
+    },
+    "addon": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          { "$ref": "#/definitions/nameNamespaceVersion" },
+          { "type": "null" }
+        ]
+      }
+    },
+    "ipam": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          { "$ref": "#/definitions/nameNamespaceVersion" },
+          { "type": "null" }
+        ]
+      }
+    }
+  }
+}
