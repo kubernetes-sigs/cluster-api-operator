@@ -147,6 +147,18 @@ func (p *phaseReconciler) initializePhaseReconciler(ctx context.Context) (reconc
 		return reconcile.Result{}, err
 	}
 
+	// Get all custom providers using fetchConfig that aren't the current provider.
+	customProviders, err := util.GetCustomProviders(ctx, p.ctrlClient, p.provider)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	// Load all custom providers into MemoryReader.
+	reader, err = loadCustomProviders(customProviders, reader)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
 	// Load provider's secret and config url.
 	p.configClient, err = configclient.New(ctx, "", configclient.InjectReader(reader))
 	if err != nil {
@@ -560,6 +572,28 @@ func getProvider(provider operatorv1.GenericProvider, defaultVersion string) clu
 	}
 
 	return *clusterctlProvider
+}
+
+// loadCustomProviders loads the passed providers list into the clusterctl configuration via the MemoryReader.
+func loadCustomProviders(providers []operatorv1.GenericProvider, reader configclient.Reader) (configclient.Reader, error) {
+	mr, ok := reader.(*configclient.MemoryReader)
+	if !ok {
+		return nil, fmt.Errorf("unable to load custom providers, invalid reader passed")
+	}
+
+	for _, provider := range providers {
+		if provider.GetSpec().FetchConfig.URL == "" {
+			if _, err := mr.AddProvider(provider.GetName(), util.ClusterctlProviderType(provider), fakeURL); err != nil {
+				return nil, err
+			}
+		} else {
+			if _, err := mr.AddProvider(provider.GetName(), util.ClusterctlProviderType(provider), provider.GetSpec().FetchConfig.URL); err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	return mr, nil
 }
 
 // delete deletes the provider components using clusterctl library.
