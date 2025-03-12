@@ -46,6 +46,16 @@ metadata:
     "argocd.argoproj.io/sync-wave": "1"
   name: docker-infrastructure-system
 ---
+# Source: cluster-api-operator/templates/ipam.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    "helm.sh/hook": "post-install,post-upgrade"
+    "helm.sh/hook-weight": "1"
+    "argocd.argoproj.io/sync-wave": "1"
+  name: in-cluster-ipam-system
+---
 # Source: cluster-api-operator/templates/addon.yaml
 apiVersion: operator.cluster.x-k8s.io/v1alpha2
 kind: AddonProvider
@@ -88,6 +98,19 @@ kind: CoreProvider
 metadata:
   name: cluster-api
   namespace: capi-system
+  annotations:
+    "helm.sh/hook": "post-install,post-upgrade"
+    "helm.sh/hook-weight": "2"
+    "argocd.argoproj.io/sync-wave": "2"
+spec:
+  manager:
+---
+# Source: cluster-api-operator/templates/ipam.yaml
+apiVersion: operator.cluster.x-k8s.io/v1alpha2
+kind: IPAMProvider
+metadata:
+  name: in-cluster
+  namespace: in-cluster-ipam-system
   annotations:
     "helm.sh/hook": "post-install,post-upgrade"
     "helm.sh/hook-weight": "2"

@@ -46,6 +46,16 @@ metadata:
     "argocd.argoproj.io/sync-wave": "1"
   name: capd-custom-ns
 ---
+# Source: cluster-api-operator/templates/ipam.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    "helm.sh/hook": "post-install,post-upgrade"
+    "helm.sh/hook-weight": "1"
+    "argocd.argoproj.io/sync-wave": "1"
+  name: in-cluster-custom-ns
+---
 # Source: cluster-api-operator/templates/addon.yaml
 apiVersion: operator.cluster.x-k8s.io/v1alpha2
 kind: AddonProvider
@@ -101,6 +111,22 @@ metadata:
     "argocd.argoproj.io/sync-wave": "2"
 spec:
   version: v1.7.7
+  configSecret:
+    name: test-secret-name
+    namespace: test-secret-namespace
+---
+# Source: cluster-api-operator/templates/ipam.yaml
+apiVersion: operator.cluster.x-k8s.io/v1alpha2
+kind: IPAMProvider
+metadata:
+  name: in-cluster
+  namespace: in-cluster-custom-ns
+  annotations:
+    "helm.sh/hook": "post-install,post-upgrade"
+    "helm.sh/hook-weight": "2"
+    "argocd.argoproj.io/sync-wave": "2"
+spec:
+  version: v1.0.0
   configSecret:
     name: test-secret-name
     namespace: test-secret-namespace
