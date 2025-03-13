@@ -47,8 +47,8 @@ spec:
   version: {{ $infrastructureVersion }}
 {{- end }}
 {{- if $.Values.manager }}
-  manager:
 {{- if and (kindIs "map" $.Values.manager.featureGates) (hasKey $.Values.manager.featureGates $infrastructureName) }}
+  manager:
 {{- range $key, $value := $.Values.manager.featureGates }}
   {{- if eq $key $infrastructureName }}
     featureGates:
