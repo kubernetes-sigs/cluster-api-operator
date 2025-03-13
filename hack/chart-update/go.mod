@@ -1,6 +1,9 @@
 module sigs.k8s.io/cluster-api-operator/hack/chart-update
 
-go 1.23
+go 1.23.0
+
+toolchain go1.23.7
+
 require (
 	github.com/google/go-github/v50 v50.2.0
 	helm.sh/helm/v3 v3.16.4
