@@ -16,6 +16,7 @@ metadata:
   annotations:
     "helm.sh/hook": "post-install,post-upgrade"
     "helm.sh/hook-weight": "1"
+    "argocd.argoproj.io/sync-wave": "1"
   name: capi-system
 ---
 # Source: cluster-api-operator/templates/infra-conditions.yaml
@@ -98,6 +99,7 @@ metadata:
   annotations:
     "helm.sh/hook": "post-install,post-upgrade"
     "helm.sh/hook-weight": "2"
+    "argocd.argoproj.io/sync-wave": "2"
 spec:
   configSecret:
     name: test-secret-name
