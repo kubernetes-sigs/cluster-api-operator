@@ -47,8 +47,8 @@ spec:
   version: {{ $ipamVersion }}
 {{- end }}
 {{- if $.Values.manager }}
-  manager:
 {{- if and (kindIs "map" $.Values.manager.featureGates) (hasKey $.Values.manager.featureGates $ipamName) }}
+  manager:
 {{- range $key, $value := $.Values.manager.featureGates }}
   {{- if eq $key $ipamName }}
     featureGates:
