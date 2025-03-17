@@ -45,8 +45,8 @@ spec:
   version: {{ $coreVersion }}
 {{- end }}
 {{- if $.Values.manager }}
-  manager:
 {{- if and $.Values.manager.featureGates $.Values.manager.featureGates.core }}
+  manager:
     featureGates:
     {{- range $key, $value := $.Values.manager.featureGates.core }}
       {{ $key }}: {{ $value }}

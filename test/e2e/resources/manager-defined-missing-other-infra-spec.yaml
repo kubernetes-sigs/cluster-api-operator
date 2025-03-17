@@ -115,7 +115,6 @@ metadata:
     "helm.sh/hook-weight": "2"
     "argocd.argoproj.io/sync-wave": "2"
 spec:
-  manager:
 ---
 # Source: cluster-api-operator/templates/infra.yaml
 apiVersion: operator.cluster.x-k8s.io/v1alpha2
@@ -128,4 +127,3 @@ metadata:
     "helm.sh/hook-weight": "2"
     "argocd.argoproj.io/sync-wave": "2"
 spec:
-  manager:
