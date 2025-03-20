@@ -54,6 +54,6 @@ const (
 	ipamProviderURL            = "https://github.com/kubernetes-sigs/cluster-api-ipam-provider-in-cluster/releases/latest/ipam-components.yaml"
 	ipamProviderDeploymentName = "capi-ipam-in-cluster-controller-manager"
 
-	customManifestsFolder = "resources/"
+	customManifestsFolder = "resources"
 	customProviderName    = "kubeadm-custom"
 )

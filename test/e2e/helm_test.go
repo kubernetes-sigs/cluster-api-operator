@@ -80,7 +80,7 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 
 		By("Waiting for core provider to be ready")
 		WaitFor(ctx, For(coreProvider).In(clusterProxy).ToSatisfy(
-			HaveStatusCondition(&coreProvider.Status.Conditions, operatorv1.ProviderInstalledCondition),
+			HaveStatusConditionsTrue(coreProvider, operatorv1.ProviderInstalledCondition),
 		), e2eConfig.GetIntervals(helmClusterProxy.GetName(), "wait-controllers")...)
 
 		By("Waiting for status.InstalledVersion to be set")
@@ -107,7 +107,7 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 
 		By("Waiting for bootstrap provider to be ready")
 		WaitFor(ctx, For(bootstrapProvider).In(clusterProxy).ToSatisfy(
-			HaveStatusCondition(&bootstrapProvider.Status.Conditions, operatorv1.ProviderInstalledCondition)),
+			HaveStatusConditionsTrue(bootstrapProvider, operatorv1.ProviderInstalledCondition)),
 			e2eConfig.GetIntervals(helmClusterProxy.GetName(), "wait-controllers")...)
 
 		By("Waiting for status.InstalledVersion to be set")
