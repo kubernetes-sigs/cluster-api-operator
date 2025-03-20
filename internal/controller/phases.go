@@ -194,7 +194,7 @@ func (p *phaseReconciler) load(ctx context.Context) (reconcile.Result, error) {
 		labelSelector = p.provider.GetSpec().FetchConfig.Selector
 	}
 
-	additionalManifests, err := p.fetchAddionalManifests(ctx)
+	additionalManifests, err := p.fetchAdditionalManifests(ctx)
 	if err != nil {
 		return reconcile.Result{}, wrapPhaseError(err, "failed to load additional manifests", operatorv1.ProviderInstalledCondition)
 	}
@@ -356,7 +356,7 @@ func (p *phaseReconciler) configmapRepository(ctx context.Context, labelSelector
 	return mr, nil
 }
 
-func (p *phaseReconciler) fetchAddionalManifests(ctx context.Context) (string, error) {
+func (p *phaseReconciler) fetchAdditionalManifests(ctx context.Context) (string, error) {
 	cm := &corev1.ConfigMap{}
 
 	if p.provider.GetSpec().AdditionalManifestsRef != nil {
@@ -548,7 +548,7 @@ func (p *phaseReconciler) install(ctx context.Context) (reconcile.Result, error)
 	return reconcile.Result{}, nil
 }
 
-func (p *phaseReconciler) reportStatus(ctx context.Context) (reconcile.Result, error) {
+func (p *phaseReconciler) reportStatus(_ context.Context) (reconcile.Result, error) {
 	status := p.provider.GetStatus()
 	status.Contract = &p.contract
 	installedVersion := p.components.Version()
