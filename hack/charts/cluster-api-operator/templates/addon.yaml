@@ -1,26 +1,8 @@
 # Addon provider
-{{- if .Values.addon }}
-{{- $addons := split ";" .Values.addon }}
-{{- $addonNamespace := "" }}
-{{- $addonName := "" }}
-{{- $addonVersion := "" }}
-{{- range $addon := $addons }}
-{{- $addonArgs := split ":" $addon }}
-{{- $addonArgsLen :=  len $addonArgs }}
-{{-  if eq $addonArgsLen 3 }}
-  {{- $addonNamespace = $addonArgs._0 }}
-  {{- $addonName = $addonArgs._1 }}
-  {{- $addonVersion = $addonArgs._2 }}
-{{-  else if eq $addonArgsLen 2 }}
-  {{- $addonNamespace = print $addonArgs._0 "-addon-system" }}
-  {{- $addonName = $addonArgs._0 }}
-  {{- $addonVersion = $addonArgs._1 }}
-{{-  else if eq $addonArgsLen 1 }}
-  {{- $addonNamespace = print $addonArgs._0 "-addon-system" }}
-  {{- $addonName = $addonArgs._0 }}
-{{- else }}
-  {{- fail "addon provider argument should have the following format helm:v1.0.0 or mynamespace:helm:v1.0.0" }}
-{{- end }}
+{{- range $name, $addon := $.Values.addon }}
+  {{- $addonNamespace := default ( printf "%s-%s" $name "addon-system" ) (get $addon "namespace") }}
+  {{- $addonName := $name }}
+  {{- $addonVersion := get $addon "version" }}
 ---
 apiVersion: v1
 kind: Namespace
@@ -56,5 +38,24 @@ spec:
 {{- if $.Values.secretNamespace }}
   secretNamespace: {{ $.Values.secretNamespace }}
 {{- end }}
+{{- if $addon.manifestPatches }}
+  manifestPatches: {{ toYaml $addon.manifestPatches | nindent 4 }}
 {{- end }}
+{{- if $addon.additionalManifests }}
+  additionalManifests:
+    name: {{ $addon.additionalManifests.name }}
+    {{- if $addon.additionalManifests.namespace }}
+    namespace: {{ $addon.additionalManifests.namespace }}
+    {{- end }} {{/* if $addon.additionalManifests.namespace */}}
 {{- end }}
+{{- if $addon.additionalManifests }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $addon.additionalManifests.name }}
+  namespace: {{ default $addonNamespace $addon.additionalManifests.namespace }}
+data:
+  manifests: {{- toYaml $addon.additionalManifests.manifests | nindent 4 }}
+{{- end }}
+{{- end }} {{/* range $name, $addon := .Values.addon */}}

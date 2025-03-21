@@ -37,7 +37,7 @@ metadata:
     "helm.sh/hook": "post-install,post-upgrade"
     "helm.sh/hook-weight": "1"
     "argocd.argoproj.io/sync-wave": "1"
-  name: capd-custom-ns
+  name: capz-custom-ns
 ---
 # Source: cluster-api-operator/templates/infra.yaml
 apiVersion: v1
@@ -47,7 +47,7 @@ metadata:
     "helm.sh/hook": "post-install,post-upgrade"
     "helm.sh/hook-weight": "1"
     "argocd.argoproj.io/sync-wave": "1"
-  name: capz-custom-ns
+  name: capd-custom-ns
 ---
 # Source: cluster-api-operator/templates/infra-conditions.yaml
 apiVersion: operator.cluster.x-k8s.io/v1alpha2
@@ -98,22 +98,6 @@ spec:
 apiVersion: operator.cluster.x-k8s.io/v1alpha2
 kind: InfrastructureProvider
 metadata:
-  name: docker
-  namespace: capd-custom-ns
-  annotations:
-    "helm.sh/hook": "post-install,post-upgrade"
-    "helm.sh/hook-weight": "2"
-    "argocd.argoproj.io/sync-wave": "2"
-spec:
-  version: v1.7.7
-  configSecret:
-    name: test-secret-name
-    namespace: test-secret-namespace
----
-# Source: cluster-api-operator/templates/infra.yaml
-apiVersion: operator.cluster.x-k8s.io/v1alpha2
-kind: InfrastructureProvider
-metadata:
   name: azure
   namespace: capz-custom-ns
   annotations:
@@ -122,6 +106,22 @@ metadata:
     "argocd.argoproj.io/sync-wave": "2"
 spec:
   version: v1.10.0
+  configSecret:
+    name: test-secret-name
+    namespace: test-secret-namespace
+---
+# Source: cluster-api-operator/templates/infra.yaml
+apiVersion: operator.cluster.x-k8s.io/v1alpha2
+kind: InfrastructureProvider
+metadata:
+  name: docker
+  namespace: capd-custom-ns
+  annotations:
+    "helm.sh/hook": "post-install,post-upgrade"
+    "helm.sh/hook-weight": "2"
+    "argocd.argoproj.io/sync-wave": "2"
+spec:
+  version: v1.7.7
   configSecret:
     name: test-secret-name
     namespace: test-secret-namespace

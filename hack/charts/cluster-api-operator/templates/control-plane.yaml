@@ -1,26 +1,8 @@
 # Control plane provider
-{{- if .Values.controlPlane }}
-{{- $controlPlanes := split ";" .Values.controlPlane }}
-{{- $controlPlaneNamespace := "" }}
-{{- $controlPlaneName := "" }}
-{{- $controlPlaneVersion := "" }}
-{{- range $controlPlane := $controlPlanes }}
-{{- $controlPlaneArgs := split ":" $controlPlane }}
-{{- $controlPlaneArgsLen :=  len $controlPlaneArgs }}
-{{-  if eq $controlPlaneArgsLen 3 }}
-  {{- $controlPlaneNamespace = $controlPlaneArgs._0 }}
-  {{- $controlPlaneName = $controlPlaneArgs._1 }}
-  {{- $controlPlaneVersion = $controlPlaneArgs._2 }}
-{{-  else if eq $controlPlaneArgsLen 2 }}
-  {{- $controlPlaneNamespace = print $controlPlaneArgs._0 "-control-plane-system" }}
-  {{- $controlPlaneName = $controlPlaneArgs._0 }}
-  {{- $controlPlaneVersion = $controlPlaneArgs._1 }}
-{{-  else if eq $controlPlaneArgsLen 1 }}
-  {{- $controlPlaneNamespace = print $controlPlaneArgs._0 "-control-plane-system" }}
-  {{- $controlPlaneName = $controlPlaneArgs._0 }}
-{{- else }}
-  {{- fail "controlplane provider argument should have the following format kubeadm:v1.0.0 or mynamespace:kubeadm:v1.0.0" }}
-{{-  end }}
+{{- range $name, $controlPlane := $.Values.controlPlane }}
+  {{- $controlPlaneNamespace := default ( printf "%s-%s" $name "control-plane-system" ) (get $controlPlane "namespace") }}
+  {{- $controlPlaneName := $name }}
+  {{- $controlPlaneVersion := get $controlPlane "version" }}
 ---
 apiVersion: v1
 kind: Namespace
@@ -70,5 +52,24 @@ spec:
     namespace: {{ $.Values.configSecret.namespace }}
     {{- end }}
 {{- end }}
+{{- if $controlPlane.manifestPatches }}
+  manifestPatches: {{ toYaml $controlPlane.manifestPatches | nindent 4 }}
 {{- end }}
+{{- if $controlPlane.additionalManifests }}
+  additionalManifests:
+    name: {{ $controlPlane.additionalManifests.name }}
+    {{- if $controlPlane.additionalManifests.namespace }}
+    namespace: {{ $controlPlane.additionalManifests.namespace }}
+    {{- end }} {{/* if $controlPlane.additionalManifests.namespace */}}
 {{- end }}
+{{- if $controlPlane.additionalManifests }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $controlPlane.additionalManifests.name }}
+  namespace: {{ default $controlPlaneNamespace $controlPlane.additionalManifests.namespace }}
+data:
+  manifests: {{- toYaml $controlPlane.additionalManifests.manifests | nindent 4 }}
+{{- end }}
+{{- end }} {{/* range $name, $controlPlane := .Values.controlPlane */}}
