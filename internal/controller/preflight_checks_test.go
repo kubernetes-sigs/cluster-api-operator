@@ -242,6 +242,61 @@ func TestPreflightChecks(t *testing.T) {
 			providerList: &operatorv1.InfrastructureProviderList{},
 		},
 		{
+			name:          "only one infra provider exists but core provider is not ready, preflight check failed",
+			expectedError: true,
+			providers: []operatorv1.GenericProvider{
+				&operatorv1.InfrastructureProvider{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "aws",
+						Namespace: namespaceName1,
+					},
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "InfrastructureProvider",
+						APIVersion: "operator.cluster.x-k8s.io/v1alpha1",
+					},
+					Spec: operatorv1.InfrastructureProviderSpec{
+						ProviderSpec: operatorv1.ProviderSpec{
+							Version: "v1.0.0",
+						},
+					},
+				},
+				&operatorv1.CoreProvider{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "cluster-api",
+						Namespace: namespaceName2,
+					},
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "CoreProvider",
+						APIVersion: "operator.cluster.x-k8s.io/v1alpha4",
+					},
+					Spec: operatorv1.CoreProviderSpec{
+						ProviderSpec: operatorv1.ProviderSpec{
+							Version: "v1.0.0",
+						},
+					},
+					Status: operatorv1.CoreProviderStatus{
+						ProviderStatus: operatorv1.ProviderStatus{
+							Conditions: []clusterv1.Condition{
+								{
+									Type:               clusterv1.ReadyCondition,
+									Status:             corev1.ConditionFalse,
+									LastTransitionTime: metav1.Now(),
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedCondition: clusterv1.Condition{
+				Type:     operatorv1.PreflightCheckCondition,
+				Status:   corev1.ConditionFalse,
+				Reason:   operatorv1.WaitingForCoreProviderReadyReason,
+				Severity: clusterv1.ConditionSeverityInfo,
+				Message:  "Waiting for the CoreProvider to be installed.",
+			},
+			providerList: &operatorv1.InfrastructureProviderList{},
+		},
+		{
 			name: "two different infra providers exist in same namespaces, preflight check passed",
 			providers: []operatorv1.GenericProvider{
 				&operatorv1.InfrastructureProvider{
@@ -509,7 +564,7 @@ func TestPreflightChecks(t *testing.T) {
 			providerList: &operatorv1.InfrastructureProviderList{},
 		},
 		{
-			name: "predefined Core Provider without fetch config, preflight check passed",
+			name: "predefined core provider without fetch config, preflight check passed",
 			providers: []operatorv1.GenericProvider{
 				&operatorv1.CoreProvider{
 					ObjectMeta: metav1.ObjectMeta{
@@ -601,13 +656,13 @@ func TestPreflightChecks(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			gs := NewWithT(t)
 
-			fakeclient := fake.NewClientBuilder().WithObjects().Build()
+			fakeClient := fake.NewClientBuilder().WithObjects().Build()
 
 			for _, c := range tc.providers {
-				gs.Expect(fakeclient.Create(ctx, c)).To(Succeed())
+				gs.Expect(fakeClient.Create(ctx, c)).To(Succeed())
 			}
 
-			err := preflightChecks(context.Background(), fakeclient, tc.providers[0], tc.providerList)
+			err := preflightChecks(context.Background(), fakeClient, tc.providers[0], tc.providerList)
 			if tc.expectedError {
 				gs.Expect(err).To(HaveOccurred())
 			} else {
@@ -700,11 +755,11 @@ func TestPreflightChecksUpgradesDowngrades(t *testing.T) {
 				},
 			}
 
-			fakeclient := fake.NewClientBuilder().WithObjects().Build()
+			fakeClient := fake.NewClientBuilder().WithObjects().Build()
 
-			gs.Expect(fakeclient.Create(ctx, provider)).To(Succeed())
+			gs.Expect(fakeClient.Create(ctx, provider)).To(Succeed())
 
-			err := preflightChecks(context.Background(), fakeclient, provider, &operatorv1.CoreProviderList{})
+			err := preflightChecks(context.Background(), fakeClient, provider, &operatorv1.CoreProviderList{})
 			if tc.expectedError {
 				gs.Expect(err).To(HaveOccurred())
 			} else {

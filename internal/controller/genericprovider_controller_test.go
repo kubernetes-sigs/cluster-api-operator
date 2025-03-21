@@ -156,7 +156,7 @@ func testDeploymentLabelValueGetter(deploymentNS, deploymentName string) func() 
 	}
 }
 
-func TestConfigSecretChangesAreAppliedTotheDeployment(t *testing.T) {
+func TestConfigSecretChangesAreAppliedToTheDeployment(t *testing.T) {
 	g := NewWithT(t)
 	objs := []client.Object{}
 
@@ -203,7 +203,7 @@ func TestConfigSecretChangesAreAppliedTotheDeployment(t *testing.T) {
 		30*time.Second,
 	).Should(BeEquivalentTo("initial-value"))
 
-	t.Log("Provider deploymnet deployed")
+	t.Log("Provider deployment deployed")
 
 	configSecret.Data["CONFIGURED_VALUE"] = []byte("updated-value")
 
@@ -531,6 +531,64 @@ releaseSeries:
 	}
 }
 
+func TestProviderShouldNotBeInstalledWhenCoreProviderNotReady(t *testing.T) {
+	g := NewGomegaWithT(t)
+	coreProvider := &operatorv1.CoreProvider{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "cluster-api",
+		},
+		Spec: operatorv1.CoreProviderSpec{
+			ProviderSpec: operatorv1.ProviderSpec{
+				Version: "v0.0.1-incorrect",
+			},
+		},
+	}
+	controlPlaneProvider := &operatorv1.ControlPlaneProvider{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "kubeadm",
+		},
+		Spec: operatorv1.ControlPlaneProviderSpec{
+			ProviderSpec: operatorv1.ProviderSpec{
+				Version: testCurrentVersion,
+			},
+		},
+	}
+
+	ns, err := env.CreateNamespace(ctx, "core-provider-not-ready")
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(ns.Name).NotTo(BeEmpty())
+
+	coreProvider.Namespace = ns.Name
+	g.Expect(env.CreateAndWait(ctx, coreProvider)).To(Succeed())
+
+	controlPlaneProvider.Namespace = ns.Name
+	g.Expect(env.CreateAndWait(ctx, controlPlaneProvider)).To(Succeed())
+
+	defer func() {
+		g.Expect(env.CleanupAndWait(ctx, []client.Object{coreProvider, controlPlaneProvider}...)).To(Succeed())
+	}()
+
+	g.Eventually(func() bool {
+		if err = env.Get(ctx, client.ObjectKeyFromObject(coreProvider), coreProvider); err != nil {
+			return false
+		}
+
+		providerInstalled := conditions.Get(coreProvider, operatorv1.ProviderInstalledCondition)
+
+		return providerInstalled != nil && providerInstalled.Status == corev1.ConditionFalse
+	}, timeout).Should(BeEquivalentTo(true))
+
+	g.Consistently(func() bool {
+		if err = env.Get(ctx, client.ObjectKeyFromObject(controlPlaneProvider), controlPlaneProvider); err != nil {
+			return false
+		}
+
+		return !conditions.IsTrue(controlPlaneProvider, operatorv1.PreflightCheckCondition) &&
+			!conditions.IsTrue(controlPlaneProvider, operatorv1.ProviderInstalledCondition) &&
+			!conditions.IsTrue(controlPlaneProvider, clusterv1.ReadyCondition)
+	}, timeout/3).Should(BeEquivalentTo(true))
+}
+
 func TestProviderConfigSecretChanges(t *testing.T) {
 	testCases := []struct {
 		name           string
@@ -846,15 +904,9 @@ func generateExpectedResultChecker(provider genericprovider.GenericProvider, spe
 			return false
 		}
 
-		for _, cond := range provider.GetStatus().Conditions {
-			if cond.Type == operatorv1.ProviderInstalledCondition {
-				if cond.Status == condStatus {
-					return true
-				}
-			}
-		}
+		condition := conditions.Get(provider, operatorv1.ProviderInstalledCondition)
 
-		return false
+		return condition != nil && condition.Status == condStatus
 	}
 }
 

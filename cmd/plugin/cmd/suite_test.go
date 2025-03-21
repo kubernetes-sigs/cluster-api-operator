@@ -30,7 +30,7 @@ import (
 )
 
 const (
-	waitShort = time.Second * 5
+	waitShort = time.Second * 10
 	waitLong  = time.Second * 20
 )
 
