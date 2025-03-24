@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 
@@ -46,9 +47,11 @@ var (
 	moreThanOneProviderInstanceExistsMessage     = "There is already a %s with name %s in the cluster. Only one is allowed."
 	capiVersionIncompatibilityMessage            = "CAPI operator is only compatible with %s providers, detected %s for provider %s."
 	invalidGithubTokenMessage                    = "Invalid github token, please check your github token value and its permissions" //nolint:gosec
-	waitingForCoreProviderReadyMessage           = "Waiting for the core provider to be installed."
+	waitingForCoreProviderReadyMessage           = "Waiting for the CoreProvider to be installed."
 	incorrectCoreProviderNameMessage             = "Incorrect CoreProvider name: %s. It should be %s"
 	unsupportedProviderDowngradeMessage          = "Downgrade is not supported for provider %s"
+
+	errCoreProviderWait = errors.New(waitingForCoreProviderReadyMessage)
 )
 
 // preflightChecks performs preflight checks before installing provider.
@@ -121,10 +124,10 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 		}
 
 		if token, ok := secret.Data[configclient.GitHubTokenVariable]; ok {
-			client := github.NewClient(oauth2.NewClient(ctx, oauth2.StaticTokenSource(
+			githubClient := github.NewClient(oauth2.NewClient(ctx, oauth2.StaticTokenSource(
 				&oauth2.Token{AccessToken: string(token)},
 			)))
-			if _, _, err := client.Organizations.List(ctx, "kubernetes-sigs", nil); err != nil {
+			if _, _, err := githubClient.Organizations.List(ctx, "kubernetes-sigs", nil); err != nil {
 				conditions.Set(provider, conditions.FalseCondition(
 					operatorv1.PreflightCheckCondition,
 					operatorv1.InvalidGithubTokenReason,
@@ -190,7 +193,7 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 				"%s", waitingForCoreProviderReadyMessage,
 			))
 
-			return nil
+			return errCoreProviderWait
 		}
 	}
 
@@ -256,6 +259,15 @@ func coreProviderIsReady(ctx context.Context, c client.Client) (bool, error) {
 	}
 
 	return false, nil
+}
+
+// ignoreCoreProviderWaitError ignores errCoreProviderWait error.
+func ignoreCoreProviderWaitError(err error) error {
+	if errors.Is(err, errCoreProviderWait) {
+		return nil
+	}
+
+	return err
 }
 
 // isPredefinedProvider checks if a given provider is known for Cluster API.
