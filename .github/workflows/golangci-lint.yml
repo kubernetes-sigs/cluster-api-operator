@@ -21,12 +21,12 @@ jobs:
         with:
           go-version: ${{ steps.vars.outputs.go_version }}
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@4696ba8babb6127d732c3c6dde519db15edab9ea # tag=v6.5.1
+        uses: golangci/golangci-lint-action@55c2c1448f86e01eaae002a5a3a9624417608d84 # tag=v6.5.2
         with:
           version: v1.63.3
           args: --timeout 15m
       - name: golangci-lint-test
-        uses: golangci/golangci-lint-action@4696ba8babb6127d732c3c6dde519db15edab9ea # tag=v6.5.1
+        uses: golangci/golangci-lint-action@55c2c1448f86e01eaae002a5a3a9624417608d84 # tag=v6.5.2
         with:
           version: v1.63.3
           args: --build-tags e2e --timeout 15m
