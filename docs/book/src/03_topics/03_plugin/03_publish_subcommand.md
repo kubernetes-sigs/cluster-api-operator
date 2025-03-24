@@ -38,7 +38,7 @@ kubectl operator publish -u ttl.sh/${IMAGE_NAME}:5m -d manifests -f metadata.yam
 
 ## Publishing Multiple Providers and Versions in an OCI Image
 
-This example demonstrates how to publish three different providers (`control-plane kubeadm`, `bootstrap kubeadm`, and `infrastructure docker`) along with their versioned metadata and components files into a **single OCI image**. Each provider has two versions (`v1.9.4` and `v1.9.5`), and the corresponding metadata and components files follow versioned naming conventions.
+This example demonstrates how to publish three different providers (`control-plane kubeadm`, `bootstrap kubeadm`, and `infrastructure docker`) along with their versioned metadata and components files into a **single OCI image**. Each provider has two versions (`v1.9.4` and `v1.10.0-beta.0`), and the corresponding metadata and components files follow versioned naming conventions.
 
 The following layout for the directory can be used:
 
@@ -50,19 +50,19 @@ manifests/
 ├── bootstrap-kubeadm-v1.9.4-components.yaml
 ├── infrastructure-docker-v1.9.4-metadata.yaml
 ├── infrastructure-docker-v1.9.4-components.yaml
-├── control-plane-kubeadm-v1.9.5-metadata.yaml
-├── control-plane-kubeadm-v1.9.5-components.yaml
-├── bootstrap-kubeadm-v1.9.5-metadata.yaml
-├── bootstrap-kubeadm-v1.9.5-components.yaml
-└── infrastructure-docker-v1.9.5-metadata.yaml
-└── infrastructure-docker-v1.9.5-components.yaml
+├── control-plane-kubeadm-v1.10.0-beta.0-metadata.yaml
+├── control-plane-kubeadm-v1.10.0-beta.0-components.yaml
+├── bootstrap-kubeadm-v1.10.0-beta.0-metadata.yaml
+├── bootstrap-kubeadm-v1.10.0-beta.0-components.yaml
+└── infrastructure-docker-v1.10.0-beta.0-metadata.yaml
+└── infrastructure-docker-v1.10.0-beta.0-components.yaml
 ```
 
 ```bash
 capioperator publish -u my-registry.example.com/providers:latest -d manifests \
 ```
 
-This will publish both versions (`v1.9.4` and `v1.9.5`) of each provider into single OCI image, and each version will have its corresponding metadata and component files.
+This will publish both versions (`v1.9.4` and `v1.10.0-beta.0`) of each provider into single OCI image, and each version will have its corresponding metadata and component files.
 
 ### Publish with authentication
 If authentication is required for the OCI registry, you can specify credentials using environment variables:

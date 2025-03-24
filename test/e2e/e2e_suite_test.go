@@ -337,7 +337,7 @@ func ensureCertManager(clusterProxy framework.ClusterProxy, config *clusterctl.E
 		AdditionalFlags: Flags(
 			"--create-namespace",
 			"-n", certManagerNamespace,
-			"--version", config.GetVariable(certManagerVersion),
+			"--version", config.MustGetVariable(certManagerVersion),
 		),
 	}
 	_, err = certChart.Run(map[string]string{
