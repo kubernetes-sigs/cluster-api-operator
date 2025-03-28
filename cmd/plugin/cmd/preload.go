@@ -66,7 +66,7 @@ var loadCmd = &cobra.Command{
 
 		Alternatively, for multi-provider OCI artifact, a fully specified name can be used for both metadata and components:
 
-		oras push ttl.sh/infrastructure-provider:tag infrastructure-docker-v1.9.5-metadata.yaml infrastructure-docker-v1.9.5-components.yaml
+		oras push ttl.sh/infrastructure-provider:tag infrastructure-docker-v1.10.0-beta.0-metadata.yaml infrastructure-docker-v1.10.0-beta.0-components.yaml
 	`),
 	Example: Examples(`
 		# Load CAPI operator manifests from OCI source
