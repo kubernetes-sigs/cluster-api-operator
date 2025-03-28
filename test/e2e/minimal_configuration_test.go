@@ -109,7 +109,7 @@ metadata:
 
 		By("Waiting for core provider to be ready")
 		WaitFor(ctx, For(coreProvider).In(bootstrapCluster).ToSatisfy(
-			HaveStatusCondition(&coreProvider.Status.Conditions, operatorv1.ProviderInstalledCondition)),
+			HaveStatusConditionsTrue(coreProvider, operatorv1.ProviderInstalledCondition)),
 			e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
 		By("Waiting for status.InstalledVersion to be set")
@@ -151,7 +151,7 @@ metadata:
 
 		By("Waiting for bootstrap provider to be ready")
 		WaitFor(ctx, For(bootstrapProvider).In(bootstrapCluster).ToSatisfy(
-			HaveStatusCondition(&bootstrapProvider.Status.Conditions, operatorv1.ProviderInstalledCondition)),
+			HaveStatusConditionsTrue(bootstrapProvider, operatorv1.ProviderInstalledCondition)),
 			e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
 		By("Waiting for status.InstalledVersion to be set")
@@ -186,7 +186,7 @@ metadata:
 
 		By("Waiting for the control plane provider to be ready")
 		WaitFor(ctx, For(cpProvider).In(bootstrapCluster).ToSatisfy(
-			HaveStatusCondition(&cpProvider.Status.Conditions, operatorv1.ProviderInstalledCondition)),
+			HaveStatusConditionsTrue(cpProvider, operatorv1.ProviderInstalledCondition)),
 			e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
 		By("Waiting for status.InstalledVersion to be set")
@@ -221,7 +221,7 @@ metadata:
 
 		By("Waiting for the infrastructure provider to be ready")
 		WaitFor(ctx, For(infraProvider).In(bootstrapCluster).ToSatisfy(
-			HaveStatusCondition(&infraProvider.Status.Conditions, operatorv1.ProviderInstalledCondition)),
+			HaveStatusConditionsTrue(infraProvider, operatorv1.ProviderInstalledCondition)),
 			e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
 		By("Waiting for status.InstalledVersion to be set")
@@ -263,7 +263,7 @@ metadata:
 
 		By("Waiting for the addon provider to be ready")
 		WaitFor(ctx, For(addonProvider).In(bootstrapCluster).ToSatisfy(
-			HaveStatusCondition(&addonProvider.Status.Conditions, operatorv1.ProviderInstalledCondition)),
+			HaveStatusConditionsTrue(addonProvider, operatorv1.ProviderInstalledCondition)),
 			e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
 		By("Waiting for status.InstalledVersion to be set")
@@ -307,7 +307,7 @@ metadata:
 
 		By("Waiting for the ipam provider to be ready")
 		WaitFor(ctx, For(ipamProvider).In(bootstrapCluster).ToSatisfy(
-			HaveStatusCondition(&ipamProvider.Status.Conditions, operatorv1.ProviderInstalledCondition)),
+			HaveStatusConditionsTrue(ipamProvider, operatorv1.ProviderInstalledCondition)),
 			e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
 		By("Waiting for status.InstalledVersion to be set")
@@ -342,7 +342,7 @@ metadata:
 
 		By("Waiting for core provider to be ready")
 		WaitFor(ctx, For(coreProvider).In(bootstrapCluster).ToSatisfy(
-			HaveStatusCondition(&coreProvider.Status.Conditions, operatorv1.ProviderInstalledCondition)),
+			HaveStatusConditionsTrue(coreProvider, operatorv1.ProviderInstalledCondition)),
 			e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
 		By("Waiting for the core provide status.InstalledVersion to be set")
@@ -423,7 +423,7 @@ metadata:
 
 		By("Waiting for the custom provider to be ready")
 		WaitFor(ctx, For(provider).In(bootstrapCluster).ToSatisfy(
-			HaveStatusCondition(&provider.Status.Conditions, operatorv1.ProviderInstalledCondition)),
+			HaveStatusConditionsTrue(provider, operatorv1.ProviderInstalledCondition)),
 			e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
 		By("Waiting for status.InstalledVersion to be set")
@@ -510,7 +510,7 @@ metadata:
 
 		By("Waiting for the docker provider to be ready")
 		WaitFor(ctx, For(provider).In(bootstrapCluster).ToSatisfy(
-			HaveStatusCondition(&provider.Status.Conditions, operatorv1.ProviderInstalledCondition)),
+			HaveStatusConditionsTrue(provider, operatorv1.ProviderInstalledCondition)),
 			e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
 		By("Waiting for status.InstalledVersion to be set")
@@ -597,7 +597,7 @@ metadata:
 
 		By("Waiting for the docker provider to be ready")
 		WaitFor(ctx, For(provider).In(bootstrapCluster).ToSatisfy(
-			HaveStatusCondition(&provider.Status.Conditions, operatorv1.ProviderInstalledCondition)),
+			HaveStatusConditionsTrue(provider, operatorv1.ProviderInstalledCondition)),
 			e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
 		By("Waiting for status.InstalledVersion to be set")
@@ -616,7 +616,7 @@ metadata:
 
 		By("Waiting for the docker provider to be ready")
 		WaitFor(ctx, For(provider).In(bootstrapCluster).ToSatisfy(
-			HaveStatusCondition(&provider.Status.Conditions, operatorv1.ProviderInstalledCondition)),
+			HaveStatusConditionsTrue(provider, operatorv1.ProviderInstalledCondition)),
 			e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
 		Expect(bootstrapCluster.Delete(ctx, provider)).To(Succeed())
