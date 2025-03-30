@@ -34,7 +34,7 @@ import (
 // It lists all the providers and if its PreflightCheckCondition is not True, this object will be added to the resulting request.
 // This means that notifications will only be sent to those objects that have not pass PreflightCheck.
 func newCoreProviderToProviderFuncMapForProviderList(k8sClient client.Client, providerList genericprovider.GenericProviderList) handler.MapFunc {
-	providerListType := fmt.Sprintf("%t", providerList)
+	providerListType := fmt.Sprintf("%T", providerList)
 
 	return func(ctx context.Context, obj client.Object) []reconcile.Request {
 		log := ctrl.LoggerFrom(ctx).WithValues("provider", map[string]string{"name": obj.GetName(), "namespace": obj.GetNamespace()}, "providerListType", providerListType)
