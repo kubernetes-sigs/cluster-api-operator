@@ -38,7 +38,7 @@ const (
 // It lists all the providers matching spec.configSecret.name values with the secret name querying by index.
 // If the provider references a secret without a namespace, it will assume the secret is in the same namespace as the provider.
 func newSecretToProviderFuncMapForProviderList(k8sClient client.Client, providerList genericprovider.GenericProviderList) handler.MapFunc {
-	providerListType := fmt.Sprintf("%t", providerList)
+	providerListType := fmt.Sprintf("%T", providerList)
 
 	return func(ctx context.Context, secret client.Object) []reconcile.Request {
 		log := ctrl.LoggerFrom(ctx).WithValues("secret", map[string]string{"name": secret.GetName(), "namespace": secret.GetNamespace()}, "providerListType", providerListType)
