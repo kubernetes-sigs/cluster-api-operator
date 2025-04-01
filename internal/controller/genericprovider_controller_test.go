@@ -31,6 +31,7 @@ import (
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	clusterctlv1 "sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3"
 	"sigs.k8s.io/cluster-api/util/conditions"
+	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
@@ -200,7 +201,7 @@ func TestConfigSecretChangesAreAppliedToTheDeployment(t *testing.T) {
 
 	g.Eventually(
 		testDeploymentLabelValueGetter(ns.Name, testDeploymentName),
-		30*time.Second,
+		timeout,
 	).Should(BeEquivalentTo("initial-value"))
 
 	t.Log("Provider deployment deployed")
@@ -213,7 +214,7 @@ func TestConfigSecretChangesAreAppliedToTheDeployment(t *testing.T) {
 
 	g.Eventually(
 		testDeploymentLabelValueGetter(ns.Name, testDeploymentName),
-		30*time.Second,
+		timeout,
 	).Should(BeEquivalentTo("updated-value"))
 }
 
@@ -293,6 +294,17 @@ func TestReconcilerPreflightConditions(t *testing.T) {
 				g.Expect(env.CreateAndWait(ctx, p)).To(Succeed())
 			}
 
+			defer func() {
+				objs := []client.Object{
+					dummyConfigMap(tc.namespace),
+				}
+				for _, p := range tc.providers {
+					objs = append(objs, p)
+				}
+
+				g.Expect(env.CleanupAndWait(ctx, objs...)).To(Succeed())
+			}()
+
 			g.Eventually(func() bool {
 				for _, p := range tc.providers {
 					if err := env.Get(ctx, client.ObjectKeyFromObject(p), p); err != nil {
@@ -306,20 +318,6 @@ func TestReconcilerPreflightConditions(t *testing.T) {
 
 				return false
 			}, timeout).Should(BeEquivalentTo(true))
-
-			objs := []client.Object{}
-			for _, p := range tc.providers {
-				objs = append(objs, p)
-			}
-
-			objs = append(objs, &corev1.ConfigMap{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      testCurrentVersion,
-					Namespace: tc.namespace,
-				},
-			})
-
-			g.Expect(env.CleanupAndWait(ctx, objs...)).To(Succeed())
 		})
 	}
 }
@@ -394,6 +392,11 @@ releaseSeries:
 			provider.SetNamespace(namespace)
 			t.Log("creating test provider", provider.GetName())
 			g.Expect(env.CreateAndWait(ctx, provider)).To(Succeed())
+
+			defer func() {
+				// Clean up
+				g.Expect(env.CleanupAndWait(ctx, []client.Object{provider, dummyFutureConfigMap(namespace, currentVersion), dummyFutureConfigMap(namespace, tc.newVersion)}...)).To(Succeed())
+			}()
 
 			g.Eventually(func() bool {
 				if err := env.Get(ctx, client.ObjectKeyFromObject(provider), provider); err != nil {
@@ -509,24 +512,6 @@ releaseSeries:
 
 				return allSet
 			}, 2*time.Second).Should(BeTrue())
-
-			// Clean up
-			objs := []client.Object{provider}
-			objs = append(objs, &corev1.ConfigMap{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      currentVersion,
-					Namespace: namespace,
-				},
-			})
-
-			objs = append(objs, &corev1.ConfigMap{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      tc.newVersion,
-					Namespace: namespace,
-				},
-			})
-
-			g.Expect(env.CleanupAndWait(ctx, objs...)).To(Succeed())
 		})
 	}
 }
@@ -573,9 +558,7 @@ func TestProviderShouldNotBeInstalledWhenCoreProviderNotReady(t *testing.T) {
 			return false
 		}
 
-		providerInstalled := conditions.Get(coreProvider, operatorv1.ProviderInstalledCondition)
-
-		return providerInstalled != nil && providerInstalled.Status == corev1.ConditionFalse
+		return conditions.Has(coreProvider, operatorv1.ProviderInstalledCondition) && conditions.IsFalse(coreProvider, operatorv1.ProviderInstalledCondition)
 	}, timeout).Should(BeEquivalentTo(true))
 
 	g.Consistently(func() bool {
@@ -587,6 +570,88 @@ func TestProviderShouldNotBeInstalledWhenCoreProviderNotReady(t *testing.T) {
 			!conditions.IsTrue(controlPlaneProvider, operatorv1.ProviderInstalledCondition) &&
 			!conditions.IsTrue(controlPlaneProvider, clusterv1.ReadyCondition)
 	}, timeout/3).Should(BeEquivalentTo(true))
+}
+
+func TestReconcilerPreflightConditionsFromCoreProviderEvents(t *testing.T) {
+	namespace := "test-core-provider-events"
+	coreProvider := &operatorv1.CoreProvider{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "cluster-api",
+		},
+		Spec: operatorv1.CoreProviderSpec{
+			ProviderSpec: operatorv1.ProviderSpec{
+				Version: testCurrentVersion,
+			},
+		},
+	}
+	infrastructureProvider := &operatorv1.InfrastructureProvider{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "vsphere",
+		},
+		Spec: operatorv1.InfrastructureProviderSpec{
+			ProviderSpec: operatorv1.ProviderSpec{
+				Version: testCurrentVersion,
+			},
+		},
+	}
+
+	g := NewWithT(t)
+	t.Log("Ensure namespace exists", namespace)
+	g.Expect(env.EnsureNamespaceExists(ctx, namespace)).To(Succeed())
+
+	g.Expect(env.CreateAndWait(ctx, dummyConfigMap(namespace))).To(Succeed())
+
+	for _, p := range []genericprovider.GenericProvider{coreProvider, infrastructureProvider} {
+		insertDummyConfig(p)
+		p.SetNamespace(namespace)
+		t.Log("creating test provider", p.GetName())
+		g.Expect(env.CreateAndWait(ctx, p)).To(Succeed())
+	}
+
+	defer func() {
+		g.Expect(env.CleanupAndWait(ctx, []client.Object{coreProvider, infrastructureProvider, dummyConfigMap(namespace)}...)).To(Succeed())
+	}()
+
+	g.Eventually(func() bool {
+		if err := env.Get(ctx, client.ObjectKeyFromObject(infrastructureProvider), infrastructureProvider); err != nil {
+			return false
+		}
+
+		if conditions.Has(infrastructureProvider, operatorv1.PreflightCheckCondition) && conditions.IsFalse(infrastructureProvider, operatorv1.PreflightCheckCondition) {
+			return true
+		}
+
+		return false
+	}, timeout).Should(BeEquivalentTo(true))
+
+	g.Eventually(func() bool {
+		if err := env.Get(ctx, client.ObjectKeyFromObject(coreProvider), coreProvider); err != nil {
+			return false
+		}
+
+		if conditions.IsTrue(coreProvider, operatorv1.PreflightCheckCondition) && conditions.IsTrue(coreProvider, operatorv1.ProviderInstalledCondition) {
+			return true
+		}
+
+		return false
+	}, timeout).Should(BeEquivalentTo(true))
+
+	patchHelper, err := patch.NewHelper(coreProvider, env)
+	g.Expect(err).ToNot(HaveOccurred())
+	conditions.MarkTrue(coreProvider, clusterv1.ReadyCondition)
+	g.Expect(patchHelper.Patch(ctx, coreProvider)).To(Succeed())
+
+	g.Eventually(func() bool {
+		if err := env.Get(ctx, client.ObjectKeyFromObject(infrastructureProvider), infrastructureProvider); err != nil {
+			return false
+		}
+
+		if conditions.IsTrue(infrastructureProvider, operatorv1.PreflightCheckCondition) {
+			return true
+		}
+
+		return false
+	}, timeout).Should(BeEquivalentTo(true))
 }
 
 func TestProviderConfigSecretChanges(t *testing.T) {
@@ -859,6 +924,11 @@ func TestProviderSpecChanges(t *testing.T) {
 			t.Log("creating test provider", provider.GetName())
 			g.Expect(env.CreateAndWait(ctx, provider.DeepCopy())).To(Succeed())
 
+			defer func() {
+				// Clean up
+				g.Expect(env.Cleanup(ctx, provider, dummyConfigMap(namespace))).To(Succeed())
+			}()
+
 			g.Eventually(generateExpectedResultChecker(provider, specHash, corev1.ConditionTrue), timeout).Should(BeEquivalentTo(true))
 
 			g.Eventually(func() error {
@@ -886,9 +956,6 @@ func TestProviderSpecChanges(t *testing.T) {
 			} else {
 				g.Eventually(generateExpectedResultChecker(provider, "", corev1.ConditionFalse), timeout).Should(BeEquivalentTo(true))
 			}
-
-			// Clean up
-			g.Expect(env.Cleanup(ctx, provider, ns)).To(Succeed())
 		})
 	}
 }
