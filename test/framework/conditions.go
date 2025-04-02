@@ -22,20 +22,26 @@ import (
 	"fmt"
 
 	. "github.com/onsi/ginkgo/v2" //nolint:stylecheck
-	corev1 "k8s.io/api/core/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	capiconditions "sigs.k8s.io/cluster-api/util/conditions"
 )
 
-func HaveStatusCondition(conditions *clusterv1.Conditions, condition clusterv1.ConditionType) Condition {
+func HaveStatusConditionsTrue(getter capiconditions.Getter, conditions ...clusterv1.ConditionType) Condition {
 	return func() bool {
-		By(fmt.Sprintf("Checking if %s condition is set...", condition))
+		if len(conditions) == 0 {
+			By("Empty condition list provided. Can't be validated...")
 
-		for _, c := range *conditions {
-			if c.Type == condition && c.Status == corev1.ConditionTrue {
-				return true
+			return false
+		}
+
+		for _, condition := range conditions {
+			By(fmt.Sprintf("Checking if %s condition is set...", condition))
+
+			if !capiconditions.IsTrue(getter, condition) {
+				return false
 			}
 		}
 
-		return false
+		return true
 	}
 }
