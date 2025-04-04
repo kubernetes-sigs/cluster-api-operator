@@ -9,7 +9,7 @@ replace sigs.k8s.io/cluster-api-operator => ../
 require (
 	github.com/onsi/ginkgo/v2 v2.23.3
 	github.com/onsi/gomega v1.37.0
-	github.com/opencontainers/image-spec v1.1.0
+	github.com/opencontainers/image-spec v1.1.1
 	golang.org/x/tools v0.31.0
 	k8s.io/api v0.32.3
 	k8s.io/apiextensions-apiserver v0.32.3
