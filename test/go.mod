@@ -17,7 +17,7 @@ require (
 	k8s.io/klog/v2 v2.130.1
 	k8s.io/utils v0.0.0-20241104100929-3ea5e8cea738
 	oras.land/oras-go/v2 v2.5.0
-	sigs.k8s.io/cluster-api v1.10.0-beta.0
+	sigs.k8s.io/cluster-api v1.10.0-beta.1
 	sigs.k8s.io/cluster-api-operator v0.0.0-00010101000000-000000000000
 	sigs.k8s.io/cluster-api/test v1.10.0-beta.0
 	sigs.k8s.io/controller-runtime v0.20.4
