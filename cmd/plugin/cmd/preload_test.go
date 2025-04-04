@@ -64,8 +64,8 @@ func TestPreloadCommand(t *testing.T) {
 			publishOpts: &publishOptions{
 				ociUrl: "ttl.sh/cluster-api-operator-manifests:1m",
 				providers: []publishProvider{{
-					configMapName:  "core-cluster-api-v1.9.5",
-					provider:       generateGenericProvider(clusterctlv1.CoreProviderType, "cluster-api", "default", "v1.9.5", "", ""),
+					configMapName:  "core-cluster-api-v1.10.0-beta.0",
+					provider:       generateGenericProvider(clusterctlv1.CoreProviderType, "cluster-api", "default", "v1.10.0-beta.0", "", ""),
 					metadataKey:    "metadata.yaml",
 					metadataData:   []byte("metadata"),
 					componentsKey:  "components.yaml",
@@ -79,18 +79,18 @@ func TestPreloadCommand(t *testing.T) {
 			publishOpts: &publishOptions{
 				ociUrl: "ttl.sh/cluster-api-operator-manifests:1m",
 				providers: []publishProvider{{
-					configMapName:  "core-cluster-api-v1.9.5",
-					provider:       generateGenericProvider(clusterctlv1.CoreProviderType, "cluster-api", "default", "v1.9.5", "", ""),
-					metadataKey:    "core-cluster-api-v1.9.5-metadata.yaml",
+					configMapName:  "core-cluster-api-v1.10.0-beta.0",
+					provider:       generateGenericProvider(clusterctlv1.CoreProviderType, "cluster-api", "default", "v1.10.0-beta.0", "", ""),
+					metadataKey:    "core-cluster-api-v1.10.0-beta.0-metadata.yaml",
 					metadataData:   []byte("metadata"),
-					componentsKey:  "core-cluster-api-v1.9.5-components.yaml",
+					componentsKey:  "core-cluster-api-v1.10.0-beta.0-components.yaml",
 					componentsData: []byte("components"),
 				}, {
-					configMapName:  "infrastructure-docker-v1.9.5",
-					provider:       generateGenericProvider(clusterctlv1.InfrastructureProviderType, "docker", "default", "v1.9.5", "", ""),
-					metadataKey:    "infrastructure-docker-v1.9.5-metadata.yaml",
+					configMapName:  "infrastructure-docker-v1.10.0-beta.0",
+					provider:       generateGenericProvider(clusterctlv1.InfrastructureProviderType, "docker", "default", "v1.10.0-beta.0", "", ""),
+					metadataKey:    "infrastructure-docker-v1.10.0-beta.0-metadata.yaml",
 					metadataData:   []byte("metadata"),
-					componentsKey:  "infrastructure-docker-v1.9.5-components.yaml",
+					componentsKey:  "infrastructure-docker-v1.10.0-beta.0-components.yaml",
 					componentsData: []byte("components"),
 				}},
 			},
@@ -100,7 +100,7 @@ func TestPreloadCommand(t *testing.T) {
 			name: "custom url infra provider",
 			existingProviders: []genericprovider.GenericProvider{
 				func() genericprovider.GenericProvider {
-					p := generateGenericProvider(clusterctlv1.InfrastructureProviderType, "docker", "default", "v1.9.5", "", "")
+					p := generateGenericProvider(clusterctlv1.InfrastructureProviderType, "docker", "default", "v1.10.0-beta.0", "", "")
 					spec := p.GetSpec()
 					spec.FetchConfig = &operatorv1.FetchConfiguration{
 						URL: "https://github.com/kubernetes-sigs/cluster-api/releases/latest/core-components.yaml",
@@ -115,8 +115,8 @@ func TestPreloadCommand(t *testing.T) {
 		{
 			name: "regular core and infra provider",
 			existingProviders: []genericprovider.GenericProvider{
-				generateGenericProvider(clusterctlv1.CoreProviderType, "cluster-api", "default", "v1.9.5", "", ""),
-				generateGenericProvider(clusterctlv1.InfrastructureProviderType, "docker", "default", "v1.9.5", "", ""),
+				generateGenericProvider(clusterctlv1.CoreProviderType, "cluster-api", "default", "v1.10.0-beta.0", "", ""),
+				generateGenericProvider(clusterctlv1.InfrastructureProviderType, "docker", "default", "v1.10.0-beta.0", "", ""),
 			},
 			expectedConfigMaps: 2,
 		},
@@ -125,8 +125,8 @@ func TestPreloadCommand(t *testing.T) {
 			publishOpts: &publishOptions{
 				ociUrl: "ttl.sh/cluster-api-operator-manifests:1m",
 				providers: []publishProvider{{
-					configMapName:  "core-cluster-api-v1.9.5",
-					provider:       generateGenericProvider(clusterctlv1.InfrastructureProviderType, "metadata-missing", "default", "v1.9.5", "", ""),
+					configMapName:  "core-cluster-api-v1.10.0-beta.0",
+					provider:       generateGenericProvider(clusterctlv1.InfrastructureProviderType, "metadata-missing", "default", "v1.10.0-beta.0", "", ""),
 					metadataKey:    "incorrect-metadata.yaml",
 					metadataData:   []byte("test"),
 					componentsKey:  "components.yaml",
@@ -140,8 +140,8 @@ func TestPreloadCommand(t *testing.T) {
 			publishOpts: &publishOptions{
 				ociUrl: "ttl.sh/cluster-api-operator-manifests:1m",
 				providers: []publishProvider{{
-					configMapName:  "core-cluster-api-v1.9.5",
-					provider:       generateGenericProvider(clusterctlv1.InfrastructureProviderType, "components-missing", "default", "v1.9.5", "", ""),
+					configMapName:  "core-cluster-api-v1.10.0-beta.0",
+					provider:       generateGenericProvider(clusterctlv1.InfrastructureProviderType, "components-missing", "default", "v1.10.0-beta.0", "", ""),
 					metadataKey:    "metadata.yaml",
 					metadataData:   []byte("test"),
 					componentsKey:  "incorrect-components.yaml",
@@ -154,7 +154,7 @@ func TestPreloadCommand(t *testing.T) {
 			name: "OCI override with missing image",
 			existingProviders: []genericprovider.GenericProvider{
 				func() genericprovider.GenericProvider {
-					p := generateGenericProvider(clusterctlv1.InfrastructureProviderType, "docker", "default", "v1.9.5", "", "")
+					p := generateGenericProvider(clusterctlv1.InfrastructureProviderType, "docker", "default", "v1.10.0-beta.0", "", "")
 					spec := p.GetSpec()
 					spec.FetchConfig = &operatorv1.FetchConfiguration{
 						OCIConfiguration: operatorv1.OCIConfiguration{
