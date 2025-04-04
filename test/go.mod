@@ -20,7 +20,7 @@ require (
 	sigs.k8s.io/cluster-api v1.10.0-beta.0
 	sigs.k8s.io/cluster-api-operator v0.0.0-00010101000000-000000000000
 	sigs.k8s.io/cluster-api/test v1.10.0-beta.0
-	sigs.k8s.io/controller-runtime v0.20.3
+	sigs.k8s.io/controller-runtime v0.20.4
 	sigs.k8s.io/yaml v1.4.0
 )
 
