@@ -1,26 +1,8 @@
 # Bootstrap provider
-{{- if .Values.bootstrap }}
-{{- $bootstraps := split ";" .Values.bootstrap }}
-{{- $bootstrapNamespace := "" }}
-{{- $bootstrapName := "" }}
-{{- $bootstrapVersion := "" }}
-{{- range $bootstrap := $bootstraps }}
-{{- $bootstrapArgs := split ":" $bootstrap }}
-{{- $bootstrapArgsLen :=  len $bootstrapArgs }}
-{{-  if eq $bootstrapArgsLen 3 }}
-  {{- $bootstrapNamespace = $bootstrapArgs._0 }}
-  {{- $bootstrapName = $bootstrapArgs._1 }}
-  {{- $bootstrapVersion = $bootstrapArgs._2 }}
-{{-  else if eq $bootstrapArgsLen 2 }}
-  {{- $bootstrapNamespace = print $bootstrapArgs._0 "-bootstrap-system" }}
-  {{- $bootstrapName = $bootstrapArgs._0 }}
-  {{- $bootstrapVersion = $bootstrapArgs._1 }}
-{{-  else if eq $bootstrapArgsLen 1 }}
-  {{- $bootstrapNamespace = print $bootstrapArgs._0 "-bootstrap-system" }}
-  {{- $bootstrapName = $bootstrapArgs._0 }}
-{{- else }}
-  {{- fail "bootstrap provider argument should have the following format kubeadm:v1.0.0 or mynamespace:kubeadm:v1.0.0" }}
-{{- end }}
+{{- range $name, $bootstrap := $.Values.bootstrap }}
+  {{- $bootstrapNamespace := default ( printf "%s-%s" $name "bootstrap-system" ) (get $bootstrap "namespace") }}
+  {{- $bootstrapName := $name }}
+  {{- $bootstrapVersion := get $bootstrap "version" }}
 ---
 apiVersion: v1
 kind: Namespace
@@ -57,5 +39,24 @@ spec:
     namespace: {{ $.Values.configSecret.namespace }}
     {{- end }}
 {{- end }}
+{{- if $bootstrap.manifestPatches }}
+  manifestPatches: {{ toYaml $bootstrap.manifestPatches | nindent 4 }}
 {{- end }}
+{{- if $bootstrap.additionalManifests }}
+  additionalManifests:
+    name: {{ $bootstrap.additionalManifests.name }}
+    {{- if $bootstrap.additionalManifests.namespace }}
+    namespace: {{ $bootstrap.additionalManifests.namespace }}
+    {{- end }} {{/* if $bootstrap.additionalManifests.namespace */}}
 {{- end }}
+{{- if $bootstrap.additionalManifests }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $bootstrap.additionalManifests.name }}
+  namespace: {{ default $bootstrapNamespace $bootstrap.additionalManifests.namespace }}
+data:
+  manifests: {{- toYaml $bootstrap.additionalManifests.manifests | nindent 4 }}
+{{- end }}
+{{- end }} {{/* range $name, $bootstrap := .Values.bootstrap */}}
