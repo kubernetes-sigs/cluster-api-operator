@@ -32,7 +32,7 @@ import (
 )
 
 type publishManifestsOptions struct {
-	ociUrl string
+	ociURL string
 	dir    string
 	files  []string
 }
@@ -62,7 +62,7 @@ var publishCmd = &cobra.Command{
 func init() {
 	publishCmd.PersistentFlags().StringVarP(&publishOpts.dir, "dir", "d", ".", `Directory with provider manifests`)
 	publishCmd.PersistentFlags().StringSliceVarP(&publishOpts.files, "file", "f", []string{}, `Provider manifes file`)
-	publishCmd.Flags().StringVarP(&publishOpts.ociUrl, "artifact-url", "u", "",
+	publishCmd.Flags().StringVarP(&publishOpts.ociURL, "artifact-url", "u", "",
 		"The URL of the OCI artifact to collect component manifests from.")
 
 	RootCmd.AddCommand(publishCmd)
@@ -71,10 +71,10 @@ func init() {
 func runPublish() (err error) {
 	ctx := context.Background()
 
-	return publish(ctx, publishOpts.dir, publishOpts.ociUrl, publishOpts.files...)
+	return publish(ctx, publishOpts.dir, publishOpts.ociURL, publishOpts.files...)
 }
 
-func publish(ctx context.Context, dir, ociUrl string, files ...string) error {
+func publish(ctx context.Context, dir, ociURL string, files ...string) error {
 	// 0. Create a file store
 	fs, err := file.New(dir)
 	if err != nil {
@@ -133,16 +133,16 @@ func publish(ctx context.Context, dir, ociUrl string, files ...string) error {
 
 	fmt.Println("Packaged manifests")
 
-	ociUrl, plainHTTP := strings.CutPrefix(ociUrl, "http://")
+	ociURL, plainHTTP := strings.CutPrefix(ociURL, "http://")
 
 	version := ""
 
-	if parts := strings.SplitN(ociUrl, ":", 3); len(parts) == 2 {
-		ociUrl = parts[0]
+	if parts := strings.SplitN(ociURL, ":", 3); len(parts) == 2 {
+		ociURL = parts[0]
 		version = parts[1]
 	} else if len(parts) == 3 {
 		version = parts[2]
-		ociUrl, _ = strings.CutSuffix(ociUrl, version)
+		ociURL, _ = strings.CutSuffix(ociURL, version)
 	}
 
 	if err = fs.Tag(ctx, manifestDescriptor, version); err != nil {
@@ -150,9 +150,9 @@ func publish(ctx context.Context, dir, ociUrl string, files ...string) error {
 	}
 
 	// 3. Connect to a remote repository
-	reg := strings.Split(ociUrl, "/")[0]
+	reg := strings.Split(ociURL, "/")[0]
 
-	repo, err := remote.NewRepository(ociUrl)
+	repo, err := remote.NewRepository(ociURL)
 	if err != nil {
 		return err
 	}

@@ -1,46 +1,34 @@
+version: "2"
 run:
-  timeout: 5m
   go: "1.23"
   allow-parallel-runners: true
-
 linters:
-  disable-all: true
-  # Enable specific linter
-  # https://golangci-lint.run/usage/linters/#enabled-by-default-linters
+  default: none
   enable:
-    # Default linters
-    - errcheck
-    - gosimple
-    - govet
-    - ineffassign
-    - staticcheck
-    - typecheck
-    - unused
-    # Additional linters
     - asasalint
     - asciicheck
     - bidichk
     - bodyclose
     - contextcheck
+    - copyloopvar
     - dogsled
     - durationcheck
+    - errcheck
     - errname
     - errorlint
     - exhaustive
-    - copyloopvar
     - forcetypeassert
     - ginkgolinter
     - goconst
     - gocritic
     - gocyclo
     - godot
-    - gofmt
-    - gofumpt
     - goheader
-    - goimports
     - goprintffuncname
     - gosec
+    - govet
     - importas
+    - ineffassign
     - makezero
     - misspell
     - nakedret
@@ -56,105 +44,137 @@ linters:
     - reassign
     - rowserrcheck
     - sqlclosecheck
-    - stylecheck
+    - staticcheck
     - tagliatelle
-    - tenv
     - testableexamples
     - thelper
     - tparallel
     - unconvert
     - unparam
+    - unused
     - usestdlibvars
     - wastedassign
     - whitespace
     - wsl
+  settings:
+    goheader:
+      values:
+        regexp:
+          license-year: (202[0-9]|20[3-9][0-9])
+      template: |-
+        Copyright {{license-year}} The Kubernetes Authors.
 
-linters-settings:
-  goheader:
-    values:
-      regexp:
-        license-year: (202[0-9]|20[3-9][0-9])
-    template: |-
-      Copyright {{license-year}} The Kubernetes Authors.
+        Licensed under the Apache License, Version 2.0 (the "License");
+        you may not use this file except in compliance with the License.
+        You may obtain a copy of the License at
 
-      Licensed under the Apache License, Version 2.0 (the "License");
-      you may not use this file except in compliance with the License.
-      You may obtain a copy of the License at
+            http://www.apache.org/licenses/LICENSE-2.0
 
-          http://www.apache.org/licenses/LICENSE-2.0
-
-      Unless required by applicable law or agreed to in writing, software
-      distributed under the License is distributed on an "AS IS" BASIS,
-      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-      See the License for the specific language governing permissions and
-      limitations under the License.
-  nlreturn:
-    block-size: 2
-  revive:
-    confidence: 0
+        Unless required by applicable law or agreed to in writing, software
+        distributed under the License is distributed on an "AS IS" BASIS,
+        WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+        See the License for the specific language governing permissions and
+        limitations under the License.
+    importas:
+      alias:
+        # Kubernetes
+        - pkg: k8s.io/api/core/v1
+          alias: corev1
+        - pkg: k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1
+          alias: apiextensionsv1
+        - pkg: k8s.io/apimachinery/pkg/apis/meta/v1
+          alias: metav1
+        - pkg: k8s.io/apimachinery/pkg/api/errors
+          alias: apierrors
+        - pkg: k8s.io/apimachinery/pkg/util/errors
+          alias: kerrors
+        - pkg: k8s.io/apimachinery/pkg/util/runtime
+          alias: utilruntime
+        # Controller Runtime
+        - pkg: sigs.k8s.io/controller-runtime
+          alias: ctrl
+        # CAPI
+        - pkg: sigs.k8s.io/cluster-api/api/v1beta1
+          alias: clusterv1
+        - pkg: sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3
+          alias: clusterctlv1
+        - pkg: sigs.k8s.io/cluster-api/cmd/clusterctl/client/config
+          alias: configclient
+        # CAPI Operator
+        - pkg: sigs.k8s.io/cluster-api-operator/api/v1alpha1
+          alias: operatorv1alpha1
+        - pkg: sigs.k8s.io/cluster-api-operator/api/v1alpha2
+          alias: operatorv1
+        - pkg: sigs.k8s.io/cluster-api-operator/internal/controller
+          alias: providercontroller
+      no-unaliased: true
+    nlreturn:
+      block-size: 2
+    revive:
+      confidence: 0
+      rules:
+        - name: exported
+          arguments:
+            - checkPrivateReceivers
+            - disableStutteringCheck
+          severity: warning
+          disabled: false
+    staticcheck:
+      # https://staticcheck.io/docs/options#checks
+      checks:
+        - -ST1000
+        - -ST1003
+        - -ST1016
+        - all
+      dot-import-whitelist:
+        - github.com/onsi/gomega
+  exclusions:
+    generated: lax
     rules:
-    - name: exported
-      severity: warning
-      disabled: false
-      arguments:
-        - "checkPrivateReceivers"
-        - "disableStutteringCheck"
-  stylecheck:
-    # https://staticcheck.io/docs/options#checks
-    checks: ["all", "-ST1000", "-ST1003", "-ST1016"]
-    dot-import-whitelist:
-      - "github.com/onsi/gomega"
-  importas:
-    no-unaliased: true
-    alias:
-      # Kubernetes
-      - pkg: k8s.io/api/core/v1
-        alias: corev1
-      - pkg: k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1
-        alias: apiextensionsv1
-      - pkg: k8s.io/apimachinery/pkg/apis/meta/v1
-        alias: metav1
-      - pkg: k8s.io/apimachinery/pkg/api/errors
-        alias: apierrors
-      - pkg: k8s.io/apimachinery/pkg/util/errors
-        alias: kerrors
-      - pkg: k8s.io/apimachinery/pkg/util/runtime
-        alias: utilruntime
-      # Controller Runtime
-      - pkg: sigs.k8s.io/controller-runtime
-        alias: ctrl
-      # CAPI
-      - pkg: sigs.k8s.io/cluster-api/api/v1beta1
-        alias: clusterv1
-      - pkg: sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3
-        alias: clusterctlv1
-      - pkg: sigs.k8s.io/cluster-api/cmd/clusterctl/client/config
-        alias: configclient
-      # CAPI Operator
-      - pkg: sigs.k8s.io/cluster-api-operator/api/v1alpha1
-        alias: operatorv1alpha1
-      - pkg: sigs.k8s.io/cluster-api-operator/api/v1alpha2
-        alias: operatorv1
-      - pkg: sigs.k8s.io/cluster-api-operator/internal/controller
-        alias: providercontroller
-issues:
-  exclude:
-    # Not all platforms are supported by this operator, those which aren't
-    # supported will be caught by the default case in the switches.
-    - "missing cases in switch of type v1.PlatformType: (\\.*)"
-  exclude-use-default: false
-  exclude-files:
-    - "zz_generated.*\\.go$"
-  exclude-rules:
-    - linters:
-      - staticcheck
-      text: "SA1019: (\"sigs.k8s.io/controller-runtime/pkg/config/v1alpha1\"|ctrlconfigv1.*) is deprecated: The component config package has been deprecated and will be removed in a future release."
-    # Exclude some linters from running on tests files.
-    - path: _test\.go
-      linters:
-        - gosec
-    - path: internal/envtest/environment.go
-      linters:
-        - dogsled
-        - gosec
-        - wsl
+      - linters:
+          - staticcheck
+        text: 'SA1019: ("sigs.k8s.io/controller-runtime/pkg/config/v1alpha1"|ctrlconfigv1.*) is deprecated: The component config package has been deprecated and will be removed in a future release.'
+      - linters:
+          - staticcheck
+        text: 'ST1016: methods on the same type should have the same receiver name'
+        path: api/(.+)\.go$
+      - linters:
+          - staticcheck
+        text: 'ST1003: should not use underscores in Go names;'
+        path: api/(.+)\.go$      
+      - linters:
+          - staticcheck
+        text: 'QF1008: could remove embedded field'
+      - linters:
+          - staticcheck
+        text: 'ST1000: at least one file in a package should have a package comment'
+      # Exclude some linters from running on tests files.
+      - linters:
+          - gosec
+        path: _test\.go
+      - linters:
+          - dogsled
+          - gosec
+          - wsl
+        path: internal/envtest/environment.go
+      # Not all platforms are supported by this operator, those which aren't
+      # supported will be caught by the default case in the switches.
+      - path: (.+)\.go$
+        text: 'missing cases in switch of type v1.PlatformType: (\.*)'
+    paths:
+      - zz_generated.*\.go$
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  enable:
+    - gofmt
+    - gofumpt
+    - goimports
+  exclusions:
+    generated: lax
+    paths:
+      - zz_generated.*\.go$
+      - third_party$
+      - builtin$
+      - examples$
