@@ -28,7 +28,7 @@ metadata:
     "helm.sh/hook-weight": "2"
     {{- end }}
     "argocd.argoproj.io/sync-wave": "2"
-{{- if or $coreVersion $.Values.configSecret.name $.Values.manager }}
+{{- if or $coreVersion $.Values.configSecret.name $.Values.manager (($core).configSecret).name }}
 spec:
 {{- end}}
 {{- if $coreVersion }}
@@ -43,12 +43,8 @@ spec:
     {{- end }}
 {{- end }}
 {{- end }}
-{{- if $.Values.configSecret.name }}
-  configSecret:
-    name: {{ $.Values.configSecret.name }}
-    {{- if $.Values.configSecret.namespace }}
-    namespace: {{ $.Values.configSecret.namespace }}
-    {{- end }}
+{{- if (default (($core).configSecret).name (($.Values).configSecret).name) }}
+{{- include "capi-operator.configSecret" (dict "ROOT" $ "ARGUMENT" $core) | nindent 2 }}
 {{- end }}
 {{- if $core.manifestPatches }}
   manifestPatches: {{ toYaml $core.manifestPatches | nindent 4 }}
