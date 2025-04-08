@@ -21,7 +21,7 @@ package framework
 import (
 	"fmt"
 
-	. "github.com/onsi/ginkgo/v2" //nolint:stylecheck
+	. "github.com/onsi/ginkgo/v2" //nolint:staticcheck
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	capiconditions "sigs.k8s.io/cluster-api/util/conditions"
 )

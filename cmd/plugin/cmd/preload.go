@@ -44,7 +44,7 @@ type loadOptions struct {
 	runtimeExtensionProviders []string
 	addonProviders            []string
 	targetNamespace           string
-	ociUrl                    string
+	ociURL                    string
 	kubeconfig                string
 	existing                  bool
 }
@@ -119,7 +119,7 @@ func init() {
 		"Add-on providers and versions (e.g. helm:v0.1.0) to add to the management cluster.")
 	loadCmd.Flags().StringVarP(&loadOpts.targetNamespace, "target-namespace", "n", "capi-operator-system",
 		"The target namespace where the operator should be deployed. If unspecified, the 'capi-operator-system' namespace is used.")
-	loadCmd.Flags().StringVarP(&loadOpts.ociUrl, "artifact-url", "u", "",
+	loadCmd.Flags().StringVarP(&loadOpts.ociURL, "artifact-url", "u", "",
 		"The URL of the OCI artifact to collect component manifests from.")
 
 	RootCmd.AddCommand(loadCmd)
@@ -128,7 +128,7 @@ func init() {
 func runPreLoad() error {
 	ctx := context.Background()
 
-	if loadOpts.ociUrl == "" {
+	if loadOpts.ociURL == "" {
 		return fmt.Errorf("missing configMap artifacts url")
 	}
 
@@ -136,7 +136,7 @@ func runPreLoad() error {
 
 	// Load Core Provider.
 	if loadOpts.coreProvider != "" {
-		configMap, err := templateConfigMap(ctx, clusterctlv1.CoreProviderType, loadOpts.ociUrl, loadOpts.coreProvider, loadOpts.targetNamespace)
+		configMap, err := templateConfigMap(ctx, clusterctlv1.CoreProviderType, loadOpts.ociURL, loadOpts.coreProvider, loadOpts.targetNamespace)
 
 		if err != nil {
 			return fmt.Errorf("cannot prepare manifests config map for core provider: %w", err)
@@ -147,7 +147,7 @@ func runPreLoad() error {
 
 	// Load Bootstrap Providers.
 	for _, bootstrapProvider := range loadOpts.bootstrapProviders {
-		configMap, err := templateConfigMap(ctx, clusterctlv1.BootstrapProviderType, loadOpts.ociUrl, bootstrapProvider, loadOpts.targetNamespace)
+		configMap, err := templateConfigMap(ctx, clusterctlv1.BootstrapProviderType, loadOpts.ociURL, bootstrapProvider, loadOpts.targetNamespace)
 		if err != nil {
 			return fmt.Errorf("cannot prepare manifests config map for bootstrap provider: %w", err)
 		}
@@ -157,7 +157,7 @@ func runPreLoad() error {
 
 	// Load Infrastructure Providers.
 	for _, infrastructureProvider := range loadOpts.infrastructureProviders {
-		configMap, err := templateConfigMap(ctx, clusterctlv1.InfrastructureProviderType, loadOpts.ociUrl, infrastructureProvider, loadOpts.targetNamespace)
+		configMap, err := templateConfigMap(ctx, clusterctlv1.InfrastructureProviderType, loadOpts.ociURL, infrastructureProvider, loadOpts.targetNamespace)
 		if err != nil {
 			return fmt.Errorf("cannot prepare manifests config map for infrastructure provider: %w", err)
 		}
@@ -167,7 +167,7 @@ func runPreLoad() error {
 
 	// Load Control Plane Providers.
 	for _, controlPlaneProvider := range loadOpts.controlPlaneProviders {
-		configMap, err := templateConfigMap(ctx, clusterctlv1.ControlPlaneProviderType, loadOpts.ociUrl, controlPlaneProvider, loadOpts.targetNamespace)
+		configMap, err := templateConfigMap(ctx, clusterctlv1.ControlPlaneProviderType, loadOpts.ociURL, controlPlaneProvider, loadOpts.targetNamespace)
 		if err != nil {
 			return fmt.Errorf("cannot prepare manifests config map for controlplane provider: %w", err)
 		}
@@ -177,7 +177,7 @@ func runPreLoad() error {
 
 	// Load Add-on Providers.
 	for _, addonProvider := range loadOpts.addonProviders {
-		configMap, err := templateConfigMap(ctx, clusterctlv1.AddonProviderType, loadOpts.ociUrl, addonProvider, loadOpts.targetNamespace)
+		configMap, err := templateConfigMap(ctx, clusterctlv1.AddonProviderType, loadOpts.ociURL, addonProvider, loadOpts.targetNamespace)
 		if err != nil {
 			return fmt.Errorf("cannot prepare manifests config map for addon provider: %w", err)
 		}
@@ -187,7 +187,7 @@ func runPreLoad() error {
 
 	// Load IPAM Providers.
 	for _, ipamProvider := range loadOpts.ipamProviders {
-		configMap, err := templateConfigMap(ctx, clusterctlv1.IPAMProviderType, loadOpts.ociUrl, ipamProvider, loadOpts.targetNamespace)
+		configMap, err := templateConfigMap(ctx, clusterctlv1.IPAMProviderType, loadOpts.ociURL, ipamProvider, loadOpts.targetNamespace)
 		if err != nil {
 			return fmt.Errorf("cannot prepare manifests config map for IPAM provider: %w", err)
 		}
@@ -197,7 +197,7 @@ func runPreLoad() error {
 
 	// Load Runtime Extension Providers.
 	for _, runtimeExtension := range loadOpts.runtimeExtensionProviders {
-		configMap, err := templateConfigMap(ctx, clusterctlv1.RuntimeExtensionProviderType, loadOpts.ociUrl, runtimeExtension, loadOpts.targetNamespace)
+		configMap, err := templateConfigMap(ctx, clusterctlv1.RuntimeExtensionProviderType, loadOpts.ociURL, runtimeExtension, loadOpts.targetNamespace)
 		if err != nil {
 			return fmt.Errorf("cannot prepare manifests config map for runtime extension provider: %w", err)
 		}

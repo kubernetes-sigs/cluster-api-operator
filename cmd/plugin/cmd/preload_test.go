@@ -42,7 +42,7 @@ type publishProvider struct {
 }
 
 type publishOptions struct {
-	ociUrl    string
+	ociURL    string
 	providers []publishProvider
 }
 
@@ -62,7 +62,7 @@ func TestPreloadCommand(t *testing.T) {
 		{
 			name: "builtin core provider with OCI override",
 			publishOpts: &publishOptions{
-				ociUrl: "ttl.sh/cluster-api-operator-manifests:1m",
+				ociURL: "ttl.sh/cluster-api-operator-manifests:1m",
 				providers: []publishProvider{{
 					configMapName:  "core-cluster-api-v1.10.0-beta.0",
 					provider:       generateGenericProvider(clusterctlv1.CoreProviderType, "cluster-api", "default", "v1.10.0-beta.0", "", ""),
@@ -77,7 +77,7 @@ func TestPreloadCommand(t *testing.T) {
 		{
 			name: "multiple providers with OCI override",
 			publishOpts: &publishOptions{
-				ociUrl: "ttl.sh/cluster-api-operator-manifests:1m",
+				ociURL: "ttl.sh/cluster-api-operator-manifests:1m",
 				providers: []publishProvider{{
 					configMapName:  "core-cluster-api-v1.10.0-beta.0",
 					provider:       generateGenericProvider(clusterctlv1.CoreProviderType, "cluster-api", "default", "v1.10.0-beta.0", "", ""),
@@ -123,7 +123,7 @@ func TestPreloadCommand(t *testing.T) {
 		{
 			name: "OCI override with incorrect metadata key",
 			publishOpts: &publishOptions{
-				ociUrl: "ttl.sh/cluster-api-operator-manifests:1m",
+				ociURL: "ttl.sh/cluster-api-operator-manifests:1m",
 				providers: []publishProvider{{
 					configMapName:  "core-cluster-api-v1.10.0-beta.0",
 					provider:       generateGenericProvider(clusterctlv1.InfrastructureProviderType, "metadata-missing", "default", "v1.10.0-beta.0", "", ""),
@@ -138,7 +138,7 @@ func TestPreloadCommand(t *testing.T) {
 		{
 			name: "OCI override with incorrect components key",
 			publishOpts: &publishOptions{
-				ociUrl: "ttl.sh/cluster-api-operator-manifests:1m",
+				ociURL: "ttl.sh/cluster-api-operator-manifests:1m",
 				providers: []publishProvider{{
 					configMapName:  "core-cluster-api-v1.10.0-beta.0",
 					provider:       generateGenericProvider(clusterctlv1.InfrastructureProviderType, "components-missing", "default", "v1.10.0-beta.0", "", ""),
@@ -180,7 +180,7 @@ func TestPreloadCommand(t *testing.T) {
 			g.Expect(err).To(Succeed())
 
 			opts := cmp.Or(tt.publishOpts, &publishOptions{})
-			if tt.publishOpts != nil && opts.ociUrl != "" {
+			if tt.publishOpts != nil && opts.ociURL != "" {
 				for _, provider := range opts.providers {
 					err = os.WriteFile(path.Join(dir, provider.metadataKey), provider.metadataData, 0o777)
 					g.Expect(err).To(Succeed())
@@ -188,13 +188,13 @@ func TestPreloadCommand(t *testing.T) {
 					g.Expect(err).To(Succeed())
 				}
 
-				g.Expect(publish(ctx, dir, opts.ociUrl)).To(Succeed())
+				g.Expect(publish(ctx, dir, opts.ociURL)).To(Succeed())
 
 				for _, data := range opts.providers {
 					spec := data.provider.GetSpec()
 					spec.FetchConfig = &operatorv1.FetchConfiguration{
 						OCIConfiguration: operatorv1.OCIConfiguration{
-							OCI: opts.ociUrl,
+							OCI: opts.ociURL,
 						},
 					}
 					data.provider.SetSpec(spec)
