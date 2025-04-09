@@ -21,7 +21,7 @@ import (
 	"fmt"
 
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
-	"sigs.k8s.io/cluster-api-operator/internal/controller/genericprovider"
+	"sigs.k8s.io/cluster-api-operator/internal/controller/generic"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util/conditions"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -33,7 +33,7 @@ import (
 // newCoreProviderToProviderFuncMapForProviderList maps a ready CoreProvider object to all other provider objects.
 // It lists all the providers and if its PreflightCheckCondition is not True, this object will be added to the resulting request.
 // This means that notifications will only be sent to those objects that have not pass PreflightCheck.
-func newCoreProviderToProviderFuncMapForProviderList(k8sClient client.Client, providerList genericprovider.GenericProviderList) handler.MapFunc {
+func newCoreProviderToProviderFuncMapForProviderList(k8sClient client.Client, providerList generic.ProviderList) handler.MapFunc {
 	providerListType := fmt.Sprintf("%T", providerList)
 
 	return func(ctx context.Context, obj client.Object) []reconcile.Request {

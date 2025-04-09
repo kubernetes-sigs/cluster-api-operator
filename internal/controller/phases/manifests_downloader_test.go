@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package controller
+package phases
 
 import (
 	"context"
@@ -36,33 +36,45 @@ func TestManifestsDownloader(t *testing.T) {
 
 	fakeclient := fake.NewClientBuilder().WithObjects().Build()
 
-	p := &phaseReconciler{
-		ctrlClient: fakeclient,
-		provider: &operatorv1.CoreProvider{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "cluster-api",
-				Namespace: testNamespaceName,
-			},
-			Spec: operatorv1.CoreProviderSpec{
-				ProviderSpec: operatorv1.ProviderSpec{
-					Version: "v1.4.3",
-				},
+	namespace := "test-namespace"
+
+	core := &operatorv1.CoreProvider{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "cluster-api",
+			Namespace: namespace,
+		},
+		Spec: operatorv1.CoreProviderSpec{
+			ProviderSpec: operatorv1.ProviderSpec{
+				Version: "v1.4.3",
 			},
 		},
 	}
 
-	_, err := p.initializePhaseReconciler(ctx)
+	p := &PhaseReconciler[*operatorv1.CoreProvider, Phase[*operatorv1.CoreProvider]]{
+		ctrlClient: fakeclient,
+	}
+
+	_, err := p.InitializePhaseReconciler(ctx, Phase[*operatorv1.CoreProvider]{
+		Provider:     core,
+		ProviderType: clusterctlv1.CoreProviderType,
+		ProviderList: &operatorv1.CoreProviderList{},
+	})
 	g.Expect(err).ToNot(HaveOccurred())
 
-	_, err = p.downloadManifests(ctx)
+	_, err = p.DownloadManifests(ctx, Phase[*operatorv1.CoreProvider]{
+		Client:       fakeclient,
+		Provider:     core,
+		ProviderType: clusterctlv1.CoreProviderType,
+		ProviderList: &operatorv1.CoreProviderList{},
+	})
 	g.Expect(err).ToNot(HaveOccurred())
 
 	// Ensure that config map was created
 	labelSelector := metav1.LabelSelector{
-		MatchLabels: p.prepareConfigMapLabels(),
+		MatchLabels: ProviderLabels(core),
 	}
 
-	exists, err := p.checkConfigMapExists(ctx, labelSelector, p.provider.GetNamespace())
+	exists, err := checkConfigMapExists(ctx, fakeclient, labelSelector, core.GetNamespace())
 	g.Expect(err).ToNot(HaveOccurred())
 
 	g.Expect(exists).To(BeTrue())
@@ -82,28 +94,36 @@ func TestProviderDownloadWithOverrides(t *testing.T) {
 	overridesClient, err := configclient.New(ctx, "", configclient.InjectReader(reader))
 	g.Expect(err).ToNot(HaveOccurred())
 
-	p := &phaseReconciler{
-		ctrlClient: fakeclient,
-		provider: &operatorv1.CoreProvider{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "cluster-api",
-				Namespace: testNamespaceName,
-			},
-			Spec: operatorv1.CoreProviderSpec{},
+	core := &operatorv1.CoreProvider{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "cluster-api",
+			Namespace: testNamespaceName,
 		},
+		Spec: operatorv1.CoreProviderSpec{},
+	}
+
+	p := &PhaseReconciler[*operatorv1.CoreProvider, Phase[*operatorv1.CoreProvider]]{
+		ctrlClient:      fakeclient,
 		overridesClient: overridesClient,
 	}
 
-	_, err = p.initializePhaseReconciler(ctx)
+	phase := Phase[*operatorv1.CoreProvider]{
+		Client:       fakeclient,
+		Provider:     core,
+		ProviderType: clusterctlv1.CoreProviderType,
+		ProviderList: &operatorv1.CoreProviderList{},
+	}
+
+	_, err = p.InitializePhaseReconciler(ctx, phase)
 	g.Expect(err).ToNot(HaveOccurred())
 
-	_, err = p.downloadManifests(ctx)
+	_, err = p.DownloadManifests(ctx, phase)
 	g.Expect(err).ToNot(HaveOccurred())
 
-	_, err = p.load(ctx)
+	_, err = p.Load(ctx, phase)
 	g.Expect(err).ToNot(HaveOccurred())
 
-	_, err = p.fetch(ctx)
+	_, err = p.Fetch(ctx, phase)
 	g.Expect(err).ToNot(HaveOccurred())
 
 	g.Expect(p.components.Images()).To(HaveExactElements([]string{"registry.k8s.io/cluster-api/cluster-api-controller:v1.4.3"}))

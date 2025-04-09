@@ -27,7 +27,7 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/util/errors"
 	"oras.land/oras-go/v2/registry/remote/auth"
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
-	providercontroller "sigs.k8s.io/cluster-api-operator/internal/controller"
+	"sigs.k8s.io/cluster-api-operator/internal/controller/phases"
 	"sigs.k8s.io/cluster-api-operator/util"
 	clusterctlv1 "sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3"
 	configclient "sigs.k8s.io/cluster-api/cmd/clusterctl/client/config"
@@ -270,7 +270,7 @@ func fetchProviders(ctx context.Context, cl client.Client, providerList genericP
 
 	for _, provider := range providerList.GetItems() {
 		if provider.GetSpec().FetchConfig != nil && provider.GetSpec().FetchConfig.OCI != "" {
-			cm, err := providercontroller.OCIConfigMap(ctx, provider, ociAuthentication())
+			cm, err := phases.OCIConfigMap(ctx, provider, ociAuthentication())
 			if err != nil {
 				return configMaps, err
 			}
@@ -304,7 +304,7 @@ func templateConfigMap(ctx context.Context, providerType clusterctlv1.ProviderTy
 	provider.SetSpec(spec)
 
 	if spec.Version != "" {
-		return providercontroller.OCIConfigMap(ctx, provider, ociAuthentication())
+		return phases.OCIConfigMap(ctx, provider, ociAuthentication())
 	}
 
 	// User didn't set the version, try to get repository default.
@@ -313,7 +313,7 @@ func templateConfigMap(ctx context.Context, providerType clusterctlv1.ProviderTy
 		return nil, fmt.Errorf("cannot create config client: %w", err)
 	}
 
-	providerConfig, err := configClient.Providers().Get(provider.GetName(), util.ClusterctlProviderType(provider))
+	providerConfig, err := configClient.Providers().Get(provider.GetName(), clusterctlv1.ProviderType(provider.GetType()))
 	if err != nil {
 		if !strings.Contains(err.Error(), "failed to get configuration") {
 			return nil, err
@@ -329,7 +329,7 @@ func templateConfigMap(ctx context.Context, providerType clusterctlv1.ProviderTy
 
 	provider.SetSpec(spec)
 
-	return providercontroller.OCIConfigMap(ctx, provider, ociAuthentication())
+	return phases.OCIConfigMap(ctx, provider, ociAuthentication())
 }
 
 func providerConfigMap(ctx context.Context, provider operatorv1.GenericProvider) (*corev1.ConfigMap, error) {
@@ -340,7 +340,7 @@ func providerConfigMap(ctx context.Context, provider operatorv1.GenericProvider)
 
 	// If provided store fetch config url in memory reader.
 	if provider.GetSpec().FetchConfig != nil && provider.GetSpec().FetchConfig.URL != "" {
-		_, err := mr.AddProvider(provider.GetName(), util.ClusterctlProviderType(provider), provider.GetSpec().FetchConfig.URL)
+		_, err := mr.AddProvider(provider.GetName(), clusterctlv1.ProviderType(provider.GetType()), provider.GetSpec().FetchConfig.URL)
 		if err != nil {
 			return nil, fmt.Errorf("cannot add custom url provider: %w", err)
 		}
@@ -351,7 +351,7 @@ func providerConfigMap(ctx context.Context, provider operatorv1.GenericProvider)
 		return nil, fmt.Errorf("cannot create config client: %w", err)
 	}
 
-	providerConfig, err := configClient.Providers().Get(provider.GetName(), util.ClusterctlProviderType(provider))
+	providerConfig, err := configClient.Providers().Get(provider.GetName(), clusterctlv1.ProviderType(provider.GetType()))
 	if err != nil {
 		if !strings.Contains(err.Error(), "failed to get configuration") {
 			return nil, err
@@ -363,15 +363,15 @@ func providerConfigMap(ctx context.Context, provider operatorv1.GenericProvider)
 		return nil, fmt.Errorf("cannot create repository: %w", err)
 	}
 
-	return providercontroller.RepositoryConfigMap(ctx, provider, repo)
+	return phases.RepositoryConfigMap(ctx, provider, repo)
 }
 
 // ociAuthentication returns user supplied credentials from provider variables.
 func ociAuthentication() *auth.Credential {
-	username := os.Getenv(providercontroller.OCIUsernameKey)
-	password := os.Getenv(providercontroller.OCIPasswordKey)
-	accessToken := os.Getenv(providercontroller.OCIAccessTokenKey)
-	refreshToken := os.Getenv(providercontroller.OCIRefreshTokenKey)
+	username := os.Getenv(phases.OCIUsernameKey)
+	password := os.Getenv(phases.OCIPasswordKey)
+	accessToken := os.Getenv(phases.OCIAccessTokenKey)
+	refreshToken := os.Getenv(phases.OCIRefreshTokenKey)
 
 	if username != "" || password != "" || accessToken != "" || refreshToken != "" {
 		return &auth.Credential{
