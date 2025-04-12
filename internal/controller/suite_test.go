@@ -22,11 +22,17 @@ import (
 	"testing"
 	"time"
 
+	"k8s.io/apimachinery/pkg/runtime"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"sigs.k8s.io/cluster-api-operator/internal/controller/phases"
 	"sigs.k8s.io/cluster-api-operator/internal/controller/providers"
 	"sigs.k8s.io/cluster-api-operator/internal/envtest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+
+	corev1 "k8s.io/api/core/v1"
+	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
+	clusterctlv1 "sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3"
 )
 
 const (
@@ -38,6 +44,15 @@ var (
 	env *envtest.Environment
 	ctx = ctrl.SetupSignalHandler()
 )
+
+func setupScheme() *runtime.Scheme {
+	scheme := runtime.NewScheme()
+	utilruntime.Must(corev1.AddToScheme(scheme))
+	utilruntime.Must(operatorv1.AddToScheme(scheme))
+	utilruntime.Must(clusterctlv1.AddToScheme(scheme))
+
+	return scheme
+}
 
 func TestMain(m *testing.M) {
 	fmt.Println("Creating new test environment")

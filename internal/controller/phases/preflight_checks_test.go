@@ -33,7 +33,6 @@ import (
 
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
 	"sigs.k8s.io/cluster-api-operator/internal/controller/generic"
-	"sigs.k8s.io/cluster-api-operator/internal/controller/phases"
 	"sigs.k8s.io/cluster-api-operator/internal/controller/providers"
 )
 
@@ -462,7 +461,7 @@ func TestInfrastructurePreflightChecks(t *testing.T) {
 
 			rec := providercontroller.NewProviderControllerWrapper(
 				providers.NewInfrastructureProviderReconciler(newConnector(fakeclient)),
-				phases.NewPhase,
+				NewPhase,
 				false,
 			)
 

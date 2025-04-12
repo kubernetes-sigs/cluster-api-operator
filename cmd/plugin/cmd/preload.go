@@ -27,6 +27,7 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/util/errors"
 	"oras.land/oras-go/v2/registry/remote/auth"
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
+	"sigs.k8s.io/cluster-api-operator/internal/controller/generic"
 	"sigs.k8s.io/cluster-api-operator/internal/controller/phases"
 	"sigs.k8s.io/cluster-api-operator/util"
 	clusterctlv1 "sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3"
@@ -237,13 +238,13 @@ func preloadExisting(ctx context.Context, cl client.Client) ([]*corev1.ConfigMap
 	configMaps := []*corev1.ConfigMap{}
 
 	for _, list := range operatorv1.ProviderLists {
-		list, ok := list.(genericProviderList)
+		list, ok := list.(generic.ProviderList)
 		if !ok {
 			log.V(5).Info("Expected to get GenericProviderList")
 			continue
 		}
 
-		list, ok = list.DeepCopyObject().(genericProviderList)
+		list, ok = list.DeepCopyObject().(generic.ProviderList)
 		if !ok {
 			log.V(5).Info("Expected to get GenericProviderList")
 			continue
@@ -257,7 +258,7 @@ func preloadExisting(ctx context.Context, cl client.Client) ([]*corev1.ConfigMap
 	return configMaps, kerrors.NewAggregate(errors)
 }
 
-func fetchProviders(ctx context.Context, cl client.Client, providerList genericProviderList) ([]*corev1.ConfigMap, error) {
+func fetchProviders(ctx context.Context, cl client.Client, providerList generic.ProviderList) ([]*corev1.ConfigMap, error) {
 	configMaps := []*corev1.ConfigMap{}
 
 	if err := retryWithExponentialBackoff(ctx, newReadBackoff(), func(ctx context.Context) error {

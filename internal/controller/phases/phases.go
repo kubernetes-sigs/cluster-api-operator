@@ -60,13 +60,13 @@ type PhaseReconciler[P generic.Provider, G generic.Group[P]] struct {
 
 	ctrlClient         client.Client
 	ctrlConfig         *rest.Config
-	repo               repository.Repository
-	contract           string
-	options            repository.ComponentsOptions
-	providerConfig     configclient.Provider
-	configClient       configclient.Client
+	Repo               repository.Repository
+	Contract           string
+	Options            repository.ComponentsOptions
+	ProviderConfig     configclient.Provider
+	ConfigClient       configclient.Client
 	overridesClient    configclient.Client
-	components         repository.Components
+	Components         repository.Components
 	clusterctlProvider *clusterctlv1.Provider
 }
 
@@ -188,7 +188,7 @@ func (p *PhaseReconciler[P, G]) InitializePhaseReconciler(ctx context.Context, p
 		overrideProviders = providers
 	}
 
-	reader, err := p.secretReader(ctx, overrideProviders...)
+	reader, err := secretReader(ctx, phase, overrideProviders...)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -314,7 +314,7 @@ func secretReader[P generic.Provider](ctx context.Context, phase generic.Group[P
 			return nil, err
 		}
 
-		if provider.Type() == clusterctlv1.ProviderType(p.provider.GetType()) && provider.Name() == p.provider.GetName() {
+		if provider.Type() == clusterctlv1.ProviderType(phase.GetProvider().GetType()) && provider.Name() == phase.GetProvider().GetName() {
 			isCustom = false
 		}
 	}
@@ -332,11 +332,11 @@ func secretReader[P generic.Provider](ctx context.Context, phase generic.Group[P
 			// To register a new provider from the config map, we need to specify a URL with a valid
 			// format. However, since we're using data from a local config map, URLs are not needed.
 			// As a workaround, we add a fake but well-formatted URL.
-			return mr.AddProvider(p.provider.GetName(), util.ClusterctlProviderType(p.provider), fakeURL)
+			return mr.AddProvider(phase.GetProvider().GetName(), util.ClusterctlProviderType(phase.GetProvider()), fakeURL)
 		}
 
-		if isCustom && p.provider.GetSpec().FetchConfig.OCI != "" {
-			return mr.AddProvider(p.provider.GetName(), util.ClusterctlProviderType(p.provider), fakeURL)
+		if isCustom && phase.GetProvider().GetSpec().FetchConfig.OCI != "" {
+			return mr.AddProvider(phase.GetProvider().GetName(), util.ClusterctlProviderType(phase.GetProvider()), fakeURL)
 		}
 	}
 
@@ -527,7 +527,7 @@ func (p *PhaseReconciler[P, G]) Fetch(ctx context.Context, phase G) (reconcile.R
 	}
 
 	// Apply image overrides to the provider manifests.
-	if err := repository.AlterComponents(p.components, imageOverrides(p.components.ManifestLabel(), p.overridesClient)); err != nil {
+	if err := repository.AlterComponents(p.Components, imageOverrides(p.Components.ManifestLabel(), p.overridesClient)); err != nil {
 		return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.ProviderInstalledCondition)
 	}
 

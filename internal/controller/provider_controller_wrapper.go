@@ -129,7 +129,7 @@ func (r *ProviderControllerWrapper[P, R]) Reconcile(ctx context.Context, provide
 	}
 
 	// Check if spec hash stays the same and don't go further in this case.
-	specHash, err := calculateHash(ctx, r.Client, r.Provider)
+	specHash, err := calculateHash(ctx, r.Reconciler.GetClient(), r.Provider)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -149,7 +149,7 @@ func (r *ProviderControllerWrapper[P, R]) Reconcile(ctx context.Context, provide
 	// Set the spec hash annotation if reconciliation was successful or reset it otherwise.
 	if res.IsZero() && err == nil {
 		// Recalculate spec hash in case it was changed during reconciliation process.
-		specHash, err := calculateHash(ctx, r.Client, r.Provider)
+		specHash, err := calculateHash(ctx, r.Reconciler.GetClient(), r.Provider)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -221,7 +221,7 @@ func (r *ProviderControllerWrapper[P, R]) reconcileDelete(ctx context.Context, p
 	return r.reconcilePhases(ctx, provider, r.Reconciler.ReconcileDelete(ctx, provider))
 }
 
-func addConfigSecretToHash(ctx context.Context, k8sClient client.Client, hash hash.Hash, provider genericprovider.GenericProvider) error {
+func addConfigSecretToHash(ctx context.Context, k8sClient client.Client, hash hash.Hash, provider generic.Provider) error {
 	if provider.GetSpec().ConfigSecret != nil {
 		secret := &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
@@ -262,7 +262,7 @@ func addObjectToHash(hash hash.Hash, object interface{}) error {
 	return nil
 }
 
-func calculateHash(ctx context.Context, k8sClient client.Client, provider genericprovider.GenericProvider) (string, error) {
+func calculateHash(ctx context.Context, k8sClient client.Client, provider generic.Provider) (string, error) {
 	hash := sha256.New()
 
 	err := addObjectToHash(hash, provider.GetSpec())

@@ -66,8 +66,8 @@ func (p *PhaseReconciler[P, G]) DownloadManifests(ctx context.Context, phase G) 
 
 	log.Info("Downloading provider manifests")
 
-	if p.providerConfig.URL() != fakeURL {
-		p.repo, err = util.RepositoryFactory(ctx, p.providerConfig, p.configClient.Variables())
+	if p.ProviderConfig.URL() != fakeURL {
+		p.Repo, err = util.RepositoryFactory(ctx, p.ProviderConfig, p.ConfigClient.Variables())
 		if err != nil {
 			err = fmt.Errorf("failed to create repo from provider url for provider %q: %w", p.provider.GetName(), err)
 
@@ -77,9 +77,9 @@ func (p *PhaseReconciler[P, G]) DownloadManifests(ctx context.Context, phase G) 
 
 	spec := phase.GetProvider().GetSpec()
 
-	if spec.Version == "" && p.repo != nil {
+	if spec.Version == "" && p.Repo != nil {
 		// User didn't set the version, try to get repository default.
-		spec.Version = p.repo.DefaultVersion()
+		spec.Version = p.Repo.DefaultVersion()
 
 		// Add version to the provider spec.
 		phase.GetProvider().SetSpec(spec)
@@ -89,12 +89,12 @@ func (p *PhaseReconciler[P, G]) DownloadManifests(ctx context.Context, phase G) 
 
 	// Fetch the provider metadata and components yaml files from the provided repository GitHub/GitLab or OCI source
 	if p.provider.GetSpec().FetchConfig != nil && p.provider.GetSpec().FetchConfig.OCI != "" {
-		configMap, err = OCIConfigMap(ctx, p.provider, OCIAuthentication(p.configClient.Variables()))
+		configMap, err = OCIConfigMap(ctx, p.provider, OCIAuthentication(p.ConfigClient.Variables()))
 		if err != nil {
 			return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.ProviderInstalledCondition)
 		}
 	} else {
-		configMap, err = RepositoryConfigMap(ctx, p.provider, p.repo)
+		configMap, err = RepositoryConfigMap(ctx, p.provider, p.Repo)
 		if err != nil {
 			err = fmt.Errorf("failed to create config map for provider %q: %w", p.provider.GetName(), err)
 

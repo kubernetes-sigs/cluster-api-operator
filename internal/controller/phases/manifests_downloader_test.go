@@ -126,6 +126,6 @@ func TestProviderDownloadWithOverrides(t *testing.T) {
 	_, err = p.Fetch(ctx, phase)
 	g.Expect(err).ToNot(HaveOccurred())
 
-	g.Expect(p.components.Images()).To(HaveExactElements([]string{"registry.k8s.io/cluster-api/cluster-api-controller:v1.4.3"}))
-	g.Expect(p.components.Version()).To(Equal("v1.4.3"))
+	g.Expect(p.Components.Images()).To(HaveExactElements([]string{"registry.k8s.io/cluster-api/cluster-api-controller:v1.4.3"}))
+	g.Expect(p.Components.Version()).To(Equal("v1.4.3"))
 }
