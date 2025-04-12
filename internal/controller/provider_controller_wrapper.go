@@ -26,12 +26,12 @@ import (
 	"reflect"
 
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	kerrors "k8s.io/apimachinery/pkg/util/errors"
-	"k8s.io/client-go/rest"
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
-	"sigs.k8s.io/cluster-api-operator/internal/controller/genericprovider"
+	"sigs.k8s.io/cluster-api-operator/internal/controller/generic"
+	"sigs.k8s.io/cluster-api-operator/internal/controller/phases"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/patch"
@@ -43,66 +43,63 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-type GenericProviderReconciler struct {
-	Provider                 genericprovider.GenericProvider
-	ProviderList             genericprovider.GenericProviderList
-	Client                   client.Client
-	Config                   *rest.Config
+type ProviderControllerWrapper[P generic.Provider, R generic.ProviderReconciler[P]] struct {
+	Reconciler               R
+	NewGroup                 generic.NewGroup[P]
 	WatchConfigSecretChanges bool
+}
+
+func NewProviderControllerWrapper[P generic.Provider, R generic.ProviderReconciler[P]](rec R, groupFn generic.NewGroup[P], watchConfigSecretChanges bool) *ProviderControllerWrapper[P, R] {
+	return &ProviderControllerWrapper[P, R]{
+		Reconciler:               rec,
+		NewGroup:                 groupFn,
+		WatchConfigSecretChanges: watchConfigSecretChanges,
+	}
 }
 
 const (
 	appliedSpecHashAnnotation = "operator.cluster.x-k8s.io/applied-spec-hash"
 )
 
-func (r *GenericProviderReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager, options controller.Options) error {
+func (r *ProviderControllerWrapper[P, R]) SetupWithManager(ctx context.Context, mgr ctrl.Manager, options controller.Options) error {
+	provider := reflect.New(reflect.TypeOf(*new(P)).Elem()).Interface().(P) //nolint:forcetypeassert
 	builder := ctrl.NewControllerManagedBy(mgr).
-		For(r.Provider)
+		For(provider).
+		WithOptions(options)
 
 	if r.WatchConfigSecretChanges {
-		if err := mgr.GetFieldIndexer().IndexField(ctx, r.Provider, configSecretNameField, configSecretNameIndexFunc); err != nil {
+		if err := mgr.GetFieldIndexer().IndexField(ctx, provider, configSecretNameField, configSecretNameIndexFunc); err != nil {
 			return err
 		}
 
-		if err := mgr.GetFieldIndexer().IndexField(ctx, r.Provider, configSecretNamespaceField, configSecretNamespaceIndexFunc); err != nil {
+		if err := mgr.GetFieldIndexer().IndexField(ctx, provider, configSecretNamespaceField, configSecretNamespaceIndexFunc); err != nil {
 			return err
 		}
 
 		builder.Watches(
 			&corev1.Secret{},
-			handler.EnqueueRequestsFromMapFunc(newSecretToProviderFuncMapForProviderList(r.Client, r.ProviderList)),
+			handler.EnqueueRequestsFromMapFunc(newSecretToProviderFuncMapForProviderList(mgr.GetClient(), r.Reconciler.GetProviderList())),
 		)
 	}
 
 	// We don't want to receive secondary events from the CoreProvider for itself.
-	if reflect.TypeOf(r.Provider) != reflect.TypeOf(genericprovider.GenericProvider(&operatorv1.CoreProvider{})) {
+	if reflect.TypeOf(provider) != reflect.TypeOf(&operatorv1.CoreProvider{}) {
 		builder.Watches(
 			&operatorv1.CoreProvider{},
-			handler.EnqueueRequestsFromMapFunc(newCoreProviderToProviderFuncMapForProviderList(r.Client, r.ProviderList)),
+			handler.EnqueueRequestsFromMapFunc(newCoreProviderToProviderFuncMapForProviderList(mgr.GetClient(), r.Reconciler.GetProviderList())),
 		)
 	}
 
-	return builder.WithOptions(options).
-		Complete(r)
+	return builder.Complete(reconcile.AsReconciler(mgr.GetClient(), r))
 }
 
-func (r *GenericProviderReconciler) Reconcile(ctx context.Context, req reconcile.Request) (_ reconcile.Result, reterr error) {
+func (r *ProviderControllerWrapper[P, R]) Reconcile(ctx context.Context, provider P) (_ reconcile.Result, reterr error) {
 	log := ctrl.LoggerFrom(ctx)
 
 	log.Info("Reconciling provider")
 
-	if err := r.Client.Get(ctx, req.NamespacedName, r.Provider); err != nil {
-		if apierrors.IsNotFound(err) {
-			// Object not found, return. Created objects are automatically garbage collected.
-			// For additional cleanup logic use finalizers.
-			return ctrl.Result{}, nil
-		}
-		// Error reading the object - requeue the request.
-		return ctrl.Result{}, err
-	}
-
 	// Initialize the patch helper
-	patchHelper, err := patch.NewHelper(r.Provider, r.Client)
+	patchHelper, err := patch.NewHelper(provider, r.Reconciler.GetClient())
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -115,36 +112,36 @@ func (r *GenericProviderReconciler) Reconcile(ctx context.Context, req reconcile
 			patchOpts = append(patchOpts, patch.WithStatusObservedGeneration{})
 		}
 
-		if err := patchProvider(ctx, r.Provider, patchHelper, patchOpts...); err != nil {
+		if err := patchProvider(ctx, provider, patchHelper, patchOpts...); err != nil {
 			reterr = kerrors.NewAggregate([]error{reterr, err})
 		}
 	}()
 
 	// Add finalizer first if not exist to avoid the race condition between init and delete
-	if !controllerutil.ContainsFinalizer(r.Provider, operatorv1.ProviderFinalizer) {
-		controllerutil.AddFinalizer(r.Provider, operatorv1.ProviderFinalizer)
+	if !controllerutil.ContainsFinalizer(provider, operatorv1.ProviderFinalizer) {
+		controllerutil.AddFinalizer(provider, operatorv1.ProviderFinalizer)
 		return ctrl.Result{}, nil
 	}
 
 	// Handle deletion reconciliation loop.
-	if !r.Provider.GetDeletionTimestamp().IsZero() {
-		return r.reconcileDelete(ctx, r.Provider)
+	if !provider.GetDeletionTimestamp().IsZero() {
+		return r.reconcileDelete(ctx, provider)
 	}
 
 	// Check if spec hash stays the same and don't go further in this case.
-	specHash, err := calculateHash(ctx, r.Client, r.Provider)
+	specHash, err := calculateHash(ctx, r.Reconciler.GetClient(), r.Provider)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
-	if r.Provider.GetAnnotations()[appliedSpecHashAnnotation] == specHash {
+	if provider.GetAnnotations()[appliedSpecHashAnnotation] == specHash {
 		log.Info("No changes detected, skipping further steps")
 		return ctrl.Result{}, nil
 	}
 
-	res, err := r.reconcile(ctx, r.Provider, r.ProviderList)
+	res, err := r.reconcileNormal(ctx, provider)
 
-	annotations := r.Provider.GetAnnotations()
+	annotations := provider.GetAnnotations()
 	if annotations == nil {
 		annotations = map[string]string{}
 	}
@@ -152,7 +149,7 @@ func (r *GenericProviderReconciler) Reconcile(ctx context.Context, req reconcile
 	// Set the spec hash annotation if reconciliation was successful or reset it otherwise.
 	if res.IsZero() && err == nil {
 		// Recalculate spec hash in case it was changed during reconciliation process.
-		specHash, err := calculateHash(ctx, r.Client, r.Provider)
+		specHash, err := calculateHash(ctx, r.Reconciler.GetClient(), r.Provider)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -162,7 +159,7 @@ func (r *GenericProviderReconciler) Reconcile(ctx context.Context, req reconcile
 		annotations[appliedSpecHashAnnotation] = ""
 	}
 
-	r.Provider.SetAnnotations(annotations)
+	provider.SetAnnotations(annotations)
 
 	return res, ignoreCoreProviderWaitError(err)
 }
@@ -178,27 +175,26 @@ func patchProvider(ctx context.Context, provider operatorv1.GenericProvider, pat
 	return patchHelper.Patch(ctx, provider, options...)
 }
 
-func (r *GenericProviderReconciler) reconcile(ctx context.Context, provider genericprovider.GenericProvider, genericProviderList genericprovider.GenericProviderList) (ctrl.Result, error) {
-	reconciler := newPhaseReconciler(*r, provider, genericProviderList)
-	phases := []reconcilePhaseFn{
-		reconciler.preflightChecks,
-		reconciler.initializePhaseReconciler,
-		reconciler.downloadManifests,
-		reconciler.load,
-		reconciler.fetch,
-		reconciler.upgrade,
-		reconciler.install,
-		reconciler.reportStatus,
+func (r *ProviderControllerWrapper[P, R]) reconcileNormal(ctx context.Context, provider P) (ctrl.Result, error) {
+	r.Reconciler.Init()
+
+	phases := r.Reconciler.PreflightChecks(ctx, provider)
+	phases = append(phases, r.Reconciler.ReconcileNormal(ctx, provider)...)
+	phases = append(phases, r.Reconciler.ReportStatus(ctx, provider)...)
+
+	return r.reconcilePhases(ctx, provider, phases)
+}
+
+func (r *ProviderControllerWrapper[P, R]) reconcilePhases(ctx context.Context, provider P, p []generic.ReconcileFn[P, generic.Group[P]]) (res ctrl.Result, err error) {
+	providerList := r.Reconciler.GetProviderList()
+	if err := r.Reconciler.GetClient().List(ctx, providerList); err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to list providers: %w", err)
 	}
 
-	res := reconcile.Result{}
-
-	var err error
-
-	for _, phase := range phases {
-		res, err = phase(ctx)
+	for _, phase := range p {
+		res, err = phase(ctx, r.NewGroup(provider, providerList, r.Reconciler))
 		if err != nil {
-			var pe *PhaseError
+			var pe *phases.PhaseError
 			if errors.As(err, &pe) {
 				conditions.Set(provider, conditions.FalseCondition(pe.Type, pe.Reason, pe.Severity, "%s", err.Error()))
 			}
@@ -213,41 +209,19 @@ func (r *GenericProviderReconciler) reconcile(ctx context.Context, provider gene
 	return res, nil
 }
 
-func (r *GenericProviderReconciler) reconcileDelete(ctx context.Context, provider operatorv1.GenericProvider) (ctrl.Result, error) {
+func (r *ProviderControllerWrapper[P, R]) reconcileDelete(ctx context.Context, provider P) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 
 	log.Info("Deleting provider resources")
 
-	reconciler := newPhaseReconciler(*r, provider, nil)
-	phases := []reconcilePhaseFn{
-		reconciler.delete,
-	}
-
-	res := reconcile.Result{}
-
-	var err error
-
-	for _, phase := range phases {
-		res, err = phase(ctx)
-		if err != nil {
-			var pe *PhaseError
-			if errors.As(err, &pe) {
-				conditions.Set(provider, conditions.FalseCondition(pe.Type, pe.Reason, pe.Severity, "%s", err.Error()))
-			}
-		}
-
-		if !res.IsZero() || err != nil {
-			// the steps are sequential, so we must be complete before progressing.
-			return res, err
-		}
-	}
+	r.Reconciler.Init()
 
 	controllerutil.RemoveFinalizer(provider, operatorv1.ProviderFinalizer)
 
-	return res, nil
+	return r.reconcilePhases(ctx, provider, r.Reconciler.ReconcileDelete(ctx, provider))
 }
 
-func addConfigSecretToHash(ctx context.Context, k8sClient client.Client, hash hash.Hash, provider genericprovider.GenericProvider) error {
+func addConfigSecretToHash(ctx context.Context, k8sClient client.Client, hash hash.Hash, provider generic.Provider) error {
 	if provider.GetSpec().ConfigSecret != nil {
 		secret := &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
@@ -288,7 +262,7 @@ func addObjectToHash(hash hash.Hash, object interface{}) error {
 	return nil
 }
 
-func calculateHash(ctx context.Context, k8sClient client.Client, provider genericprovider.GenericProvider) (string, error) {
+func calculateHash(ctx context.Context, k8sClient client.Client, provider generic.Provider) (string, error) {
 	hash := sha256.New()
 
 	err := addObjectToHash(hash, provider.GetSpec())
