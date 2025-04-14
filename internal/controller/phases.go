@@ -472,17 +472,17 @@ func (p *phaseReconciler) fetch(ctx context.Context) (reconcile.Result, error) {
 	// ProviderSpec provides fields for customizing the provider deployment options.
 	// We can use clusterctl library to apply this customizations.
 	if err := repository.AlterComponents(p.components, customizeObjectsFn(p.provider)); err != nil {
-		return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.ProviderInstalledCondition)
+		return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsCustomizationErrorReason, operatorv1.ProviderInstalledCondition)
 	}
 
 	// Apply patches to the provider components if specified.
 	if err := repository.AlterComponents(p.components, applyPatches(ctx, p.provider)); err != nil {
-		return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.ProviderInstalledCondition)
+		return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsPatchErrorReason, operatorv1.ProviderInstalledCondition)
 	}
 
 	// Apply image overrides to the provider manifests.
 	if err := repository.AlterComponents(p.components, imageOverrides(p.components.ManifestLabel(), p.overridesClient)); err != nil {
-		return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.ProviderInstalledCondition)
+		return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsImageOverrideErrorReason, operatorv1.ProviderInstalledCondition)
 	}
 
 	conditions.Set(p.provider, conditions.TrueCondition(operatorv1.ProviderInstalledCondition))

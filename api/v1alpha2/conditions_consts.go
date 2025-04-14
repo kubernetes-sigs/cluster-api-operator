@@ -47,6 +47,15 @@ const (
 	// ComponentsFetchErrorReason documents that an error occurred fetching the components.
 	ComponentsFetchErrorReason = "ComponentsFetchError"
 
+	// ComponentsCustomizationErrorReason documents that an error occurred customizing the components.
+	ComponentsCustomizationErrorReason = "ComponentsCustomizationError"
+
+	// ComponentsPatchErrorReason documents that an error occurred patching the components.
+	ComponentsPatchErrorReason = "ComponentsPatchError"
+
+	// ComponentsImageOverrideErrorReason documents that an error occurred overriding the components image.
+	ComponentsImageOverrideErrorReason = "ComponentsImageOverrideError"
+
 	// ComponentsUpgradeErrorReason documents that an error occurred while upgrading the components.
 	ComponentsUpgradeErrorReason = "ComponentsUpgradeError"
 
