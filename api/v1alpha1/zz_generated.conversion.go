@@ -1020,6 +1020,7 @@ func autoConvert_v1alpha2_ManagerSpec_To_v1alpha1_ManagerSpec(in *v1alpha2.Manag
 	out.MaxConcurrentReconciles = in.MaxConcurrentReconciles
 	out.Verbosity = in.Verbosity
 	out.FeatureGates = *(*map[string]bool)(unsafe.Pointer(&in.FeatureGates))
+	// WARNING: in.AdditionalArgs requires manual conversion: does not exist in peer-type
 	return nil
 }
 

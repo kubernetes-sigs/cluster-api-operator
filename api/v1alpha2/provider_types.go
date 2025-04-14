@@ -150,6 +150,11 @@ type ManagerSpec struct {
 	// in as container args to the provider's controller manager.
 	// Controller Manager flag is --feature-gates.
 	FeatureGates map[string]bool `json:"featureGates,omitempty"`
+
+	// AdditionalArgs is a map of additional options that will be passed
+	// in as container args to the provider's controller manager.
+	// +optional
+	AdditionalArgs map[string]string `json:"additionalArgs,omitempty"`
 }
 
 // DeploymentSpec defines the properties that can be enabled on the Deployment for the provider.

@@ -48,6 +48,10 @@ func (src *BootstrapProvider) ConvertTo(dstRaw conversion.Hub) error {
 	dst.Spec.AdditionalDeployments = restored.Spec.AdditionalDeployments
 	dst.Spec.FetchConfig.OCI = restored.Spec.FetchConfig.OCI
 
+	if restored.Spec.ProviderSpec.Manager != nil {
+		dst.Spec.ProviderSpec.Manager.AdditionalArgs = restored.Spec.ProviderSpec.Manager.AdditionalArgs
+	}
+
 	return nil
 }
 
@@ -110,6 +114,10 @@ func (src *ControlPlaneProvider) ConvertTo(dstRaw conversion.Hub) error {
 	dst.Spec.ManifestPatches = restored.Spec.ManifestPatches
 	dst.Spec.AdditionalDeployments = restored.Spec.AdditionalDeployments
 	dst.Spec.FetchConfig.OCI = restored.Spec.FetchConfig.OCI
+
+	if restored.Spec.ProviderSpec.Manager != nil {
+		dst.Spec.ProviderSpec.Manager.AdditionalArgs = restored.Spec.ProviderSpec.Manager.AdditionalArgs
+	}
 
 	return nil
 }
@@ -174,6 +182,10 @@ func (src *CoreProvider) ConvertTo(dstRaw conversion.Hub) error {
 	dst.Spec.AdditionalDeployments = restored.Spec.AdditionalDeployments
 	dst.Spec.FetchConfig.OCI = restored.Spec.FetchConfig.OCI
 
+	if restored.Spec.ProviderSpec.Manager != nil {
+		dst.Spec.ProviderSpec.Manager.AdditionalArgs = restored.Spec.ProviderSpec.Manager.AdditionalArgs
+	}
+
 	return nil
 }
 
@@ -236,6 +248,10 @@ func (src *InfrastructureProvider) ConvertTo(dstRaw conversion.Hub) error {
 	dst.Spec.ManifestPatches = restored.Spec.ManifestPatches
 	dst.Spec.AdditionalDeployments = restored.Spec.AdditionalDeployments
 	dst.Spec.FetchConfig.OCI = restored.Spec.FetchConfig.OCI
+
+	if restored.Spec.ProviderSpec.Manager != nil {
+		dst.Spec.ProviderSpec.Manager.AdditionalArgs = restored.Spec.ProviderSpec.Manager.AdditionalArgs
+	}
 
 	return nil
 }
