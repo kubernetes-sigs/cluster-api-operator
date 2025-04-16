@@ -1291,6 +1291,13 @@ spec:
                       description: Manager defines the properties that can be enabled
                         on the controller manager for the additional provider deployment.
                       properties:
+                        additionalArgs:
+                          additionalProperties:
+                            type: string
+                          description: |-
+                            AdditionalArgs is a map of additional options that will be passed
+                            in as container args to the provider's controller manager.
+                          type: object
                         cacheNamespace:
                           description: |-
                             CacheNamespace if specified restricts the manager's cache to watch objects in
@@ -2822,6 +2829,13 @@ spec:
                 description: Manager defines the properties that can be enabled on
                   the controller manager for the provider.
                 properties:
+                  additionalArgs:
+                    additionalProperties:
+                      type: string
+                    description: |-
+                      AdditionalArgs is a map of additional options that will be passed
+                      in as container args to the provider's controller manager.
+                    type: object
                   cacheNamespace:
                     description: |-
                       CacheNamespace if specified restricts the manager's cache to watch objects in

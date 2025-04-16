@@ -85,6 +85,7 @@ func TestCustomizeDeployment(t *testing.T) {
 		inputDeploymentSpec    *operatorv1.DeploymentSpec
 		inputManagerSpec       *operatorv1.ManagerSpec
 		expectedDeploymentSpec func(*appsv1.DeploymentSpec) (*appsv1.DeploymentSpec, bool)
+		expectedError          bool
 	}{
 		{
 			name:                "empty",
@@ -492,6 +493,10 @@ func TestCustomizeDeployment(t *testing.T) {
 						RetryPeriod:       metav1.Duration{Duration: sevenHours},
 					},
 				},
+				AdditionalArgs: map[string]string{
+					"--test-option":    "test-value",
+					"--another-option": "another-value",
+				},
 			},
 			expectedDeploymentSpec: func(inputDS *appsv1.DeploymentSpec) (*appsv1.DeploymentSpec, bool) {
 				expectedDS := &appsv1.DeploymentSpec{
@@ -526,6 +531,8 @@ func TestCustomizeDeployment(t *testing.T) {
 										"--profiler-address=localhost:1234",
 										"--v=5",
 										"--feature-gates=ANOTHER=false,TEST=true",
+										"--test-option=test-value",
+										"--another-option=another-value",
 									},
 									LivenessProbe: &corev1.Probe{
 										ProbeHandler: corev1.ProbeHandler{
@@ -552,12 +559,50 @@ func TestCustomizeDeployment(t *testing.T) {
 				return expectedDS, reflect.DeepEqual(inputDS.Template.Spec.Containers[0], expectedDS.Template.Spec.Containers[0])
 			},
 		},
+		{
+			name: "additional arg already in args list with different value",
+			inputManagerSpec: &operatorv1.ManagerSpec{
+				ControllerManagerConfiguration: operatorv1.ControllerManagerConfiguration{
+					Webhook: operatorv1.ControllerWebhook{
+						Port:    ptr.To(3579),
+						CertDir: "/tmp/certs",
+					},
+				},
+				AdditionalArgs: map[string]string{
+					"--test-option":    "test-value",
+					"--webhook-port":   "0000",
+					"--another-option": "another-value",
+				},
+			},
+			expectedError: true,
+		},
+		{
+			name: "additional arg already in args list with same value",
+			inputManagerSpec: &operatorv1.ManagerSpec{
+				ControllerManagerConfiguration: operatorv1.ControllerManagerConfiguration{
+					Webhook: operatorv1.ControllerWebhook{
+						Port:    ptr.To(3579),
+						CertDir: "/tmp/certs",
+					},
+				},
+				AdditionalArgs: map[string]string{
+					"--test-option":    "test-value",
+					"--webhook-port":   "3579",
+					"--another-option": "another-value",
+				},
+			},
+			expectedError: true,
+		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			deployment := managerDepl.DeepCopy()
 			if err := customizeDeployment(tc.inputDeploymentSpec, tc.inputManagerSpec, deployment); err != nil {
+				if tc.expectedError {
+					return
+				}
+
 				t.Error(err)
 			}
 

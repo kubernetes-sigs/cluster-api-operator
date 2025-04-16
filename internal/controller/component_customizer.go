@@ -137,7 +137,9 @@ func customizeDeployment(dSpec *operatorv1.DeploymentSpec, mSpec *operatorv1.Man
 			return fmt.Errorf("cannot find %q container in deployment %q", managerContainerName, d.Name)
 		}
 
-		customizeManagerContainer(mSpec, container)
+		if err := customizeManagerContainer(mSpec, container); err != nil {
+			return fmt.Errorf("failed to customize manager container: %w", err)
+		}
 	}
 
 	return nil
@@ -184,7 +186,7 @@ func findManagerContainer(dSpec *appsv1.DeploymentSpec) *corev1.Container {
 }
 
 // customizeManagerContainer customize manager container base on provider spec input.
-func customizeManagerContainer(mSpec *operatorv1.ManagerSpec, c *corev1.Container) {
+func customizeManagerContainer(mSpec *operatorv1.ManagerSpec, c *corev1.Container) error {
 	// ControllerManagerConfigurationSpec fields
 	if mSpec.Controller != nil {
 		// TODO can't find an arg for CacheSyncTimeout
@@ -266,6 +268,19 @@ func customizeManagerContainer(mSpec *operatorv1.ManagerSpec, c *corev1.Containe
 		sort.Strings(fgValue)
 		c.Args = setArgs(c.Args, "--feature-gates", strings.Join(fgValue, ","))
 	}
+
+	for k, v := range mSpec.AdditionalArgs {
+		// Make sure the key is not already in the args
+		for _, arg := range c.Args {
+			if strings.HasPrefix(arg, k+"=") {
+				return fmt.Errorf("arg %q already exists", k)
+			}
+		}
+
+		c.Args = setArgs(c.Args, k, v)
+	}
+
+	return nil
 }
 
 // customizeContainer customize provider container base on provider spec input.
