@@ -47,7 +47,7 @@ diagnosticsAddress: ":8443"
 healthAddr: ":9440"
 insecureDiagnostics: false
 watchConfigSecret: false
-imagePullSecrets: {}
+imagePullSecrets: []
 resources:
   manager:
     limits:

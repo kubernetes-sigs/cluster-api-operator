@@ -1,47 +1,322 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
+  "$defs": {
+    "Provider": {
+      "type": "object",
+      "properties": {
+        "namespace": {
+          "$ref": "#/$defs/Rfc1123SubdomainNameOrNull"
+        },
+        "version": {
+          "$ref": "#/$defs/VersionOrNull"
+        },
+        "configSecret": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "$ref": "#/$defs/Rfc1123SubdomainNameOrNull"
+            },
+            "namespace": {
+              "$ref": "#/$defs/Rfc1123SubdomainNameOrNull"
+            }
+          },
+          "additionalProperties": false
+        },
+        "manifestPatches": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "additionalManifests": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "$ref": "#/$defs/Rfc1123SubdomainNameOrNull"
+            },
+            "namespace": {
+              "$ref": "#/$defs/Rfc1123SubdomainNameOrNull"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "Rfc1123SubdomainNameOrNull": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "string",
+          "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$",
+          "minLength": 1,
+          "maxLength": 253
+        }
+      ]
+    },
+    "VersionOrNull": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "string",
+          "minLength": 1
+        }
+      ]
+    }
+  },
   "type": "object",
   "properties": {
     "core": {
       "oneOf": [
-        { "type": "object" },
-        { "type": "null" }
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "patternProperties": {
+            "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$": {
+              "$ref": "#/$defs/Provider"
+            }
+          },
+          "additionalProperties": false
+        }
       ]
     },
     "bootstrap": {
       "type": "object",
       "oneOf": [
-        { "type": "object" },
-        { "type": "null" }
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "patternProperties": {
+            "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$": {
+              "$ref": "#/$defs/Provider"
+            }
+          },
+          "additionalProperties": false
+        }
       ]
     },
     "controlPlane": {
       "type": "object",
       "oneOf": [
-        { "type": "object" },
-        { "type": "null" }
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "patternProperties": {
+            "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$": {
+              "$ref": "#/$defs/Provider"
+            }
+          },
+          "additionalProperties": false
+        }
       ]
     },
     "infrastructure": {
       "type": "object",
       "oneOf": [
-        { "type": "object" },
-        { "type": "null" }
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "patternProperties": {
+            "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$": {
+              "$ref": "#/$defs/Provider"
+            }
+          },
+          "additionalProperties": false
+        }
       ]
     },
     "addon": {
       "type": "object",
       "oneOf": [
-        { "type": "object" },
-        { "type": "null" }
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "patternProperties": {
+            "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$": {
+              "$ref": "#/$defs/Provider"
+            }
+          },
+          "additionalProperties": false
+        }
       ]
     },
     "ipam": {
       "type": "object",
       "oneOf": [
-        { "type": "object" },
-        { "type": "null" }
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "patternProperties": {
+            "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$": {
+              "$ref": "#/$defs/Provider"
+            }
+          },
+          "additionalProperties": false
+        }
       ]
+    },
+    "manager.featureGates": {
+      "type": [
+        "null",
+        "object"
+      ]
+    },
+    "fetchConfig": {
+      "type": [
+        "null",
+        "object"
+      ]
+    },
+    "configSecret": {
+      "type": [
+        "null",
+        "object"
+      ]
+    },
+    "logLevel": {
+      "type": [
+        "null",
+        "integer"
+      ]
+    },
+    "replicaCount": {
+      "type": "integer"
+    },
+    "leaderElection": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "image": {
+      "type": "object",
+      "properties": {
+        "manager": {
+          "type": "object",
+          "properties": {
+            "repository": {
+              "type": "string"
+            },
+            "tag": {
+              "type": "string"
+            },
+            "pullPolicy": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "env": {
+      "type": "object",
+      "properties": {
+        "manager": {
+          "type": "array"
+        }
+      },
+      "additionalProperties": false
+    },
+    "diagnosticsAddress": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "healthAddr": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "insecureDiagnostics": {
+      "type": "boolean"
+    },
+    "watchConfigSecret": {
+      "type": "boolean"
+    },
+    "imagePullSecrets": {
+      "type": "array"
+    },
+    "resources": {
+      "type": "object",
+      "properties": {
+        "manager": {
+          "type": [
+            "null",
+            "object"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "containerSecurityContext": {
+      "type": "object",
+      "properties": {
+        "manager": {
+          "type": [
+            "null",
+            "object"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "affinity": {
+      "type": [
+        "null",
+        "object"
+      ]
+    },
+    "tolerations": {
+      "type": [
+        "array"
+      ]
+    },
+    "volumes": {
+      "type": [
+        "array"
+      ]
+    },
+    "volumeMounts": {
+      "type": "object",
+      "properties": {
+        "manager": {
+          "type": "array"
+        }
+      },
+      "additionalProperties": false
+    },
+    "enableHelmHook": {
+      "type": "boolean"
     }
-  }
+  },
+  "additionalProperties": false
 }
