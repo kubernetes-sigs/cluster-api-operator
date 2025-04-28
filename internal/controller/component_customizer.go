@@ -179,7 +179,14 @@ func customizeDeploymentSpec(dSpec operatorv1.DeploymentSpec, d *appsv1.Deployme
 // findManagerContainer finds manager container in the provider deployment.
 func findManagerContainer(dSpec *appsv1.DeploymentSpec) *corev1.Container {
 	for ic := range dSpec.Template.Spec.Containers {
-		return &dSpec.Template.Spec.Containers[ic]
+		if dSpec.Template.Spec.Containers[ic].Name == managerContainerName {
+			return &dSpec.Template.Spec.Containers[ic]
+		}
+	}
+
+	// This is for backward compatibility before fixing the issue https://github.com/kubernetes-sigs/cluster-api-operator/issues/787
+	if len(dSpec.Template.Spec.Containers) > 0 {
+		return &dSpec.Template.Spec.Containers[0]
 	}
 
 	return nil
