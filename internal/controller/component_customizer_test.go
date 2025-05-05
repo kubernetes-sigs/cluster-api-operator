@@ -49,33 +49,39 @@ func TestCustomizeDeployment(t *testing.T) {
 					Name: "manager",
 				},
 				Spec: corev1.PodSpec{
-					Containers: []corev1.Container{{
-						Name:  "manager",
-						Image: "registry.k8s.io/a-manager:1.6.2",
-						Env: []corev1.EnvVar{
-							{
-								Name:  "test1",
-								Value: "value1",
-							},
+					Containers: []corev1.Container{
+						{
+							Name:  "kube-rbac-proxy",
+							Image: "registry.k8s.io/a-kube-rbac-proxy:v0.13.1",
 						},
-						Args: []string{"--webhook-port=2345"},
-						LivenessProbe: &corev1.Probe{
-							ProbeHandler: corev1.ProbeHandler{
-								HTTPGet: &corev1.HTTPGetAction{
-									Path: "/healthz",
-									Port: intstr.FromString("healthz"),
+						{
+							Name:  "manager",
+							Image: "registry.k8s.io/a-manager:1.6.2",
+							Env: []corev1.EnvVar{
+								{
+									Name:  "test1",
+									Value: "value1",
+								},
+							},
+							Args: []string{"--webhook-port=2345"},
+							LivenessProbe: &corev1.Probe{
+								ProbeHandler: corev1.ProbeHandler{
+									HTTPGet: &corev1.HTTPGetAction{
+										Path: "/healthz",
+										Port: intstr.FromString("healthz"),
+									},
+								},
+							},
+							ReadinessProbe: &corev1.Probe{
+								ProbeHandler: corev1.ProbeHandler{
+									HTTPGet: &corev1.HTTPGetAction{
+										Path: "/readyz",
+										Port: intstr.FromString("healthz"),
+									},
 								},
 							},
 						},
-						ReadinessProbe: &corev1.Probe{
-							ProbeHandler: corev1.ProbeHandler{
-								HTTPGet: &corev1.HTTPGetAction{
-									Path: "/readyz",
-									Port: intstr.FromString("healthz"),
-								},
-							},
-						},
-					}},
+					},
 				},
 			},
 		},
@@ -279,6 +285,10 @@ func TestCustomizeDeployment(t *testing.T) {
 						Spec: corev1.PodSpec{
 							Containers: []corev1.Container{
 								{
+									Name:  "kube-rbac-proxy",
+									Image: "registry.k8s.io/a-kube-rbac-proxy:v0.13.1",
+								},
+								{
 									Name:  "manager",
 									Image: "quay.io/dev/mydns:v3.4.2",
 									Env: []corev1.EnvVar{
@@ -404,6 +414,10 @@ func TestCustomizeDeployment(t *testing.T) {
 							},
 							Containers: []corev1.Container{
 								{
+									Name:  "kube-rbac-proxy",
+									Image: "registry.k8s.io/a-kube-rbac-proxy:v0.13.1",
+								},
+								{
 									Name:  "manager",
 									Image: "quay.io/dev/mydns:v3.4.2",
 									Env: []corev1.EnvVar{
@@ -506,6 +520,10 @@ func TestCustomizeDeployment(t *testing.T) {
 						},
 						Spec: corev1.PodSpec{
 							Containers: []corev1.Container{
+								{
+									Name:  "kube-rbac-proxy",
+									Image: "registry.k8s.io/a-kube-rbac-proxy:v0.13.1",
+								},
 								{
 									Name:  "manager",
 									Image: "registry.k8s.io/a-manager:1.6.2",
