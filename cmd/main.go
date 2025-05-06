@@ -104,11 +104,11 @@ func InitFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&watchNamespace, "namespace", "",
 		"Namespace that the controller watches to reconcile cluster-api objects. If unspecified, the controller watches for cluster-api objects across all namespaces.")
 
-	fs.StringVar(&profilerAddress, "profiler-address", "",
-		"Bind address to expose the pprof profiler (e.g. localhost:6060)")
+	fs.StringVar(&profilerAddress, "profiler-address", "localhost:6060",
+		"Bind address to expose the pprof profiler (e.g. localhost:6060). Set to empty string to disable.")
 
 	fs.BoolVar(&enableContentionProfiling, "contention-profiling", false,
-		"Enable block profiling")
+		"Enable block profiling when profiler is active")
 
 	fs.IntVar(&concurrencyNumber, "concurrency", 1,
 		"Number of core resources to process simultaneously")
@@ -148,7 +148,7 @@ func main() {
 		}
 	}
 
-	if enableContentionProfiling {
+	if enableContentionProfiling && profilerAddress != "" {
 		goruntime.SetBlockProfileRate(1)
 	}
 
