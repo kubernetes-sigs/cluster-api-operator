@@ -1433,7 +1433,7 @@ spec:
                           minimum: 1
                           type: integer
                         metrics:
-                          description: Metrics contains thw controller metrics configuration
+                          description: Metrics contains the controller metrics configuration
                           properties:
                             bindAddress:
                               description: |-
@@ -2970,7 +2970,7 @@ spec:
                     minimum: 1
                     type: integer
                   metrics:
-                    description: Metrics contains thw controller metrics configuration
+                    description: Metrics contains the controller metrics configuration
                     properties:
                       bindAddress:
                         description: |-
