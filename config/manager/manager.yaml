@@ -25,6 +25,9 @@ spec:
         image: controller:latest
         name: manager
         ports:
+          - containerPort: 6060
+            name: profiler
+            protocol: TCP
           - containerPort: 8443
             name: metrics
             protocol: TCP

@@ -45,6 +45,8 @@ env:
   manager: []
 diagnosticsAddress: ":8443"
 healthAddr: ":9440"
+profilerAddress: ":6060"
+contentionProfiling: false
 insecureDiagnostics: false
 watchConfigSecret: false
 imagePullSecrets: {}
