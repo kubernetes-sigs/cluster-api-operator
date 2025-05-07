@@ -240,7 +240,7 @@ func (p *PhaseReconciler) Load(ctx context.Context) (*Result, error) {
 		labelSelector = p.provider.GetSpec().FetchConfig.Selector
 	}
 
-	additionalManifests, err := p.fetchAdditionalManifests(ctx)
+	additionalManifests, err := fetchAdditionalManifests(ctx, p.ctrlClient, p.provider)
 	if err != nil {
 		return &Result{}, wrapPhaseError(err, "failed to load additional manifests", operatorv1.ProviderInstalledCondition)
 	}
@@ -419,13 +419,13 @@ func (p *PhaseReconciler) configmapRepository(ctx context.Context, labelSelector
 	return mr, nil
 }
 
-func (p *PhaseReconciler) fetchAdditionalManifests(ctx context.Context) (string, error) {
+func fetchAdditionalManifests(ctx context.Context, cl client.Client, provider genericprovider.GenericProvider) (string, error) {
 	cm := &corev1.ConfigMap{}
 
-	if p.provider.GetSpec().AdditionalManifestsRef != nil {
-		key := types.NamespacedName{Namespace: p.provider.GetSpec().AdditionalManifestsRef.Namespace, Name: p.provider.GetSpec().AdditionalManifestsRef.Name}
+	if provider.GetSpec().AdditionalManifestsRef != nil {
+		key := types.NamespacedName{Namespace: provider.GetSpec().AdditionalManifestsRef.Namespace, Name: provider.GetSpec().AdditionalManifestsRef.Name}
 
-		if err := p.ctrlClient.Get(ctx, key, cm); err != nil {
+		if err := cl.Get(ctx, key, cm); err != nil {
 			return "", fmt.Errorf("failed to get ConfigMap %s/%s: %w", key.Namespace, key.Name, err)
 		}
 	}

@@ -23,6 +23,7 @@ import (
 	"errors"
 	"fmt"
 	"hash"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -39,7 +40,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	utilyaml "sigs.k8s.io/cluster-api/util/yaml"
 )
 
 type GenericProviderReconciler struct {
@@ -56,6 +60,7 @@ type GenericProviderReconciler struct {
 
 const (
 	appliedSpecHashAnnotation = "operator.cluster.x-k8s.io/applied-spec-hash"
+	cacheOwner                = "capi-operator"
 )
 
 func (r *GenericProviderReconciler) BuildWithManager(ctx context.Context, mgr ctrl.Manager) (*ctrl.Builder, error) {
@@ -173,8 +178,15 @@ func (r *GenericProviderReconciler) Reconcile(ctx context.Context, req reconcile
 		return ctrl.Result{}, err
 	}
 
-	if r.Provider.GetAnnotations()[appliedSpecHashAnnotation] == specHash {
+	// Check provider config map for changes
+	cacheUsed, err := applyFromCache(ctx, r.Client, r.Provider)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	if r.Provider.GetAnnotations()[appliedSpecHashAnnotation] == specHash || cacheUsed {
 		log.Info("No changes detected, skipping further steps")
+
 		return ctrl.Result{}, nil
 	}
 
@@ -316,17 +328,140 @@ func addObjectToHash(hash hash.Hash, object interface{}) error {
 	return nil
 }
 
-func calculateHash(ctx context.Context, k8sClient client.Client, provider genericprovider.GenericProvider) (string, error) {
-	hash := sha256.New()
+// providerHash calculates hash for provider and referenced objects.
+func providerHash(ctx context.Context, client client.Client, hash hash.Hash, provider genericprovider.GenericProvider) error {
+	log := log.FromContext(ctx)
 
 	err := addObjectToHash(hash, provider.GetSpec())
 	if err != nil {
-		return "", err
+		log.Error(err, "failed to calculate provider hash")
+
+		return err
 	}
 
-	if err := addConfigSecretToHash(ctx, k8sClient, hash, provider); err != nil {
-		return "", err
+	if err := addConfigSecretToHash(ctx, client, hash, provider); err != nil {
+		log.Error(err, "failed to calculate secret hash")
+
+		return err
 	}
 
-	return fmt.Sprintf("%x", hash.Sum(nil)), nil
+	return nil
+}
+
+func calculateHash(ctx context.Context, k8sClient client.Client, provider genericprovider.GenericProvider) (string, error) {
+	hash := sha256.New()
+
+	err := providerHash(ctx, k8sClient, hash, provider)
+
+	return fmt.Sprintf("%x", hash.Sum(nil)), err
+}
+
+// applyFromCache applies provider configuration from cache and returns true if the cache did not change.
+func applyFromCache(ctx context.Context, cl client.Client, provider genericprovider.GenericProvider) (bool, error) {
+	log := log.FromContext(ctx)
+
+	configMap, err := providerConfigMap(ctx, cl, provider)
+	if err != nil {
+		log.Error(err, "failed to get provider config map")
+
+		return false, err
+	}
+
+	// config map does not exist, nothing to apply
+	if configMap == nil {
+		return false, nil
+	}
+
+	// calculate combined hash for provider and config map cache
+	hash := sha256.New()
+	if err := providerHash(ctx, cl, hash, provider); err != nil {
+		log.Error(err, "failed to calculate provider hash")
+
+		return false, err
+	}
+
+	if err := addObjectToHash(hash, configMap.Data); err != nil {
+		log.Error(err, "failed to calculate config map hash")
+
+		return false, err
+	}
+
+	cacheHash := fmt.Sprintf("%x", hash.Sum(nil))
+	if configMap.GetAnnotations()[appliedSpecHashAnnotation] != cacheHash {
+		log.Info("Provider or cache state has changed", "cacheHash", cacheHash, "providerHash", configMap.GetAnnotations()[appliedSpecHashAnnotation])
+
+		return false, nil
+	}
+
+	components, err := getComponentsData(*configMap)
+	if err != nil {
+		log.Error(err, "failed to get provider components")
+
+		return false, err
+	}
+
+	additionalManifests, err := fetchAdditionalManifests(ctx, cl, provider)
+	if err != nil {
+		log.Error(err, "failed to get additional manifests")
+
+		return false, err
+	}
+
+	if additionalManifests != "" {
+		components = components + "\n---\n" + additionalManifests
+	}
+
+	for _, manifests := range strings.Split(components, "---") {
+		manifests, err := utilyaml.ToUnstructured([]byte(manifests))
+		if err != nil {
+			log.Error(err, "failed to convert yaml to unstructured")
+
+			return false, err
+		}
+
+		if err := cl.Patch(ctx, &manifests[0], client.Apply, client.ForceOwnership, client.FieldOwner(cacheOwner)); err != nil {
+			log.Error(err, "failed to apply object from cache")
+
+			return false, nil
+		}
+	}
+
+	log.Info("Applied all objects from cache")
+
+	return true, nil
+}
+
+// setCacheHash calculates current provider and configMap hash, and updates it on the configMap.
+func setCacheHash(ctx context.Context, cl client.Client, provider genericprovider.GenericProvider) error {
+	configMap, err := providerConfigMap(ctx, cl, provider)
+	if err != nil {
+		return err
+	}
+
+	helper, err := patch.NewHelper(configMap, cl)
+	if err != nil {
+		return err
+	}
+
+	hash := sha256.New()
+
+	if err := providerHash(ctx, cl, hash, provider); err != nil {
+		return err
+	}
+
+	if err := addObjectToHash(hash, configMap.Data); err != nil {
+		return err
+	}
+
+	cacheHash := fmt.Sprintf("%x", hash.Sum(nil))
+
+	annotations := configMap.GetAnnotations()
+	if annotations == nil {
+		annotations = map[string]string{}
+	}
+
+	annotations[appliedSpecHashAnnotation] = cacheHash
+	configMap.SetAnnotations(annotations)
+
+	return helper.Patch(ctx, configMap)
 }

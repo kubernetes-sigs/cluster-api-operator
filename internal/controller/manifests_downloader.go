@@ -138,6 +138,16 @@ func (p *PhaseReconciler) checkConfigMapExists(ctx context.Context, labelSelecto
 	return len(configMapList.Items) == 1, nil
 }
 
+// finalize applies combined hash to a configMap, in order to mark provider provisioning completed.
+func (p *phaseReconciler) finalize(ctx context.Context) (reconcile.Result, error) {
+	err := setCacheHash(ctx, p.ctrlClient, p.provider)
+	if err != nil {
+		ctrl.LoggerFrom(ctx).V(5).Error(err, "Failed to update providers ConfigMap hash")
+	}
+
+	return reconcile.Result{}, wrapPhaseError(err, "failed to update providers ConfigMap hash", operatorv1.ProviderInstalledCondition)
+}
+
 // prepareConfigMapLabels returns labels that identify a config map with downloaded manifests.
 func (p *PhaseReconciler) prepareConfigMapLabels() map[string]string {
 	return ProviderLabels(p.provider)
@@ -283,6 +293,27 @@ func providerLabelSelector(provider operatorv1.GenericProvider) *metav1.LabelSel
 	return &metav1.LabelSelector{
 		MatchLabels: ProviderLabels(provider),
 	}
+}
+
+// providerConfigMap finds a ConfigMap the given provider label selector.
+func providerConfigMap(ctx context.Context, cl client.Client, provider operatorv1.GenericProvider) (*corev1.ConfigMap, error) {
+	labelSelector := providerLabelSelector(provider)
+	labelSet := labels.Set(labelSelector.MatchLabels)
+	listOpts := []client.ListOption{
+		client.MatchingLabelsSelector{Selector: labels.SelectorFromSet(labelSet)},
+		client.InNamespace(provider.GetNamespace()),
+	}
+
+	configMapList := &corev1.ConfigMapList{}
+	if err := cl.List(ctx, configMapList, listOpts...); err != nil {
+		return nil, fmt.Errorf("failed to list ConfigMaps: %w", err)
+	}
+
+	if len(configMapList.Items) > 1 {
+		return nil, fmt.Errorf("multiple ConfigMaps found for provider %q", provider.GetName())
+	}
+
+	return &configMapList.Items[0], nil
 }
 
 // ProviderLabels returns default set of labels that identify a config map with downloaded manifests.
