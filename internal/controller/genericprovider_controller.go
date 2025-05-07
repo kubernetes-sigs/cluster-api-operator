@@ -137,7 +137,13 @@ func (r *GenericProviderReconciler) Reconcile(ctx context.Context, req reconcile
 		return ctrl.Result{}, err
 	}
 
-	if r.Provider.GetAnnotations()[appliedSpecHashAnnotation] == specHash {
+	// Check provider config map for changes
+	cacheDiffers, err := cacheHashCahnged(ctx, r.Client, r.Provider)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	if r.Provider.GetAnnotations()[appliedSpecHashAnnotation] == specHash && !cacheDiffers {
 		log.Info("No changes detected, skipping further steps")
 		return ctrl.Result{}, nil
 	}
@@ -189,6 +195,7 @@ func (r *GenericProviderReconciler) reconcile(ctx context.Context, provider gene
 		reconciler.upgrade,
 		reconciler.install,
 		reconciler.reportStatus,
+		reconciler.finalize,
 	}
 
 	res := reconcile.Result{}
@@ -288,17 +295,72 @@ func addObjectToHash(hash hash.Hash, object interface{}) error {
 	return nil
 }
 
+// providerHash calculates hash for provider and referenced objects
+func providerHash(ctx context.Context, client client.Client, hash hash.Hash, provider genericprovider.GenericProvider) error {
+	err := addObjectToHash(hash, provider.GetSpec())
+	if err != nil {
+		return err
+	}
+
+	if err := addConfigSecretToHash(ctx, client, hash, provider); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func calculateHash(ctx context.Context, k8sClient client.Client, provider genericprovider.GenericProvider) (string, error) {
 	hash := sha256.New()
 
-	err := addObjectToHash(hash, provider.GetSpec())
-	if err != nil {
-		return "", err
-	}
-
-	if err := addConfigSecretToHash(ctx, k8sClient, hash, provider); err != nil {
-		return "", err
-	}
+	providerHash(ctx, k8sClient, hash, provider)
 
 	return fmt.Sprintf("%x", hash.Sum(nil)), nil
+}
+
+// cacheHashCahnged returns true if the provider or cache state has changed
+func cacheHashCahnged(ctx context.Context, cl client.Client, provider genericprovider.GenericProvider) (bool, error) {
+	hash := sha256.New()
+
+	providerHash(ctx, cl, hash, provider)
+
+	configMap, err := providerConfigMap(ctx, cl, provider)
+	if err != nil {
+		return false, err
+	}
+
+	cacheHash := fmt.Sprintf("%x", hash.Sum(nil))
+
+	err = addObjectToHash(hash, configMap.Data)
+
+	return configMap.GetAnnotations()[appliedSpecHashAnnotation] != cacheHash, err
+}
+
+// setCacheHash calculates current provider and configMap hash, and updates it on the configMap
+func setCacheHash(ctx context.Context, cl client.Client, provider genericprovider.GenericProvider) error {
+	configMap, err := providerConfigMap(ctx, cl, provider)
+	if err != nil {
+		return err
+	}
+
+	helper, err := patch.NewHelper(configMap, cl)
+	if err != nil {
+		return err
+	}
+
+	hash := sha256.New()
+
+	providerHash(ctx, cl, hash, provider)
+	err = addObjectToHash(hash, configMap.Data)
+
+	cacheHash := fmt.Sprintf("%x", hash.Sum(nil))
+
+	annotations := configMap.GetAnnotations()
+	if annotations == nil {
+		annotations = map[string]string{}
+	}
+
+	annotations[appliedSpecHashAnnotation] = cacheHash
+	configMap.SetAnnotations(annotations)
+
+	return helper.Patch(ctx, configMap)
 }
