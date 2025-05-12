@@ -18,11 +18,10 @@ package controller
 
 import (
 	"bytes"
-	"compress/gzip"
 	"context"
 	"fmt"
-	"io"
 	"os"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -32,6 +31,7 @@ import (
 	versionutil "k8s.io/apimachinery/pkg/util/version"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes/scheme"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
 	"sigs.k8s.io/cluster-api-operator/internal/controller/genericprovider"
@@ -45,6 +45,7 @@ import (
 	"sigs.k8s.io/cluster-api/util/conditions"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -135,6 +136,34 @@ type InNamespace string
 
 func (i InNamespace) ApplyToConfigMapRepository(settings *ConfigMapRepositorySettings) {
 	settings.namespace = string(i)
+}
+
+// initReaderVariables initializes the given reader with configuration variables from the provider's
+// Spec.ConfigSecret if it is set.
+func initReaderVariables(ctx context.Context, cl client.Client, reader configclient.Reader, provider genericprovider.GenericProvider) error {
+	log := log.FromContext(ctx)
+
+	// Fetch configuration variables from the secret. See API field docs for more info.
+	if provider.GetSpec().ConfigSecret == nil {
+		log.Info("No configuration secret was specified")
+
+		return nil
+	}
+
+	secret := &corev1.Secret{}
+	key := types.NamespacedName{Namespace: provider.GetSpec().ConfigSecret.Namespace, Name: provider.GetSpec().ConfigSecret.Name}
+
+	if err := cl.Get(ctx, key, secret); err != nil {
+		log.Error(err, "failed to get referenced secret")
+
+		return err
+	}
+
+	for k, v := range secret.Data {
+		reader.Set(k, string(v))
+	}
+
+	return nil
 }
 
 // preflightChecks a wrapper around the preflight checks.
@@ -252,7 +281,7 @@ func (p *phaseReconciler) load(ctx context.Context) (reconcile.Result, error) {
 	// Store some provider specific inputs for passing it to clusterctl library
 	p.options = repository.ComponentsOptions{
 		TargetNamespace:     p.provider.GetNamespace(),
-		SkipTemplateProcess: false,
+		SkipTemplateProcess: true,
 		Version:             spec.Version,
 	}
 
@@ -275,20 +304,7 @@ func (p *phaseReconciler) secretReader(ctx context.Context, providers ...configc
 	}
 
 	// Fetch configuration variables from the secret. See API field docs for more info.
-	if p.provider.GetSpec().ConfigSecret != nil {
-		secret := &corev1.Secret{}
-		key := types.NamespacedName{Namespace: p.provider.GetSpec().ConfigSecret.Namespace, Name: p.provider.GetSpec().ConfigSecret.Name}
-
-		if err := p.ctrlClient.Get(ctx, key, secret); err != nil {
-			return nil, err
-		}
-
-		for k, v := range secret.Data {
-			mr.Set(k, string(v))
-		}
-	} else {
-		log.Info("No configuration secret was specified")
-	}
+	initReaderVariables(ctx, p.ctrlClient, mr, p.provider)
 
 	isCustom := true
 
@@ -434,18 +450,9 @@ func getComponentsData(cm corev1.ConfigMap) (string, error) {
 		return "", fmt.Errorf("ConfigMap %s/%s BinaryData has no components", cm.Namespace, cm.Name)
 	}
 
-	zr, err := gzip.NewReader(bytes.NewReader(compressedComponents))
-	if err != nil {
-		return "", err
-	}
-
-	components, err := io.ReadAll(zr)
+	components, err := decompressYaml(compressedComponents)
 	if err != nil {
 		return "", fmt.Errorf("cannot decompress data from ConfigMap %s/%s", cm.Namespace, cm.Name)
-	}
-
-	if err := zr.Close(); err != nil {
-		return "", err
 	}
 
 	return string(components), nil
@@ -531,7 +538,91 @@ func (p *phaseReconciler) fetch(ctx context.Context) (reconcile.Result, error) {
 		return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsImageOverrideErrorReason, operatorv1.ProviderInstalledCondition)
 	}
 
-	conditions.Set(p.provider, conditions.TrueCondition(operatorv1.ProviderInstalledCondition))
+	return reconcile.Result{}, nil
+}
+
+// store stores the provider components in the cache.
+func (p *phaseReconciler) store(ctx context.Context) (reconcile.Result, error) {
+	log := ctrl.LoggerFrom(ctx)
+	log.Info("Storing provider in cache")
+
+	componentsFile, err := p.components.Yaml()
+	if err != nil {
+		return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsCustomizationErrorReason, operatorv1.ProviderInstalledCondition)
+	}
+
+	kinds, _, err := clientgoscheme.Scheme.ObjectKinds(&corev1.ConfigMap{})
+	if err != nil || len(kinds) == 0 {
+		log.Error(err, "cannot fetch kind of the ConfigMap resource")
+		err = fmt.Errorf("cannot fetch kind of the ConfigMap resource: %w", err)
+
+		return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsCustomizationErrorReason, operatorv1.ProviderInstalledCondition)
+	}
+
+	configMap := &corev1.ConfigMap{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       kinds[0].Kind,
+			APIVersion: kinds[0].GroupVersion().String(),
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        ProviderCacheName(p.provider),
+			Namespace:   p.provider.GetNamespace(),
+			Annotations: map[string]string{},
+		},
+		Data: map[string]string{},
+	}
+
+	gvk := p.provider.GetObjectKind().GroupVersionKind()
+
+	configMap.SetOwnerReferences([]metav1.OwnerReference{
+		{
+			APIVersion: gvk.GroupVersion().String(),
+			Kind:       gvk.Kind,
+			Name:       p.provider.GetName(),
+			UID:        p.provider.GetUID(),
+		},
+	})
+
+	compress := needToCompress(componentsFile)
+	if compress {
+		configMap.Annotations[operatorv1.CompressedAnnotation] = "true"
+	}
+
+	for i, manifest := range strings.Split(string(componentsFile), "---") {
+		manifest = strings.TrimSpace(manifest)
+
+		if compress {
+			var buf bytes.Buffer
+			if err := compressYaml(&buf, []byte(manifest)); err != nil {
+				return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsCustomizationErrorReason, operatorv1.ProviderInstalledCondition)
+			}
+
+			configMap.BinaryData[fmt.Sprintf("%d", i)] = buf.Bytes()
+
+			continue
+		}
+
+		configMap.Data[fmt.Sprintf("%d", i)] = string(manifest)
+	}
+
+	if err := p.ctrlClient.Patch(ctx, configMap, client.Apply, client.ForceOwnership, client.FieldOwner(cacheOwner)); err != nil {
+		log.Error(err, "failed to apply cache config map")
+
+		return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsCustomizationErrorReason, operatorv1.ProviderInstalledCondition)
+	}
+
+	// Perform template processing with variable replacement.
+	p.options.SkipTemplateProcess = false
+	p.components, err = repository.NewComponents(repository.ComponentsInput{
+		Provider:     p.providerConfig,
+		ConfigClient: p.configClient,
+		Processor:    yamlprocessor.NewSimpleProcessor(),
+		RawYaml:      componentsFile,
+		Options:      p.options,
+	})
+	if err != nil {
+		return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.ProviderInstalledCondition)
+	}
 
 	return reconcile.Result{}, nil
 }
@@ -580,7 +671,7 @@ func (p *phaseReconciler) install(ctx context.Context) (reconcile.Result, error)
 	log.Info("Installing provider")
 
 	if err := clusterClient.ProviderComponents().Create(ctx, p.components.Objs()); err != nil {
-		reason := "Install failed"
+		reason := "Install failed!"
 		if wait.Interrupted(err) {
 			reason = "Timed out waiting for deployment to become ready"
 		}
