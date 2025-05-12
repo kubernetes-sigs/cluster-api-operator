@@ -3,8 +3,7 @@
   {{- $addonNamespace := default ( printf "%s-%s" $name "addon-system" ) (get $addon "namespace") }}
   {{- $addonName := $name }}
   {{- $addonVersion := get $addon "version" }}
-  {{- $addonCreateNamespace := default (true) (get $addon "createNamespace")}}
-{{- if $addonCreateNamespace }}
+{{- if ne $addon.createNamespace false }}
 ---
 apiVersion: v1
 kind: Namespace

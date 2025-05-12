@@ -3,8 +3,7 @@
   {{- $bootstrapNamespace := default ( printf "%s-%s" $name "bootstrap-system" ) (get $bootstrap "namespace") }}
   {{- $bootstrapName := $name }}
   {{- $bootstrapVersion := get $bootstrap "version" }}
-  {{- $bootstrapCreateNamespace := default (true) (get $bootstrap "createNamespace")}}
-{{- if $bootstrapCreateNamespace }}
+{{- if ne $bootstrap.createNamespace false }}
 ---
 apiVersion: v1
 kind: Namespace

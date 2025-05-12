@@ -3,8 +3,7 @@
   {{- $controlPlaneNamespace := default ( printf "%s-%s" $name "control-plane-system" ) (get $controlPlane "namespace") }}
   {{- $controlPlaneName := $name }}
   {{- $controlPlaneVersion := get $controlPlane "version" }}
-  {{- $controlPlaneCreateNamespace := default (true) (get $controlPlane "createNamespace")}}
-{{- if $controlPlaneCreateNamespace }}
+{{- if ne $controlPlane.createNamespace false }}
 ---
 apiVersion: v1
 kind: Namespace

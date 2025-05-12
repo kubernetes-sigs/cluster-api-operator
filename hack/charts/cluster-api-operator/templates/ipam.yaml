@@ -3,8 +3,7 @@
   {{- $ipamNamespace := default ( printf "%s-%s" $name "ipam-system" ) (get $ipam "namespace") }}
   {{- $ipamName := $name }}
   {{- $ipamVersion := get $ipam "version" }}
-  {{- $ipamCreateNamespace := default (true) (get $ipam "createNamespace")}}
-{{- if $ipamCreateNamespace }}
+{{- if ne $ipam.createNamespace false }}
 ---
 apiVersion: v1
 kind: Namespace

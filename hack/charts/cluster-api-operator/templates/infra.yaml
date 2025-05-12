@@ -3,8 +3,7 @@
   {{- $infrastructureNamespace := default ( printf "%s-%s" $name "infrastructure-system" ) (get $infra "namespace") }}
   {{- $infrastructureName := $name }}
   {{- $infrastructureVersion := get $infra "version" }}
-  {{- $infraCreateNamespace := default (true) (get $infra "createNamespace")}}
-{{- if $infraCreateNamespace }}
+{{- if ne $infra.createNamespace false }}
 ---
 apiVersion: v1
 kind: Namespace

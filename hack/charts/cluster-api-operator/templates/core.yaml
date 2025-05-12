@@ -3,8 +3,7 @@
   {{- $coreNamespace := default "capi-system" (get $core "namespace") }}
   {{- $coreName := $name }}
   {{- $coreVersion := get $core "version" }}
-  {{- $coreCreateNamespace := default (true) (get $core "createNamespace")}}
-{{- if $coreCreateNamespace }}
+{{- if ne $core.createNamespace false }}
 ---
 apiVersion: v1
 kind: Namespace
