@@ -389,7 +389,7 @@ metadata:
 				g.Expect(fakeclient.Create(ctx, &tt.configMaps[i])).To(Succeed())
 			}
 
-			got, err := p.configmapRepository(context.TODO(), p.provider.GetSpec().FetchConfig.Selector, "ns1", tt.additionalManifests)
+			got, err := p.configmapRepository(context.TODO(), p.provider.GetSpec().FetchConfig.Selector, InNamespace("ns1"), WithAdditionalManifests(tt.additionalManifests))
 
 			if len(tt.wantErr) > 0 {
 				g.Expect(err).Should(MatchError(tt.wantErr))
@@ -596,7 +596,7 @@ releaseSeries:
 					MatchLabels: map[string]string{
 						operatorManagedLabel: "true",
 					},
-				}, "default", "")
+				}, InNamespace("default"))
 				g.Expect(err).To(Succeed())
 			}
 

@@ -108,6 +108,35 @@ func newPhaseReconciler(r GenericProviderReconciler, provider genericprovider.Ge
 	}
 }
 
+type ConfigMapRepositorySettings struct {
+	repository.Repository
+	additionalManifests string
+	skipComponents      bool
+	namespace           string
+}
+
+type ConfigMapRepositoryOption interface {
+	ApplyToConfigMapRepository(*ConfigMapRepositorySettings)
+}
+
+type WithAdditionalManifests string
+
+func (w WithAdditionalManifests) ApplyToConfigMapRepository(settings *ConfigMapRepositorySettings) {
+	settings.additionalManifests = string(w)
+}
+
+type SkipComponents struct{}
+
+func (s SkipComponents) ApplyToConfigMapRepository(settings *ConfigMapRepositorySettings) {
+	settings.skipComponents = true
+}
+
+type InNamespace string
+
+func (i InNamespace) ApplyToConfigMapRepository(settings *ConfigMapRepositorySettings) {
+	settings.namespace = string(i)
+}
+
 // preflightChecks a wrapper around the preflight checks.
 func (p *phaseReconciler) preflightChecks(ctx context.Context) (reconcile.Result, error) {
 	return reconcile.Result{}, preflightChecks(ctx, p.ctrlClient, p.provider, p.providerList)
@@ -199,7 +228,7 @@ func (p *phaseReconciler) load(ctx context.Context) (reconcile.Result, error) {
 		return reconcile.Result{}, wrapPhaseError(err, "failed to load additional manifests", operatorv1.ProviderInstalledCondition)
 	}
 
-	p.repo, err = p.configmapRepository(ctx, labelSelector, p.provider.GetNamespace(), additionalManifests)
+	p.repo, err = p.configmapRepository(ctx, labelSelector, InNamespace(p.provider.GetNamespace()), WithAdditionalManifests(additionalManifests))
 	if err != nil {
 		return reconcile.Result{}, wrapPhaseError(err, "failed to load the repository", operatorv1.ProviderInstalledCondition)
 	}
@@ -299,9 +328,17 @@ func (p *phaseReconciler) secretReader(ctx context.Context, providers ...configc
 
 // configmapRepository use clusterctl NewMemoryRepository structure to store the manifests
 // and metadata from a given configmap.
-func (p *phaseReconciler) configmapRepository(ctx context.Context, labelSelector *metav1.LabelSelector, namespace, additionalManifests string) (repository.Repository, error) {
+func (p *phaseReconciler) configmapRepository(ctx context.Context, labelSelector *metav1.LabelSelector, options ...ConfigMapRepositoryOption) (repository.Repository, error) {
 	mr := repository.NewMemoryRepository()
 	mr.WithPaths("", "components.yaml")
+
+	settings := &ConfigMapRepositorySettings{
+		Repository: mr,
+	}
+
+	for _, option := range options {
+		option.ApplyToConfigMapRepository(settings)
+	}
 
 	cml := &corev1.ConfigMapList{}
 
@@ -310,7 +347,7 @@ func (p *phaseReconciler) configmapRepository(ctx context.Context, labelSelector
 		return nil, err
 	}
 
-	if err = p.ctrlClient.List(ctx, cml, &client.ListOptions{LabelSelector: selector, Namespace: namespace}); err != nil {
+	if err = p.ctrlClient.List(ctx, cml, &client.ListOptions{LabelSelector: selector, Namespace: settings.namespace}); err != nil {
 		return nil, err
 	}
 
@@ -341,13 +378,22 @@ func (p *phaseReconciler) configmapRepository(ctx context.Context, labelSelector
 
 		mr.WithFile(version, metadataFile, []byte(metadata))
 
+		// Exclude components from the repository if only metadata is needed.
+		// Used for provider upgrades, when compatibility with other providers is
+		// established based on the metadata only.
+		if settings.skipComponents {
+			mr.WithFile(version, mr.ComponentsPath(), []byte{})
+
+			continue
+		}
+
 		components, err := getComponentsData(cm)
 		if err != nil {
 			return nil, err
 		}
 
-		if additionalManifests != "" {
-			components = components + "\n---\n" + additionalManifests
+		if settings.additionalManifests != "" {
+			components = components + "\n---\n" + settings.additionalManifests
 		}
 
 		mr.WithFile(version, mr.ComponentsPath(), []byte(components))
@@ -649,7 +695,7 @@ func (p *phaseReconciler) repositoryProxy(ctx context.Context, provider configcl
 			return nil, wrapPhaseError(fmt.Errorf("config map not found"), "config map repository required for validation does not exist yet for provider "+provider.String(), operatorv1.ProviderUpgradedCondition)
 		}
 
-		repo, err := p.configmapRepository(ctx, providerLabelSelector(genericProvider), genericProvider.GetNamespace(), "")
+		repo, err := p.configmapRepository(ctx, providerLabelSelector(genericProvider), InNamespace(genericProvider.GetNamespace()), SkipComponents{})
 		if err != nil {
 			provider := client.ObjectKeyFromObject(genericProvider)
 			return nil, wrapPhaseError(err, "failed to load the repository for provider "+provider.String(), operatorv1.ProviderUpgradedCondition)
