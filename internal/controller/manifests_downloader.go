@@ -21,8 +21,10 @@ import (
 	"compress/gzip"
 	"context"
 	"fmt"
+	"io"
 
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -40,6 +42,11 @@ const (
 	configMapSourceLabel      = "provider.cluster.x-k8s.io/source"
 	configMapSourceAnnotation = "provider.cluster.x-k8s.io/source"
 	operatorManagedLabel      = "managed-by.operator.cluster.x-k8s.io"
+	operatorCacheLabel        = "cached-by.operator.cluster.x-k8s.io"
+
+	cacheVersionLabelName = "provider-cache.cluster.x-k8s.io/version"
+	cacheTypeLabel        = "provider-cache.cluster.x-k8s.io/type"
+	cacheNameLabel        = "provider-cache.cluster.x-k8s.io/name"
 
 	maxConfigMapSize = 1 * 1024 * 1024
 	ociSource        = "oci"
@@ -188,15 +195,8 @@ func TemplateManifestsConfigMap(provider operatorv1.GenericProvider, labels map[
 		configMap.Data[operatorv1.ComponentsConfigMapKey] = string(components)
 	} else {
 		var componentsBuf bytes.Buffer
-		zw := gzip.NewWriter(&componentsBuf)
-
-		_, err := zw.Write(components)
-		if err != nil {
+		if err := compressYaml(&componentsBuf, components); err != nil {
 			return nil, fmt.Errorf("cannot compress data for provider %s/%s: %w", provider.GetNamespace(), provider.GetName(), err)
-		}
-
-		if err := zw.Close(); err != nil {
-			return nil, err
 		}
 
 		configMap.BinaryData = map[string][]byte{
@@ -219,6 +219,41 @@ func TemplateManifestsConfigMap(provider operatorv1.GenericProvider, labels map[
 	})
 
 	return configMap, nil
+}
+
+// compressYaml takes a bytes.Buffer and data, and compresses data into it.
+func compressYaml(componentsBuf *bytes.Buffer, data []byte) (err error) {
+	zw := gzip.NewWriter(componentsBuf)
+
+	_, err = zw.Write(data)
+	defer func() {
+		err = zw.Close()
+	}()
+
+	if err != nil {
+		return fmt.Errorf("cannot compress data: %w", err)
+	}
+
+	return
+}
+
+// decompressYaml takes a compressed data, and decompresses it.
+func decompressYaml(compressedData []byte) (data []byte, err error) {
+	zr, err := gzip.NewReader(bytes.NewReader(compressedData))
+	if err != nil {
+		return nil, fmt.Errorf("cannot open gzip reader from data: %w", err)
+	}
+
+	defer func() {
+		err = zr.Close()
+	}()
+
+	decompressedData, err := io.ReadAll(zr)
+	if err != nil {
+		return nil, fmt.Errorf("cannot decompress data: %w", err)
+	}
+
+	return decompressedData, nil
 }
 
 // OCIConfigMap templates config from the OCI source.
@@ -295,25 +330,16 @@ func providerLabelSelector(provider operatorv1.GenericProvider) *metav1.LabelSel
 	}
 }
 
-// providerConfigMap finds a ConfigMap the given provider label selector.
-func providerConfigMap(ctx context.Context, cl client.Client, provider operatorv1.GenericProvider) (*corev1.ConfigMap, error) {
-	labelSelector := providerLabelSelector(provider)
-	labelSet := labels.Set(labelSelector.MatchLabels)
-	listOpts := []client.ListOption{
-		client.MatchingLabelsSelector{Selector: labels.SelectorFromSet(labelSet)},
-		client.InNamespace(provider.GetNamespace()),
-	}
-
-	configMapList := &corev1.ConfigMapList{}
-	if err := cl.List(ctx, configMapList, listOpts...); err != nil {
+// providerCacheConfigMap finds a cached ConfigMap the given provider label selector.
+func providerCacheConfigMap(ctx context.Context, cl client.Client, provider operatorv1.GenericProvider) (*corev1.ConfigMap, error) {
+	configMap := &corev1.ConfigMap{}
+	if err := cl.Get(ctx, client.ObjectKey{Name: ProviderCacheName(provider), Namespace: provider.GetNamespace()}, configMap); apierrors.IsNotFound(err) {
+		return nil, nil
+	} else if err != nil {
 		return nil, fmt.Errorf("failed to list ConfigMaps: %w", err)
 	}
 
-	if len(configMapList.Items) > 1 {
-		return nil, fmt.Errorf("multiple ConfigMaps found for provider %q", provider.GetName())
-	}
-
-	return &configMapList.Items[0], nil
+	return configMap, nil
 }
 
 // ProviderLabels returns default set of labels that identify a config map with downloaded manifests.
@@ -330,6 +356,12 @@ func ProviderLabels(provider operatorv1.GenericProvider) map[string]string {
 	}
 
 	return labels
+}
+
+// ProviderCacheName generates a cache name for a given provider.
+
+func ProviderCacheName(provider operatorv1.GenericProvider) string {
+	return fmt.Sprintf("%s-%s-%s-cache", provider.GetType(), provider.GetName(), provider.GetSpec().Version)
 }
 
 // needToCompress checks whether the input data exceeds the maximum configmap
