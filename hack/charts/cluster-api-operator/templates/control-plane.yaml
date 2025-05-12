@@ -3,6 +3,8 @@
   {{- $controlPlaneNamespace := default ( printf "%s-%s" $name "control-plane-system" ) (get $controlPlane "namespace") }}
   {{- $controlPlaneName := $name }}
   {{- $controlPlaneVersion := get $controlPlane "version" }}
+  {{- $controlPlaneCreateNamespace := default (true) (get $controlPlane "createNamespace")}}
+{{- if $controlPlaneCreateNamespace }}
 ---
 apiVersion: v1
 kind: Namespace
@@ -14,6 +16,7 @@ metadata:
     {{- end }}
     "argocd.argoproj.io/sync-wave": "1"
   name: {{ $controlPlaneNamespace }}
+{{- end }}
 ---
 apiVersion: operator.cluster.x-k8s.io/v1alpha2
 kind: ControlPlaneProvider
