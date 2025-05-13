@@ -30,6 +30,7 @@ const (
 	ConfigMapNameLabel        = "provider.cluster.x-k8s.io/name"
 
 	CompressedAnnotation = "provider.cluster.x-k8s.io/compressed"
+	TrueValue            = "true"
 
 	MetadataConfigMapKey            = "metadata"
 	ComponentsConfigMapKey          = "components"
