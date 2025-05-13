@@ -40,8 +40,10 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/config"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
+
 	ctrlwebhook "sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
@@ -173,6 +175,9 @@ func main() {
 					&corev1.Secret{},
 				},
 			},
+		},
+		Controller: config.Controller{
+			MaxConcurrentReconciles: concurrencyNumber,
 		},
 		WebhookServer: ctrlwebhook.NewServer(
 			ctrlwebhook.Options{
