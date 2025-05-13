@@ -24,7 +24,6 @@ import (
 	"io"
 
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -43,10 +42,6 @@ const (
 	configMapSourceAnnotation = "provider.cluster.x-k8s.io/source"
 	operatorManagedLabel      = "managed-by.operator.cluster.x-k8s.io"
 	operatorCacheLabel        = "cached-by.operator.cluster.x-k8s.io"
-
-	cacheVersionLabelName = "provider-cache.cluster.x-k8s.io/version"
-	cacheTypeLabel        = "provider-cache.cluster.x-k8s.io/type"
-	cacheNameLabel        = "provider-cache.cluster.x-k8s.io/name"
 
 	maxConfigMapSize = 1 * 1024 * 1024
 	ociSource        = "oci"
@@ -328,18 +323,6 @@ func providerLabelSelector(provider operatorv1.GenericProvider) *metav1.LabelSel
 	return &metav1.LabelSelector{
 		MatchLabels: ProviderLabels(provider),
 	}
-}
-
-// providerCacheConfigMap finds a cached ConfigMap the given provider label selector.
-func providerCacheConfigMap(ctx context.Context, cl client.Client, provider operatorv1.GenericProvider) (*corev1.ConfigMap, error) {
-	configMap := &corev1.ConfigMap{}
-	if err := cl.Get(ctx, client.ObjectKey{Name: ProviderCacheName(provider), Namespace: provider.GetNamespace()}, configMap); apierrors.IsNotFound(err) {
-		return nil, nil
-	} else if err != nil {
-		return nil, fmt.Errorf("failed to list ConfigMaps: %w", err)
-	}
-
-	return configMap, nil
 }
 
 // ProviderLabels returns default set of labels that identify a config map with downloaded manifests.

@@ -361,16 +361,14 @@ func calculateHash(ctx context.Context, k8sClient client.Client, provider generi
 func applyFromCache(ctx context.Context, cl client.Client, provider genericprovider.GenericProvider) (bool, error) {
 	log := log.FromContext(ctx)
 
-	configMap, err := providerCacheConfigMap(ctx, cl, provider)
-	if err != nil {
+	configMap := &corev1.ConfigMap{}
+	if err := cl.Get(ctx, client.ObjectKey{Name: ProviderCacheName(provider), Namespace: provider.GetNamespace()}, configMap); apierrors.IsNotFound(err) {
+		// config map does not exist, nothing to apply
+		return false, nil
+	} else if err != nil {
 		log.Error(err, "failed to get provider config map")
 
-		return false, err
-	}
-
-	// config map does not exist, nothing to apply
-	if configMap == nil {
-		return false, nil
+		return false, fmt.Errorf("failed to get cache ConfigMap: %w", err)
 	}
 
 	// calculate combined hash for provider and config map cache
@@ -395,6 +393,7 @@ func applyFromCache(ctx context.Context, cl client.Client, provider genericprovi
 	}
 
 	log.Info("Applying provider configuration from cache")
+
 	errs := []error{}
 
 	mr := configclient.NewMemoryReader()
@@ -404,7 +403,9 @@ func applyFromCache(ctx context.Context, cl client.Client, provider genericprovi
 	}
 
 	// Fetch configuration variables from the secret. See API field docs for more info.
-	initReaderVariables(ctx, cl, mr, provider)
+	if err := initReaderVariables(ctx, cl, mr, provider); err != nil {
+		return false, err
+	}
 
 	processor := yamlprocessor.NewSimpleProcessor()
 	for _, manifest := range configMap.Data {
@@ -422,7 +423,7 @@ func applyFromCache(ctx context.Context, cl client.Client, provider genericprovi
 			return false, err
 		}
 
-		if len(manifest) > 1 {
+		if len(manifests) > 1 {
 			return false, fmt.Errorf("multiple manifests found: %d", len(manifests))
 		} else if len(manifests) == 0 {
 			continue
@@ -441,20 +442,21 @@ func applyFromCache(ctx context.Context, cl client.Client, provider genericprovi
 			return false, err
 		}
 
-		manifest, err = processor.Process([]byte(manifest), mr.Get)
+		manifest, err = processor.Process(manifest, mr.Get)
 		if err != nil {
 			log.Error(err, "failed to process manifest")
 
 			return false, err
 		}
-		manifests, err := utilyaml.ToUnstructured([]byte(manifest))
+
+		manifests, err := utilyaml.ToUnstructured(manifest)
 		if err != nil {
 			log.Error(err, "failed to convert yaml to unstructured")
 
 			return false, err
 		}
 
-		if len(manifest) > 1 {
+		if len(manifests) > 1 {
 			return false, fmt.Errorf("multiple manifests found: %d", len(manifests))
 		} else if len(manifests) == 0 {
 			continue
@@ -478,9 +480,9 @@ func applyFromCache(ctx context.Context, cl client.Client, provider genericprovi
 
 // setCacheHash calculates current provider and configMap hash, and updates it on the configMap.
 func setCacheHash(ctx context.Context, cl client.Client, provider genericprovider.GenericProvider) error {
-	configMap, err := providerCacheConfigMap(ctx, cl, provider)
-	if err != nil {
-		return err
+	configMap := &corev1.ConfigMap{}
+	if err := cl.Get(ctx, client.ObjectKey{Name: ProviderCacheName(provider), Namespace: provider.GetNamespace()}, configMap); err != nil {
+		return fmt.Errorf("failed to get cache ConfigMaps: %w", err)
 	}
 
 	helper, err := patch.NewHelper(configMap, cl)
