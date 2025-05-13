@@ -25,13 +25,13 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/types"
 	versionutil "k8s.io/apimachinery/pkg/util/version"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes/scheme"
-	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
 	"sigs.k8s.io/cluster-api-operator/internal/controller/genericprovider"
@@ -47,6 +47,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	utilyaml "sigs.k8s.io/cluster-api/util/yaml"
 )
 
 // fakeURL is the stub url for custom providers, missing from clusterctl repository.
@@ -304,7 +306,9 @@ func (p *phaseReconciler) secretReader(ctx context.Context, providers ...configc
 	}
 
 	// Fetch configuration variables from the secret. See API field docs for more info.
-	initReaderVariables(ctx, p.ctrlClient, mr, p.provider)
+	if err := initReaderVariables(ctx, p.ctrlClient, mr, p.provider); err != nil {
+		return nil, err
+	}
 
 	isCustom := true
 
@@ -546,12 +550,14 @@ func (p *phaseReconciler) store(ctx context.Context) (reconcile.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 	log.Info("Storing provider in cache")
 
-	componentsFile, err := p.components.Yaml()
+	components := addNamespaceIfMissing(p.components.Objs(), p.provider.GetNamespace())
+
+	componentsFile, err := utilyaml.FromUnstructured(components)
 	if err != nil {
 		return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsCustomizationErrorReason, operatorv1.ProviderInstalledCondition)
 	}
 
-	kinds, _, err := clientgoscheme.Scheme.ObjectKinds(&corev1.ConfigMap{})
+	kinds, _, err := scheme.Scheme.ObjectKinds(&corev1.ConfigMap{})
 	if err != nil || len(kinds) == 0 {
 		log.Error(err, "cannot fetch kind of the ConfigMap resource")
 		err = fmt.Errorf("cannot fetch kind of the ConfigMap resource: %w", err)
@@ -569,7 +575,8 @@ func (p *phaseReconciler) store(ctx context.Context) (reconcile.Result, error) {
 			Namespace:   p.provider.GetNamespace(),
 			Annotations: map[string]string{},
 		},
-		Data: map[string]string{},
+		Data:       map[string]string{},
+		BinaryData: map[string][]byte{},
 	}
 
 	gvk := p.provider.GetObjectKind().GroupVersionKind()
@@ -588,7 +595,7 @@ func (p *phaseReconciler) store(ctx context.Context) (reconcile.Result, error) {
 		configMap.Annotations[operatorv1.CompressedAnnotation] = "true"
 	}
 
-	for i, manifest := range strings.Split(string(componentsFile), "---") {
+	for i, manifest := range strings.Split(string(componentsFile), "\n---") {
 		manifest = strings.TrimSpace(manifest)
 
 		if compress {
@@ -602,7 +609,7 @@ func (p *phaseReconciler) store(ctx context.Context) (reconcile.Result, error) {
 			continue
 		}
 
-		configMap.Data[fmt.Sprintf("%d", i)] = string(manifest)
+		configMap.Data[fmt.Sprintf("%d", i)] = manifest
 	}
 
 	if err := p.ctrlClient.Patch(ctx, configMap, client.Apply, client.ForceOwnership, client.FieldOwner(cacheOwner)); err != nil {
@@ -613,6 +620,7 @@ func (p *phaseReconciler) store(ctx context.Context) (reconcile.Result, error) {
 
 	// Perform template processing with variable replacement.
 	p.options.SkipTemplateProcess = false
+
 	p.components, err = repository.NewComponents(repository.ComponentsInput{
 		Provider:     p.providerConfig,
 		ConfigClient: p.configClient,
@@ -625,6 +633,33 @@ func (p *phaseReconciler) store(ctx context.Context) (reconcile.Result, error) {
 	}
 
 	return reconcile.Result{}, nil
+}
+
+// addNamespaceIfMissing adda a Namespace object if missing (this ensure the targetNamespace will be created).
+func addNamespaceIfMissing(objs []unstructured.Unstructured, targetNamespace string) []unstructured.Unstructured {
+	namespaceObjectFound := false
+
+	for _, o := range objs {
+		// if the object has Kind Namespace, fix the namespace name
+		if o.GetKind() == namespaceKind {
+			namespaceObjectFound = true
+		}
+	}
+
+	// if there isn't an object with Kind Namespace, add it
+	if !namespaceObjectFound {
+		objs = append(objs, unstructured.Unstructured{
+			Object: map[string]interface{}{
+				"apiVersion": "v1",
+				"kind":       namespaceKind,
+				"metadata": map[string]interface{}{
+					"name": targetNamespace,
+				},
+			},
+		})
+	}
+
+	return objs
 }
 
 // upgrade ensure all the clusterctl CRDs are available before installing the provider,
@@ -671,7 +706,7 @@ func (p *phaseReconciler) install(ctx context.Context) (reconcile.Result, error)
 	log.Info("Installing provider")
 
 	if err := clusterClient.ProviderComponents().Create(ctx, p.components.Objs()); err != nil {
-		reason := "Install failed!"
+		reason := "Install failed"
 		if wait.Interrupted(err) {
 			reason = "Timed out waiting for deployment to become ready"
 		}
