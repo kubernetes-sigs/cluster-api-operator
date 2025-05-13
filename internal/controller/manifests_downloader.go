@@ -190,7 +190,7 @@ func TemplateManifestsConfigMap(provider operatorv1.GenericProvider, labels map[
 		configMap.Data[operatorv1.ComponentsConfigMapKey] = string(components)
 	} else {
 		var componentsBuf bytes.Buffer
-		if err := compressYaml(&componentsBuf, components); err != nil {
+		if err := compressData(&componentsBuf, components); err != nil {
 			return nil, fmt.Errorf("cannot compress data for provider %s/%s: %w", provider.GetNamespace(), provider.GetName(), err)
 		}
 
@@ -216,8 +216,8 @@ func TemplateManifestsConfigMap(provider operatorv1.GenericProvider, labels map[
 	return configMap, nil
 }
 
-// compressYaml takes a bytes.Buffer and data, and compresses data into it.
-func compressYaml(componentsBuf *bytes.Buffer, data []byte) (err error) {
+// compressData takes a bytes.Buffer and data, and compresses data into it.
+func compressData(componentsBuf *bytes.Buffer, data []byte) (err error) {
 	zw := gzip.NewWriter(componentsBuf)
 
 	_, err = zw.Write(data)
@@ -232,8 +232,8 @@ func compressYaml(componentsBuf *bytes.Buffer, data []byte) (err error) {
 	return
 }
 
-// decompressYaml takes a compressed data, and decompresses it.
-func decompressYaml(compressedData []byte) (data []byte, err error) {
+// decompressData takes a compressed data, and decompresses it.
+func decompressData(compressedData []byte) (data []byte, err error) {
 	zr, err := gzip.NewReader(bytes.NewReader(compressedData))
 	if err != nil {
 		return nil, fmt.Errorf("cannot open gzip reader from data: %w", err)

@@ -27,13 +27,13 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	kerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/client-go/rest"
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
 	"sigs.k8s.io/cluster-api-operator/internal/controller/genericprovider"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	configclient "sigs.k8s.io/cluster-api/cmd/clusterctl/client/config"
-	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/yamlprocessor"
 	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/patch"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -43,8 +43,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-
-	utilyaml "sigs.k8s.io/cluster-api/util/yaml"
 )
 
 type GenericProviderReconciler struct {
@@ -361,14 +359,14 @@ func calculateHash(ctx context.Context, k8sClient client.Client, provider generi
 func applyFromCache(ctx context.Context, cl client.Client, provider genericprovider.GenericProvider) (bool, error) {
 	log := log.FromContext(ctx)
 
-	configMap := &corev1.ConfigMap{}
-	if err := cl.Get(ctx, client.ObjectKey{Name: ProviderCacheName(provider), Namespace: provider.GetNamespace()}, configMap); apierrors.IsNotFound(err) {
-		// config map does not exist, nothing to apply
+	secret := &corev1.Secret{}
+	if err := cl.Get(ctx, client.ObjectKey{Name: ProviderCacheName(provider), Namespace: provider.GetNamespace()}, secret); apierrors.IsNotFound(err) {
+		// secret does not exist, nothing to apply
 		return false, nil
 	} else if err != nil {
-		log.Error(err, "failed to get provider config map")
+		log.Error(err, "failed to get provider cache")
 
-		return false, fmt.Errorf("failed to get cache ConfigMap: %w", err)
+		return false, fmt.Errorf("failed to get provider cache: %w", err)
 	}
 
 	// calculate combined hash for provider and config map cache
@@ -379,15 +377,15 @@ func applyFromCache(ctx context.Context, cl client.Client, provider genericprovi
 		return false, err
 	}
 
-	if err := addObjectToHash(hash, configMap.Data); err != nil {
+	if err := addObjectToHash(hash, secret.Data); err != nil {
 		log.Error(err, "failed to calculate config map hash")
 
 		return false, err
 	}
 
 	cacheHash := fmt.Sprintf("%x", hash.Sum(nil))
-	if configMap.GetAnnotations()[appliedSpecHashAnnotation] != cacheHash {
-		log.Info("Provider or cache state has changed", "cacheHash", cacheHash, "providerHash", configMap.GetAnnotations()[appliedSpecHashAnnotation])
+	if secret.GetAnnotations()[appliedSpecHashAnnotation] != cacheHash {
+		log.Info("Provider or cache state has changed", "cacheHash", cacheHash, "providerHash", secret.GetAnnotations()[appliedSpecHashAnnotation])
 
 		return false, nil
 	}
@@ -407,63 +405,52 @@ func applyFromCache(ctx context.Context, cl client.Client, provider genericprovi
 		return false, err
 	}
 
-	processor := yamlprocessor.NewSimpleProcessor()
-	for _, manifest := range configMap.Data {
-		manifest, err := processor.Process([]byte(manifest), mr.Get)
-		if err != nil {
-			log.Error(err, "failed to process manifest")
-
-			return false, err
+	for _, manifest := range secret.Data {
+		if secret.GetAnnotations()[operatorv1.CompressedAnnotation] == operatorv1.TrueValue {
+			break
 		}
 
-		manifests, err := utilyaml.ToUnstructured(manifest)
+		manifests := []unstructured.Unstructured{}
+
+		err := json.Unmarshal(manifest, &manifests)
 		if err != nil {
 			log.Error(err, "failed to convert yaml to unstructured")
 
 			return false, err
 		}
 
-		if len(manifests) > 1 {
-			return false, fmt.Errorf("multiple manifests found: %d", len(manifests))
-		} else if len(manifests) == 0 {
-			continue
-		}
-
-		if err := cl.Patch(ctx, &manifests[0], client.Apply, client.ForceOwnership, client.FieldOwner(cacheOwner)); err != nil {
-			errs = append(errs, err)
+		for _, manifest := range manifests {
+			if err := cl.Patch(ctx, &manifest, client.Apply, client.ForceOwnership, client.FieldOwner(cacheOwner)); err != nil {
+				errs = append(errs, err)
+			}
 		}
 	}
 
-	for _, binaryManifest := range configMap.BinaryData {
-		manifest, err := decompressYaml(binaryManifest)
+	for _, binaryManifest := range secret.Data {
+		if secret.GetAnnotations()[operatorv1.CompressedAnnotation] != operatorv1.TrueValue {
+			break
+		}
+
+		manifest, err := decompressData(binaryManifest)
 		if err != nil {
 			log.Error(err, "failed to decompress yaml")
 
 			return false, err
 		}
 
-		manifest, err = processor.Process(manifest, mr.Get)
-		if err != nil {
-			log.Error(err, "failed to process manifest")
+		manifests := []unstructured.Unstructured{}
 
-			return false, err
-		}
-
-		manifests, err := utilyaml.ToUnstructured(manifest)
+		err = json.Unmarshal(manifest, &manifests)
 		if err != nil {
 			log.Error(err, "failed to convert yaml to unstructured")
 
 			return false, err
 		}
 
-		if len(manifests) > 1 {
-			return false, fmt.Errorf("multiple manifests found: %d", len(manifests))
-		} else if len(manifests) == 0 {
-			continue
-		}
-
-		if err := cl.Patch(ctx, &manifests[0], client.Apply, client.ForceOwnership, client.FieldOwner(cacheOwner)); err != nil {
-			errs = append(errs, err)
+		for _, manifest := range manifests {
+			if err := cl.Patch(ctx, &manifest, client.Apply, client.ForceOwnership, client.FieldOwner(cacheOwner)); err != nil {
+				errs = append(errs, err)
+			}
 		}
 	}
 
@@ -478,14 +465,14 @@ func applyFromCache(ctx context.Context, cl client.Client, provider genericprovi
 	return true, nil
 }
 
-// setCacheHash calculates current provider and configMap hash, and updates it on the configMap.
+// setCacheHash calculates current provider and secret hash, and updates it on the secret.
 func setCacheHash(ctx context.Context, cl client.Client, provider genericprovider.GenericProvider) error {
-	configMap := &corev1.ConfigMap{}
-	if err := cl.Get(ctx, client.ObjectKey{Name: ProviderCacheName(provider), Namespace: provider.GetNamespace()}, configMap); err != nil {
-		return fmt.Errorf("failed to get cache ConfigMaps: %w", err)
+	secret := &corev1.Secret{}
+	if err := cl.Get(ctx, client.ObjectKey{Name: ProviderCacheName(provider), Namespace: provider.GetNamespace()}, secret); err != nil {
+		return fmt.Errorf("failed to get cache secret: %w", err)
 	}
 
-	helper, err := patch.NewHelper(configMap, cl)
+	helper, err := patch.NewHelper(secret, cl)
 	if err != nil {
 		return err
 	}
@@ -496,19 +483,19 @@ func setCacheHash(ctx context.Context, cl client.Client, provider genericprovide
 		return err
 	}
 
-	if err := addObjectToHash(hash, configMap.Data); err != nil {
+	if err := addObjectToHash(hash, secret.Data); err != nil {
 		return err
 	}
 
 	cacheHash := fmt.Sprintf("%x", hash.Sum(nil))
 
-	annotations := configMap.GetAnnotations()
+	annotations := secret.GetAnnotations()
 	if annotations == nil {
 		annotations = map[string]string{}
 	}
 
 	annotations[appliedSpecHashAnnotation] = cacheHash
-	configMap.SetAnnotations(annotations)
+	secret.SetAnnotations(annotations)
 
-	return helper.Patch(ctx, configMap)
+	return helper.Patch(ctx, secret)
 }

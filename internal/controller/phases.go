@@ -21,8 +21,9 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"strings"
 	"time"
+
+	apijson "k8s.io/apimachinery/pkg/util/json"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -48,8 +49,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-
-	utilyaml "sigs.k8s.io/cluster-api/util/yaml"
 )
 
 // fakeURL is the stub url for custom providers, missing from clusterctl repository.
@@ -71,6 +70,7 @@ type PhaseReconciler struct {
 	overridesClient    configclient.Client
 	components         repository.Components
 	clusterctlProvider *clusterctlv1.Provider
+	needsCompression   bool
 }
 
 // PhaseFn is a function that represent a phase of the reconciliation.
@@ -301,7 +301,7 @@ func (p *PhaseReconciler) Load(ctx context.Context) (*Result, error) {
 	// Store some provider specific inputs for passing it to clusterctl library
 	p.options = repository.ComponentsOptions{
 		TargetNamespace:     p.provider.GetNamespace(),
-		SkipTemplateProcess: true,
+		SkipTemplateProcess: false,
 		Version:             spec.Version,
 	}
 
@@ -472,7 +472,7 @@ func getComponentsData(cm corev1.ConfigMap) (string, error) {
 		return "", fmt.Errorf("ConfigMap %s/%s BinaryData has no components", cm.Namespace, cm.Name)
 	}
 
-	components, err := decompressYaml(compressedComponents)
+	components, err := decompressData(compressedComponents)
 	if err != nil {
 		return "", fmt.Errorf("cannot decompress data from ConfigMap %s/%s", cm.Namespace, cm.Name)
 	}
@@ -530,6 +530,9 @@ func (p *PhaseReconciler) Fetch(ctx context.Context) (*Result, error) {
 		return &Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.ProviderInstalledCondition)
 	}
 
+	// Check if components exceed the resource size.
+	p.needsCompression = needToCompress(componentsFile)
+
 	// Generate a set of new objects using the clusterctl library. NewComponents() will do the yaml processing,
 	// like ensure all the provider components are in proper namespace, replace variables, etc. See the clusterctl
 	// documentation for more details.
@@ -568,22 +571,15 @@ func (p *phaseReconciler) store(ctx context.Context) (reconcile.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 	log.Info("Storing provider in cache")
 
-	components := addNamespaceIfMissing(p.components.Objs(), p.provider.GetNamespace())
-
-	componentsFile, err := utilyaml.FromUnstructured(components)
-	if err != nil {
-		return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsCustomizationErrorReason, operatorv1.ProviderInstalledCondition)
-	}
-
-	kinds, _, err := scheme.Scheme.ObjectKinds(&corev1.ConfigMap{})
+	kinds, _, err := scheme.Scheme.ObjectKinds(&corev1.Secret{})
 	if err != nil || len(kinds) == 0 {
-		log.Error(err, "cannot fetch kind of the ConfigMap resource")
-		err = fmt.Errorf("cannot fetch kind of the ConfigMap resource: %w", err)
+		log.Error(err, "cannot fetch kind of the Secret resource")
+		err = fmt.Errorf("cannot fetch kind of the Secret resource: %w", err)
 
 		return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsCustomizationErrorReason, operatorv1.ProviderInstalledCondition)
 	}
 
-	configMap := &corev1.ConfigMap{
+	secret := &corev1.Secret{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       kinds[0].Kind,
 			APIVersion: kinds[0].GroupVersion().String(),
@@ -593,13 +589,13 @@ func (p *phaseReconciler) store(ctx context.Context) (reconcile.Result, error) {
 			Namespace:   p.provider.GetNamespace(),
 			Annotations: map[string]string{},
 		},
-		Data:       map[string]string{},
-		BinaryData: map[string][]byte{},
+		StringData: map[string]string{},
+		Data:       map[string][]byte{},
 	}
 
 	gvk := p.provider.GetObjectKind().GroupVersionKind()
 
-	configMap.SetOwnerReferences([]metav1.OwnerReference{
+	secret.SetOwnerReferences([]metav1.OwnerReference{
 		{
 			APIVersion: gvk.GroupVersion().String(),
 			Kind:       gvk.Kind,
@@ -608,46 +604,30 @@ func (p *phaseReconciler) store(ctx context.Context) (reconcile.Result, error) {
 		},
 	})
 
-	compress := needToCompress(componentsFile)
-	if compress {
-		configMap.Annotations[operatorv1.CompressedAnnotation] = "true"
+	if p.needsCompression {
+		secret.Annotations[operatorv1.CompressedAnnotation] = "true"
 	}
 
-	for i, manifest := range strings.Split(string(componentsFile), "\n---") {
-		manifest = strings.TrimSpace(manifest)
-
-		if compress {
-			var buf bytes.Buffer
-			if err := compressYaml(&buf, []byte(manifest)); err != nil {
-				return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsCustomizationErrorReason, operatorv1.ProviderInstalledCondition)
-			}
-
-			configMap.BinaryData[fmt.Sprintf("%d", i)] = buf.Bytes()
-
-			continue
-		}
-
-		configMap.Data[fmt.Sprintf("%d", i)] = manifest
-	}
-
-	if err := p.ctrlClient.Patch(ctx, configMap, client.Apply, client.ForceOwnership, client.FieldOwner(cacheOwner)); err != nil {
-		log.Error(err, "failed to apply cache config map")
-
+	manifests, err := apijson.Marshal(addNamespaceIfMissing(p.components.Objs(), p.provider.GetNamespace()))
+	if err != nil {
 		return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsCustomizationErrorReason, operatorv1.ProviderInstalledCondition)
 	}
 
-	// Perform template processing with variable replacement.
-	p.options.SkipTemplateProcess = false
+	if p.needsCompression {
+		var buf bytes.Buffer
+		if err := compressData(&buf, manifests); err != nil {
+			return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsCustomizationErrorReason, operatorv1.ProviderInstalledCondition)
+		}
 
-	p.components, err = repository.NewComponents(repository.ComponentsInput{
-		Provider:     p.providerConfig,
-		ConfigClient: p.configClient,
-		Processor:    yamlprocessor.NewSimpleProcessor(),
-		RawYaml:      componentsFile,
-		Options:      p.options,
-	})
-	if err != nil {
-		return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.ProviderInstalledCondition)
+		secret.Data["cache"] = buf.Bytes()
+	} else {
+		secret.StringData["cache"] = string(manifests)
+	}
+
+	if err := p.ctrlClient.Patch(ctx, secret, client.Apply, client.ForceOwnership, client.FieldOwner(cacheOwner)); err != nil {
+		log.Error(err, "failed to apply cache config map")
+
+		return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsCustomizationErrorReason, operatorv1.ProviderInstalledCondition)
 	}
 
 	return reconcile.Result{}, nil
@@ -853,7 +833,7 @@ func (p *PhaseReconciler) repositoryProxy(ctx context.Context, provider configcl
 		return nil, err
 	}
 
-	return repositoryProxy{Client: cl, components: p.components}, nil
+	return repositoryProxy{Client: cl, components: nil}, nil
 }
 
 // newClusterClient returns a clusterctl client for interacting with management cluster.
