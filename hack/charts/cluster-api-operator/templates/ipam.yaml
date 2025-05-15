@@ -3,6 +3,7 @@
   {{- $ipamNamespace := default ( printf "%s-%s" $name "ipam-system" ) (get $ipam "namespace") }}
   {{- $ipamName := $name }}
   {{- $ipamVersion := get $ipam "version" }}
+{{- if ne $ipam.createNamespace false }}
 ---
 apiVersion: v1
 kind: Namespace
@@ -14,6 +15,7 @@ metadata:
     {{- end }}
     "argocd.argoproj.io/sync-wave": "1"
   name: {{ $ipamNamespace }}
+{{- end }}
 ---
 apiVersion: operator.cluster.x-k8s.io/v1alpha2
 kind: IPAMProvider
