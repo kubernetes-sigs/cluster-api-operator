@@ -40,8 +40,10 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/config"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
+
 	ctrlwebhook "sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
@@ -63,6 +65,7 @@ var (
 	profilerAddress             string
 	enableContentionProfiling   bool
 	concurrencyNumber           int
+	managerConcurrency          int
 	syncPeriod                  time.Duration
 	webhookPort                 int
 	webhookCertDir              string
@@ -112,6 +115,9 @@ func InitFlags(fs *pflag.FlagSet) {
 
 	fs.IntVar(&concurrencyNumber, "concurrency", 1,
 		"Number of core resources to process simultaneously")
+
+	fs.IntVar(&managerConcurrency, "manager-concurrency", 10,
+		"Number of concurrent reconciles to process simultaneously across all controllers")
 
 	fs.DurationVar(&syncPeriod, "sync-period", 10*time.Minute,
 		"The minimum interval at which watched resources are reconciled (e.g. 15m)")
@@ -173,6 +179,9 @@ func main() {
 					&corev1.Secret{},
 				},
 			},
+		},
+		Controller: config.Controller{
+			MaxConcurrentReconciles: managerConcurrency,
 		},
 		WebhookServer: ctrlwebhook.NewServer(
 			ctrlwebhook.Options{
