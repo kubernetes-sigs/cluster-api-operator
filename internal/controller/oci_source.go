@@ -195,19 +195,28 @@ func (m mapStore) Tag(ctx context.Context, desc ocispec.Descriptor, reference st
 
 var _ oras.Target = &mapStore{}
 
-// CopyOCIStore collects artifacts from the provider OCI url and creates a map of file contents.
-func CopyOCIStore(ctx context.Context, url string, version string, store *mapStore, credential *auth.Credential) error {
-	log := log.FromContext(ctx)
-
+// parseOCISource accepts an OCI URL and the provider version. It returns the image name,
+// the image version (if not set on the OCI URL, the provider version is used) and whether
+// plain HTTP should be used to fetch the image (when url starts with "http://").
+func parseOCISource(url string, version string) (string, string, bool) {
 	url, plainHTTP := strings.CutPrefix(url, "http://")
 
-	if parts := strings.SplitN(url, ":", 3); len(parts) == 2 {
+	if parts := strings.SplitN(url, ":", 3); len(parts) == 2 && !strings.Contains(parts[1], "/") {
 		url = parts[0]
 		version = parts[1]
 	} else if len(parts) == 3 {
 		version = parts[2]
-		url, _ = strings.CutSuffix(url, version)
+		url = fmt.Sprintf("%s:%s", parts[0], parts[1])
 	}
+
+	return url, version, plainHTTP
+}
+
+// CopyOCIStore collects artifacts from the provider OCI url and creates a map of file contents.
+func CopyOCIStore(ctx context.Context, url string, version string, store *mapStore, credential *auth.Credential) error {
+	log := log.FromContext(ctx)
+
+	url, version, plainHTTP := parseOCISource(url, version)
 
 	repo, err := remote.NewRepository(url)
 	if err != nil {
