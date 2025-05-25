@@ -26,6 +26,15 @@ ipam: {}
 #   namespace: ""  # Optional
 #   version: ""    # Optional
 manager.featureGates: {}
+# Configuration for enabling feature gates in diffrent providers
+# manager: # example
+#   featureGates:
+#     proxmox:
+#       ClusterTopology: true
+#     core:
+#       ClusterTopology: true
+#     kubeadm:
+#       ClusterTopology: true
 fetchConfig: {}
 # ---
 # Common configuration secret options
