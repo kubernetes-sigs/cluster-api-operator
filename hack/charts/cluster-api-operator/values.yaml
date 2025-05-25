@@ -27,9 +27,9 @@ ipam: {}
 #   version: ""    # Optional
 manager.featureGates: {}
 # Configuration for enabling feature gates in diffrent providers
-# manager: # example
+# manager: 
 #   featureGates:
-#     proxmox:
+#     proxmox: # Name of the provider
 #       ClusterTopology: true
 #     core:
 #       ClusterTopology: true
