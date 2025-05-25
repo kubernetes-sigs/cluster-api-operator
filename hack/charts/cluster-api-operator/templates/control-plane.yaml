@@ -33,16 +33,12 @@ spec:
   version: {{ $controlPlaneVersion }}
 {{- end }}
 {{- if $.Values.manager }}
-{{- if hasKey $.Values.manager.featureGates $controlPlaneName }}
+{{- if and $.Values.manager.featureGates $.Values.manager.featureGates.controlPlane }}
   manager:
-{{- range $key, $value := $.Values.manager.featureGates }}
-  {{- if eq $key $controlPlaneName }}
     featureGates:
-    {{- range $k, $v := $value }}
-      {{ $k }}: {{ $v }}
+    {{- range $key, $value := $.Values.manager.featureGates.controlPlane }}
+      {{ $key }}: {{ $value }}
     {{- end }}
-  {{- end }}
-{{- end }}
 {{- end }}
 {{- end }}
 {{- if $.Values.configSecret.name }}

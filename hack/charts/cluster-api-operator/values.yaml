@@ -25,7 +25,14 @@ ipam: {}
 # in-cluster: {}   # Name, required
 #   namespace: ""  # Optional
 #   version: ""    # Optional
-manager.featureGates: {}
+manager:
+  featureGates:
+    addon: {}
+    bootstrap: {}
+    core: {}
+    controlPlane: {}
+    infrastructure: {}
+    ipam: {}
 fetchConfig: {}
 # ---
 # Common configuration secret options

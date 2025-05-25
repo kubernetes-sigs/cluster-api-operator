@@ -32,6 +32,15 @@ spec:
 {{- if $bootstrapVersion }}
   version: {{ $bootstrapVersion }}
 {{- end }}
+{{- if $.Values.manager }}
+{{- if and $.Values.manager.featureGates $.Values.manager.featureGates.bootstrap }}
+  manager:
+    featureGates:
+    {{- range $key, $value := $.Values.manager.featureGates.bootstrap }}
+      {{ $key }}: {{ $value }}
+    {{- end }}
+{{- end }}
+{{- end }}
 {{- if $.Values.configSecret.name }}
   configSecret:
     name: {{ $.Values.configSecret.name }}

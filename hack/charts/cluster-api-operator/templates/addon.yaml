@@ -32,6 +32,15 @@ spec:
 {{- if $addonVersion }}
   version: {{ $addonVersion }}
 {{- end }}
+{{- if $.Values.manager }}
+{{- if and $.Values.manager.featureGates $.Values.manager.featureGates.addon }}
+  manager:
+    featureGates:
+    {{- range $key, $value := $.Values.manager.featureGates.addon }}
+      {{ $key }}: {{ $value }}
+    {{- end }}
+{{- end }}
+{{- end }}
 {{- if $.Values.secretName }}
   secretName: {{ $.Values.secretName }}
 {{- end }}

@@ -33,16 +33,12 @@ spec:
   version: {{ $infrastructureVersion }}
 {{- end }}
 {{- if $.Values.manager }}
-{{- if and (kindIs "map" $.Values.manager.featureGates) (hasKey $.Values.manager.featureGates $infrastructureName) }}
+{{- if and $.Values.manager.featureGates $.Values.manager.featureGates.infrastructure }}
   manager:
-{{- range $key, $value := $.Values.manager.featureGates }}
-  {{- if eq $key $infrastructureName }}
     featureGates:
-    {{- range $k, $v := $value }}
-      {{ $k }}: {{ $v }}
+    {{- range $key, $value := $.Values.manager.featureGates.infrastructure }}
+      {{ $key }}: {{ $value }}
     {{- end }}
-  {{- end }}
-{{- end }}
 {{- end }}
 {{- end }}
 {{- if and (kindIs "map" $.Values.fetchConfig) (hasKey $.Values.fetchConfig $infrastructureName) }}
