@@ -45,6 +45,16 @@ spec:
 {{- end }}
 {{- end }}
 {{- end }}
+{{- if and (kindIs "map" $.Values.fetchConfig) (hasKey $.Values.fetchConfig $ipamName) }}
+{{- range $key, $value := $.Values.fetchConfig }}
+  {{- if eq $key $ipamName }}
+  fetchConfig:
+    {{- range $k, $v := $value }}
+      {{ $k }}: {{ $v }}
+    {{- end }}
+  {{- end }}
+{{- end }}
+{{- end }}
 {{- if $.Values.configSecret.name }}
   configSecret:
     name: {{ $.Values.configSecret.name }}
