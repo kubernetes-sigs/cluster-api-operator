@@ -3,6 +3,7 @@
   {{- $infrastructureNamespace := default ( printf "%s-%s" $name "infrastructure-system" ) (get $infra "namespace") }}
   {{- $infrastructureName := $name }}
   {{- $infrastructureVersion := get $infra "version" }}
+{{- if ne $infra.createNamespace false }}
 ---
 apiVersion: v1
 kind: Namespace
@@ -14,6 +15,7 @@ metadata:
     {{- end }}
     "argocd.argoproj.io/sync-wave": "1"
   name: {{ $infrastructureNamespace }}
+{{- end }}
 ---
 apiVersion: operator.cluster.x-k8s.io/v1alpha2
 kind: InfrastructureProvider

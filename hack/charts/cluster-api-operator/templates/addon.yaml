@@ -3,6 +3,7 @@
   {{- $addonNamespace := default ( printf "%s-%s" $name "addon-system" ) (get $addon "namespace") }}
   {{- $addonName := $name }}
   {{- $addonVersion := get $addon "version" }}
+{{- if ne $addon.createNamespace false }}
 ---
 apiVersion: v1
 kind: Namespace
@@ -14,6 +15,7 @@ metadata:
     {{- end }}
     "argocd.argoproj.io/sync-wave": "1"
   name: {{ $addonNamespace }}
+{{- end }}
 ---
 apiVersion: operator.cluster.x-k8s.io/v1alpha2
 kind: AddonProvider

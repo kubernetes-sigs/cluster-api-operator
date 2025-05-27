@@ -2,29 +2,35 @@
 # ---
 # Cluster API provider options
 core: {}
-# cluster-api: {}  # Name, required
-#   namespace: ""  # Optional
-#   version: ""    # Optional
+# cluster-api: {}         # Name, required
+#   namespace: ""         # Optional
+#   version: ""           # Optional
+#   createNamespace: true # Optional
 bootstrap: {}
-# kubeadm: {}      # Name, required
-#   namespace: ""  # Optional
-#   version: ""    # Optional
+# kubeadm: {}             # Name, required
+#   namespace: ""         # Optional
+#   version: ""           # Optional
+#   createNamespace: true # Optional
 controlPlane: {}
-# kubeadm: {}      # Name, required
-#   namespace: ""  # Optional
-#   version: ""    # Optional
+# kubeadm: {}             # Name, required
+#   namespace: ""         # Optional
+#   version: ""           # Optional
+#   createNamespace: true # Optional
 infrastructure: {}
-# docker: {}  # Name, required
-#   namespace: ""  # Optional
-#   version: ""    # Optional
+# docker: {}              # Name, required
+#   namespace: ""         # Optional
+#   version: ""           # Optional
+#   createNamespace: true # Optional
 addon: {}
-# helm: {}         # Name, required
-#   namespace: ""  # Optional
-#   version: ""    # Optional
+# helm: {}                # Name, required
+#   namespace: ""         # Optional
+#   version: ""           # Optional
+#   createNamespace: true # Optional
 ipam: {}
-# in-cluster: {}   # Name, required
-#   namespace: ""  # Optional
-#   version: ""    # Optional
+# in-cluster: {}          # Name, required
+#   namespace: ""         # Optional
+#   version: ""           # Optional
+#   createNamespace: true # Optional
 manager.featureGates: {}
 fetchConfig: {}
 # ---

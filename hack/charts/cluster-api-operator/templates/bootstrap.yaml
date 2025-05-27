@@ -3,6 +3,7 @@
   {{- $bootstrapNamespace := default ( printf "%s-%s" $name "bootstrap-system" ) (get $bootstrap "namespace") }}
   {{- $bootstrapName := $name }}
   {{- $bootstrapVersion := get $bootstrap "version" }}
+{{- if ne $bootstrap.createNamespace false }}
 ---
 apiVersion: v1
 kind: Namespace
@@ -14,6 +15,7 @@ metadata:
     {{- end }}
     "argocd.argoproj.io/sync-wave": "1"
   name: {{ $bootstrapNamespace }}
+{{- end }}
 ---
 apiVersion: operator.cluster.x-k8s.io/v1alpha2
 kind: BootstrapProvider
