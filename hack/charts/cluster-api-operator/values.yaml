@@ -32,6 +32,15 @@ ipam: {}
 #   version: ""           # Optional
 #   createNamespace: true # Optional
 manager.featureGates: {}
+# Configuration for enabling feature gates in different providers
+# manager: 
+#   featureGates:
+#     proxmox: # Name of the provider
+#       ClusterTopology: true
+#     core:
+#       ClusterTopology: true
+#     kubeadm:
+#       ClusterTopology: true
 fetchConfig: {}
 # ---
 # Common configuration secret options
