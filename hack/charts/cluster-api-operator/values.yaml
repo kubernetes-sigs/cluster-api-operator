@@ -26,7 +26,7 @@ ipam: {}
 #   namespace: ""  # Optional
 #   version: ""    # Optional
 manager.featureGates: {}
-# Configuration for enabling feature gates in diffrent providers
+# Configuration for enabling feature gates in different providers
 # manager: 
 #   featureGates:
 #     proxmox: # Name of the provider
