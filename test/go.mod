@@ -19,7 +19,7 @@ require (
 	oras.land/oras-go/v2 v2.5.0
 	sigs.k8s.io/cluster-api v1.10.1
 	sigs.k8s.io/cluster-api-operator v0.0.0-00010101000000-000000000000
-	sigs.k8s.io/cluster-api/test v1.10.0-beta.0
+	sigs.k8s.io/cluster-api/test v1.10.2
 	sigs.k8s.io/controller-runtime v0.20.4
 	sigs.k8s.io/yaml v1.4.0
 )
@@ -45,7 +45,7 @@ require (
 	github.com/cloudflare/circl v1.3.7 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/distribution/reference v0.6.0 // indirect
-	github.com/docker/docker v28.0.1+incompatible // indirect
+	github.com/docker/docker v28.0.2+incompatible // indirect
 	github.com/docker/go-connections v0.5.0 // indirect
 	github.com/docker/go-units v0.4.0 // indirect
 	github.com/drone/envsubst/v2 v2.0.0-20210730161058-179042472c46 // indirect
