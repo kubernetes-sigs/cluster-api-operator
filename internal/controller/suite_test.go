@@ -58,6 +58,7 @@ func TestMain(m *testing.M) {
 		ProviderList:             &operatorv1.InfrastructureProviderList{},
 		Client:                   env,
 		WatchConfigSecretChanges: true,
+		WatchCoreProviderChanges: true,
 	}).SetupWithManager(ctx, env.Manager, controller.Options{MaxConcurrentReconciles: 1}); err != nil {
 		panic(fmt.Sprintf("Failed to start InfrastructureProviderReconciler: %v", err))
 	}
@@ -67,6 +68,7 @@ func TestMain(m *testing.M) {
 		ProviderList:             &operatorv1.BootstrapProviderList{},
 		Client:                   env,
 		WatchConfigSecretChanges: true,
+		WatchCoreProviderChanges: true,
 	}).SetupWithManager(ctx, env.Manager, controller.Options{MaxConcurrentReconciles: 1}); err != nil {
 		panic(fmt.Sprintf("Failed to start BootstrapProviderReconciler: %v", err))
 	}
@@ -76,6 +78,7 @@ func TestMain(m *testing.M) {
 		ProviderList:             &operatorv1.ControlPlaneProviderList{},
 		Client:                   env,
 		WatchConfigSecretChanges: true,
+		WatchCoreProviderChanges: true,
 	}).SetupWithManager(ctx, env.Manager, controller.Options{MaxConcurrentReconciles: 1}); err != nil {
 		panic(fmt.Sprintf("Failed to start ControlPlaneProviderReconciler: %v", err))
 	}
