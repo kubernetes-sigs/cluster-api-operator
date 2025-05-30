@@ -36,7 +36,7 @@ func TestManifestsDownloader(t *testing.T) {
 
 	fakeclient := fake.NewClientBuilder().WithObjects().Build()
 
-	p := &phaseReconciler{
+	p := &PhaseReconciler{
 		ctrlClient: fakeclient,
 		provider: &operatorv1.CoreProvider{
 			ObjectMeta: metav1.ObjectMeta{
@@ -82,7 +82,7 @@ func TestProviderDownloadWithOverrides(t *testing.T) {
 	overridesClient, err := configclient.New(ctx, "", configclient.InjectReader(reader))
 	g.Expect(err).ToNot(HaveOccurred())
 
-	p := &phaseReconciler{
+	p := &PhaseReconciler{
 		ctrlClient: fakeclient,
 		provider: &operatorv1.CoreProvider{
 			ObjectMeta: metav1.ObjectMeta{

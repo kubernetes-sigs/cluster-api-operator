@@ -128,7 +128,15 @@ func (r *GenericProviderReconciler) Reconcile(ctx context.Context, req reconcile
 
 	// Handle deletion reconciliation loop.
 	if !r.Provider.GetDeletionTimestamp().IsZero() {
-		return r.reconcileDelete(ctx, r.Provider)
+		res, err := r.reconcileDelete(ctx, r.Provider)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+
+		return ctrl.Result{
+			Requeue:      res.Requeue,
+			RequeueAfter: res.RequeueAfter,
+		}, nil
 	}
 
 	// Check if spec hash stays the same and don't go further in this case.
@@ -164,7 +172,10 @@ func (r *GenericProviderReconciler) Reconcile(ctx context.Context, req reconcile
 
 	r.Provider.SetAnnotations(annotations)
 
-	return res, ignoreCoreProviderWaitError(err)
+	return ctrl.Result{
+		Requeue:      res.Requeue,
+		RequeueAfter: res.RequeueAfter,
+	}, ignoreCoreProviderWaitError(err)
 }
 
 func patchProvider(ctx context.Context, provider operatorv1.GenericProvider, patchHelper *patch.Helper, options ...patch.Option) error {
@@ -178,9 +189,9 @@ func patchProvider(ctx context.Context, provider operatorv1.GenericProvider, pat
 	return patchHelper.Patch(ctx, provider, options...)
 }
 
-func (r *GenericProviderReconciler) reconcile(ctx context.Context, provider genericprovider.GenericProvider, genericProviderList genericprovider.GenericProviderList) (ctrl.Result, error) {
-	reconciler := newPhaseReconciler(*r, provider, genericProviderList)
-	phases := []reconcilePhaseFn{
+func (r *GenericProviderReconciler) reconcile(ctx context.Context, provider genericprovider.GenericProvider, genericProviderList genericprovider.GenericProviderList) (*Result, error) {
+	reconciler := NewPhaseReconciler(*r, provider, genericProviderList)
+	phases := []PhaseFn{
 		reconciler.preflightChecks,
 		reconciler.initializePhaseReconciler,
 		reconciler.downloadManifests,
@@ -191,12 +202,10 @@ func (r *GenericProviderReconciler) reconcile(ctx context.Context, provider gene
 		reconciler.reportStatus,
 	}
 
-	res := reconcile.Result{}
-
-	var err error
+	var res Result
 
 	for _, phase := range phases {
-		res, err = phase(ctx)
+		res, err := phase(ctx)
 		if err != nil {
 			var pe *PhaseError
 			if errors.As(err, &pe) {
@@ -205,30 +214,33 @@ func (r *GenericProviderReconciler) reconcile(ctx context.Context, provider gene
 		}
 
 		if !res.IsZero() || err != nil {
+			// Stop the reconciliation if the phase was final
+			if res.Completed {
+				return &Result{}, nil
+			}
+
 			// the steps are sequential, so we must be complete before progressing.
 			return res, err
 		}
 	}
 
-	return res, nil
+	return &res, nil
 }
 
-func (r *GenericProviderReconciler) reconcileDelete(ctx context.Context, provider operatorv1.GenericProvider) (ctrl.Result, error) {
+func (r *GenericProviderReconciler) reconcileDelete(ctx context.Context, provider operatorv1.GenericProvider) (*Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 
 	log.Info("Deleting provider resources")
 
-	reconciler := newPhaseReconciler(*r, provider, nil)
-	phases := []reconcilePhaseFn{
+	reconciler := NewPhaseReconciler(*r, provider, nil)
+	phases := []PhaseFn{
 		reconciler.delete,
 	}
 
-	res := reconcile.Result{}
-
-	var err error
+	var res Result
 
 	for _, phase := range phases {
-		res, err = phase(ctx)
+		res, err := phase(ctx)
 		if err != nil {
 			var pe *PhaseError
 			if errors.As(err, &pe) {
@@ -237,6 +249,11 @@ func (r *GenericProviderReconciler) reconcileDelete(ctx context.Context, provide
 		}
 
 		if !res.IsZero() || err != nil {
+			// Stop the reconciliation if the phase was final
+			if res.Completed {
+				return &Result{}, nil
+			}
+
 			// the steps are sequential, so we must be complete before progressing.
 			return res, err
 		}
@@ -244,7 +261,7 @@ func (r *GenericProviderReconciler) reconcileDelete(ctx context.Context, provide
 
 	controllerutil.RemoveFinalizer(provider, operatorv1.ProviderFinalizer)
 
-	return res, nil
+	return &res, nil
 }
 
 func addConfigSecretToHash(ctx context.Context, k8sClient client.Client, hash hash.Hash, provider genericprovider.GenericProvider) error {
