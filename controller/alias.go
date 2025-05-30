@@ -21,45 +21,21 @@ to allow external users to interact with the core controller logic.
 package controller
 
 import (
-	"context"
-
-	"k8s.io/client-go/rest"
-	internalcontroller "sigs.k8s.io/cluster-api-operator/internal/controller"
-	"sigs.k8s.io/cluster-api-operator/internal/controller/genericprovider"
+	providercontroller "sigs.k8s.io/cluster-api-operator/internal/controller"
 	internalhealthcheck "sigs.k8s.io/cluster-api-operator/internal/controller/healthcheck"
-	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller"
 )
 
 // GenericProviderReconciler wraps the internal GenericProviderReconciler.
-type GenericProviderReconciler struct {
-	Provider                 genericprovider.GenericProvider
-	ProviderList             genericprovider.GenericProviderList
-	Client                   client.Client
-	Config                   *rest.Config
-	WatchConfigSecretChanges bool
-}
+type GenericProviderReconciler = providercontroller.GenericProviderReconciler
 
-// SetupWithManager sets up the GenericProviderReconciler with the Manager.
-func (r *GenericProviderReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager, options controller.Options) error {
-	return (&internalcontroller.GenericProviderReconciler{
-		Provider:                 r.Provider,
-		ProviderList:             r.ProviderList,
-		Client:                   r.Client,
-		Config:                   r.Config,
-		WatchConfigSecretChanges: r.WatchConfigSecretChanges,
-	}).SetupWithManager(ctx, mgr, options)
-}
+// GenericProviderHealthCheckReconciler wraps the internal GenericProviderHealthCheckReconciler.
+type GenericProviderHealthCheckReconciler = internalhealthcheck.GenericProviderHealthCheckReconciler
 
-// ProviderHealthCheckReconciler wraps the internal ProviderHealthCheckReconciler.
-type ProviderHealthCheckReconciler struct {
-	Client client.Client
-}
+// PhaseFn is an alias for the internal PhaseFn type.
+type PhaseFn = providercontroller.PhaseFn
 
-// SetupWithManager sets up the health check controllers with the Manager.
-func (r *ProviderHealthCheckReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager, options controller.Options) error {
-	return (&internalhealthcheck.ProviderHealthCheckReconciler{
-		Client: r.Client,
-	}).SetupWithManager(mgr, options)
-}
+// Result is an alias for the internal Result type.
+type Result = providercontroller.Result
+
+// NewPhaseReconciler is an alias for the internal NewPhaseReconciler function.
+var NewPhaseReconciler = providercontroller.NewPhaseReconciler

@@ -49,6 +49,9 @@ type GenericProviderReconciler struct {
 	Client                   client.Client
 	Config                   *rest.Config
 	WatchConfigSecretChanges bool
+
+	DeletePhases    []PhaseFn
+	ReconcilePhases []PhaseFn
 }
 
 const (
@@ -80,6 +83,23 @@ func (r *GenericProviderReconciler) SetupWithManager(ctx context.Context, mgr ct
 			&operatorv1.CoreProvider{},
 			handler.EnqueueRequestsFromMapFunc(newCoreProviderToProviderFuncMapForProviderList(r.Client, r.ProviderList)),
 		)
+	}
+
+	reconciler := NewPhaseReconciler(*r, r.Provider, r.ProviderList)
+
+	r.ReconcilePhases = []PhaseFn{
+		reconciler.PreflightChecks,
+		reconciler.InitializePhaseReconciler,
+		reconciler.DownloadManifests,
+		reconciler.Load,
+		reconciler.Fetch,
+		reconciler.Upgrade,
+		reconciler.Install,
+		reconciler.ReportStatus,
+	}
+
+	r.DeletePhases = []PhaseFn{
+		reconciler.Delete,
 	}
 
 	return builder.WithOptions(options).
@@ -150,7 +170,7 @@ func (r *GenericProviderReconciler) Reconcile(ctx context.Context, req reconcile
 		return ctrl.Result{}, nil
 	}
 
-	res, err := r.reconcile(ctx, r.Provider, r.ProviderList)
+	res, err := r.reconcile(ctx)
 
 	annotations := r.Provider.GetAnnotations()
 	if annotations == nil {
@@ -189,27 +209,15 @@ func patchProvider(ctx context.Context, provider operatorv1.GenericProvider, pat
 	return patchHelper.Patch(ctx, provider, options...)
 }
 
-func (r *GenericProviderReconciler) reconcile(ctx context.Context, provider genericprovider.GenericProvider, genericProviderList genericprovider.GenericProviderList) (*Result, error) {
-	reconciler := NewPhaseReconciler(*r, provider, genericProviderList)
-	phases := []PhaseFn{
-		reconciler.preflightChecks,
-		reconciler.initializePhaseReconciler,
-		reconciler.downloadManifests,
-		reconciler.load,
-		reconciler.fetch,
-		reconciler.upgrade,
-		reconciler.install,
-		reconciler.reportStatus,
-	}
-
+func (r *GenericProviderReconciler) reconcile(ctx context.Context) (*Result, error) {
 	var res Result
 
-	for _, phase := range phases {
+	for _, phase := range r.ReconcilePhases {
 		res, err := phase(ctx)
 		if err != nil {
 			var pe *PhaseError
 			if errors.As(err, &pe) {
-				conditions.Set(provider, conditions.FalseCondition(pe.Type, pe.Reason, pe.Severity, "%s", err.Error()))
+				conditions.Set(r.Provider, conditions.FalseCondition(pe.Type, pe.Reason, pe.Severity, "%s", err.Error()))
 			}
 		}
 
@@ -232,14 +240,9 @@ func (r *GenericProviderReconciler) reconcileDelete(ctx context.Context, provide
 
 	log.Info("Deleting provider resources")
 
-	reconciler := NewPhaseReconciler(*r, provider, nil)
-	phases := []PhaseFn{
-		reconciler.delete,
-	}
-
 	var res Result
 
-	for _, phase := range phases {
+	for _, phase := range r.DeletePhases {
 		res, err := phase(ctx)
 		if err != nil {
 			var pe *PhaseError

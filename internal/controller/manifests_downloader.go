@@ -45,8 +45,8 @@ const (
 	ociSource        = "oci"
 )
 
-// downloadManifests downloads CAPI manifests from a url.
-func (p *PhaseReconciler) downloadManifests(ctx context.Context) (*Result, error) {
+// DownloadManifests downloads CAPI manifests from a url.
+func (p *PhaseReconciler) DownloadManifests(ctx context.Context) (*Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 
 	// Return immediately if a custom config map is used instead of a url.

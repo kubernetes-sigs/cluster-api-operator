@@ -160,13 +160,13 @@ func (i InNamespace) ApplyToConfigMapRepository(settings *ConfigMapRepositorySet
 	settings.namespace = string(i)
 }
 
-// preflightChecks a wrapper around the preflight checks.
-func (p *PhaseReconciler) preflightChecks(ctx context.Context) (*Result, error) {
+// PreflightChecks a wrapper around the preflight checks.
+func (p *PhaseReconciler) PreflightChecks(ctx context.Context) (*Result, error) {
 	return &Result{}, preflightChecks(ctx, p.ctrlClient, p.provider, p.providerList)
 }
 
-// initializePhaseReconciler initializes phase reconciler.
-func (p *PhaseReconciler) initializePhaseReconciler(ctx context.Context) (*Result, error) {
+// InitializePhaseReconciler initializes phase reconciler.
+func (p *PhaseReconciler) InitializePhaseReconciler(ctx context.Context) (*Result, error) {
 	path := configPath
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
 		path = ""
@@ -227,8 +227,8 @@ func (p *PhaseReconciler) initializePhaseReconciler(ctx context.Context) (*Resul
 	return &Result{}, nil
 }
 
-// load provider specific configuration into phaseReconciler object.
-func (p *PhaseReconciler) load(ctx context.Context) (*Result, error) {
+// Load provider specific configuration into phaseReconciler object.
+func (p *PhaseReconciler) Load(ctx context.Context) (*Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 
 	log.Info("Loading provider")
@@ -511,8 +511,8 @@ func (p *PhaseReconciler) validateRepoCAPIVersion(ctx context.Context) error {
 	return nil
 }
 
-// fetch fetches the provider components from the repository and processes all yaml manifests.
-func (p *PhaseReconciler) fetch(ctx context.Context) (*Result, error) {
+// Fetch fetches the provider components from the repository and processes all yaml manifests.
+func (p *PhaseReconciler) Fetch(ctx context.Context) (*Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 	log.Info("Fetching provider")
 
@@ -559,9 +559,9 @@ func (p *PhaseReconciler) fetch(ctx context.Context) (*Result, error) {
 	return &Result{}, nil
 }
 
-// upgrade ensure all the clusterctl CRDs are available before installing the provider,
+// Upgrade ensure all the clusterctl CRDs are available before installing the provider,
 // and update existing components if required.
-func (p *PhaseReconciler) upgrade(ctx context.Context) (*Result, error) {
+func (p *PhaseReconciler) Upgrade(ctx context.Context) (*Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 
 	// Nothing to do if it's a fresh installation.
@@ -589,8 +589,8 @@ func (p *PhaseReconciler) upgrade(ctx context.Context) (*Result, error) {
 	return &Result{}, nil
 }
 
-// install installs the provider components using clusterctl library.
-func (p *PhaseReconciler) install(ctx context.Context) (*Result, error) {
+// Install installs the provider components using clusterctl library.
+func (p *PhaseReconciler) Install(ctx context.Context) (*Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 
 	// Provider was upgraded, nothing to do
@@ -617,7 +617,7 @@ func (p *PhaseReconciler) install(ctx context.Context) (*Result, error) {
 	return &Result{}, nil
 }
 
-func (p *PhaseReconciler) reportStatus(_ context.Context) (*Result, error) {
+func (p *PhaseReconciler) ReportStatus(_ context.Context) (*Result, error) {
 	status := p.provider.GetStatus()
 	status.Contract = &p.contract
 	installedVersion := p.components.Version()
@@ -665,8 +665,8 @@ func loadCustomProviders(providers []operatorv1.GenericProvider, reader configcl
 	return mr, nil
 }
 
-// delete deletes the provider components using clusterctl library.
-func (p *PhaseReconciler) delete(ctx context.Context) (*Result, error) {
+// Delete deletes the provider components using clusterctl library.
+func (p *PhaseReconciler) Delete(ctx context.Context) (*Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 	log.Info("Deleting provider")
 
