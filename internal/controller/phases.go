@@ -85,12 +85,6 @@ type Result struct {
 	Completed bool
 }
 
-// // PhaseReconciler defines the interface for a provider phase reconciler.
-// type PhaseReconciler interface {
-// 	// GetPhases returns the list of reconciliation phases.
-// 	GetPhases() []PhaseFn
-// }
-
 func (r *Result) IsZero() bool {
 	return r == nil || *r == Result{}
 }
