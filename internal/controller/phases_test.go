@@ -42,7 +42,7 @@ func TestSecretReader(t *testing.T) {
 	secretName := "test-secret"
 	secretNamespace := "test-secret-namespace"
 
-	p := &phaseReconciler{
+	p := &PhaseReconciler{
 		ctrlClient: fakeclient,
 		provider: &operatorv1.CoreProvider{
 			ObjectMeta: metav1.ObjectMeta{
@@ -380,7 +380,7 @@ metadata:
 			g := NewWithT(t)
 
 			fakeclient := fake.NewClientBuilder().WithScheme(setupScheme()).WithObjects(provider).Build()
-			p := &phaseReconciler{
+			p := &PhaseReconciler{
 				ctrlClient: fakeclient,
 				provider:   provider,
 			}
@@ -579,7 +579,7 @@ releaseSeries:
 			g := NewWithT(t)
 
 			fakeclient := fake.NewClientBuilder().WithScheme(setupScheme()).WithObjects(tt.genericProviders...).Build()
-			p := &phaseReconciler{
+			p := &PhaseReconciler{
 				ctrlClient:     fakeclient,
 				providerConfig: coreProvider,
 				repo:           repository.NewMemoryRepository(),

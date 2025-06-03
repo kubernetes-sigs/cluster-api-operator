@@ -36,7 +36,7 @@ func TestManifestsDownloader(t *testing.T) {
 
 	fakeclient := fake.NewClientBuilder().WithObjects().Build()
 
-	p := &phaseReconciler{
+	p := &PhaseReconciler{
 		ctrlClient: fakeclient,
 		provider: &operatorv1.CoreProvider{
 			ObjectMeta: metav1.ObjectMeta{
@@ -51,10 +51,10 @@ func TestManifestsDownloader(t *testing.T) {
 		},
 	}
 
-	_, err := p.initializePhaseReconciler(ctx)
+	_, err := p.InitializePhaseReconciler(ctx)
 	g.Expect(err).ToNot(HaveOccurred())
 
-	_, err = p.downloadManifests(ctx)
+	_, err = p.DownloadManifests(ctx)
 	g.Expect(err).ToNot(HaveOccurred())
 
 	// Ensure that config map was created
@@ -82,7 +82,7 @@ func TestProviderDownloadWithOverrides(t *testing.T) {
 	overridesClient, err := configclient.New(ctx, "", configclient.InjectReader(reader))
 	g.Expect(err).ToNot(HaveOccurred())
 
-	p := &phaseReconciler{
+	p := &PhaseReconciler{
 		ctrlClient: fakeclient,
 		provider: &operatorv1.CoreProvider{
 			ObjectMeta: metav1.ObjectMeta{
@@ -94,16 +94,16 @@ func TestProviderDownloadWithOverrides(t *testing.T) {
 		overridesClient: overridesClient,
 	}
 
-	_, err = p.initializePhaseReconciler(ctx)
+	_, err = p.InitializePhaseReconciler(ctx)
 	g.Expect(err).ToNot(HaveOccurred())
 
-	_, err = p.downloadManifests(ctx)
+	_, err = p.DownloadManifests(ctx)
 	g.Expect(err).ToNot(HaveOccurred())
 
-	_, err = p.load(ctx)
+	_, err = p.Load(ctx)
 	g.Expect(err).ToNot(HaveOccurred())
 
-	_, err = p.fetch(ctx)
+	_, err = p.Fetch(ctx)
 	g.Expect(err).ToNot(HaveOccurred())
 
 	g.Expect(p.components.Images()).To(HaveExactElements([]string{"registry.k8s.io/cluster-api/cluster-api-controller:v1.4.3"}))
