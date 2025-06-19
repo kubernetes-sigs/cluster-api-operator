@@ -180,6 +180,7 @@ endif
 RELEASE_ALIAS_TAG ?= $(PULL_BASE_REF)
 RELEASE_DIR := $(ROOT)/out
 CHART_DIR := $(RELEASE_DIR)/charts/cluster-api-operator
+CRD_CHART_DIR := $(RELEASE_DIR)/charts/cluster-api-operator-crds
 CHART_PACKAGE_DIR := $(RELEASE_DIR)/package
 
 # Set --output-base for conversion-gen if we are not within GOPATH
@@ -338,7 +339,7 @@ verify-gen: generate
 ## --------------------------------------
 
 .PHONY: generate
-generate: $(CONTROLLER_GEN) $(HELM) release-chart ## Generate code
+generate: $(CONTROLLER_GEN) $(HELM) release-crds-chart release-chart ## Generate code
 	$(MAKE) generate-manifests
 	$(MAKE) generate-go
 	$(HELM) template capi-operator $(CHART_PACKAGE_DIR)/$(PACKAGE_NAME)-$(HELM_CHART_TAG).tgz > test/e2e/resources/full-chart-install.yaml
@@ -452,6 +453,9 @@ $(RELEASE_DIR):
 $(CHART_DIR):
 	mkdir -p $(CHART_DIR)/templates
 
+$(CRD_CHART_DIR):
+	mkdir -p $(CRD_CHART_DIR)/templates
+
 $(CHART_PACKAGE_DIR):
 	mkdir -p $(CHART_PACKAGE_DIR)
 
@@ -464,6 +468,7 @@ release: clean-release $(RELEASE_DIR)  ## Builds and push container images using
 	$(MAKE) manifest-modification REGISTRY=$(PROD_REGISTRY)
 	$(MAKE) chart-manifest-modification REGISTRY=$(PROD_REGISTRY)
 	$(MAKE) release-manifests
+	$(MAKE) release-crds-chart
 	$(MAKE) release-chart
 
 .PHONY: manifest-modification
@@ -487,8 +492,13 @@ release-manifests: $(KUSTOMIZE) $(RELEASE_DIR) ## Builds the manifests to publis
 .PHONY: release-chart
 release-chart: $(HELM) $(KUSTOMIZE) $(RELEASE_DIR) $(CHART_DIR) $(CHART_PACKAGE_DIR) ## Builds the chart to publish with a release
 	cp -rf $(ROOT)/hack/charts/cluster-api-operator/. $(CHART_DIR)
-	$(KUSTOMIZE) build ./config/chart > $(CHART_DIR)/templates/operator-components.yaml
 	$(HELM) package $(CHART_DIR) --app-version=$(HELM_CHART_TAG) --version=$(HELM_CHART_TAG) --destination=$(CHART_PACKAGE_DIR)
+
+.PHONY: release-crds-chart
+release-crds-chart: $(HELM) $(KUSTOMIZE) $(RELEASE_DIR) $(CRD_CHART_DIR) $(CHART_PACKAGE_DIR) ## Builds the CRDs chart to publish with a release
+	cp -rf $(ROOT)/hack/charts/cluster-api-operator-crds/. $(CRD_CHART_DIR)
+	$(KUSTOMIZE) build ./config/crd > $(CRD_CHART_DIR)/templates/crds.yaml
+	$(HELM) package $(CRD_CHART_DIR) --app-version=$(HELM_CHART_TAG) --version=$(HELM_CHART_TAG) --destination=$(CHART_PACKAGE_DIR)
 
 .PHONY: release-staging
 release-staging: ## Builds and push container images and manifests to the staging bucket.
@@ -551,6 +561,7 @@ test-e2e-local: docker-build-e2e test-e2e
 .PHONY: test-e2e
 test-e2e: $(KUSTOMIZE)
 	$(MAKE) release-manifests
+	$(MAKE) release-crds-chart
 	$(MAKE) release-chart
 	$(MAKE) test-e2e-run
 
