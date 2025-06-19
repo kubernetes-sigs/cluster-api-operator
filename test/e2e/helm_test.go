@@ -37,7 +37,7 @@ import (
 )
 
 var _ = Describe("Create a proper set of manifests when using helm charts", func() {
-	It("should deploy a quick-start cluster-api-operator chart", func() {
+	It("should deploy a quick-start cluster-api-operator-providers chart", func() {
 		clusterProxy := helmClusterProxy.GetClient()
 
 		fullHelmChart := &HelmChart{
