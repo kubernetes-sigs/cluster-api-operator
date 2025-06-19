@@ -1,5 +1,5 @@
 ---
-# Source: cluster-api-operator/templates/bootstrap.yaml
+# Source: cluster-api-operator-providers/templates/bootstrap.yaml
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -9,7 +9,7 @@ metadata:
     "argocd.argoproj.io/sync-wave": "1"
   name: kubeadm-bootstrap-custom-ns
 ---
-# Source: cluster-api-operator/templates/bootstrap.yaml
+# Source: cluster-api-operator-providers/templates/bootstrap.yaml
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -19,7 +19,7 @@ metadata:
     "argocd.argoproj.io/sync-wave": "1"
   name: rke2-bootstrap-custom-ns
 ---
-# Source: cluster-api-operator/templates/core-conditions.yaml
+# Source: cluster-api-operator-providers/templates/core-conditions.yaml
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -29,7 +29,7 @@ metadata:
     "argocd.argoproj.io/sync-wave": "1"
   name: capi-system
 ---
-# Source: cluster-api-operator/templates/bootstrap.yaml
+# Source: cluster-api-operator-providers/templates/bootstrap.yaml
 apiVersion: operator.cluster.x-k8s.io/v1alpha2
 kind: BootstrapProvider
 metadata:
@@ -45,7 +45,7 @@ spec:
     name: test-secret-name
     namespace: test-secret-namespace
 ---
-# Source: cluster-api-operator/templates/bootstrap.yaml
+# Source: cluster-api-operator-providers/templates/bootstrap.yaml
 apiVersion: operator.cluster.x-k8s.io/v1alpha2
 kind: BootstrapProvider
 metadata:
@@ -61,7 +61,7 @@ spec:
     name: test-secret-name
     namespace: test-secret-namespace
 ---
-# Source: cluster-api-operator/templates/core-conditions.yaml
+# Source: cluster-api-operator-providers/templates/core-conditions.yaml
 apiVersion: operator.cluster.x-k8s.io/v1alpha2
 kind: CoreProvider
 metadata:

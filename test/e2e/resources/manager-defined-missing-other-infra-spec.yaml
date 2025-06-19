@@ -1,5 +1,5 @@
 ---
-# Source: cluster-api-operator/templates/addon.yaml
+# Source: cluster-api-operator-providers/templates/addon.yaml
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -9,7 +9,7 @@ metadata:
     "argocd.argoproj.io/sync-wave": "1"
   name: helm-addon-system
 ---
-# Source: cluster-api-operator/templates/bootstrap.yaml
+# Source: cluster-api-operator-providers/templates/bootstrap.yaml
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -19,7 +19,7 @@ metadata:
     "argocd.argoproj.io/sync-wave": "1"
   name: kubeadm-bootstrap-system
 ---
-# Source: cluster-api-operator/templates/control-plane.yaml
+# Source: cluster-api-operator-providers/templates/control-plane.yaml
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -29,7 +29,7 @@ metadata:
     "argocd.argoproj.io/sync-wave": "1"
   name: kubeadm-control-plane-system
 ---
-# Source: cluster-api-operator/templates/core.yaml
+# Source: cluster-api-operator-providers/templates/core.yaml
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -39,7 +39,7 @@ metadata:
     "argocd.argoproj.io/sync-wave": "1"
   name: capi-system
 ---
-# Source: cluster-api-operator/templates/infra.yaml
+# Source: cluster-api-operator-providers/templates/infra.yaml
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -49,7 +49,7 @@ metadata:
     "argocd.argoproj.io/sync-wave": "1"
   name: docker-infrastructure-system
 ---
-# Source: cluster-api-operator/templates/ipam.yaml
+# Source: cluster-api-operator-providers/templates/ipam.yaml
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -59,7 +59,7 @@ metadata:
     "argocd.argoproj.io/sync-wave": "1"
   name: in-cluster-ipam-system
 ---
-# Source: cluster-api-operator/templates/addon.yaml
+# Source: cluster-api-operator-providers/templates/addon.yaml
 apiVersion: operator.cluster.x-k8s.io/v1alpha2
 kind: AddonProvider
 metadata:
@@ -70,7 +70,7 @@ metadata:
     "helm.sh/hook-weight": "2"
     "argocd.argoproj.io/sync-wave": "2"
 ---
-# Source: cluster-api-operator/templates/bootstrap.yaml
+# Source: cluster-api-operator-providers/templates/bootstrap.yaml
 apiVersion: operator.cluster.x-k8s.io/v1alpha2
 kind: BootstrapProvider
 metadata:
@@ -81,7 +81,7 @@ metadata:
     "helm.sh/hook-weight": "2"
     "argocd.argoproj.io/sync-wave": "2"
 ---
-# Source: cluster-api-operator/templates/control-plane.yaml
+# Source: cluster-api-operator-providers/templates/control-plane.yaml
 apiVersion: operator.cluster.x-k8s.io/v1alpha2
 kind: ControlPlaneProvider
 metadata:
@@ -93,7 +93,7 @@ metadata:
     "argocd.argoproj.io/sync-wave": "2"
 spec:
 ---
-# Source: cluster-api-operator/templates/core.yaml
+# Source: cluster-api-operator-providers/templates/core.yaml
 apiVersion: operator.cluster.x-k8s.io/v1alpha2
 kind: CoreProvider
 metadata:
@@ -109,7 +109,7 @@ spec:
       ClusterTopology: true
       MachinePool: true
 ---
-# Source: cluster-api-operator/templates/ipam.yaml
+# Source: cluster-api-operator-providers/templates/ipam.yaml
 apiVersion: operator.cluster.x-k8s.io/v1alpha2
 kind: IPAMProvider
 metadata:
@@ -121,7 +121,7 @@ metadata:
     "argocd.argoproj.io/sync-wave": "2"
 spec:
 ---
-# Source: cluster-api-operator/templates/infra.yaml
+# Source: cluster-api-operator-providers/templates/infra.yaml
 apiVersion: operator.cluster.x-k8s.io/v1alpha2
 kind: InfrastructureProvider
 metadata:

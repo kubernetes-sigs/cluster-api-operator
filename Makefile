@@ -149,7 +149,7 @@ PROD_REGISTRY ?= registry.k8s.io/capi-operator
 
 # Image name
 IMAGE_NAME ?= cluster-api-operator
-PACKAGE_NAME = cluster-api-operator
+PACKAGE_NAME = cluster-api-operator-providers
 CONTROLLER_IMG ?= $(REGISTRY)/$(IMAGE_NAME)
 CONTROLLER_IMG_TAG ?= $(CONTROLLER_IMG)-$(ARCH):$(TAG)
 
@@ -180,6 +180,7 @@ endif
 RELEASE_ALIAS_TAG ?= $(PULL_BASE_REF)
 RELEASE_DIR := $(ROOT)/out
 CHART_DIR := $(RELEASE_DIR)/charts/cluster-api-operator
+CHART_PROVIDERS_DIR := $(RELEASE_DIR)/charts/cluster-api-operator-providers
 CHART_PACKAGE_DIR := $(RELEASE_DIR)/package
 
 # Set --output-base for conversion-gen if we are not within GOPATH
@@ -455,6 +456,9 @@ $(CHART_DIR):
 $(CHART_PACKAGE_DIR):
 	mkdir -p $(CHART_PACKAGE_DIR)
 
+$(CHART_PROVIDERS_DIR):
+	mkdir -p $(CHART_PROVIDERS_DIR)/templates
+
 .PHONY: release
 release: clean-release $(RELEASE_DIR)  ## Builds and push container images using the latest git tag for the commit.
 	@if [ -z "${RELEASE_TAG}" ]; then echo "RELEASE_TAG is not set"; exit 1; fi
@@ -485,10 +489,16 @@ release-manifests: $(KUSTOMIZE) $(RELEASE_DIR) ## Builds the manifests to publis
 	$(KUSTOMIZE) build ./config/default > $(RELEASE_DIR)/operator-components.yaml
 
 .PHONY: release-chart
-release-chart: $(HELM) $(KUSTOMIZE) $(RELEASE_DIR) $(CHART_DIR) $(CHART_PACKAGE_DIR) ## Builds the chart to publish with a release
+release-chart: $(HELM) $(KUSTOMIZE) $(RELEASE_DIR) $(CHART_DIR) $(CHART_PROVIDERS_DIR) $(CHART_PACKAGE_DIR) ## Builds the chart to publish with a release
+	# Processing the cluster-api-operator chart
 	cp -rf $(ROOT)/hack/charts/cluster-api-operator/. $(CHART_DIR)
 	$(KUSTOMIZE) build ./config/chart > $(CHART_DIR)/templates/operator-components.yaml
 	$(HELM) package $(CHART_DIR) --app-version=$(HELM_CHART_TAG) --version=$(HELM_CHART_TAG) --destination=$(CHART_PACKAGE_DIR)
+
+	# Processing the cluster-api-operator-providers chart
+	cp -rf $(ROOT)/hack/charts/cluster-api-operator-providers/. $(CHART_PROVIDERS_DIR)
+	$(HELM) dependency update $(CHART_PROVIDERS_DIR)
+	$(HELM) package $(CHART_PROVIDERS_DIR) --app-version=$(HELM_CHART_TAG) --version=$(HELM_CHART_TAG) --destination=$(CHART_PACKAGE_DIR)
 
 .PHONY: release-staging
 release-staging: ## Builds and push container images and manifests to the staging bucket.
@@ -561,7 +571,7 @@ test-e2e-run: $(GINKGO) $(ENVSUBST) $(HELM) ## Run e2e tests
 		-e2e.artifacts-folder="$(ARTIFACTS)" \
 		-e2e.config="$(E2E_CONF_FILE_ENVSUBST)"  -e2e.components=$(RELEASE_DIR)/operator-components.yaml \
 		-e2e.skip-resource-cleanup=$(SKIP_CLEANUP) -e2e.use-existing-cluster=$(SKIP_CREATE_MGMT_CLUSTER) \
-		-e2e.helm-binary-path=$(HELM) -e2e.chart-path=$(CHART_PACKAGE_DIR)/cluster-api-operator-$(HELM_CHART_TAG).tgz $(E2E_ARGS)
+		-e2e.helm-binary-path=$(HELM) -e2e.chart-path=$(CHART_PACKAGE_DIR)/cluster-api-operator-providers-$(HELM_CHART_TAG).tgz $(E2E_ARGS)
 
 go-version: ## Print the go version we use to compile our binaries and images
 	@echo $(GO_VERSION)

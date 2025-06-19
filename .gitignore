@@ -80,3 +80,5 @@ _releasenotes
 
 # Helm
 .helm
+Chart.lock
+hack/charts/cluster-api-operator-providers/charts
