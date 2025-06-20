@@ -43,7 +43,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/config"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
-
 	ctrlwebhook "sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
