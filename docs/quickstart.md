@@ -52,13 +52,13 @@ The `--wait` flag is REQUIRED for the helm install command to work. If the --wai
 </aside>
 
 ```bash
-helm install capi-operator capi-operator/cluster-api-operator --create-namespace -n capi-operator-system --set infrastructure.docker.enabled=true --set cert-manager.enabled=true --set configSecret.name=${CREDENTIALS_SECRET_NAME} --set configSecret.namespace=${CREDENTIALS_SECRET_NAMESPACE}  --wait --timeout 90s
+helm install capi-operator capi-operator/cluster-api-operator --create-namespace -n capi-operator-system --set infrastructure.docker.enabled=true --set configSecret.name=${CREDENTIALS_SECRET_NAME} --set configSecret.namespace=${CREDENTIALS_SECRET_NAMESPACE}  --wait --timeout 90s
 ```
 
 Docker provider can be replaced by any provider supported by [clusterctl](https://cluster-api.sigs.k8s.io/reference/providers.html#infrastructure).
 
 Other options for installing Cluster API Operator are described in [full documentation](https://github.com/kubernetes-sigs/cluster-api-operator/blob/main/docs/README.md#installation).
- 
+
 # Example API Usage
 
 Deploy latest version of core Cluster API components:
@@ -69,7 +69,6 @@ kind: CoreProvider
 metadata:
   name: cluster-api
   namespace: capi-system
-
 ```
 
 Deploy Cluster API AWS provider with specific version, custom manager options and flags:
