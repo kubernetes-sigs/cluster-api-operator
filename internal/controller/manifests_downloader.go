@@ -140,14 +140,14 @@ func (p *PhaseReconciler) checkConfigMapExists(ctx context.Context, labelSelecto
 	return len(configMapList.Items) == 1, nil
 }
 
-// finalize applies combined hash to a configMap, in order to mark provider provisioning completed.
-func (p *phaseReconciler) finalize(ctx context.Context) (reconcile.Result, error) {
+// Finalize applies combined hash to a configMap, in order to mark provider provisioning completed.
+func (p *PhaseReconciler) Finalize(ctx context.Context) (*Result, error) {
 	err := setCacheHash(ctx, p.ctrlClient, p.provider)
 	if err != nil {
 		ctrl.LoggerFrom(ctx).V(5).Error(err, "Failed to update providers ConfigMap hash")
 	}
 
-	return reconcile.Result{}, wrapPhaseError(err, "failed to update providers ConfigMap hash", operatorv1.ProviderInstalledCondition)
+	return &Result{}, wrapPhaseError(err, "failed to update providers ConfigMap hash", operatorv1.ProviderInstalledCondition)
 }
 
 // prepareConfigMapLabels returns labels that identify a config map with downloaded manifests.

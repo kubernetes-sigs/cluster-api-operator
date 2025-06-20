@@ -48,7 +48,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 // fakeURL is the stub url for custom providers, missing from clusterctl repository.
@@ -566,8 +565,8 @@ func (p *PhaseReconciler) Fetch(ctx context.Context) (*Result, error) {
 	return &Result{}, nil
 }
 
-// store stores the provider components in the cache.
-func (p *phaseReconciler) store(ctx context.Context) (reconcile.Result, error) {
+// Store stores the provider components in the cache.
+func (p *PhaseReconciler) Store(ctx context.Context) (*Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 	log.Info("Storing provider in cache")
 
@@ -576,7 +575,7 @@ func (p *phaseReconciler) store(ctx context.Context) (reconcile.Result, error) {
 		log.Error(err, "cannot fetch kind of the Secret resource")
 		err = fmt.Errorf("cannot fetch kind of the Secret resource: %w", err)
 
-		return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsCustomizationErrorReason, operatorv1.ProviderInstalledCondition)
+		return &Result{}, wrapPhaseError(err, operatorv1.ComponentsCustomizationErrorReason, operatorv1.ProviderInstalledCondition)
 	}
 
 	secret := &corev1.Secret{
@@ -610,13 +609,13 @@ func (p *phaseReconciler) store(ctx context.Context) (reconcile.Result, error) {
 
 	manifests, err := apijson.Marshal(addNamespaceIfMissing(p.components.Objs(), p.provider.GetNamespace()))
 	if err != nil {
-		return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsCustomizationErrorReason, operatorv1.ProviderInstalledCondition)
+		return &Result{}, wrapPhaseError(err, operatorv1.ComponentsCustomizationErrorReason, operatorv1.ProviderInstalledCondition)
 	}
 
 	if p.needsCompression {
 		var buf bytes.Buffer
 		if err := compressData(&buf, manifests); err != nil {
-			return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsCustomizationErrorReason, operatorv1.ProviderInstalledCondition)
+			return &Result{}, wrapPhaseError(err, operatorv1.ComponentsCustomizationErrorReason, operatorv1.ProviderInstalledCondition)
 		}
 
 		secret.Data["cache"] = buf.Bytes()
@@ -627,10 +626,10 @@ func (p *phaseReconciler) store(ctx context.Context) (reconcile.Result, error) {
 	if err := p.ctrlClient.Patch(ctx, secret, client.Apply, client.ForceOwnership, client.FieldOwner(cacheOwner)); err != nil {
 		log.Error(err, "failed to apply cache config map")
 
-		return reconcile.Result{}, wrapPhaseError(err, operatorv1.ComponentsCustomizationErrorReason, operatorv1.ProviderInstalledCondition)
+		return &Result{}, wrapPhaseError(err, operatorv1.ComponentsCustomizationErrorReason, operatorv1.ProviderInstalledCondition)
 	}
 
-	return reconcile.Result{}, nil
+	return &Result{}, nil
 }
 
 // addNamespaceIfMissing adda a Namespace object if missing (this ensure the targetNamespace will be created).

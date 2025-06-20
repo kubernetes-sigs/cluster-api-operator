@@ -92,14 +92,17 @@ func (r *GenericProviderReconciler) BuildWithManager(ctx context.Context, mgr ct
 	reconciler := NewPhaseReconciler(*r, r.Provider, r.ProviderList)
 
 	r.ReconcilePhases = []PhaseFn{
+		reconciler.ApplyFromCache,
 		reconciler.PreflightChecks,
 		reconciler.InitializePhaseReconciler,
 		reconciler.DownloadManifests,
 		reconciler.Load,
 		reconciler.Fetch,
+		reconciler.Store,
 		reconciler.Upgrade,
 		reconciler.Install,
 		reconciler.ReportStatus,
+		reconciler.Finalize,
 	}
 
 	r.DeletePhases = []PhaseFn{
@@ -177,13 +180,7 @@ func (r *GenericProviderReconciler) Reconcile(ctx context.Context, req reconcile
 		return ctrl.Result{}, err
 	}
 
-	// Check provider config map for changes
-	cacheUsed, err := applyFromCache(ctx, r.Client, r.Provider)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
-	if r.Provider.GetAnnotations()[appliedSpecHashAnnotation] == specHash || cacheUsed {
+	if r.Provider.GetAnnotations()[appliedSpecHashAnnotation] == specHash {
 		log.Info("No changes detected, skipping further steps")
 
 		return ctrl.Result{}, nil
@@ -355,39 +352,39 @@ func calculateHash(ctx context.Context, k8sClient client.Client, provider generi
 	return fmt.Sprintf("%x", hash.Sum(nil)), err
 }
 
-// applyFromCache applies provider configuration from cache and returns true if the cache did not change.
-func applyFromCache(ctx context.Context, cl client.Client, provider genericprovider.GenericProvider) (bool, error) {
+// ApplyFromCache applies provider configuration from cache and returns true if the cache did not change.
+func (p *PhaseReconciler) ApplyFromCache(ctx context.Context) (*Result, error) {
 	log := log.FromContext(ctx)
 
 	secret := &corev1.Secret{}
-	if err := cl.Get(ctx, client.ObjectKey{Name: ProviderCacheName(provider), Namespace: provider.GetNamespace()}, secret); apierrors.IsNotFound(err) {
+	if err := p.ctrlClient.Get(ctx, client.ObjectKey{Name: ProviderCacheName(p.provider), Namespace: p.provider.GetNamespace()}, secret); apierrors.IsNotFound(err) {
 		// secret does not exist, nothing to apply
-		return false, nil
+		return &Result{}, nil
 	} else if err != nil {
 		log.Error(err, "failed to get provider cache")
 
-		return false, fmt.Errorf("failed to get provider cache: %w", err)
+		return &Result{}, fmt.Errorf("failed to get provider cache: %w", err)
 	}
 
 	// calculate combined hash for provider and config map cache
 	hash := sha256.New()
-	if err := providerHash(ctx, cl, hash, provider); err != nil {
+	if err := providerHash(ctx, p.ctrlClient, hash, p.provider); err != nil {
 		log.Error(err, "failed to calculate provider hash")
 
-		return false, err
+		return &Result{}, err
 	}
 
 	if err := addObjectToHash(hash, secret.Data); err != nil {
 		log.Error(err, "failed to calculate config map hash")
 
-		return false, err
+		return &Result{}, err
 	}
 
 	cacheHash := fmt.Sprintf("%x", hash.Sum(nil))
 	if secret.GetAnnotations()[appliedSpecHashAnnotation] != cacheHash {
 		log.Info("Provider or cache state has changed", "cacheHash", cacheHash, "providerHash", secret.GetAnnotations()[appliedSpecHashAnnotation])
 
-		return false, nil
+		return &Result{}, nil
 	}
 
 	log.Info("Applying provider configuration from cache")
@@ -397,12 +394,12 @@ func applyFromCache(ctx context.Context, cl client.Client, provider genericprovi
 	mr := configclient.NewMemoryReader()
 
 	if err := mr.Init(ctx, ""); err != nil {
-		return false, err
+		return &Result{}, err
 	}
 
 	// Fetch configuration variables from the secret. See API field docs for more info.
-	if err := initReaderVariables(ctx, cl, mr, provider); err != nil {
-		return false, err
+	if err := initReaderVariables(ctx, p.ctrlClient, mr, p.provider); err != nil {
+		return &Result{}, err
 	}
 
 	for _, manifest := range secret.Data {
@@ -416,11 +413,11 @@ func applyFromCache(ctx context.Context, cl client.Client, provider genericprovi
 		if err != nil {
 			log.Error(err, "failed to convert yaml to unstructured")
 
-			return false, err
+			return &Result{}, err
 		}
 
 		for _, manifest := range manifests {
-			if err := cl.Patch(ctx, &manifest, client.Apply, client.ForceOwnership, client.FieldOwner(cacheOwner)); err != nil {
+			if err := p.ctrlClient.Patch(ctx, &manifest, client.Apply, client.ForceOwnership, client.FieldOwner(cacheOwner)); err != nil {
 				errs = append(errs, err)
 			}
 		}
@@ -435,7 +432,7 @@ func applyFromCache(ctx context.Context, cl client.Client, provider genericprovi
 		if err != nil {
 			log.Error(err, "failed to decompress yaml")
 
-			return false, err
+			return &Result{}, err
 		}
 
 		manifests := []unstructured.Unstructured{}
@@ -444,11 +441,11 @@ func applyFromCache(ctx context.Context, cl client.Client, provider genericprovi
 		if err != nil {
 			log.Error(err, "failed to convert yaml to unstructured")
 
-			return false, err
+			return &Result{}, err
 		}
 
 		for _, manifest := range manifests {
-			if err := cl.Patch(ctx, &manifest, client.Apply, client.ForceOwnership, client.FieldOwner(cacheOwner)); err != nil {
+			if err := p.ctrlClient.Patch(ctx, &manifest, client.Apply, client.ForceOwnership, client.FieldOwner(cacheOwner)); err != nil {
 				errs = append(errs, err)
 			}
 		}
@@ -457,12 +454,12 @@ func applyFromCache(ctx context.Context, cl client.Client, provider genericprovi
 	if err := kerrors.NewAggregate(errs); err != nil {
 		log.Error(err, "failed to apply objects from cache")
 
-		return false, err
+		return &Result{}, err
 	}
 
 	log.Info("Applied all objects from cache")
 
-	return true, nil
+	return &Result{Completed: true}, nil
 }
 
 // setCacheHash calculates current provider and secret hash, and updates it on the secret.
