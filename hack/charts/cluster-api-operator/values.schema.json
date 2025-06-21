@@ -2,46 +2,154 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "type": "object",
   "properties": {
-    "core": {
-      "oneOf": [
-        { "type": "object" },
-        { "type": "null" }
-      ]
+    "logLevel": {
+      "type": "integer",
+      "default": 2
     },
-    "bootstrap": {
-      "type": "object",
-      "oneOf": [
-        { "type": "object" },
-        { "type": "null" }
-      ]
+    "replicaCount": {
+      "type": "integer",
+      "default": 1
     },
-    "controlPlane": {
+    "leaderElection": {
       "type": "object",
-      "oneOf": [
-        { "type": "object" },
-        { "type": "null" }
-      ]
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true
+        },
+        "leaseDuration": {
+          "type": "string"
+        },
+        "renewDeadline": {
+          "type": "string"
+        },
+        "retryPeriod": {
+          "type": "string"
+        }
+      }
     },
-    "infrastructure": {
+    "image": {
       "type": "object",
-      "oneOf": [
-        { "type": "object" },
-        { "type": "null" }
-      ]
+      "properties": {
+        "manager": {
+          "type": "object",
+          "properties": {
+            "repository": {
+              "type": "string"
+            },
+            "tag": {
+              "type": "string"
+            },
+            "pullPolicy": {
+              "type": "string",
+              "enum": ["Always", "IfNotPresent", "Never"]
+            },
+            "registry": {
+              "type": "string"
+            },
+            "digest": {
+              "type": "string"
+            }
+          }
+        }
+      }
     },
-    "addon": {
+    "env": {
       "type": "object",
-      "oneOf": [
-        { "type": "object" },
-        { "type": "null" }
-      ]
+      "properties": {
+        "manager": {
+          "type": "array"
+        }
+      }
     },
-    "ipam": {
+    "diagnosticsAddress": {
+      "type": "string",
+      "default": ":8443"
+    },
+    "healthAddr": {
+      "type": "string",
+      "default": ":9440"
+    },
+    "profilerAddress": {
+      "type": "string",
+      "default": ":6060"
+    },
+    "contentionProfiling": {
+      "type": "boolean",
+      "default": false
+    },
+    "insecureDiagnostics": {
+      "type": "boolean",
+      "default": false
+    },
+    "watchConfigSecret": {
+      "type": "boolean",
+      "default": false
+    },
+    "imagePullSecrets": {
+      "type": "object"
+    },
+    "resources": {
       "type": "object",
-      "oneOf": [
-        { "type": "object" },
-        { "type": "null" }
-      ]
+      "properties": {
+        "manager": {
+          "type": "object"
+        }
+      }
+    },
+    "containerSecurityContext": {
+      "type": "object"
+    },
+    "affinity": {
+      "type": "object"
+    },
+    "tolerations": {
+      "type": "array"
+    },
+    "volumes": {
+      "type": "array"
+    },
+    "volumeMounts": {
+      "type": "object",
+      "properties": {
+        "manager": {
+          "type": "array"
+        }
+      }
+    },
+    "enableHelmHook": {
+      "type": "boolean",
+      "default": true
+    },
+    "deploymentLabels": {
+      "type": "object"
+    },
+    "deploymentAnnotations": {
+      "type": "object"
+    },
+    "podLabels": {
+      "type": "object"
+    },
+    "podAnnotations": {
+      "type": "object"
+    },
+    "securityContext": {
+      "type": "object"
+    },
+    "strategy": {
+      "type": "object"
+    },
+    "nodeSelector": {
+      "type": "object"
+    },
+    "topologySpreadConstraints": {
+      "type": "array"
+    },
+    "podDnsPolicy": {
+      "type": "string"
+    },
+    "podDnsConfig": {
+      "type": "object"
     }
   }
 }
