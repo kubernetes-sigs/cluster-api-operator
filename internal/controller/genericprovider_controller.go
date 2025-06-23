@@ -381,7 +381,7 @@ func (p *PhaseReconciler) ApplyFromCache(ctx context.Context) (*Result, error) {
 	}
 
 	cacheHash := fmt.Sprintf("%x", hash.Sum(nil))
-	if secret.GetAnnotations()[appliedSpecHashAnnotation] != cacheHash {
+	if secret.GetAnnotations()[appliedSpecHashAnnotation] != cacheHash || p.provider.GetAnnotations()[appliedSpecHashAnnotation] != cacheHash {
 		log.Info("Provider or cache state has changed", "cacheHash", cacheHash, "providerHash", secret.GetAnnotations()[appliedSpecHashAnnotation])
 
 		return &Result{}, nil
@@ -493,6 +493,15 @@ func setCacheHash(ctx context.Context, cl client.Client, provider genericprovide
 
 	annotations[appliedSpecHashAnnotation] = cacheHash
 	secret.SetAnnotations(annotations)
+
+	// Set hash on the provider to avoid cache re-use on re-creation
+	annotations = provider.GetAnnotations()
+	if annotations == nil {
+		annotations = map[string]string{}
+	}
+
+	annotations[appliedSpecHashAnnotation] = cacheHash
+	provider.SetAnnotations(annotations)
 
 	return helper.Patch(ctx, secret)
 }
