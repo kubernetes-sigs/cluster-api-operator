@@ -355,8 +355,6 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 			"ipam.in-cluster.enabled":                   "true",
 			"addon.helm.enabled":                        "true",
 			"image.manager.tag":                         "v0.9.1",
-			"cert-manager.enabled":                      "false",
-			"cert-manager.installCRDs":                  "false",
 			"core.cluster-api.version":                  "v1.6.2",
 			"manager.featureGates.core.ClusterTopology": "true",
 			"manager.featureGates.core.MachinePool":     "true",
@@ -373,14 +371,12 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 	})
 	It("should deploy all providers with manager defined but no feature gates enabled", func() {
 		manifests, err := helmChart.Run(map[string]string{
-			"configSecret.name":                "test-secret-name",
-			"configSecret.namespace":           "test-secret-namespace",
-			"core.cluster-api.enabled":         "true",
-			"infrastructure.azure.enabled":     "true",
-			"ipam.in-cluster.enabled":          "true",
-			"addon.helm.enabled":               "true",
-			"manager.cert-manager.enabled":     "false",
-			"manager.cert-manager.installCRDs": "false",
+			"configSecret.name":            "test-secret-name",
+			"configSecret.namespace":       "test-secret-namespace",
+			"core.cluster-api.enabled":     "true",
+			"infrastructure.azure.enabled": "true",
+			"ipam.in-cluster.enabled":      "true",
+			"addon.helm.enabled":           "true",
 		})
 		Expect(err).ToNot(HaveOccurred())
 		Expect(manifests).ToNot(BeEmpty())
