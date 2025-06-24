@@ -18,15 +18,16 @@ package controller
 
 import (
 	"bytes"
-	"compress/gzip"
 	"context"
 	"fmt"
-	"io"
 	"os"
 	"time"
 
+	apijson "k8s.io/apimachinery/pkg/util/json"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/types"
@@ -46,6 +47,7 @@ import (
 	"sigs.k8s.io/cluster-api/util/conditions"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 // fakeURL is the stub url for custom providers, missing from clusterctl repository.
@@ -67,6 +69,7 @@ type PhaseReconciler struct {
 	overridesClient    configclient.Client
 	components         repository.Components
 	clusterctlProvider *clusterctlv1.Provider
+	needsCompression   bool
 }
 
 // PhaseFn is a function that represent a phase of the reconciliation.
@@ -152,6 +155,34 @@ type InNamespace string
 
 func (i InNamespace) ApplyToConfigMapRepository(settings *ConfigMapRepositorySettings) {
 	settings.namespace = string(i)
+}
+
+// initReaderVariables initializes the given reader with configuration variables from the provider's
+// Spec.ConfigSecret if it is set.
+func initReaderVariables(ctx context.Context, cl client.Client, reader configclient.Reader, provider genericprovider.GenericProvider) error {
+	log := log.FromContext(ctx)
+
+	// Fetch configuration variables from the secret. See API field docs for more info.
+	if provider.GetSpec().ConfigSecret == nil {
+		log.Info("No configuration secret was specified")
+
+		return nil
+	}
+
+	secret := &corev1.Secret{}
+	key := types.NamespacedName{Namespace: provider.GetSpec().ConfigSecret.Namespace, Name: provider.GetSpec().ConfigSecret.Name}
+
+	if err := cl.Get(ctx, key, secret); err != nil {
+		log.Error(err, "failed to get referenced secret")
+
+		return err
+	}
+
+	for k, v := range secret.Data {
+		reader.Set(k, string(v))
+	}
+
+	return nil
 }
 
 // PreflightChecks a wrapper around the preflight checks.
@@ -240,7 +271,7 @@ func (p *PhaseReconciler) Load(ctx context.Context) (*Result, error) {
 		labelSelector = p.provider.GetSpec().FetchConfig.Selector
 	}
 
-	additionalManifests, err := p.fetchAdditionalManifests(ctx)
+	additionalManifests, err := fetchAdditionalManifests(ctx, p.ctrlClient, p.provider)
 	if err != nil {
 		return &Result{}, wrapPhaseError(err, "failed to load additional manifests", operatorv1.ProviderInstalledCondition)
 	}
@@ -292,19 +323,8 @@ func (p *PhaseReconciler) secretReader(ctx context.Context, providers ...configc
 	}
 
 	// Fetch configuration variables from the secret. See API field docs for more info.
-	if p.provider.GetSpec().ConfigSecret != nil {
-		secret := &corev1.Secret{}
-		key := types.NamespacedName{Namespace: p.provider.GetSpec().ConfigSecret.Namespace, Name: p.provider.GetSpec().ConfigSecret.Name}
-
-		if err := p.ctrlClient.Get(ctx, key, secret); err != nil {
-			return nil, err
-		}
-
-		for k, v := range secret.Data {
-			mr.Set(k, string(v))
-		}
-	} else {
-		log.Info("No configuration secret was specified")
+	if err := initReaderVariables(ctx, p.ctrlClient, mr, p.provider); err != nil {
+		return nil, err
 	}
 
 	isCustom := true
@@ -419,13 +439,13 @@ func (p *PhaseReconciler) configmapRepository(ctx context.Context, labelSelector
 	return mr, nil
 }
 
-func (p *PhaseReconciler) fetchAdditionalManifests(ctx context.Context) (string, error) {
+func fetchAdditionalManifests(ctx context.Context, cl client.Client, provider genericprovider.GenericProvider) (string, error) {
 	cm := &corev1.ConfigMap{}
 
-	if p.provider.GetSpec().AdditionalManifestsRef != nil {
-		key := types.NamespacedName{Namespace: p.provider.GetSpec().AdditionalManifestsRef.Namespace, Name: p.provider.GetSpec().AdditionalManifestsRef.Name}
+	if provider.GetSpec().AdditionalManifestsRef != nil {
+		key := types.NamespacedName{Namespace: provider.GetSpec().AdditionalManifestsRef.Namespace, Name: provider.GetSpec().AdditionalManifestsRef.Name}
 
-		if err := p.ctrlClient.Get(ctx, key, cm); err != nil {
+		if err := cl.Get(ctx, key, cm); err != nil {
 			return "", fmt.Errorf("failed to get ConfigMap %s/%s: %w", key.Namespace, key.Name, err)
 		}
 	}
@@ -451,18 +471,9 @@ func getComponentsData(cm corev1.ConfigMap) (string, error) {
 		return "", fmt.Errorf("ConfigMap %s/%s BinaryData has no components", cm.Namespace, cm.Name)
 	}
 
-	zr, err := gzip.NewReader(bytes.NewReader(compressedComponents))
-	if err != nil {
-		return "", err
-	}
-
-	components, err := io.ReadAll(zr)
+	components, err := decompressData(compressedComponents)
 	if err != nil {
 		return "", fmt.Errorf("cannot decompress data from ConfigMap %s/%s", cm.Namespace, cm.Name)
-	}
-
-	if err := zr.Close(); err != nil {
-		return "", err
 	}
 
 	return string(components), nil
@@ -518,6 +529,9 @@ func (p *PhaseReconciler) Fetch(ctx context.Context) (*Result, error) {
 		return &Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.ProviderInstalledCondition)
 	}
 
+	// Check if components exceed the resource size.
+	p.needsCompression = needToCompress(componentsFile)
+
 	// Generate a set of new objects using the clusterctl library. NewComponents() will do the yaml processing,
 	// like ensure all the provider components are in proper namespace, replace variables, etc. See the clusterctl
 	// documentation for more details.
@@ -548,9 +562,101 @@ func (p *PhaseReconciler) Fetch(ctx context.Context) (*Result, error) {
 		return &Result{}, wrapPhaseError(err, operatorv1.ComponentsImageOverrideErrorReason, operatorv1.ProviderInstalledCondition)
 	}
 
-	conditions.Set(p.provider, conditions.TrueCondition(operatorv1.ProviderInstalledCondition))
+	return &Result{}, nil
+}
+
+// Store stores the provider components in the cache.
+func (p *PhaseReconciler) Store(ctx context.Context) (*Result, error) {
+	log := ctrl.LoggerFrom(ctx)
+	log.Info("Storing provider in cache")
+
+	kinds, _, err := scheme.Scheme.ObjectKinds(&corev1.Secret{})
+	if err != nil || len(kinds) == 0 {
+		log.Error(err, "cannot fetch kind of the Secret resource")
+		err = fmt.Errorf("cannot fetch kind of the Secret resource: %w", err)
+
+		return &Result{}, wrapPhaseError(err, operatorv1.ComponentsCustomizationErrorReason, operatorv1.ProviderInstalledCondition)
+	}
+
+	secret := &corev1.Secret{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       kinds[0].Kind,
+			APIVersion: kinds[0].GroupVersion().String(),
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        ProviderCacheName(p.provider),
+			Namespace:   p.provider.GetNamespace(),
+			Annotations: map[string]string{},
+		},
+		StringData: map[string]string{},
+		Data:       map[string][]byte{},
+	}
+
+	gvk := p.provider.GetObjectKind().GroupVersionKind()
+
+	secret.SetOwnerReferences([]metav1.OwnerReference{
+		{
+			APIVersion: gvk.GroupVersion().String(),
+			Kind:       gvk.Kind,
+			Name:       p.provider.GetName(),
+			UID:        p.provider.GetUID(),
+		},
+	})
+
+	if p.needsCompression {
+		secret.Annotations[operatorv1.CompressedAnnotation] = "true"
+	}
+
+	manifests, err := apijson.Marshal(addNamespaceIfMissing(p.components.Objs(), p.provider.GetNamespace()))
+	if err != nil {
+		return &Result{}, wrapPhaseError(err, operatorv1.ComponentsCustomizationErrorReason, operatorv1.ProviderInstalledCondition)
+	}
+
+	if p.needsCompression {
+		var buf bytes.Buffer
+		if err := compressData(&buf, manifests); err != nil {
+			return &Result{}, wrapPhaseError(err, operatorv1.ComponentsCustomizationErrorReason, operatorv1.ProviderInstalledCondition)
+		}
+
+		secret.Data["cache"] = buf.Bytes()
+	} else {
+		secret.StringData["cache"] = string(manifests)
+	}
+
+	if err := p.ctrlClient.Patch(ctx, secret, client.Apply, client.ForceOwnership, client.FieldOwner(cacheOwner)); err != nil {
+		log.Error(err, "failed to apply cache config map")
+
+		return &Result{}, wrapPhaseError(err, operatorv1.ComponentsCustomizationErrorReason, operatorv1.ProviderInstalledCondition)
+	}
 
 	return &Result{}, nil
+}
+
+// addNamespaceIfMissing adda a Namespace object if missing (this ensure the targetNamespace will be created).
+func addNamespaceIfMissing(objs []unstructured.Unstructured, targetNamespace string) []unstructured.Unstructured {
+	namespaceObjectFound := false
+
+	for _, o := range objs {
+		// if the object has Kind Namespace, fix the namespace name
+		if o.GetKind() == namespaceKind {
+			namespaceObjectFound = true
+		}
+	}
+
+	// if there isn't an object with Kind Namespace, add it
+	if !namespaceObjectFound {
+		objs = append(objs, unstructured.Unstructured{
+			Object: map[string]interface{}{
+				"apiVersion": "v1",
+				"kind":       namespaceKind,
+				"metadata": map[string]interface{}{
+					"name": targetNamespace,
+				},
+			},
+		})
+	}
+
+	return objs
 }
 
 // Upgrade ensure all the clusterctl CRDs are available before installing the provider,

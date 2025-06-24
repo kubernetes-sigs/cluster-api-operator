@@ -21,6 +21,7 @@ import (
 	"compress/gzip"
 	"context"
 	"fmt"
+	"io"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -40,6 +41,7 @@ const (
 	configMapSourceLabel      = "provider.cluster.x-k8s.io/source"
 	configMapSourceAnnotation = "provider.cluster.x-k8s.io/source"
 	operatorManagedLabel      = "managed-by.operator.cluster.x-k8s.io"
+	operatorCacheLabel        = "cached-by.operator.cluster.x-k8s.io"
 
 	maxConfigMapSize = 1 * 1024 * 1024
 	ociSource        = "oci"
@@ -138,6 +140,16 @@ func (p *PhaseReconciler) checkConfigMapExists(ctx context.Context, labelSelecto
 	return len(configMapList.Items) == 1, nil
 }
 
+// Finalize applies combined hash to a configMap, in order to mark provider provisioning completed.
+func (p *PhaseReconciler) Finalize(ctx context.Context) (*Result, error) {
+	err := setCacheHash(ctx, p.ctrlClient, p.provider)
+	if err != nil {
+		ctrl.LoggerFrom(ctx).V(5).Error(err, "Failed to update providers hash")
+	}
+
+	return &Result{}, wrapPhaseError(err, "failed to update providers hash", operatorv1.ProviderInstalledCondition)
+}
+
 // prepareConfigMapLabels returns labels that identify a config map with downloaded manifests.
 func (p *PhaseReconciler) prepareConfigMapLabels() map[string]string {
 	return ProviderLabels(p.provider)
@@ -178,15 +190,8 @@ func TemplateManifestsConfigMap(provider operatorv1.GenericProvider, labels map[
 		configMap.Data[operatorv1.ComponentsConfigMapKey] = string(components)
 	} else {
 		var componentsBuf bytes.Buffer
-		zw := gzip.NewWriter(&componentsBuf)
-
-		_, err := zw.Write(components)
-		if err != nil {
+		if err := compressData(&componentsBuf, components); err != nil {
 			return nil, fmt.Errorf("cannot compress data for provider %s/%s: %w", provider.GetNamespace(), provider.GetName(), err)
-		}
-
-		if err := zw.Close(); err != nil {
-			return nil, err
 		}
 
 		configMap.BinaryData = map[string][]byte{
@@ -209,6 +214,41 @@ func TemplateManifestsConfigMap(provider operatorv1.GenericProvider, labels map[
 	})
 
 	return configMap, nil
+}
+
+// compressData takes a bytes.Buffer and data, and compresses data into it.
+func compressData(componentsBuf *bytes.Buffer, data []byte) (err error) {
+	zw := gzip.NewWriter(componentsBuf)
+
+	_, err = zw.Write(data)
+	defer func() {
+		err = zw.Close()
+	}()
+
+	if err != nil {
+		return fmt.Errorf("cannot compress data: %w", err)
+	}
+
+	return
+}
+
+// decompressData takes a compressed data, and decompresses it.
+func decompressData(compressedData []byte) (data []byte, err error) {
+	zr, err := gzip.NewReader(bytes.NewReader(compressedData))
+	if err != nil {
+		return nil, fmt.Errorf("cannot open gzip reader from data: %w", err)
+	}
+
+	defer func() {
+		err = zr.Close()
+	}()
+
+	decompressedData, err := io.ReadAll(zr)
+	if err != nil {
+		return nil, fmt.Errorf("cannot decompress data: %w", err)
+	}
+
+	return decompressedData, nil
 }
 
 // OCIConfigMap templates config from the OCI source.
@@ -299,6 +339,12 @@ func ProviderLabels(provider operatorv1.GenericProvider) map[string]string {
 	}
 
 	return labels
+}
+
+// ProviderCacheName generates a cache name for a given provider.
+
+func ProviderCacheName(provider operatorv1.GenericProvider) string {
+	return fmt.Sprintf("%s-%s-%s-cache", provider.GetType(), provider.GetName(), provider.GetSpec().Version)
 }
 
 // needToCompress checks whether the input data exceeds the maximum configmap

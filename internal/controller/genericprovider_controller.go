@@ -27,11 +27,13 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	kerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/client-go/rest"
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
 	"sigs.k8s.io/cluster-api-operator/internal/controller/genericprovider"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	configclient "sigs.k8s.io/cluster-api/cmd/clusterctl/client/config"
 	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/patch"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -39,6 +41,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -56,6 +59,7 @@ type GenericProviderReconciler struct {
 
 const (
 	appliedSpecHashAnnotation = "operator.cluster.x-k8s.io/applied-spec-hash"
+	cacheOwner                = "capi-operator"
 )
 
 func (r *GenericProviderReconciler) BuildWithManager(ctx context.Context, mgr ctrl.Manager) (*ctrl.Builder, error) {
@@ -88,14 +92,17 @@ func (r *GenericProviderReconciler) BuildWithManager(ctx context.Context, mgr ct
 	reconciler := NewPhaseReconciler(*r, r.Provider, r.ProviderList)
 
 	r.ReconcilePhases = []PhaseFn{
+		reconciler.ApplyFromCache,
 		reconciler.PreflightChecks,
 		reconciler.InitializePhaseReconciler,
 		reconciler.DownloadManifests,
 		reconciler.Load,
 		reconciler.Fetch,
+		reconciler.Store,
 		reconciler.Upgrade,
 		reconciler.Install,
 		reconciler.ReportStatus,
+		reconciler.Finalize,
 	}
 
 	r.DeletePhases = []PhaseFn{
@@ -175,6 +182,7 @@ func (r *GenericProviderReconciler) Reconcile(ctx context.Context, req reconcile
 
 	if r.Provider.GetAnnotations()[appliedSpecHashAnnotation] == specHash {
 		log.Info("No changes detected, skipping further steps")
+
 		return ctrl.Result{}, nil
 	}
 
@@ -316,17 +324,184 @@ func addObjectToHash(hash hash.Hash, object interface{}) error {
 	return nil
 }
 
-func calculateHash(ctx context.Context, k8sClient client.Client, provider genericprovider.GenericProvider) (string, error) {
-	hash := sha256.New()
+// providerHash calculates hash for provider and referenced objects.
+func providerHash(ctx context.Context, client client.Client, hash hash.Hash, provider genericprovider.GenericProvider) error {
+	log := log.FromContext(ctx)
 
 	err := addObjectToHash(hash, provider.GetSpec())
 	if err != nil {
-		return "", err
+		log.Error(err, "failed to calculate provider hash")
+
+		return err
 	}
 
-	if err := addConfigSecretToHash(ctx, k8sClient, hash, provider); err != nil {
-		return "", err
+	if err := addConfigSecretToHash(ctx, client, hash, provider); err != nil {
+		log.Error(err, "failed to calculate secret hash")
+
+		return err
 	}
 
-	return fmt.Sprintf("%x", hash.Sum(nil)), nil
+	return nil
+}
+
+func calculateHash(ctx context.Context, k8sClient client.Client, provider genericprovider.GenericProvider) (string, error) {
+	hash := sha256.New()
+
+	err := providerHash(ctx, k8sClient, hash, provider)
+
+	return fmt.Sprintf("%x", hash.Sum(nil)), err
+}
+
+// ApplyFromCache applies provider configuration from cache and returns true if the cache did not change.
+func (p *PhaseReconciler) ApplyFromCache(ctx context.Context) (*Result, error) {
+	log := log.FromContext(ctx)
+
+	secret := &corev1.Secret{}
+	if err := p.ctrlClient.Get(ctx, client.ObjectKey{Name: ProviderCacheName(p.provider), Namespace: p.provider.GetNamespace()}, secret); apierrors.IsNotFound(err) {
+		// secret does not exist, nothing to apply
+		return &Result{}, nil
+	} else if err != nil {
+		log.Error(err, "failed to get provider cache")
+
+		return &Result{}, fmt.Errorf("failed to get provider cache: %w", err)
+	}
+
+	// calculate combined hash for provider and config map cache
+	hash := sha256.New()
+	if err := providerHash(ctx, p.ctrlClient, hash, p.provider); err != nil {
+		log.Error(err, "failed to calculate provider hash")
+
+		return &Result{}, err
+	}
+
+	if err := addObjectToHash(hash, secret.Data); err != nil {
+		log.Error(err, "failed to calculate config map hash")
+
+		return &Result{}, err
+	}
+
+	cacheHash := fmt.Sprintf("%x", hash.Sum(nil))
+	if secret.GetAnnotations()[appliedSpecHashAnnotation] != cacheHash || p.provider.GetAnnotations()[appliedSpecHashAnnotation] != cacheHash {
+		log.Info("Provider or cache state has changed", "cacheHash", cacheHash, "providerHash", secret.GetAnnotations()[appliedSpecHashAnnotation])
+
+		return &Result{}, nil
+	}
+
+	log.Info("Applying provider configuration from cache")
+
+	errs := []error{}
+
+	mr := configclient.NewMemoryReader()
+
+	if err := mr.Init(ctx, ""); err != nil {
+		return &Result{}, err
+	}
+
+	// Fetch configuration variables from the secret. See API field docs for more info.
+	if err := initReaderVariables(ctx, p.ctrlClient, mr, p.provider); err != nil {
+		return &Result{}, err
+	}
+
+	for _, manifest := range secret.Data {
+		if secret.GetAnnotations()[operatorv1.CompressedAnnotation] == operatorv1.TrueValue {
+			break
+		}
+
+		manifests := []unstructured.Unstructured{}
+
+		err := json.Unmarshal(manifest, &manifests)
+		if err != nil {
+			log.Error(err, "failed to convert yaml to unstructured")
+
+			return &Result{}, err
+		}
+
+		for _, manifest := range manifests {
+			if err := p.ctrlClient.Patch(ctx, &manifest, client.Apply, client.ForceOwnership, client.FieldOwner(cacheOwner)); err != nil {
+				errs = append(errs, err)
+			}
+		}
+	}
+
+	for _, binaryManifest := range secret.Data {
+		if secret.GetAnnotations()[operatorv1.CompressedAnnotation] != operatorv1.TrueValue {
+			break
+		}
+
+		manifest, err := decompressData(binaryManifest)
+		if err != nil {
+			log.Error(err, "failed to decompress yaml")
+
+			return &Result{}, err
+		}
+
+		manifests := []unstructured.Unstructured{}
+
+		err = json.Unmarshal(manifest, &manifests)
+		if err != nil {
+			log.Error(err, "failed to convert yaml to unstructured")
+
+			return &Result{}, err
+		}
+
+		for _, manifest := range manifests {
+			if err := p.ctrlClient.Patch(ctx, &manifest, client.Apply, client.ForceOwnership, client.FieldOwner(cacheOwner)); err != nil {
+				errs = append(errs, err)
+			}
+		}
+	}
+
+	if err := kerrors.NewAggregate(errs); err != nil {
+		log.Error(err, "failed to apply objects from cache")
+
+		return &Result{}, err
+	}
+
+	log.Info("Applied all objects from cache")
+
+	return &Result{Completed: true}, nil
+}
+
+// setCacheHash calculates current provider and secret hash, and updates it on the secret.
+func setCacheHash(ctx context.Context, cl client.Client, provider genericprovider.GenericProvider) error {
+	secret := &corev1.Secret{}
+	if err := cl.Get(ctx, client.ObjectKey{Name: ProviderCacheName(provider), Namespace: provider.GetNamespace()}, secret); err != nil {
+		return fmt.Errorf("failed to get cache secret: %w", err)
+	}
+
+	helper, err := patch.NewHelper(secret, cl)
+	if err != nil {
+		return err
+	}
+
+	hash := sha256.New()
+
+	if err := providerHash(ctx, cl, hash, provider); err != nil {
+		return err
+	}
+
+	if err := addObjectToHash(hash, secret.Data); err != nil {
+		return err
+	}
+
+	cacheHash := fmt.Sprintf("%x", hash.Sum(nil))
+
+	annotations := secret.GetAnnotations()
+	if annotations == nil {
+		annotations = map[string]string{}
+	}
+
+	annotations[appliedSpecHashAnnotation] = cacheHash
+	secret.SetAnnotations(annotations)
+
+	// Set hash on the provider to avoid cache re-use on re-creation
+	annotations = provider.GetAnnotations()
+	if annotations == nil {
+		annotations = map[string]string{}
+	}
+
+	annotations[appliedSpecHashAnnotation] = cacheHash
+	provider.SetAnnotations(annotations)
+
+	return helper.Patch(ctx, secret)
 }
