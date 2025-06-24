@@ -24,6 +24,9 @@ infrastructure: {}
 #   namespace: ""         # Optional
 #   version: ""           # Optional
 #   createNamespace: true # Optional
+#   configSecret:         # Optional
+#     name: some-secret   # Optional
+#     namespace: default  # Optional
 addon: {}
 # helm: {}                # Name, required
 #   namespace: ""         # Optional
