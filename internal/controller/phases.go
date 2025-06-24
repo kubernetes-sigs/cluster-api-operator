@@ -659,7 +659,7 @@ func addNamespaceIfMissing(objs []unstructured.Unstructured, targetNamespace str
 	return objs
 }
 
-// upgrade ensure all the clusterctl CRDs are available before installing the provider,
+// Upgrade ensure all the clusterctl CRDs are available before installing the provider,
 // and update existing components if required.
 func (p *PhaseReconciler) Upgrade(ctx context.Context) (*Result, error) {
 	log := ctrl.LoggerFrom(ctx)
@@ -832,7 +832,7 @@ func (p *PhaseReconciler) repositoryProxy(ctx context.Context, provider configcl
 		return nil, err
 	}
 
-	return repositoryProxy{Client: cl, components: nil}, nil
+	return repositoryProxy{Client: cl, components: p.components}, nil
 }
 
 // newClusterClient returns a clusterctl client for interacting with management cluster.
