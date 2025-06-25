@@ -174,39 +174,7 @@ func (r *GenericProviderReconciler) Reconcile(ctx context.Context, req reconcile
 		}, nil
 	}
 
-	// Check if spec hash stays the same and don't go further in this case.
-	specHash, err := calculateHash(ctx, r.Client, r.Provider)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
-	if r.Provider.GetAnnotations()[appliedSpecHashAnnotation] == specHash {
-		log.Info("No changes detected, skipping further steps")
-
-		return ctrl.Result{}, nil
-	}
-
 	res, err := r.reconcile(ctx)
-
-	annotations := r.Provider.GetAnnotations()
-	if annotations == nil {
-		annotations = map[string]string{}
-	}
-
-	// Set the spec hash annotation if reconciliation was successful or reset it otherwise.
-	if res.IsZero() && err == nil {
-		// Recalculate spec hash in case it was changed during reconciliation process.
-		specHash, err := calculateHash(ctx, r.Client, r.Provider)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
-
-		annotations[appliedSpecHashAnnotation] = specHash
-	} else {
-		annotations[appliedSpecHashAnnotation] = ""
-	}
-
-	r.Provider.SetAnnotations(annotations)
 
 	return ctrl.Result{
 		Requeue:      res.Requeue,
@@ -342,14 +310,6 @@ func providerHash(ctx context.Context, client client.Client, hash hash.Hash, pro
 	}
 
 	return nil
-}
-
-func calculateHash(ctx context.Context, k8sClient client.Client, provider genericprovider.GenericProvider) (string, error) {
-	hash := sha256.New()
-
-	err := providerHash(ctx, k8sClient, hash, provider)
-
-	return fmt.Sprintf("%x", hash.Sum(nil)), err
 }
 
 // ApplyFromCache applies provider configuration from cache and returns true if the cache did not change.
