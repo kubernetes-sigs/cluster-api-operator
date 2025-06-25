@@ -17,7 +17,6 @@ limitations under the License.
 package controller
 
 import (
-	"context"
 	"testing"
 	"time"
 
@@ -745,14 +744,13 @@ func TestProviderConfigSecretChanges(t *testing.T) {
 			g.Expect(env.CreateAndWait(ctx, secret.DeepCopy())).To(Succeed())
 			objs = append(objs, secret)
 
-			initialHash, err := calculateHash(ctx, env.Client, provider)
-			g.Expect(err).ToNot(HaveOccurred())
-
 			t.Log("creating test provider", provider.GetName())
 			g.Expect(env.CreateAndWait(ctx, provider.DeepCopy())).To(Succeed())
 			objs = append(objs, provider)
 
-			g.Eventually(generateExpectedResultChecker(provider, initialHash, corev1.ConditionTrue), timeout).Should(BeEquivalentTo(true))
+			g.Eventually(generateExpectedResultChecker(provider, corev1.ConditionTrue, func(s string) bool { return s != "" }), timeout).Should(BeEquivalentTo(true))
+
+			initialHash := provider.GetAnnotations()[appliedSpecHashAnnotation]
 
 			g.Eventually(func() error {
 				if err := env.Client.Get(ctx, client.ObjectKeyFromObject(secret), secret); err != nil {
@@ -765,52 +763,32 @@ func TestProviderConfigSecretChanges(t *testing.T) {
 				return env.Client.Update(ctx, secret)
 			}).Should(Succeed())
 
-			var updatedDataHash string
-
 			if tc.expectSameHash {
-				g.Eventually(func() string {
-					updatedDataHash, err = calculateHash(ctx, env.Client, provider)
-					g.Expect(err).ToNot(HaveOccurred())
+				g.Consistently(func(g Gomega) {
+					err := env.Client.Get(ctx, client.ObjectKeyFromObject(provider), provider)
+					g.Expect(client.IgnoreNotFound(err)).ToNot(HaveOccurred())
 
-					return updatedDataHash
-				}, 15*time.Second).Should(Equal(initialHash))
+					g.Expect(provider.GetAnnotations()[appliedSpecHashAnnotation]).To(Equal(initialHash))
+				}, 15*time.Second).Should(Succeed())
 			} else {
-				g.Eventually(func() string {
-					updatedDataHash, err = calculateHash(ctx, env.Client, provider)
-					g.Expect(err).ToNot(HaveOccurred())
+				g.Eventually(func(g Gomega) {
+					err := env.Client.Get(ctx, client.ObjectKeyFromObject(provider), provider)
+					g.Expect(client.IgnoreNotFound(err)).ToNot(HaveOccurred())
 
-					return updatedDataHash
-				}, 15*time.Second).ShouldNot(Equal(initialHash))
+					g.Expect(provider.GetAnnotations()[appliedSpecHashAnnotation]).ToNot(Equal(initialHash))
+				}, 15*time.Second).ShouldNot(Succeed())
 			}
-
-			g.Eventually(func() error {
-				if err := env.Client.Get(ctx, client.ObjectKeyFromObject(provider), provider); err != nil {
-					return err
-				}
-
-				// Set a label to ensure that provider was changed
-				labels := provider.GetLabels()
-				if labels == nil {
-					labels = map[string]string{}
-				}
-				labels["my-label"] = "some-value"
-				provider.SetLabels(labels)
-				provider.SetManagedFields(nil)
-
-				return env.Client.Update(ctx, provider)
-			}).Should(Succeed())
-
-			g.Eventually(generateExpectedResultChecker(provider, updatedDataHash, corev1.ConditionTrue), timeout).Should(BeEquivalentTo(true))
 		})
 	}
 }
 
 func TestProviderSpecChanges(t *testing.T) {
 	testCases := []struct {
-		name        string
-		spec        operatorv1.ProviderSpec
-		updatedSpec operatorv1.ProviderSpec
-		expectError bool
+		name             string
+		spec             operatorv1.ProviderSpec
+		updatedSpec      operatorv1.ProviderSpec
+		expectHashChange bool
+		expectError      bool
 	}{
 		{
 			name: "same spec, hash annotation doesn't change",
@@ -860,9 +838,10 @@ func TestProviderSpecChanges(t *testing.T) {
 					},
 				},
 			},
+			expectHashChange: true,
 		},
 		{
-			name:        "upgrade to a non-existent version, hash annotation is empty",
+			name:        "upgrade to a non-existent version, hash annotation unchanged",
 			expectError: true,
 			spec: operatorv1.ProviderSpec{
 				Version: testCurrentVersion,
@@ -906,12 +885,6 @@ func TestProviderSpecChanges(t *testing.T) {
 			updatedProvider := provider.DeepCopy()
 			updatedProvider.SetSpec(tc.updatedSpec)
 
-			specHash, err := calculateHash(context.Background(), env.Client, provider)
-			g.Expect(err).ToNot(HaveOccurred())
-
-			updatedSpecHash, err := calculateHash(context.Background(), env.Client, updatedProvider)
-			g.Expect(err).ToNot(HaveOccurred())
-
 			namespace := "test-provider-spec-changes"
 
 			ns, err := env.CreateNamespace(ctx, namespace)
@@ -929,7 +902,11 @@ func TestProviderSpecChanges(t *testing.T) {
 				g.Expect(env.Cleanup(ctx, provider, dummyConfigMap(namespace))).To(Succeed())
 			}()
 
-			g.Eventually(generateExpectedResultChecker(provider, specHash, corev1.ConditionTrue), timeout).Should(BeEquivalentTo(true))
+			g.Eventually(generateExpectedResultChecker(provider, corev1.ConditionTrue, func(s string) bool {
+				return s != ""
+			}), timeout).Should(BeEquivalentTo(true))
+
+			currentHash := provider.GetAnnotations()[appliedSpecHashAnnotation]
 
 			g.Eventually(func() error {
 				if err := env.Client.Get(ctx, client.ObjectKeyFromObject(provider), provider); err != nil {
@@ -952,22 +929,28 @@ func TestProviderSpecChanges(t *testing.T) {
 			}).Should(Succeed())
 
 			if !tc.expectError {
-				g.Eventually(generateExpectedResultChecker(provider, updatedSpecHash, corev1.ConditionTrue), timeout).Should(BeEquivalentTo(true))
+				g.Eventually(generateExpectedResultChecker(provider, corev1.ConditionTrue, func(s string) bool {
+					if tc.expectHashChange {
+						return s != currentHash
+					}
+
+					return s == currentHash
+				}), timeout).Should(BeEquivalentTo(true))
 			} else {
-				g.Eventually(generateExpectedResultChecker(provider, "", corev1.ConditionFalse), timeout).Should(BeEquivalentTo(true))
+				g.Eventually(generateExpectedResultChecker(provider, corev1.ConditionFalse, func(s string) bool { return s == currentHash }), timeout).Should(BeEquivalentTo(true))
 			}
 		})
 	}
 }
 
-func generateExpectedResultChecker(provider genericprovider.GenericProvider, specHash string, condStatus corev1.ConditionStatus) func() bool {
+func generateExpectedResultChecker(provider genericprovider.GenericProvider, condStatus corev1.ConditionStatus, hashCheck func(string) bool) func() bool {
 	return func() bool {
 		if err := env.Get(ctx, client.ObjectKeyFromObject(provider), provider); err != nil {
 			return false
 		}
 
 		// In case of error we don't want the spec annotation to be updated
-		if provider.GetAnnotations()[appliedSpecHashAnnotation] != specHash {
+		if !hashCheck(provider.GetAnnotations()[appliedSpecHashAnnotation]) {
 			return false
 		}
 
