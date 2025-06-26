@@ -9,10 +9,6 @@ apiVersion: v1
 kind: Namespace
 metadata:
   annotations:
-    {{- if $.Values.enableHelmHook }}
-    "helm.sh/hook": "post-install,post-upgrade"
-    "helm.sh/hook-weight": "1"
-    {{- end }}
     "argocd.argoproj.io/sync-wave": "1"
   name: {{ $controlPlaneNamespace }}
 {{- end }}
@@ -23,12 +19,8 @@ metadata:
   name: {{ $controlPlaneName }}
   namespace: {{ $controlPlaneNamespace }}
   annotations:
-    {{- if $.Values.enableHelmHook }}
-    "helm.sh/hook": "post-install,post-upgrade"
-    "helm.sh/hook-weight": "2"
-    {{- end }}
     "argocd.argoproj.io/sync-wave": "2"
-{{- if or $controlPlaneVersion $.Values.configSecret.name $.Values.manager }}
+{{- if or $controlPlaneVersion $controlPlane.configSecret $.Values.configSecret.name $.Values.manager }}
 spec:
 {{- end}}
 {{- if $controlPlaneVersion }}
@@ -47,11 +39,12 @@ spec:
 {{- end }}
 {{- end }}
 {{- end }}
-{{- if $.Values.configSecret.name }}
+{{- $configSecret := default $.Values.configSecret $controlPlane.configSecret }}
+{{- if $configSecret.name }}
   configSecret:
-    name: {{ $.Values.configSecret.name }}
-    {{- if $.Values.configSecret.namespace }}
-    namespace: {{ $.Values.configSecret.namespace }}
+    name: {{ $configSecret.name }}
+    {{- if $configSecret.namespace }}
+    namespace: {{ $configSecret.namespace }}
     {{- end }}
 {{- end }}
 {{- if $controlPlane.manifestPatches }}

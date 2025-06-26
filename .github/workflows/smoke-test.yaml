@@ -1,0 +1,225 @@
+name: Smoke Test
+
+on:
+  pull_request:
+    branches: [main, 'release-*']
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CLUSTER_NAME: capi-quickstart
+  KIND_CLUSTER_NAME: capi-operator-smoke-test
+  KUBERNETES_VERSION: v1.33.0
+  CONTROLLER_IMG: cluster-api-operator
+  TAG: smoke-test
+
+jobs:
+  smoke-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+
+      - name: Install tools
+        run: |
+          # kubectl
+          curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+          chmod +x kubectl && sudo mv kubectl /usr/local/bin/
+
+          # yq
+          wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O yq
+          chmod +x yq && sudo mv yq /usr/local/bin/
+
+          # helm
+          curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
+          # clusterctl
+          curl -L https://github.com/kubernetes-sigs/cluster-api/releases/latest/download/clusterctl-linux-amd64 -o clusterctl
+          chmod +x clusterctl && sudo mv clusterctl /usr/local/bin/
+
+      - name: Build Docker image
+        run: |
+          make docker-build
+          docker tag ${CONTROLLER_IMG}-amd64:${TAG} ${CONTROLLER_IMG}:${TAG}
+
+      - name: Build charts
+        run: |
+          make release-chart
+          echo "HELM_CHART_TAG=$(make -s -f Makefile -p | grep '^HELM_CHART_TAG :=' | cut -d' ' -f3)" >> $GITHUB_ENV
+
+      - name: Create kind cluster
+        run: |
+          chmod +x ./hack/ensure-kind.sh
+          ./hack/ensure-kind.sh
+
+          cat <<EOF > /tmp/kind-config.yaml
+          kind: Cluster
+          apiVersion: kind.x-k8s.io/v1alpha4
+          networking:
+            ipFamily: ipv4
+          nodes:
+            - role: control-plane
+              extraMounts:
+                - hostPath: /var/run/docker.sock
+                  containerPath: /var/run/docker.sock
+          containerdConfigPatches:
+            - |-
+              [plugins."io.containerd.grpc.v1.cri".registry.mirrors."docker.io"]
+                endpoint = ["https://mirror.gcr.io", "https://registry-1.docker.io"]
+          EOF
+
+          kind create cluster --name ${KIND_CLUSTER_NAME} --config /tmp/kind-config.yaml --wait 5m
+          kind load docker-image ${CONTROLLER_IMG}:${TAG} --name ${KIND_CLUSTER_NAME}
+
+      - name: Install cert-manager
+        run: |
+          helm repo add jetstack https://charts.jetstack.io
+          helm repo update
+          helm install cert-manager jetstack/cert-manager \
+            --namespace cert-manager \
+            --create-namespace \
+            --set installCRDs=true \
+            --wait \
+            --timeout 5m
+
+      - name: Install Cluster API Operator
+        run: |
+          CHART_PACKAGE="out/package/cluster-api-operator-${HELM_CHART_TAG}.tgz"
+          helm install capi-operator "$CHART_PACKAGE" \
+            --create-namespace \
+            -n capi-operator-system \
+            --set image.manager.repository=${CONTROLLER_IMG} \
+            --set image.manager.tag=${TAG} \
+            --set image.manager.pullPolicy=IfNotPresent \
+            --wait \
+            --timeout 90s
+
+      - name: Deploy providers
+        run: |
+          cat <<EOF > /tmp/providers-values.yaml
+          core:
+            cluster-api:
+              namespace: capi-system
+          bootstrap:
+            kubeadm:
+              namespace: capi-kubeadm-bootstrap-system
+          controlPlane:
+            kubeadm:
+              namespace: capi-kubeadm-control-plane-system
+          infrastructure:
+            docker:
+              namespace: capd-system
+          manager:
+            featureGates:
+              core:
+                ClusterTopology: true
+                ClusterResourceSet: true
+                MachinePool: true
+              kubeadm:
+                ClusterTopology: true
+                MachinePool: true
+              docker:
+                ClusterTopology: true
+          EOF
+
+          PROVIDERS_CHART_PACKAGE="out/package/cluster-api-operator-providers-${HELM_CHART_TAG}.tgz"
+          helm install capi-providers "$PROVIDERS_CHART_PACKAGE" -f /tmp/providers-values.yaml --wait
+
+      - name: Wait for providers
+        run: |
+          kubectl wait --for=condition=Ready --timeout=300s -n capi-system coreprovider/cluster-api
+          kubectl wait --for=condition=Ready --timeout=300s -n capi-kubeadm-bootstrap-system bootstrapprovider/kubeadm
+          kubectl wait --for=condition=Ready --timeout=300s -n capi-kubeadm-control-plane-system controlplaneprovider/kubeadm
+          kubectl wait --for=condition=Ready --timeout=300s -n capd-system infrastructureprovider/docker
+
+          kubectl wait --for=condition=Available --timeout=300s -n capi-system deployment/capi-controller-manager
+          kubectl wait --for=condition=Available --timeout=300s -n capi-kubeadm-bootstrap-system deployment/capi-kubeadm-bootstrap-controller-manager
+          kubectl wait --for=condition=Available --timeout=300s -n capi-kubeadm-control-plane-system deployment/capi-kubeadm-control-plane-controller-manager
+          kubectl wait --for=condition=Available --timeout=300s -n capd-system deployment/capd-controller-manager
+
+      - name: Verify providers
+        run: |
+          kubectl get coreprovider,bootstrapprovider,controlplaneprovider,infrastructureprovider -A
+          kubectl get pods -A | grep -E "(capi-|capd-)"
+
+      - name: Create workload cluster
+        run: |
+          clusterctl generate cluster ${CLUSTER_NAME} \
+            --infrastructure docker:v1.10.0 \
+            --flavor development \
+            --kubernetes-version ${KUBERNETES_VERSION} \
+            --control-plane-machine-count=1 \
+            --worker-machine-count=2 \
+            > capi-quickstart.yaml
+
+          kubectl apply -f capi-quickstart.yaml
+
+      - name: Get workload cluster kubeconfig
+        run: |
+          timeout 300s bash -c "until kubectl get secret ${CLUSTER_NAME}-kubeconfig -n default &>/dev/null; do sleep 2; done"
+          clusterctl get kubeconfig ${CLUSTER_NAME} --namespace default > ${CLUSTER_NAME}.kubeconfig
+          echo "KUBECONFIG=$(pwd)/${CLUSTER_NAME}.kubeconfig" >> $GITHUB_ENV
+
+      - name: Wait for workload cluster API server
+        run: |
+          timeout 300s bash -c "until kubectl cluster-info &>/dev/null; do sleep 5; done"
+
+      - name: Install CNI
+        run: |
+          kubectl apply -f https://raw.githubusercontent.com/projectcalico/calico/v3.26.1/manifests/calico.yaml
+          kubectl wait --for=condition=Ready --timeout=300s pods -n tigera-operator -l app.kubernetes.io/name=tigera-operator || true
+          kubectl wait --for=condition=Ready --timeout=300s pods -n calico-system --all || true
+
+      - name: Wait for nodes
+        run: |
+          kubectl wait --for=condition=Ready --timeout=300s nodes --all
+          kubectl get nodes -o wide
+
+      - name: Verify cluster
+        run: |
+          kubectl get po -A
+          kubectl wait --for=condition=Ready --timeout=300s pods -n kube-system -l k8s-app=kube-proxy
+          kubectl wait --for=condition=Ready --timeout=300s pods -n kube-system -l component=kube-apiserver
+          kubectl wait --for=condition=Ready --timeout=300s pods -n kube-system -l component=kube-controller-manager
+          kubectl wait --for=condition=Ready --timeout=300s pods -n kube-system -l component=kube-scheduler
+
+      - name: Collect logs on failure
+        if: failure()
+        run: |
+          echo "=== Recent Events ==="
+          kubectl get events -A --sort-by='.lastTimestamp' | tail -50
+
+          echo -e "\n=== Provider Logs ==="
+          kubectl logs -n capi-operator-system deployment/capi-operator-cluster-api-operator --tail=50 || true
+          kubectl logs -n capi-system deployment/capi-controller-manager --tail=50 || true
+          kubectl logs -n capd-system deployment/capd-controller-manager --tail=50 || true
+
+          echo -e "\n=== Cluster Resources ==="
+          kubectl get cluster,dockercluster,kubeadmcontrolplane,machine,dockermachine -A -o wide || true
+
+          echo -e "\n=== Failed Pods ==="
+          kubectl get pods -A | grep -v Running | grep -v Completed || true
+
+          if [ -f "${CLUSTER_NAME}.kubeconfig" ]; then
+            export KUBECONFIG=$(pwd)/${CLUSTER_NAME}.kubeconfig
+            echo -e "\n=== Workload Cluster Status ==="
+            kubectl get nodes -o wide || true
+            kubectl get pods -A --field-selector=status.phase!=Running,status.phase!=Succeeded || true
+          fi
+
+      - name: Cleanup
+        if: always()
+        run: |
+          kind delete cluster --name ${CLUSTER_NAME} || true
+          kind delete cluster --name ${KIND_CLUSTER_NAME} || true
