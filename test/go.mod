@@ -1,8 +1,6 @@
 module sigs.k8s.io/cluster-api-operator/test
 
-go 1.23.0
-
-toolchain go1.23.6
+go 1.24.4
 
 replace sigs.k8s.io/cluster-api-operator => ../
 
