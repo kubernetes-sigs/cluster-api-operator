@@ -29,7 +29,6 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
 
-	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
 	clusterctlv1 "sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3"
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/cluster"
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/repository"
@@ -40,12 +39,13 @@ import (
 // interact with the management cluster.
 type clientProxy struct {
 	client.Client
+	lister ProviderLister
 }
 
 func (c clientProxy) List(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
 	switch l := list.(type) {
 	case *clusterctlv1.ProviderList:
-		return listProviders(ctx, c.Client, l)
+		return c.lister(ctx, l)
 	default:
 		return c.Client.List(ctx, l, opts...)
 	}
@@ -67,34 +67,6 @@ func (c clientProxy) Patch(ctx context.Context, obj client.Object, patch client.
 	default:
 		return c.Client.Patch(ctx, o, patch, opts...)
 	}
-}
-
-func listProviders(ctx context.Context, cl client.Client, list *clusterctlv1.ProviderList) error {
-	providers := []operatorv1.GenericProviderList{
-		&operatorv1.CoreProviderList{},
-		&operatorv1.InfrastructureProviderList{},
-		&operatorv1.BootstrapProviderList{},
-		&operatorv1.ControlPlaneProviderList{},
-		&operatorv1.AddonProviderList{},
-		&operatorv1.IPAMProviderList{},
-	}
-
-	for _, group := range providers {
-		g, ok := group.(client.ObjectList)
-		if !ok {
-			continue
-		}
-
-		if err := cl.List(ctx, g); err != nil {
-			return err
-		}
-
-		for _, p := range group.GetItems() {
-			list.Items = append(list.Items, getProvider(p, ""))
-		}
-	}
-
-	return nil
 }
 
 // controllerProxy implements the Proxy interface from the clusterctl. It is used to

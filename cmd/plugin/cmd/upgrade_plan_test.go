@@ -117,7 +117,7 @@ func TestUpgradePlan(t *testing.T) {
 
 			for _, genericProvider := range tt.wantedProviders {
 				g.Eventually(func() (bool, error) {
-					provider, err := getGenericProvider(ctx, env, string(util.ClusterctlProviderType(genericProvider)), genericProvider.GetName(), genericProvider.GetNamespace())
+					provider, err := getGenericProvider(ctx, env, string(util.ClusterctlProviderType(genericProvider)), genericProvider.ProviderName(), genericProvider.GetNamespace())
 					if err != nil {
 						return false, err
 					}
@@ -133,7 +133,7 @@ func TestUpgradePlan(t *testing.T) {
 			// Init doesn't support custom URLs yet, so we have to update providers here
 			if tt.customURL != "" {
 				for _, genericProvider := range tt.wantedProviders {
-					provider, err := getGenericProvider(ctx, env, string(util.ClusterctlProviderType(genericProvider)), genericProvider.GetName(), genericProvider.GetNamespace())
+					provider, err := getGenericProvider(ctx, env, string(util.ClusterctlProviderType(genericProvider)), genericProvider.ProviderName(), genericProvider.GetNamespace())
 					g.Expect(err).NotTo(HaveOccurred())
 
 					spec := provider.GetSpec()
@@ -146,7 +146,7 @@ func TestUpgradePlan(t *testing.T) {
 					g.Expect(env.Update(ctx, provider)).NotTo(HaveOccurred())
 
 					g.Eventually(func() (bool, error) {
-						provider, err := getGenericProvider(ctx, env, string(util.ClusterctlProviderType(genericProvider)), genericProvider.GetName(), genericProvider.GetNamespace())
+						provider, err := getGenericProvider(ctx, env, string(util.ClusterctlProviderType(genericProvider)), genericProvider.ProviderName(), genericProvider.GetNamespace())
 						if err != nil {
 							return false, err
 						}

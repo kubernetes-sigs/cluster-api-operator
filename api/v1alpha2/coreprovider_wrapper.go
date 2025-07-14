@@ -50,6 +50,10 @@ func (c *CoreProvider) GetType() string {
 	return "core"
 }
 
+func (c *CoreProvider) ProviderName() string {
+	return c.GetName()
+}
+
 func (c *CoreProviderList) GetItems() []GenericProvider {
 	providers := make([]GenericProvider, len(c.Items))
 

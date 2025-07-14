@@ -29,17 +29,12 @@ import (
 	"k8s.io/apimachinery/pkg/util/version"
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
 	"sigs.k8s.io/cluster-api-operator/internal/controller/genericprovider"
-	"sigs.k8s.io/cluster-api-operator/util"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	clusterctlv1 "sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3"
 	configclient "sigs.k8s.io/cluster-api/cmd/clusterctl/client/config"
 	"sigs.k8s.io/cluster-api/util/conditions"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-)
-
-const (
-	coreProvider = "CoreProvider"
 )
 
 var (
@@ -55,7 +50,7 @@ var (
 )
 
 // preflightChecks performs preflight checks before installing provider.
-func preflightChecks(ctx context.Context, c client.Client, provider genericprovider.GenericProvider, providerList genericprovider.GenericProviderList) error {
+func preflightChecks(ctx context.Context, c client.Client, provider genericprovider.GenericProvider, providerList genericprovider.GenericProviderList, mapper ProviderTypeMapper, lister ProviderLister) error {
 	log := ctrl.LoggerFrom(ctx)
 
 	log.Info("Performing preflight checks")
@@ -70,21 +65,21 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 	}
 
 	// Ensure that the CoreProvider is called "cluster-api".
-	if util.IsCoreProvider(provider) {
-		if provider.GetName() != configclient.ClusterAPIProviderName {
+	if mapper(provider) == clusterctlv1.CoreProviderType {
+		if provider.ProviderName() != configclient.ClusterAPIProviderName {
 			conditions.Set(provider, conditions.FalseCondition(
 				operatorv1.PreflightCheckCondition,
 				operatorv1.IncorrectCoreProviderNameReason,
 				clusterv1.ConditionSeverityError,
-				"%s", fmt.Sprintf(incorrectCoreProviderNameMessage, provider.GetName(), configclient.ClusterAPIProviderName),
+				"%s", fmt.Sprintf(incorrectCoreProviderNameMessage, provider.ProviderName(), configclient.ClusterAPIProviderName),
 			))
 
-			return fmt.Errorf("incorrect CoreProvider name: %s, it should be %s", provider.GetName(), configclient.ClusterAPIProviderName)
+			return fmt.Errorf("incorrect CoreProvider name: %s, it should be %s", provider.ProviderName(), configclient.ClusterAPIProviderName)
 		}
 	}
 
 	// Check that if a predefined provider is being installed, and if it's not - ensure that FetchConfig is specified.
-	isPredefinedProvider, err := isPredefinedProvider(ctx, provider.GetName(), util.ClusterctlProviderType(provider))
+	isPredefinedProvider, err := isPredefinedProvider(ctx, provider.ProviderName(), mapper(provider))
 	if err != nil {
 		return fmt.Errorf("failed to generate a list of predefined providers: %w", err)
 	}
@@ -159,7 +154,7 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 		)
 
 		// CoreProvider is a singleton resource, more than one instances should not exist
-		if util.IsCoreProvider(p) {
+		if mapper(p) == clusterctlv1.CoreProviderType {
 			log.Info(moreThanOneCoreProviderInstanceExistsMessage)
 			preflightFalseCondition.Message = moreThanOneCoreProviderInstanceExistsMessage
 			conditions.Set(provider, preflightFalseCondition)
@@ -168,7 +163,7 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 		}
 
 		// For any other provider we should check that instances with similar name exist in any namespace
-		if p.GetObjectKind().GroupVersionKind().Kind != coreProvider && p.GetName() == provider.GetName() {
+		if mapper(p) != clusterctlv1.CoreProviderType && p.GetName() == provider.GetName() {
 			preflightFalseCondition.Message = fmt.Sprintf(moreThanOneProviderInstanceExistsMessage, p.GetName(), p.GetNamespace())
 			log.Info(preflightFalseCondition.Message)
 			conditions.Set(provider, preflightFalseCondition)
@@ -178,9 +173,9 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 	}
 
 	// Wait for core provider to be ready before we install other providers.
-	if !util.IsCoreProvider(provider) {
-		ready, err := coreProviderIsReady(ctx, c)
-		if err != nil {
+	if mapper(provider) != clusterctlv1.CoreProviderType {
+		ready := false
+		if err := lister(ctx, &clusterctlv1.ProviderList{}, coreProviderIsReady(&ready, mapper)); err != nil {
 			return fmt.Errorf("failed to get coreProvider ready condition: %w", err)
 		}
 
@@ -245,20 +240,14 @@ func checkProviderVersion(ctx context.Context, providerVersion string, provider 
 }
 
 // coreProviderIsReady returns true if the core provider is ready.
-func coreProviderIsReady(ctx context.Context, c client.Client) (bool, error) {
-	cpl := &operatorv1.CoreProviderList{}
-
-	if err := c.List(ctx, cpl); err != nil {
-		return false, err
-	}
-
-	for _, cp := range cpl.Items {
-		if conditions.IsTrue(&cp, clusterv1.ReadyCondition) {
-			return true, nil
+func coreProviderIsReady(ready *bool, mapper ProviderTypeMapper) ProviderOperation {
+	return func(provider operatorv1.GenericProvider) error {
+		if mapper(provider) == clusterctlv1.CoreProviderType && conditions.IsTrue(provider, clusterv1.ReadyCondition) {
+			*ready = true
 		}
-	}
 
-	return false, nil
+		return nil
+	}
 }
 
 // ignoreCoreProviderWaitError ignores errCoreProviderWait error.

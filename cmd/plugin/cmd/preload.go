@@ -313,7 +313,7 @@ func templateConfigMap(ctx context.Context, providerType clusterctlv1.ProviderTy
 		return nil, fmt.Errorf("cannot create config client: %w", err)
 	}
 
-	providerConfig, err := configClient.Providers().Get(provider.GetName(), util.ClusterctlProviderType(provider))
+	providerConfig, err := configClient.Providers().Get(provider.ProviderName(), util.ClusterctlProviderType(provider))
 	if err != nil {
 		if !strings.Contains(err.Error(), "failed to get configuration") {
 			return nil, err
@@ -340,7 +340,7 @@ func providerConfigMap(ctx context.Context, provider operatorv1.GenericProvider)
 
 	// If provided store fetch config url in memory reader.
 	if provider.GetSpec().FetchConfig != nil && provider.GetSpec().FetchConfig.URL != "" {
-		_, err := mr.AddProvider(provider.GetName(), util.ClusterctlProviderType(provider), provider.GetSpec().FetchConfig.URL)
+		_, err := mr.AddProvider(provider.ProviderName(), util.ClusterctlProviderType(provider), provider.GetSpec().FetchConfig.URL)
 		if err != nil {
 			return nil, fmt.Errorf("cannot add custom url provider: %w", err)
 		}
@@ -351,7 +351,7 @@ func providerConfigMap(ctx context.Context, provider operatorv1.GenericProvider)
 		return nil, fmt.Errorf("cannot create config client: %w", err)
 	}
 
-	providerConfig, err := configClient.Providers().Get(provider.GetName(), util.ClusterctlProviderType(provider))
+	providerConfig, err := configClient.Providers().Get(provider.ProviderName(), util.ClusterctlProviderType(provider))
 	if err != nil {
 		if !strings.Contains(err.Error(), "failed to get configuration") {
 			return nil, err

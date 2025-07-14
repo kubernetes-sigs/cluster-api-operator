@@ -59,16 +59,16 @@ func NewMapStore(p operatorv1.GenericProvider) mapStore {
 		data: map[string][]byte{
 			metadataFile:   nil,
 			componentsFile: nil,
-			fmt.Sprintf(typedComponentsFile, p.GetType()):                                  nil,
-			fmt.Sprintf(fullMetadataFile, p.GetType(), p.GetName(), p.GetSpec().Version):   nil,
-			fmt.Sprintf(fullComponentsFile, p.GetType(), p.GetName(), p.GetSpec().Version): nil,
+			fmt.Sprintf(typedComponentsFile, p.GetType()):                                       nil,
+			fmt.Sprintf(fullMetadataFile, p.GetType(), p.ProviderName(), p.GetSpec().Version):   nil,
+			fmt.Sprintf(fullComponentsFile, p.GetType(), p.ProviderName(), p.GetSpec().Version): nil,
 		},
 	}
 }
 
 // GetMetadata returns metadata file for the provider.
 func (m mapStore) GetMetadata(p operatorv1.GenericProvider) ([]byte, error) {
-	fullMetadataKey := fmt.Sprintf(fullMetadataFile, p.GetType(), p.GetName(), p.GetSpec().Version)
+	fullMetadataKey := fmt.Sprintf(fullMetadataFile, p.GetType(), p.ProviderName(), p.GetSpec().Version)
 
 	data := m.data[fullMetadataKey]
 	if len(data) != 0 {
@@ -85,7 +85,7 @@ func (m mapStore) GetMetadata(p operatorv1.GenericProvider) ([]byte, error) {
 
 // GetComponents returns componenents file for the provider.
 func (m mapStore) GetComponents(p operatorv1.GenericProvider) ([]byte, error) {
-	fullComponentsKey := fmt.Sprintf(fullComponentsFile, p.GetType(), p.GetName(), p.GetSpec().Version)
+	fullComponentsKey := fmt.Sprintf(fullComponentsFile, p.GetType(), p.ProviderName(), p.GetSpec().Version)
 
 	data := m.data[fullComponentsKey]
 	if len(data) != 0 {

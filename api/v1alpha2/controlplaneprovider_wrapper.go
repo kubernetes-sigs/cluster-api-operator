@@ -50,6 +50,10 @@ func (c *ControlPlaneProvider) GetType() string {
 	return "controlplane"
 }
 
+func (c *ControlPlaneProvider) ProviderName() string {
+	return c.GetName()
+}
+
 func (c *ControlPlaneProviderList) GetItems() []GenericProvider {
 	providers := make([]GenericProvider, len(c.Items))
 

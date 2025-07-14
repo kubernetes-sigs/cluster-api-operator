@@ -23,6 +23,7 @@ import (
 	"errors"
 	"fmt"
 	"hash"
+	"os"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -32,7 +33,9 @@ import (
 	"k8s.io/client-go/rest"
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
 	"sigs.k8s.io/cluster-api-operator/internal/controller/genericprovider"
+	"sigs.k8s.io/cluster-api-operator/util"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	clusterctlv1 "sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3"
 	configclient "sigs.k8s.io/cluster-api/cmd/clusterctl/client/config"
 	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/patch"
@@ -312,6 +315,36 @@ func providerHash(ctx context.Context, client client.Client, hash hash.Hash, pro
 	return nil
 }
 
+// listProviders lists all providers in the cluster and applies the given operations to them.
+func (r *GenericProviderReconciler) listProviders(ctx context.Context, list *clusterctlv1.ProviderList, ops ...ProviderOperation) error {
+	for _, group := range operatorv1.ProviderLists {
+		g, ok := group.(client.ObjectList)
+		if !ok {
+			continue
+		}
+
+		if err := r.Client.List(ctx, g); err != nil {
+			return err
+		}
+
+		for _, p := range group.GetItems() {
+			for _, op := range ops {
+				if err := op(p); err != nil {
+					return err
+				}
+			}
+
+			list.Items = append(list.Items, convertProvider(p))
+		}
+	}
+
+	return nil
+}
+
+func (r *GenericProviderReconciler) providerMapper(ctx context.Context, provider configclient.Provider) (operatorv1.GenericProvider, error) {
+	return util.GetGenericProvider(ctx, r.Client, provider)
+}
+
 // ApplyFromCache applies provider configuration from cache and returns true if the cache did not change.
 func (p *PhaseReconciler) ApplyFromCache(ctx context.Context) (*Result, error) {
 	log := log.FromContext(ctx)
@@ -338,6 +371,19 @@ func (p *PhaseReconciler) ApplyFromCache(ctx context.Context) (*Result, error) {
 		log.Error(err, "failed to calculate config map hash")
 
 		return &Result{}, err
+	}
+
+	data, err := os.ReadFile(configPath)
+	if os.IsNotExist(err) {
+		data = []byte{}
+	} else if err != nil {
+		return &Result{}, err
+	}
+
+	if err := addObjectToHash(hash, data); err != nil {
+		log.Error(err, "failed to calculate clusterctl.yaml file hash")
+
+		return &Result{}, nil
 	}
 
 	cacheHash := fmt.Sprintf("%x", hash.Sum(nil))
@@ -441,6 +487,17 @@ func setCacheHash(ctx context.Context, cl client.Client, provider genericprovide
 	}
 
 	if err := addObjectToHash(hash, secret.Data); err != nil {
+		return err
+	}
+
+	data, err := os.ReadFile(configPath)
+	if os.IsNotExist(err) {
+		data = []byte{}
+	} else if err != nil {
+		return err
+	}
+
+	if err := addObjectToHash(hash, data); err != nil {
 		return err
 	}
 

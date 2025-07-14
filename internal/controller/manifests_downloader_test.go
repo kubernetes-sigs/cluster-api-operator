@@ -27,6 +27,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
+	"sigs.k8s.io/cluster-api-operator/util"
 )
 
 func TestManifestsDownloader(t *testing.T) {
@@ -35,6 +36,10 @@ func TestManifestsDownloader(t *testing.T) {
 	ctx := context.Background()
 
 	fakeclient := fake.NewClientBuilder().WithObjects().Build()
+
+	r := &GenericProviderReconciler{
+		Client: fakeclient,
+	}
 
 	p := &PhaseReconciler{
 		ctrlClient: fakeclient,
@@ -49,6 +54,10 @@ func TestManifestsDownloader(t *testing.T) {
 				},
 			},
 		},
+		providerTypeMapper: util.ClusterctlProviderType,
+		providerLister:     r.listProviders,
+		providerConverter:  convertProvider,
+		providerMapper:     r.providerMapper,
 	}
 
 	_, err := p.InitializePhaseReconciler(ctx)
@@ -82,6 +91,10 @@ func TestProviderDownloadWithOverrides(t *testing.T) {
 	overridesClient, err := configclient.New(ctx, "", configclient.InjectReader(reader))
 	g.Expect(err).ToNot(HaveOccurred())
 
+	r := &GenericProviderReconciler{
+		Client: fakeclient,
+	}
+
 	p := &PhaseReconciler{
 		ctrlClient: fakeclient,
 		provider: &operatorv1.CoreProvider{
@@ -91,7 +104,11 @@ func TestProviderDownloadWithOverrides(t *testing.T) {
 			},
 			Spec: operatorv1.CoreProviderSpec{},
 		},
-		overridesClient: overridesClient,
+		overridesClient:    overridesClient,
+		providerTypeMapper: util.ClusterctlProviderType,
+		providerLister:     r.listProviders,
+		providerConverter:  convertProvider,
+		providerMapper:     r.providerMapper,
 	}
 
 	_, err = p.InitializePhaseReconciler(ctx)

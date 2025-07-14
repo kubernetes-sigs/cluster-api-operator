@@ -50,6 +50,10 @@ func (b *BootstrapProvider) GetType() string {
 	return "bootstrap"
 }
 
+func (b *BootstrapProvider) ProviderName() string {
+	return b.GetName()
+}
+
 func (b *BootstrapProviderList) GetItems() []GenericProvider {
 	providers := []GenericProvider{}
 

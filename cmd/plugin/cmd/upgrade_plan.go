@@ -331,7 +331,7 @@ func planUpgrade(ctx context.Context, client ctrlclient.Client) (upgradePlan, er
 		}
 
 		upgradeItems = append(upgradeItems, upgradeItem{
-			Name:           genericProvider.GetName(),
+			Name:           genericProvider.ProviderName(),
 			Namespace:      genericProvider.GetNamespace(),
 			Type:           genericProvider.GetType(),
 			CurrentVersion: genericProvider.GetSpec().Version,
@@ -448,7 +448,7 @@ func getProviderFetchConfig(ctx context.Context, genericProvider operatorv1.Gene
 		return "", "", err
 	}
 
-	providerConfig, err := configClient.Providers().Get(genericProvider.GetName(), util.ClusterctlProviderType(genericProvider))
+	providerConfig, err := configClient.Providers().Get(genericProvider.ProviderName(), util.ClusterctlProviderType(genericProvider))
 	if err != nil {
 		// TODO: implement support of fetching data from config maps
 		// This is a temporary fix for providers installed from config maps

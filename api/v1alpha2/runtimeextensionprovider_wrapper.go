@@ -50,6 +50,10 @@ func (p *RuntimeExtensionProvider) GetType() string {
 	return "runtimeextension"
 }
 
+func (p *RuntimeExtensionProvider) ProviderName() string {
+	return p.GetName()
+}
+
 func (p *RuntimeExtensionProviderList) GetItems() []GenericProvider {
 	providers := []GenericProvider{}
 
