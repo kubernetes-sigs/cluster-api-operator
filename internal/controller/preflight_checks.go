@@ -154,7 +154,7 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 		)
 
 		// CoreProvider is a singleton resource, more than one instances should not exist
-		if mapper(p) == clusterctlv1.CoreProviderType {
+		if mapper(provider) == clusterctlv1.CoreProviderType && mapper(p) == clusterctlv1.CoreProviderType {
 			log.Info(moreThanOneCoreProviderInstanceExistsMessage)
 			preflightFalseCondition.Message = moreThanOneCoreProviderInstanceExistsMessage
 			conditions.Set(provider, preflightFalseCondition)
@@ -163,7 +163,7 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 		}
 
 		// For any other provider we should check that instances with similar name exist in any namespace
-		if mapper(p) != clusterctlv1.CoreProviderType && p.GetName() == provider.GetName() {
+		if mapper(p) != clusterctlv1.CoreProviderType && p.GetName() == provider.GetName() && mapper(p) == mapper(provider) {
 			preflightFalseCondition.Message = fmt.Sprintf(moreThanOneProviderInstanceExistsMessage, p.GetName(), p.GetNamespace())
 			log.Info(preflightFalseCondition.Message)
 			conditions.Set(provider, preflightFalseCondition)

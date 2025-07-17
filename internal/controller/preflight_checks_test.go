@@ -25,6 +25,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	clusterctlv1 "sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
@@ -40,6 +41,7 @@ func TestPreflightChecks(t *testing.T) {
 		name              string
 		providers         []operatorv1.GenericProvider
 		providerList      genericprovider.GenericProviderList
+		mapper            ProviderTypeMapper
 		expectedCondition clusterv1.Condition
 		expectedError     bool
 	}{
@@ -144,6 +146,53 @@ func TestPreflightChecks(t *testing.T) {
 				Severity: clusterv1.ConditionSeverityError,
 				Message:  moreThanOneCoreProviderInstanceExistsMessage,
 				Status:   corev1.ConditionFalse,
+			},
+			providerList: &operatorv1.CoreProviderList{},
+		},
+		{
+			name: "two core providers were created, but accepted due to custom mapper logic",
+			providers: []operatorv1.GenericProvider{
+				&operatorv1.CoreProvider{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "cluster-api",
+						Namespace: namespaceName1,
+					},
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "CoreProvider",
+						APIVersion: "operator.cluster.x-k8s.io/v1alpha1",
+					},
+					Spec: operatorv1.CoreProviderSpec{
+						ProviderSpec: operatorv1.ProviderSpec{
+							Version: "v1.0.0",
+						},
+					},
+				},
+				&operatorv1.CoreProvider{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "core-3",
+						Namespace: namespaceName1,
+					},
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "CoreProvider",
+						APIVersion: "operator.cluster.x-k8s.io/v1alpha1",
+					},
+					Spec: operatorv1.CoreProviderSpec{
+						ProviderSpec: operatorv1.ProviderSpec{
+							Version: "v1.0.0",
+						},
+					},
+				},
+			},
+			expectedCondition: clusterv1.Condition{
+				Type:   operatorv1.PreflightCheckCondition,
+				Status: corev1.ConditionTrue,
+			},
+			mapper: func(provider operatorv1.GenericProvider) clusterctlv1.ProviderType {
+				if provider.GetName() == "core-3" {
+					return clusterctlv1.ProviderTypeUnknown
+				}
+
+				return clusterctlv1.CoreProviderType
 			},
 			providerList: &operatorv1.CoreProviderList{},
 		},
@@ -474,6 +523,74 @@ func TestPreflightChecks(t *testing.T) {
 			providerList: &operatorv1.InfrastructureProviderList{},
 		},
 		{
+			name: "two similarly named infra provider exist in different namespaces, but custom mapper returns differentiats types, preflight check passed",
+			providers: []operatorv1.GenericProvider{
+				&operatorv1.CoreProvider{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "cluster-api",
+						Namespace: namespaceName1,
+					},
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "CoreProvider",
+						APIVersion: "operator.cluster.x-k8s.io/v1alpha1",
+					},
+					Spec: operatorv1.CoreProviderSpec{
+						ProviderSpec: operatorv1.ProviderSpec{
+							FetchConfig: &operatorv1.FetchConfiguration{
+								URL: "https://example.com",
+							},
+						},
+					},
+				},
+				&operatorv1.InfrastructureProvider{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "aws",
+						Namespace: namespaceName1,
+					},
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "InfrastructureProvider",
+						APIVersion: "operator.cluster.x-k8s.io/v1alpha1",
+					},
+					Spec: operatorv1.InfrastructureProviderSpec{
+						ProviderSpec: operatorv1.ProviderSpec{
+							Version: "v1.0.0",
+						},
+					},
+				},
+				&operatorv1.InfrastructureProvider{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "aws",
+						Namespace: namespaceName2,
+					},
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "InfrastructureProvider",
+						APIVersion: "operator.cluster.x-k8s.io/v1alpha1",
+					},
+					Spec: operatorv1.InfrastructureProviderSpec{
+						ProviderSpec: operatorv1.ProviderSpec{
+							Version: "v1.0.0",
+						},
+					},
+				},
+			},
+			mapper: func(provider operatorv1.GenericProvider) clusterctlv1.ProviderType {
+				if provider.GetNamespace() == namespaceName2 {
+					return clusterctlv1.ProviderTypeUnknown
+				}
+
+				if provider.GetName() == "cluster-api" {
+					return clusterctlv1.CoreProviderType
+				}
+
+				return clusterctlv1.InfrastructureProviderType
+			},
+			expectedCondition: clusterv1.Condition{
+				Type:   operatorv1.PreflightCheckCondition,
+				Status: corev1.ConditionTrue,
+			},
+			providerList: &operatorv1.InfrastructureProviderList{},
+		},
+		{
 			name:          "wrong version, preflight check failed",
 			expectedError: true,
 			providers: []operatorv1.GenericProvider{
@@ -667,7 +784,12 @@ func TestPreflightChecks(t *testing.T) {
 				Client: fakeClient,
 			}
 
-			err := preflightChecks(context.Background(), fakeClient, tc.providers[0], tc.providerList, util.ClusterctlProviderType, r.listProviders)
+			mapper := tc.mapper
+			if mapper == nil {
+				mapper = util.ClusterctlProviderType
+			}
+
+			err := preflightChecks(context.Background(), fakeClient, tc.providers[0], tc.providerList, mapper, r.listProviders)
 			if tc.expectedError {
 				gs.Expect(err).To(HaveOccurred())
 			} else {
