@@ -9,10 +9,6 @@ apiVersion: v1
 kind: Namespace
 metadata:
   annotations:
-    {{- if $.Values.enableHelmHook }}
-    "helm.sh/hook": "post-install,post-upgrade"
-    "helm.sh/hook-weight": "1"
-    {{- end }}
     "argocd.argoproj.io/sync-wave": "1"
   name: {{ $bootstrapNamespace }}
 {{- end }}
@@ -23,22 +19,19 @@ metadata:
   name: {{ $bootstrapName }}
   namespace: {{ $bootstrapNamespace }}
   annotations:
-    {{- if $.Values.enableHelmHook }}
-    "helm.sh/hook": "post-install,post-upgrade"
-    "helm.sh/hook-weight": "2"
-    {{- end }}
     "argocd.argoproj.io/sync-wave": "2"
-{{- if or $bootstrapVersion $.Values.configSecret.name }}
+{{- if or $bootstrapVersion $bootstrap.configSecret $.Values.configSecret.name }}
 spec:
 {{- end}}
 {{- if $bootstrapVersion }}
   version: {{ $bootstrapVersion }}
 {{- end }}
-{{- if $.Values.configSecret.name }}
+{{- $configSecret := default $.Values.configSecret $bootstrap.configSecret }}
+{{- if $configSecret.name }}
   configSecret:
-    name: {{ $.Values.configSecret.name }}
-    {{- if $.Values.configSecret.namespace }}
-    namespace: {{ $.Values.configSecret.namespace }}
+    name: {{ $configSecret.name }}
+    {{- if $configSecret.namespace }}
+    namespace: {{ $configSecret.namespace }}
     {{- end }}
 {{- end }}
 {{- if $bootstrap.manifestPatches }}
