@@ -50,6 +50,10 @@ func (b *AddonProvider) GetType() string {
 	return "addon"
 }
 
+func (b *AddonProvider) ProviderName() string {
+	return b.GetName()
+}
+
 func (b *AddonProviderList) GetItems() []GenericProvider {
 	providers := []GenericProvider{}
 

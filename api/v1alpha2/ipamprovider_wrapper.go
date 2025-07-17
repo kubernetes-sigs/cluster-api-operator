@@ -50,6 +50,10 @@ func (p *IPAMProvider) GetType() string {
 	return "ipam"
 }
 
+func (p *IPAMProvider) ProviderName() string {
+	return p.GetName()
+}
+
 func (p *IPAMProviderList) GetItems() []GenericProvider {
 	providers := []GenericProvider{}
 

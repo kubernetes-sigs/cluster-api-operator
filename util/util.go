@@ -127,7 +127,7 @@ func GetGenericProvider(ctx context.Context, cl ctrlclient.Client, provider conf
 	}
 
 	for _, p := range list.GetItems() {
-		if p.GetName() == provider.Name() {
+		if p.ProviderName() == provider.Name() {
 			return p, nil
 		}
 	}

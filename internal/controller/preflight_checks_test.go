@@ -29,6 +29,7 @@ import (
 
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
 	"sigs.k8s.io/cluster-api-operator/internal/controller/genericprovider"
+	"sigs.k8s.io/cluster-api-operator/util"
 )
 
 func TestPreflightChecks(t *testing.T) {
@@ -662,7 +663,11 @@ func TestPreflightChecks(t *testing.T) {
 				gs.Expect(fakeClient.Create(ctx, c)).To(Succeed())
 			}
 
-			err := preflightChecks(context.Background(), fakeClient, tc.providers[0], tc.providerList)
+			r := GenericProviderReconciler{
+				Client: fakeClient,
+			}
+
+			err := preflightChecks(context.Background(), fakeClient, tc.providers[0], tc.providerList, util.ClusterctlProviderType, r.listProviders)
 			if tc.expectedError {
 				gs.Expect(err).To(HaveOccurred())
 			} else {
@@ -759,7 +764,11 @@ func TestPreflightChecksUpgradesDowngrades(t *testing.T) {
 
 			gs.Expect(fakeClient.Create(ctx, provider)).To(Succeed())
 
-			err := preflightChecks(context.Background(), fakeClient, provider, &operatorv1.CoreProviderList{})
+			r := GenericProviderReconciler{
+				Client: fakeClient,
+			}
+
+			err := preflightChecks(context.Background(), fakeClient, provider, &operatorv1.CoreProviderList{}, util.ClusterctlProviderType, r.listProviders)
 			if tc.expectedError {
 				gs.Expect(err).To(HaveOccurred())
 			} else {

@@ -324,7 +324,7 @@ func TestInitProviders(t *testing.T) {
 
 			for _, genericProvider := range tt.wantedProviders {
 				g.Eventually(func() (bool, error) {
-					provider, err := getGenericProvider(ctx, env, string(util.ClusterctlProviderType(genericProvider)), genericProvider.GetName(), genericProvider.GetNamespace())
+					provider, err := getGenericProvider(ctx, env, string(util.ClusterctlProviderType(genericProvider)), genericProvider.ProviderName(), genericProvider.GetNamespace())
 					if err != nil {
 						return false, err
 					}

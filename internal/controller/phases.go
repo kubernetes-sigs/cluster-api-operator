@@ -18,6 +18,7 @@ package controller
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	"fmt"
 	"os"
@@ -53,11 +54,30 @@ import (
 // fakeURL is the stub url for custom providers, missing from clusterctl repository.
 const fakeURL = "https://example.com/my-provider"
 
+// ProviderTypeMapper is a function that maps a generic provider to a clusterctl provider type.
+type ProviderTypeMapper = func(operatorv1.GenericProvider) clusterctlv1.ProviderType
+
+// ProviderConverter is a function that maps a generic provider to a clusterctl provider.
+type ProviderConverter = func(operatorv1.GenericProvider) clusterctlv1.Provider
+
+// ProviderMapper is a function that maps a clusterctl configclient provider interface to a generic provider.
+type ProviderMapper = func(ctx context.Context, provider configclient.Provider) (operatorv1.GenericProvider, error)
+
+// ProviderOperation is a function that perform action on a generic provider.
+type ProviderOperation = func(provider operatorv1.GenericProvider) error
+
+// ProviderLister returns a list of clusterctl provider objects, and performs arbitrary operations on them.
+type ProviderLister = func(ctx context.Context, list *clusterctlv1.ProviderList, ops ...ProviderOperation) error
+
 // PhaseReconciler holds all required information for interacting with clusterctl code and
 // helps to iterate through provider reconciliation phases.
 type PhaseReconciler struct {
-	provider     genericprovider.GenericProvider
-	providerList genericprovider.GenericProviderList
+	provider           genericprovider.GenericProvider
+	providerList       genericprovider.GenericProviderList
+	providerMapper     ProviderMapper
+	providerTypeMapper ProviderTypeMapper
+	providerLister     ProviderLister
+	providerConverter  ProviderConverter
 
 	ctrlClient         client.Client
 	ctrlConfig         *rest.Config
@@ -70,6 +90,37 @@ type PhaseReconciler struct {
 	components         repository.Components
 	clusterctlProvider *clusterctlv1.Provider
 	needsCompression   bool
+}
+
+// PhaseReconcielerOption is a function that configures the reconciler.
+type PhaseReconcielerOption func(*PhaseReconciler)
+
+// WithProviderTypeMapper configures the reconciler to use the given clustectlv1 provider type mapper.
+func WithProviderTypeMapper(providerTypeMapper ProviderTypeMapper) PhaseReconcielerOption {
+	return func(r *PhaseReconciler) {
+		r.providerTypeMapper = providerTypeMapper
+	}
+}
+
+// WithProviderLister configures the reconciler to use the given provider lister.
+func WithProviderLister(providerLister ProviderLister) PhaseReconcielerOption {
+	return func(r *PhaseReconciler) {
+		r.providerLister = providerLister
+	}
+}
+
+// WithProviderConverter configures the reconciler to use the given provider converter.
+func WithProviderConverter(providerConverter ProviderConverter) PhaseReconcielerOption {
+	return func(r *PhaseReconciler) {
+		r.providerConverter = providerConverter
+	}
+}
+
+// WithProviderMapper configures the reconciler to use the given provider mapper.
+func WithProviderMapper(providerMapper ProviderMapper) PhaseReconcielerOption {
+	return func(r *PhaseReconciler) {
+		r.providerMapper = providerMapper
+	}
 }
 
 // PhaseFn is a function that represent a phase of the reconciliation.
@@ -118,14 +169,24 @@ func wrapPhaseError(err error, reason string, condition clusterv1.ConditionType)
 }
 
 // NewPhaseReconciler returns phase reconciler for the given provider.
-func NewPhaseReconciler(r GenericProviderReconciler, provider genericprovider.GenericProvider, providerList genericprovider.GenericProviderList) *PhaseReconciler {
-	return &PhaseReconciler{
+func NewPhaseReconciler(r GenericProviderReconciler, provider genericprovider.GenericProvider, providerList genericprovider.GenericProviderList, options ...PhaseReconcielerOption) *PhaseReconciler {
+	rec := &PhaseReconciler{
 		ctrlClient:         r.Client,
 		ctrlConfig:         r.Config,
 		clusterctlProvider: &clusterctlv1.Provider{},
 		provider:           provider,
 		providerList:       providerList,
+		providerTypeMapper: util.ClusterctlProviderType,
+		providerLister:     r.listProviders,
+		providerConverter:  convertProvider,
+		providerMapper:     r.providerMapper,
 	}
+
+	for _, o := range options {
+		o(rec)
+	}
+
+	return rec
 }
 
 type ConfigMapRepositorySettings struct {
@@ -187,7 +248,7 @@ func initReaderVariables(ctx context.Context, cl client.Client, reader configcli
 
 // PreflightChecks a wrapper around the preflight checks.
 func (p *PhaseReconciler) PreflightChecks(ctx context.Context) (*Result, error) {
-	return &Result{}, preflightChecks(ctx, p.ctrlClient, p.provider, p.providerList)
+	return &Result{}, preflightChecks(ctx, p.ctrlClient, p.provider, p.providerList, p.providerTypeMapper, p.providerLister)
 }
 
 // InitializePhaseReconciler initializes phase reconciler.
@@ -224,15 +285,8 @@ func (p *PhaseReconciler) InitializePhaseReconciler(ctx context.Context) (*Resul
 		return &Result{}, err
 	}
 
-	// Get all custom providers using fetchConfig that aren't the current provider.
-	customProviders, err := util.GetCustomProviders(ctx, p.ctrlClient, p.provider)
-	if err != nil {
-		return &Result{}, err
-	}
-
-	// Load all custom providers into MemoryReader.
-	reader, err = loadCustomProviders(customProviders, reader)
-	if err != nil {
+	// retrieves all custom providers using `FetchConfig` that aren't the current provider and adds them into MemoryReader.
+	if err := p.providerLister(ctx, &clusterctlv1.ProviderList{}, loadCustomProvider(reader, p.provider, p.providerTypeMapper)); err != nil {
 		return &Result{}, err
 	}
 
@@ -244,7 +298,7 @@ func (p *PhaseReconciler) InitializePhaseReconciler(ctx context.Context) (*Resul
 
 	// Get returns the configuration for the provider with a given name/type.
 	// This is done using clusterctl internal API types.
-	p.providerConfig, err = p.configClient.Providers().Get(p.provider.GetName(), util.ClusterctlProviderType(p.provider))
+	p.providerConfig, err = p.configClient.Providers().Get(p.provider.ProviderName(), p.providerTypeMapper(p.provider))
 	if err != nil {
 		return &Result{}, wrapPhaseError(err, operatorv1.UnknownProviderReason, operatorv1.ProviderInstalledCondition)
 	}
@@ -334,7 +388,7 @@ func (p *PhaseReconciler) secretReader(ctx context.Context, providers ...configc
 			return nil, err
 		}
 
-		if provider.Type() == clusterctlv1.ProviderType(p.provider.GetType()) && provider.Name() == p.provider.GetName() {
+		if provider.Type() == clusterctlv1.ProviderType(p.provider.GetType()) && provider.Name() == p.provider.ProviderName() {
 			isCustom = false
 		}
 	}
@@ -343,7 +397,7 @@ func (p *PhaseReconciler) secretReader(ctx context.Context, providers ...configc
 	if p.provider.GetSpec().FetchConfig != nil {
 		if p.provider.GetSpec().FetchConfig.URL != "" {
 			log.Info("Custom fetch configuration url was provided")
-			return mr.AddProvider(p.provider.GetName(), util.ClusterctlProviderType(p.provider), p.provider.GetSpec().FetchConfig.URL)
+			return mr.AddProvider(p.provider.ProviderName(), p.providerTypeMapper(p.provider), p.provider.GetSpec().FetchConfig.URL)
 		}
 
 		if p.provider.GetSpec().FetchConfig.Selector != nil {
@@ -352,11 +406,11 @@ func (p *PhaseReconciler) secretReader(ctx context.Context, providers ...configc
 			// To register a new provider from the config map, we need to specify a URL with a valid
 			// format. However, since we're using data from a local config map, URLs are not needed.
 			// As a workaround, we add a fake but well-formatted URL.
-			return mr.AddProvider(p.provider.GetName(), util.ClusterctlProviderType(p.provider), fakeURL)
+			return mr.AddProvider(p.provider.ProviderName(), p.providerTypeMapper(p.provider), fakeURL)
 		}
 
 		if isCustom && p.provider.GetSpec().FetchConfig.OCI != "" {
-			return mr.AddProvider(p.provider.GetName(), util.ClusterctlProviderType(p.provider), fakeURL)
+			return mr.AddProvider(p.provider.ProviderName(), p.providerTypeMapper(p.provider), fakeURL)
 		}
 	}
 
@@ -676,9 +730,14 @@ func (p *PhaseReconciler) Upgrade(ctx context.Context) (*Result, error) {
 
 	log.Info("Version changes detected, updating existing components")
 
+	provider := p.providerConverter(p.provider)
+	if provider.Version == "" {
+		provider.Version = p.options.Version
+	}
+
 	if err := p.newClusterClient().ProviderUpgrader().ApplyCustomPlan(ctx, cluster.UpgradeOptions{}, cluster.UpgradeItem{
 		NextVersion: p.provider.GetSpec().Version,
-		Provider:    getProvider(p.provider, p.options.Version),
+		Provider:    provider,
 	}); err != nil {
 		return &Result{}, wrapPhaseError(err, operatorv1.ComponentsUpgradeErrorReason, operatorv1.ProviderUpgradedCondition)
 	}
@@ -727,42 +786,39 @@ func (p *PhaseReconciler) ReportStatus(_ context.Context) (*Result, error) {
 	return &Result{}, nil
 }
 
-func getProvider(provider operatorv1.GenericProvider, defaultVersion string) clusterctlv1.Provider {
+func convertProvider(provider operatorv1.GenericProvider) clusterctlv1.Provider {
 	clusterctlProvider := &clusterctlv1.Provider{}
 	clusterctlProvider.Name = clusterctlProviderName(provider).Name
 	clusterctlProvider.Namespace = provider.GetNamespace()
 	clusterctlProvider.Type = string(util.ClusterctlProviderType(provider))
-	clusterctlProvider.ProviderName = provider.GetName()
+	clusterctlProvider.ProviderName = provider.ProviderName()
 
 	if provider.GetStatus().InstalledVersion != nil {
 		clusterctlProvider.Version = *provider.GetStatus().InstalledVersion
-	} else {
-		clusterctlProvider.Version = defaultVersion
 	}
 
 	return *clusterctlProvider
 }
 
-// loadCustomProviders loads the passed providers list into the clusterctl configuration via the MemoryReader.
-func loadCustomProviders(providers []operatorv1.GenericProvider, reader configclient.Reader) (configclient.Reader, error) {
+// loadCustomProvider loads the passed provider into the clusterctl configuration via the MemoryReader.
+func loadCustomProvider(reader configclient.Reader, current operatorv1.GenericProvider, mapper ProviderTypeMapper) ProviderOperation {
 	mr, ok := reader.(*configclient.MemoryReader)
-	if !ok {
-		return nil, fmt.Errorf("unable to load custom providers, invalid reader passed")
-	}
+	currProviderName := current.GetName()
+	currProviderType := current.GetType()
 
-	for _, provider := range providers {
-		if provider.GetSpec().FetchConfig.URL == "" {
-			if _, err := mr.AddProvider(provider.GetName(), util.ClusterctlProviderType(provider), fakeURL); err != nil {
-				return nil, err
-			}
-		} else {
-			if _, err := mr.AddProvider(provider.GetName(), util.ClusterctlProviderType(provider), provider.GetSpec().FetchConfig.URL); err != nil {
-				return nil, err
-			}
+	return func(provider operatorv1.GenericProvider) error {
+		if !ok {
+			return fmt.Errorf("unable to load custom provider, invalid reader passed")
 		}
-	}
 
-	return mr, nil
+		if provider.GetName() == currProviderName && provider.GetType() == currProviderType || provider.GetSpec().FetchConfig == nil {
+			return nil
+		}
+
+		_, err := mr.AddProvider(provider.ProviderName(), mapper(provider), cmp.Or(provider.GetSpec().FetchConfig.URL, fakeURL))
+
+		return err
+	}
 }
 
 // Delete deletes the provider components using clusterctl library.
@@ -772,8 +828,13 @@ func (p *PhaseReconciler) Delete(ctx context.Context) (*Result, error) {
 
 	clusterClient := p.newClusterClient()
 
+	provider := p.providerConverter(p.provider)
+	if provider.Version == "" {
+		provider.Version = p.options.Version
+	}
+
 	err := clusterClient.ProviderComponents().Delete(ctx, cluster.DeleteOptions{
-		Provider:         getProvider(p.provider, p.options.Version),
+		Provider:         provider,
 		IncludeNamespace: false,
 		IncludeCRDs:      false,
 	})
@@ -798,14 +859,14 @@ func clusterctlProviderName(provider operatorv1.GenericProvider) client.ObjectKe
 		prefix = "runtime-extension-"
 	}
 
-	return client.ObjectKey{Name: prefix + provider.GetName(), Namespace: provider.GetNamespace()}
+	return client.ObjectKey{Name: prefix + provider.ProviderName(), Namespace: provider.GetNamespace()}
 }
 
 func (p *PhaseReconciler) repositoryProxy(ctx context.Context, provider configclient.Provider, configClient configclient.Client, options ...repository.Option) (repository.Client, error) {
 	injectRepo := p.repo
 
 	if !provider.SameAs(p.providerConfig) {
-		genericProvider, err := util.GetGenericProvider(ctx, p.ctrlClient, provider)
+		genericProvider, err := p.providerMapper(ctx, provider)
 		if err != nil {
 			return nil, wrapPhaseError(err, "unable to find generic provider for configclient "+string(provider.Type())+": "+provider.Name(), operatorv1.ProviderUpgradedCondition)
 		}
@@ -838,7 +899,7 @@ func (p *PhaseReconciler) repositoryProxy(ctx context.Context, provider configcl
 // newClusterClient returns a clusterctl client for interacting with management cluster.
 func (p *PhaseReconciler) newClusterClient() cluster.Client {
 	return cluster.New(cluster.Kubeconfig{}, p.configClient, cluster.InjectProxy(&controllerProxy{
-		ctrlClient: clientProxy{p.ctrlClient},
+		ctrlClient: clientProxy{p.ctrlClient, p.providerLister},
 		ctrlConfig: p.ctrlConfig,
 	}), cluster.InjectRepositoryFactory(p.repositoryProxy))
 }

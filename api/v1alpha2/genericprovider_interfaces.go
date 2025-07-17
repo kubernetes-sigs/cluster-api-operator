@@ -30,6 +30,7 @@ type GenericProvider interface {
 	GetStatus() ProviderStatus
 	SetStatus(in ProviderStatus)
 	GetType() string
+	ProviderName() string
 }
 
 // GenericProviderList interface describes operations applicable to the provider list type.

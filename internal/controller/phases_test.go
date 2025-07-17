@@ -42,6 +42,10 @@ func TestSecretReader(t *testing.T) {
 	secretName := "test-secret"
 	secretNamespace := "test-secret-namespace"
 
+	r := &GenericProviderReconciler{
+		Client: fakeclient,
+	}
+
 	p := &PhaseReconciler{
 		ctrlClient: fakeclient,
 		provider: &operatorv1.CoreProvider{
@@ -65,6 +69,10 @@ func TestSecretReader(t *testing.T) {
 				},
 			},
 		},
+		providerTypeMapper: util.ClusterctlProviderType,
+		providerLister:     r.listProviders,
+		providerConverter:  convertProvider,
+		providerMapper:     r.providerMapper,
 	}
 
 	testKey1 := "test-key1"
@@ -380,9 +388,18 @@ metadata:
 			g := NewWithT(t)
 
 			fakeclient := fake.NewClientBuilder().WithScheme(setupScheme()).WithObjects(provider).Build()
+
+			r := &GenericProviderReconciler{
+				Client: fakeclient,
+			}
+
 			p := &PhaseReconciler{
-				ctrlClient: fakeclient,
-				provider:   provider,
+				ctrlClient:         fakeclient,
+				provider:           provider,
+				providerTypeMapper: util.ClusterctlProviderType,
+				providerLister:     r.listProviders,
+				providerConverter:  convertProvider,
+				providerMapper:     r.providerMapper,
 			}
 
 			for i := range tt.configMaps {
@@ -579,11 +596,19 @@ releaseSeries:
 			g := NewWithT(t)
 
 			fakeclient := fake.NewClientBuilder().WithScheme(setupScheme()).WithObjects(tt.genericProviders...).Build()
+			r := &GenericProviderReconciler{
+				Client: fakeclient,
+			}
+
 			p := &PhaseReconciler{
-				ctrlClient:     fakeclient,
-				providerConfig: coreProvider,
-				repo:           repository.NewMemoryRepository(),
-				provider:       core,
+				ctrlClient:         fakeclient,
+				providerConfig:     coreProvider,
+				repo:               repository.NewMemoryRepository(),
+				provider:           core,
+				providerTypeMapper: util.ClusterctlProviderType,
+				providerLister:     r.listProviders,
+				providerConverter:  convertProvider,
+				providerMapper:     r.providerMapper,
 			}
 
 			for i := range tt.configMaps {
