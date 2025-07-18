@@ -54,6 +54,7 @@ type GenericProviderReconciler struct {
 	Client                   client.Client
 	Config                   *rest.Config
 	WatchConfigSecretChanges bool
+	WatchConfigMapChanges    bool
 	WatchCoreProviderChanges bool
 
 	DeletePhases    []PhaseFn
@@ -81,6 +82,13 @@ func (r *GenericProviderReconciler) BuildWithManager(ctx context.Context, mgr ct
 		builder.Watches(
 			&corev1.Secret{},
 			handler.EnqueueRequestsFromMapFunc(newSecretToProviderFuncMapForProviderList(r.Client, r.ProviderList)),
+		)
+	}
+
+	if r.WatchConfigMapChanges {
+		builder.Watches(
+			&corev1.ConfigMap{},
+			handler.EnqueueRequestsFromMapFunc(newConfigMapToProviderFuncMapForProviderList(r.Client, r.ProviderList)),
 		)
 	}
 
@@ -282,6 +290,49 @@ func addConfigSecretToHash(ctx context.Context, k8sClient client.Client, hash ha
 	return nil
 }
 
+func addConfigMapToHash(ctx context.Context, k8sClient client.Client, hash hash.Hash, provider genericprovider.GenericProvider) error {
+	spec := provider.GetSpec()
+	if spec.FetchConfig != nil && spec.FetchConfig.Selector != nil {
+		// List ConfigMaps that match the provider's selector
+		selector, err := metav1.LabelSelectorAsSelector(spec.FetchConfig.Selector)
+		if err != nil {
+			return err
+		}
+
+		configMapList := &corev1.ConfigMapList{}
+		listOpts := []client.ListOption{
+			client.MatchingLabelsSelector{Selector: selector},
+			client.InNamespace(provider.GetNamespace()),
+		}
+
+		if err := k8sClient.List(ctx, configMapList, listOpts...); err != nil {
+			return err
+		}
+
+		// Sort the ConfigMaps by name for consistent hashing
+		configMaps := configMapList.Items
+		for i := 0; i < len(configMaps)-1; i++ {
+			for j := i + 1; j < len(configMaps); j++ {
+				if configMaps[i].Name > configMaps[j].Name {
+					configMaps[i], configMaps[j] = configMaps[j], configMaps[i]
+				}
+			}
+		}
+
+		// Add each ConfigMap's data to the hash
+		for _, cm := range configMaps {
+			if err := addObjectToHash(hash, cm.Data); err != nil {
+				return err
+			}
+			if err := addObjectToHash(hash, cm.BinaryData); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
 func addObjectToHash(hash hash.Hash, object interface{}) error {
 	jsonData, err := json.Marshal(object)
 	if err != nil {
@@ -308,6 +359,12 @@ func providerHash(ctx context.Context, client client.Client, hash hash.Hash, pro
 
 	if err := addConfigSecretToHash(ctx, client, hash, provider); err != nil {
 		log.Error(err, "failed to calculate secret hash")
+
+		return err
+	}
+
+	if err := addConfigMapToHash(ctx, client, hash, provider); err != nil {
+		log.Error(err, "failed to calculate configmap hash")
 
 		return err
 	}
