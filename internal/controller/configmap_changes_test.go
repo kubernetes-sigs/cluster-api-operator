@@ -202,6 +202,7 @@ func TestConfigMapChangesWithNonMatchingSelector(t *testing.T) {
 		if err := env.Get(ctx, client.ObjectKeyFromObject(coreProvider), coreProvider); err != nil {
 			return false
 		}
+
 		return conditions.IsTrue(coreProvider, operatorv1.ProviderInstalledCondition)
 	}, timeout).Should(BeTrue())
 
@@ -286,6 +287,7 @@ func TestConfigMapChangesWithNonMatchingSelector(t *testing.T) {
 			return false
 		}
 		hash := provider.GetAnnotations()[appliedSpecHashAnnotation]
+
 		return hash != ""
 	}, timeout).Should(BeTrue(), "Provider should have a hash annotation after reconciliation")
 
@@ -308,6 +310,7 @@ func TestConfigMapChangesWithNonMatchingSelector(t *testing.T) {
 		}
 
 		currentHash := provider.GetAnnotations()[appliedSpecHashAnnotation]
+
 		return currentHash == initialHash
 	}, 10*time.Second, 2*time.Second).Should(BeTrue())
 
@@ -327,6 +330,7 @@ func TestConfigMapChangesWithNonMatchingSelector(t *testing.T) {
 		}
 
 		currentHash := provider.GetAnnotations()[appliedSpecHashAnnotation]
+
 		return currentHash != "" && currentHash != initialHash
 	}, 30*time.Second).Should(BeTrue())
 
@@ -367,6 +371,7 @@ func TestMultipleConfigMapsError(t *testing.T) {
 		if err := env.Get(ctx, client.ObjectKeyFromObject(coreProvider), coreProvider); err != nil {
 			return false
 		}
+
 		return conditions.IsTrue(coreProvider, operatorv1.ProviderInstalledCondition)
 	}, timeout).Should(BeTrue())
 
@@ -442,6 +447,7 @@ func TestMultipleConfigMapsError(t *testing.T) {
 		if err := env.Get(ctx, client.ObjectKeyFromObject(provider), provider); err != nil {
 			return false
 		}
+
 		return conditions.IsFalse(provider, operatorv1.ProviderInstalledCondition) &&
 			conditions.GetReason(provider, operatorv1.ProviderInstalledCondition) != ""
 	}, timeout).Should(BeTrue())

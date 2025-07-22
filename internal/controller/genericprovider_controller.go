@@ -327,6 +327,7 @@ func processProviderConfigMaps(ctx context.Context, k8sClient client.Client, has
 		if err := addObjectToHash(hash, cm.Data); err != nil {
 			return err
 		}
+
 		if err := addObjectToHash(hash, cm.BinaryData); err != nil {
 			return err
 		}
