@@ -31,7 +31,7 @@ import (
 func TestProviderConfigMapMapper(t *testing.T) {
 	g := NewWithT(t)
 
-	namespace := "test-namespace"
+	namespace := testNamespaceName
 	configMapLabels := map[string]string{
 		"provider-components": "edge",
 		"version":             "v0.1.19",
@@ -138,7 +138,7 @@ func TestProviderConfigMapMapper(t *testing.T) {
 func TestProviderConfigMapMapperWithExpressions(t *testing.T) {
 	g := NewWithT(t)
 
-	namespace := "test-namespace"
+	namespace := testNamespaceName
 	configMapLabels := map[string]string{
 		"provider-components": "edge",
 		"version":             "v0.1.19",
@@ -193,7 +193,7 @@ func TestProviderConfigMapMapperWithExpressions(t *testing.T) {
 func TestProviderConfigMapMapperNoMatches(t *testing.T) {
 	g := NewWithT(t)
 
-	namespace := "test-namespace"
+	namespace := testNamespaceName
 	configMapLabels := map[string]string{
 		"provider-components": "azure",
 		"version":             "v1.9.3",

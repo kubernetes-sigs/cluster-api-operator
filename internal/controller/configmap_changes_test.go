@@ -83,6 +83,7 @@ func TestConfigMapChangesAreAppliedToTheProvider(t *testing.T) {
 		if err := env.Get(ctx, client.ObjectKeyFromObject(coreProvider), coreProvider); err != nil {
 			return false
 		}
+
 		return conditions.IsTrue(coreProvider, operatorv1.ProviderInstalledCondition)
 	}, timeout).Should(BeTrue())
 
@@ -135,6 +136,7 @@ func TestConfigMapChangesAreAppliedToTheProvider(t *testing.T) {
 			return false
 		}
 		hash := provider.GetAnnotations()[appliedSpecHashAnnotation]
+
 		return hash != ""
 	}, timeout).Should(BeTrue(), "Provider should have a hash annotation after reconciliation")
 
@@ -159,6 +161,7 @@ func TestConfigMapChangesAreAppliedToTheProvider(t *testing.T) {
 		}
 
 		currentHash := provider.GetAnnotations()[appliedSpecHashAnnotation]
+
 		return currentHash != "" && currentHash != initialHash
 	}, 30*time.Second).Should(BeTrue())
 

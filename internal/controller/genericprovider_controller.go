@@ -292,37 +292,43 @@ func addConfigSecretToHash(ctx context.Context, k8sClient client.Client, hash ha
 
 func addConfigMapToHash(ctx context.Context, k8sClient client.Client, hash hash.Hash, provider genericprovider.GenericProvider) error {
 	spec := provider.GetSpec()
-	if spec.FetchConfig != nil && spec.FetchConfig.Selector != nil {
-		// List ConfigMaps that match the provider's selector
-		selector, err := metav1.LabelSelectorAsSelector(spec.FetchConfig.Selector)
-		if err != nil {
+	if spec.FetchConfig == nil || spec.FetchConfig.Selector == nil {
+		return nil
+	}
+
+	return processProviderConfigMaps(ctx, k8sClient, hash, provider, spec.FetchConfig.Selector)
+}
+
+func processProviderConfigMaps(ctx context.Context, k8sClient client.Client, hash hash.Hash, provider genericprovider.GenericProvider, selector *metav1.LabelSelector) error {
+	// List ConfigMaps that match the provider's selector
+	labelSelector, err := metav1.LabelSelectorAsSelector(selector)
+	if err != nil {
+		return err
+	}
+
+	configMapList := &corev1.ConfigMapList{}
+	listOpts := []client.ListOption{
+		client.MatchingLabelsSelector{Selector: labelSelector},
+		client.InNamespace(provider.GetNamespace()),
+	}
+
+	if err := k8sClient.List(ctx, configMapList, listOpts...); err != nil {
+		return err
+	}
+
+	// Ensure only one ConfigMap matches the selector
+	if len(configMapList.Items) > 1 {
+		return fmt.Errorf("multiple ConfigMaps match the provider selector, only one ConfigMap per provider is allowed")
+	}
+
+	// Add the ConfigMap's data to the hash (if any ConfigMap exists)
+	if len(configMapList.Items) == 1 {
+		cm := configMapList.Items[0]
+		if err := addObjectToHash(hash, cm.Data); err != nil {
 			return err
 		}
-
-		configMapList := &corev1.ConfigMapList{}
-		listOpts := []client.ListOption{
-			client.MatchingLabelsSelector{Selector: selector},
-			client.InNamespace(provider.GetNamespace()),
-		}
-
-		if err := k8sClient.List(ctx, configMapList, listOpts...); err != nil {
+		if err := addObjectToHash(hash, cm.BinaryData); err != nil {
 			return err
-		}
-
-		// Ensure only one ConfigMap matches the selector
-		if len(configMapList.Items) > 1 {
-			return fmt.Errorf("multiple ConfigMaps match the provider selector, only one ConfigMap per provider is allowed")
-		}
-
-		// Add the ConfigMap's data to the hash (if any ConfigMap exists)
-		if len(configMapList.Items) == 1 {
-			cm := configMapList.Items[0]
-			if err := addObjectToHash(hash, cm.Data); err != nil {
-				return err
-			}
-			if err := addObjectToHash(hash, cm.BinaryData); err != nil {
-				return err
-			}
 		}
 	}
 
