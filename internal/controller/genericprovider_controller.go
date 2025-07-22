@@ -309,18 +309,14 @@ func addConfigMapToHash(ctx context.Context, k8sClient client.Client, hash hash.
 			return err
 		}
 
-		// Sort the ConfigMaps by name for consistent hashing
-		configMaps := configMapList.Items
-		for i := 0; i < len(configMaps)-1; i++ {
-			for j := i + 1; j < len(configMaps); j++ {
-				if configMaps[i].Name > configMaps[j].Name {
-					configMaps[i], configMaps[j] = configMaps[j], configMaps[i]
-				}
-			}
+		// Ensure only one ConfigMap matches the selector
+		if len(configMapList.Items) > 1 {
+			return fmt.Errorf("multiple ConfigMaps match the provider selector, only one ConfigMap per provider is allowed")
 		}
 
-		// Add each ConfigMap's data to the hash
-		for _, cm := range configMaps {
+		// Add the ConfigMap's data to the hash (if any ConfigMap exists)
+		if len(configMapList.Items) == 1 {
+			cm := configMapList.Items[0]
 			if err := addObjectToHash(hash, cm.Data); err != nil {
 				return err
 			}
