@@ -99,6 +99,13 @@ func (m mapStore) GetComponents(p operatorv1.GenericProvider) ([]byte, error) {
 		return data, nil
 	}
 
+	normalizedTypeComponentsKey := fmt.Sprintf(typedComponentsFile, normalizeProviderType(p.GetType()))
+
+	data = m.data[normalizedTypeComponentsKey]
+	if len(data) != 0 {
+		return data, nil
+	}
+
 	data = m.data[componentsFile]
 	if len(data) != 0 {
 		return data, nil
@@ -288,4 +295,15 @@ func FetchOCI(ctx context.Context, provider operatorv1.GenericProvider, cred *au
 	}
 
 	return &store, nil
+}
+
+// NormalizeProviderType normalizes the provider type format.
+func normalizeProviderType(providerType string) string {
+	switch strings.ToLower(providerType) {
+	case "controlplane":
+		return "control-plane"
+	// Add more mappings as needed
+	default:
+		return providerType
+	}
 }
