@@ -252,6 +252,7 @@ func (h *HelmChart) Run(values map[string]string) (string, error) {
 			res := outString[startIndex+len("MANIFEST:"):]
 			res = strings.TrimPrefix(res, "\n")
 			res = strings.TrimSuffix(res, "\n")
+			res = strings.TrimSpace(res)
 
 			return res, nil
 		}
