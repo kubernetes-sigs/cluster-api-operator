@@ -47,7 +47,7 @@ func (c *ControlPlaneProvider) SetStatus(in ProviderStatus) {
 }
 
 func (c *ControlPlaneProvider) GetType() string {
-	return "controlplane"
+	return "control-plane"
 }
 
 func (c *ControlPlaneProvider) ProviderName() string {
