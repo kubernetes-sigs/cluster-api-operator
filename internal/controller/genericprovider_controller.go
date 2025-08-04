@@ -54,6 +54,7 @@ type GenericProviderReconciler struct {
 	Client                   client.Client
 	Config                   *rest.Config
 	WatchConfigSecretChanges bool
+	WatchConfigMapChanges    bool
 	WatchCoreProviderChanges bool
 
 	DeletePhases    []PhaseFn
@@ -81,6 +82,13 @@ func (r *GenericProviderReconciler) BuildWithManager(ctx context.Context, mgr ct
 		builder.Watches(
 			&corev1.Secret{},
 			handler.EnqueueRequestsFromMapFunc(newSecretToProviderFuncMapForProviderList(r.Client, r.ProviderList)),
+		)
+	}
+
+	if r.WatchConfigMapChanges {
+		builder.Watches(
+			&corev1.ConfigMap{},
+			handler.EnqueueRequestsFromMapFunc(newConfigMapToProviderFuncMapForProviderList(r.Client, r.ProviderList)),
 		)
 	}
 
@@ -282,6 +290,50 @@ func addConfigSecretToHash(ctx context.Context, k8sClient client.Client, hash ha
 	return nil
 }
 
+func addConfigMapToHash(ctx context.Context, k8sClient client.Client, hash hash.Hash, provider genericprovider.GenericProvider) error {
+	spec := provider.GetSpec()
+	if spec.FetchConfig == nil || spec.FetchConfig.Selector == nil {
+		return nil
+	}
+
+	return processProviderConfigMaps(ctx, k8sClient, hash, provider, spec.FetchConfig.Selector)
+}
+
+func processProviderConfigMaps(ctx context.Context, k8sClient client.Client, hash hash.Hash, provider genericprovider.GenericProvider, selector *metav1.LabelSelector) error {
+	// List ConfigMaps that match the provider's selector
+	labelSelector, err := metav1.LabelSelectorAsSelector(selector)
+	if err != nil {
+		return err
+	}
+
+	configMapList := &corev1.ConfigMapList{}
+	listOpts := []client.ListOption{
+		client.MatchingLabelsSelector{Selector: labelSelector},
+		client.InNamespace(provider.GetNamespace()),
+	}
+
+	if err := k8sClient.List(ctx, configMapList, listOpts...); err != nil {
+		return err
+	}
+
+	// Ensure only one ConfigMap matches the selector
+	if len(configMapList.Items) > 1 {
+		return fmt.Errorf("multiple ConfigMaps match selector %q in namespace %q; only one is allowed", labelSelector.String(), provider.GetNamespace())
+	}
+
+	// Add the ConfigMap's data to the hash (if any ConfigMap exists)
+	if len(configMapList.Items) == 1 {
+		cm := configMapList.Items[0]
+		for _, data := range []interface{}{cm.Data, cm.BinaryData} {
+			if err := addObjectToHash(hash, data); err != nil {
+				return fmt.Errorf("failed to add ConfigMap data to hash: %w", err)
+			}
+		}
+	}
+
+	return nil
+}
+
 func addObjectToHash(hash hash.Hash, object interface{}) error {
 	jsonData, err := json.Marshal(object)
 	if err != nil {
@@ -308,6 +360,12 @@ func providerHash(ctx context.Context, client client.Client, hash hash.Hash, pro
 
 	if err := addConfigSecretToHash(ctx, client, hash, provider); err != nil {
 		log.Error(err, "failed to calculate secret hash")
+
+		return err
+	}
+
+	if err := addConfigMapToHash(ctx, client, hash, provider); err != nil {
+		log.Error(err, "failed to calculate configmap hash")
 
 		return err
 	}
