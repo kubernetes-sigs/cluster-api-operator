@@ -64,6 +64,7 @@ profilerAddress: ":6060"
 contentionProfiling: false
 insecureDiagnostics: false
 watchConfigSecret: false
+watchConfigMap: false
 imagePullSecrets: {}
 resources:
   manager:

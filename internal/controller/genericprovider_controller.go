@@ -318,18 +318,16 @@ func processProviderConfigMaps(ctx context.Context, k8sClient client.Client, has
 
 	// Ensure only one ConfigMap matches the selector
 	if len(configMapList.Items) > 1 {
-		return fmt.Errorf("multiple ConfigMaps match the provider selector, only one ConfigMap per provider is allowed")
+		return fmt.Errorf("multiple ConfigMaps match selector %q in namespace %q; only one is allowed", labelSelector.String(), provider.GetNamespace())
 	}
 
 	// Add the ConfigMap's data to the hash (if any ConfigMap exists)
 	if len(configMapList.Items) == 1 {
 		cm := configMapList.Items[0]
-		if err := addObjectToHash(hash, cm.Data); err != nil {
-			return err
-		}
-
-		if err := addObjectToHash(hash, cm.BinaryData); err != nil {
-			return err
+		for _, data := range []interface{}{cm.Data, cm.BinaryData} {
+			if err := addObjectToHash(hash, data); err != nil {
+				return fmt.Errorf("failed to add ConfigMap data to hash: %w", err)
+			}
 		}
 	}
 

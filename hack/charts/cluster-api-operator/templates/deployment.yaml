@@ -74,6 +74,9 @@ spec:
         {{- if .Values.watchConfigSecret }}
         - --watch-configsecret
         {{- end }}
+        {{- if .Values.watchConfigMap }}
+        - --watch-configmap
+        {{- end }}
         {{- with .Values.leaderElection }}
         - --leader-elect={{ .enabled }}
         {{- if .leaseDuration }}
