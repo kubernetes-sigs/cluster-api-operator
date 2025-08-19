@@ -92,32 +92,32 @@ type PhaseReconciler struct {
 	needsCompression   bool
 }
 
-// PhaseReconcielerOption is a function that configures the reconciler.
-type PhaseReconcielerOption func(*PhaseReconciler)
+// PhaseReconcilerOption is a function that configures the reconciler.
+type PhaseReconcilerOption func(*PhaseReconciler)
 
 // WithProviderTypeMapper configures the reconciler to use the given clustectlv1 provider type mapper.
-func WithProviderTypeMapper(providerTypeMapper ProviderTypeMapper) PhaseReconcielerOption {
+func WithProviderTypeMapper(providerTypeMapper ProviderTypeMapper) PhaseReconcilerOption {
 	return func(r *PhaseReconciler) {
 		r.providerTypeMapper = providerTypeMapper
 	}
 }
 
 // WithProviderLister configures the reconciler to use the given provider lister.
-func WithProviderLister(providerLister ProviderLister) PhaseReconcielerOption {
+func WithProviderLister(providerLister ProviderLister) PhaseReconcilerOption {
 	return func(r *PhaseReconciler) {
 		r.providerLister = providerLister
 	}
 }
 
 // WithProviderConverter configures the reconciler to use the given provider converter.
-func WithProviderConverter(providerConverter ProviderConverter) PhaseReconcielerOption {
+func WithProviderConverter(providerConverter ProviderConverter) PhaseReconcilerOption {
 	return func(r *PhaseReconciler) {
 		r.providerConverter = providerConverter
 	}
 }
 
 // WithProviderMapper configures the reconciler to use the given provider mapper.
-func WithProviderMapper(providerMapper ProviderMapper) PhaseReconcielerOption {
+func WithProviderMapper(providerMapper ProviderMapper) PhaseReconcilerOption {
 	return func(r *PhaseReconciler) {
 		r.providerMapper = providerMapper
 	}
@@ -169,7 +169,7 @@ func wrapPhaseError(err error, reason string, condition clusterv1.ConditionType)
 }
 
 // NewPhaseReconciler returns phase reconciler for the given provider.
-func NewPhaseReconciler(r GenericProviderReconciler, provider genericprovider.GenericProvider, providerList genericprovider.GenericProviderList, options ...PhaseReconcielerOption) *PhaseReconciler {
+func NewPhaseReconciler(r GenericProviderReconciler, provider genericprovider.GenericProvider, providerList genericprovider.GenericProviderList, options ...PhaseReconcilerOption) *PhaseReconciler {
 	rec := &PhaseReconciler{
 		ctrlClient:         r.Client,
 		ctrlConfig:         r.Config,
