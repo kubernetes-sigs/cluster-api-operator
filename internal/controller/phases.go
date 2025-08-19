@@ -79,17 +79,18 @@ type PhaseReconciler struct {
 	providerLister     ProviderLister
 	providerConverter  ProviderConverter
 
-	ctrlClient         client.Client
-	ctrlConfig         *rest.Config
-	repo               repository.Repository
-	contract           string
-	options            repository.ComponentsOptions
-	providerConfig     configclient.Provider
-	configClient       configclient.Client
-	overridesClient    configclient.Client
-	components         repository.Components
-	clusterctlProvider *clusterctlv1.Provider
-	needsCompression   bool
+	ctrlClient                 client.Client
+	ctrlConfig                 *rest.Config
+	repo                       repository.Repository
+	contract                   string
+	options                    repository.ComponentsOptions
+	providerConfig             configclient.Provider
+	configClient               configclient.Client
+	overridesClient            configclient.Client
+	components                 repository.Components
+	clusterctlProvider         *clusterctlv1.Provider
+	needsCompression           bool
+	customAlterComponentsFuncs []repository.ComponentsAlterFn
 }
 
 // PhaseReconcilerOption is a function that configures the reconciler.
@@ -120,6 +121,13 @@ func WithProviderConverter(providerConverter ProviderConverter) PhaseReconcilerO
 func WithProviderMapper(providerMapper ProviderMapper) PhaseReconcilerOption {
 	return func(r *PhaseReconciler) {
 		r.providerMapper = providerMapper
+	}
+}
+
+// WithCustomAlterComponentsFuncs configures the reconciler to use the given custom alter components functions.
+func WithCustomAlterComponentsFuncs(fns []repository.ComponentsAlterFn) PhaseReconcilerOption {
+	return func(r *PhaseReconciler) {
+		r.customAlterComponentsFuncs = fns
 	}
 }
 
@@ -614,6 +622,12 @@ func (p *PhaseReconciler) Fetch(ctx context.Context) (*Result, error) {
 	// Apply image overrides to the provider manifests.
 	if err := repository.AlterComponents(p.components, imageOverrides(p.components.ManifestLabel(), p.overridesClient)); err != nil {
 		return &Result{}, wrapPhaseError(err, operatorv1.ComponentsImageOverrideErrorReason, operatorv1.ProviderInstalledCondition)
+	}
+
+	for _, fn := range p.customAlterComponentsFuncs {
+		if err := repository.AlterComponents(p.components, fn); err != nil {
+			return &Result{}, wrapPhaseError(err, operatorv1.ComponentsCustomizationErrorReason, operatorv1.ProviderInstalledCondition)
+		}
 	}
 
 	return &Result{}, nil
