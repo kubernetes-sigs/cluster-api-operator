@@ -24,6 +24,24 @@ const (
 	repoName      = "cluster-api-operator"
 )
 
+// chartInfo represents information about a chart to be processed
+type chartInfo struct {
+	name        string
+	description string
+}
+
+// List of charts to process
+var charts = []chartInfo{
+	{
+		name:        "cluster-api-operator",
+		description: "Cluster API Operator",
+	},
+	{
+		name:        "cluster-api-operator-providers",
+		description: "Cluster API Provider Custom Resources",
+	},
+}
+
 func main() {
 	fmt.Println("🚀 Starting index.yaml update tool")
 
@@ -38,45 +56,66 @@ func main() {
 
 	fmt.Println("⚙️  Loading index.yaml file from repo root directory")
 
-	indexFile := loadIndexFile(tag)
+	indexFile := loadIndexFile()
 
-	fmt.Println("🔎 Finding chart archive in release assets")
+	fmt.Println("🔎 Finding chart archives in release assets")
 
-	chartAsset := findChartReleaseAsset(tag)
+	// Get all release assets once
+	releaseAssets := getReleaseAssets(tag)
 
-	fmt.Println("📦 Downloading chart archive to a temp directory")
+	// Process each chart
+	processedCharts := 0
+	for _, chartInfo := range charts {
+		fmt.Printf("\n📊 Processing chart: %s\n", chartInfo.name)
 
-	archivePath, chart := downloadChart(chartAsset)
+		// Check if chart already exists in index
+		if _, err := indexFile.Get(chartInfo.name, tag[1:]); err == nil {
+			fmt.Printf("✅ Chart %s already exists in index file, skipping\n", chartInfo.name)
+			continue
+		}
 
-	fmt.Println("👉🏻 Adding entry to index.yaml")
-	addEntryToIndexFile(indexFile, chartAsset, archivePath, chart)
+		// Find chart asset
+		chartAsset := findChartAsset(releaseAssets, chartInfo.name, tag)
+		if chartAsset == nil {
+			fmt.Printf("⚠️  Chart archive for %s not found in release assets, skipping\n", chartInfo.name)
+			continue
+		}
 
-	fmt.Println("📝 Writing index.yaml file to repo root directory")
+		fmt.Printf("📦 Downloading %s chart archive to a temp directory\n", chartInfo.name)
+		archivePath, chart := downloadChart(chartAsset)
+
+		fmt.Printf("👉🏻 Adding %s entry to index.yaml\n", chartInfo.name)
+		addEntryToIndexFile(indexFile, chartAsset, archivePath, chart)
+
+		processedCharts++
+	}
+
+	if processedCharts == 0 {
+		fmt.Println("\n⚠️  No new charts were added to index.yaml")
+		os.Exit(0)
+	}
+
+	fmt.Println("\n📝 Writing index.yaml file to repo root directory")
 
 	if err := indexFile.WriteFile(indexFilePath, 0644); err != nil {
 		fmt.Println("❌ Error writing index file: ", err)
 		os.Exit(1)
 	}
 
-	fmt.Println("✅ Done updating index.yaml file")
+	fmt.Printf("\n✅ Done updating index.yaml file. Added %d chart(s)\n", processedCharts)
 }
 
-func loadIndexFile(tag string) *repo.IndexFile {
+func loadIndexFile() *repo.IndexFile {
 	indexFile, err := repo.LoadIndexFile(indexFilePath)
 	if err != nil {
 		fmt.Println("❌ Error loading index file: ", err)
 		os.Exit(1)
 	}
 
-	if _, err := indexFile.Get(repoName, tag[1:]); err == nil {
-		fmt.Println("✅ Chart already exists in index file, no need to update")
-		os.Exit(0)
-	}
-
 	return indexFile
 }
 
-func findChartReleaseAsset(tag string) *github.ReleaseAsset {
+func getReleaseAssets(tag string) []*github.ReleaseAsset {
 	ghClient := github.NewClient(nil)
 
 	release, _, err := ghClient.Repositories.GetReleaseByTag(context.TODO(), gitHubOrgName, repoName, tag)
@@ -85,22 +124,19 @@ func findChartReleaseAsset(tag string) *github.ReleaseAsset {
 		os.Exit(1)
 	}
 
-	chartAsset := &github.ReleaseAsset{}
-	found := false
-	for _, asset := range release.Assets {
-		if *asset.Name == fmt.Sprintf("%s-%s.tgz", repoName, tag[1:]) {
-			chartAsset = asset
-			found = true
-			break
+	return release.Assets
+}
+
+func findChartAsset(assets []*github.ReleaseAsset, chartName, tag string) *github.ReleaseAsset {
+	expectedFileName := fmt.Sprintf("%s-%s.tgz", chartName, tag[1:])
+
+	for _, asset := range assets {
+		if *asset.Name == expectedFileName {
+			return asset
 		}
 	}
 
-	if !found {
-		fmt.Printf("❌ Chart archive not found in release assets for release %s, please check if release was published correctly\n", tag)
-		os.Exit(1)
-	}
-
-	return chartAsset
+	return nil
 }
 
 func downloadChart(chartAsset *github.ReleaseAsset) (string, *chart.Chart) {

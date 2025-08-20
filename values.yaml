@@ -1,0 +1,35 @@
+core:
+  cluster-api:
+    enabled: true
+bootstrap:
+  k0sproject-k0smotron:
+    enabled: true
+controlPlane:
+  k0sproject-k0smotron:
+    enabled: true
+infrastructure:
+  k0sproject-k0smotron:
+    enabled: true
+  kubevirt:
+    enabled: true
+  aws:
+    enabled: true
+    namespace: capa-system
+    createNamespace: false
+    configSecret:
+      name: aws-variables
+      namespace: capa-system
+manager:
+  featureGates:
+    core:
+      ClusterTopology: true
+      MachinePool: true
+      RuntimeSDK: true
+    aws:
+      ClusterTopology: true
+      MachinePool: true
+      RuntimeSDK: true
+    kubevirt:
+      ClusterTopology: true
+      MachinePool: true
+      RuntimeSDK: true
