@@ -19,6 +19,7 @@ package controller
 import (
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -232,9 +233,16 @@ func customizeManagerContainer(mSpec *operatorv1.ManagerSpec, c *corev1.Containe
 		c.Args = leaderElectionArgs(mSpec.LeaderElection, c.Args)
 	}
 
+	// metrics
 	if mSpec.Metrics.BindAddress != "" {
 		c.Args = setArgs(c.Args, "--metrics-bind-addr", mSpec.Metrics.BindAddress)
 	}
+
+	if mSpec.Metrics.DiagnosticsAddress != "" {
+		c.Args = setArgs(c.Args, "--diagnostics-address", mSpec.Metrics.DiagnosticsAddress)
+	}
+
+	c.Args = setArgs(c.Args, "--insecure-diagnostics", strconv.FormatBool(mSpec.Metrics.InsecureDiagnostics))
 
 	// webhooks
 	if mSpec.Webhook.Host != "" {

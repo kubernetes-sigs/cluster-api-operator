@@ -104,8 +104,20 @@ type ControllerMetrics struct {
 	// BindAddress is the TCP address that the controller should bind to
 	// for serving prometheus metrics.
 	// It can be set to "0" to disable the metrics serving.
+	// NOTE: This field is deprecated, please use DiagnosticsAddress field
 	// +optional
 	BindAddress string `json:"bindAddress,omitempty"`
+
+	// DiagnosticsAddress is the TCP address that the controller should bind to
+	// for serving prometheus metric.
+	// It can be set to "0" to disable the metrics serving.
+	// +optional
+	DiagnosticsAddress string `json:"diagnosticsAddress,omitempty"`
+
+	// InsecureDiagnostics indicates if insecure metrics serving should be enabled.
+	// If false, or not set, the diagnostics address will expose pprof endpoints too.
+	// +optional
+	InsecureDiagnostics bool `json:"insecureDiagnostics,omitempty"`
 }
 
 // ControllerHealth defines the health configs.
