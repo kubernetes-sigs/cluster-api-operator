@@ -66,3 +66,6 @@ type ProviderMapper = providercontroller.ProviderMapper
 
 // WithProviderMapper is an alias for the internal WithProviderMapper function.
 var WithProviderMapper = providercontroller.WithProviderMapper
+
+// WithCustomAlterComponentsFuncs is an alias for the internal WithCustomAlterComponentsFuncs function.
+var WithCustomAlterComponentsFuncs = providercontroller.WithCustomAlterComponentsFuncs

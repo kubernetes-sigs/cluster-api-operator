@@ -79,47 +79,55 @@ type PhaseReconciler struct {
 	providerLister     ProviderLister
 	providerConverter  ProviderConverter
 
-	ctrlClient         client.Client
-	ctrlConfig         *rest.Config
-	repo               repository.Repository
-	contract           string
-	options            repository.ComponentsOptions
-	providerConfig     configclient.Provider
-	configClient       configclient.Client
-	overridesClient    configclient.Client
-	components         repository.Components
-	clusterctlProvider *clusterctlv1.Provider
-	needsCompression   bool
+	ctrlClient                 client.Client
+	ctrlConfig                 *rest.Config
+	repo                       repository.Repository
+	contract                   string
+	options                    repository.ComponentsOptions
+	providerConfig             configclient.Provider
+	configClient               configclient.Client
+	overridesClient            configclient.Client
+	components                 repository.Components
+	clusterctlProvider         *clusterctlv1.Provider
+	needsCompression           bool
+	customAlterComponentsFuncs []repository.ComponentsAlterFn
 }
 
-// PhaseReconcielerOption is a function that configures the reconciler.
-type PhaseReconcielerOption func(*PhaseReconciler)
+// PhaseReconcilerOption is a function that configures the reconciler.
+type PhaseReconcilerOption func(*PhaseReconciler)
 
 // WithProviderTypeMapper configures the reconciler to use the given clustectlv1 provider type mapper.
-func WithProviderTypeMapper(providerTypeMapper ProviderTypeMapper) PhaseReconcielerOption {
+func WithProviderTypeMapper(providerTypeMapper ProviderTypeMapper) PhaseReconcilerOption {
 	return func(r *PhaseReconciler) {
 		r.providerTypeMapper = providerTypeMapper
 	}
 }
 
 // WithProviderLister configures the reconciler to use the given provider lister.
-func WithProviderLister(providerLister ProviderLister) PhaseReconcielerOption {
+func WithProviderLister(providerLister ProviderLister) PhaseReconcilerOption {
 	return func(r *PhaseReconciler) {
 		r.providerLister = providerLister
 	}
 }
 
 // WithProviderConverter configures the reconciler to use the given provider converter.
-func WithProviderConverter(providerConverter ProviderConverter) PhaseReconcielerOption {
+func WithProviderConverter(providerConverter ProviderConverter) PhaseReconcilerOption {
 	return func(r *PhaseReconciler) {
 		r.providerConverter = providerConverter
 	}
 }
 
 // WithProviderMapper configures the reconciler to use the given provider mapper.
-func WithProviderMapper(providerMapper ProviderMapper) PhaseReconcielerOption {
+func WithProviderMapper(providerMapper ProviderMapper) PhaseReconcilerOption {
 	return func(r *PhaseReconciler) {
 		r.providerMapper = providerMapper
+	}
+}
+
+// WithCustomAlterComponentsFuncs configures the reconciler to use the given custom alter components functions.
+func WithCustomAlterComponentsFuncs(fns []repository.ComponentsAlterFn) PhaseReconcilerOption {
+	return func(r *PhaseReconciler) {
+		r.customAlterComponentsFuncs = fns
 	}
 }
 
@@ -169,7 +177,7 @@ func wrapPhaseError(err error, reason string, condition clusterv1.ConditionType)
 }
 
 // NewPhaseReconciler returns phase reconciler for the given provider.
-func NewPhaseReconciler(r GenericProviderReconciler, provider genericprovider.GenericProvider, providerList genericprovider.GenericProviderList, options ...PhaseReconcielerOption) *PhaseReconciler {
+func NewPhaseReconciler(r GenericProviderReconciler, provider genericprovider.GenericProvider, providerList genericprovider.GenericProviderList, options ...PhaseReconcilerOption) *PhaseReconciler {
 	rec := &PhaseReconciler{
 		ctrlClient:         r.Client,
 		ctrlConfig:         r.Config,
@@ -614,6 +622,12 @@ func (p *PhaseReconciler) Fetch(ctx context.Context) (*Result, error) {
 	// Apply image overrides to the provider manifests.
 	if err := repository.AlterComponents(p.components, imageOverrides(p.components.ManifestLabel(), p.overridesClient)); err != nil {
 		return &Result{}, wrapPhaseError(err, operatorv1.ComponentsImageOverrideErrorReason, operatorv1.ProviderInstalledCondition)
+	}
+
+	for _, fn := range p.customAlterComponentsFuncs {
+		if err := repository.AlterComponents(p.components, fn); err != nil {
+			return &Result{}, wrapPhaseError(err, operatorv1.ComponentsCustomizationErrorReason, operatorv1.ProviderInstalledCondition)
+		}
 	}
 
 	return &Result{}, nil
