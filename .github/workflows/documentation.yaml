@@ -15,7 +15,7 @@ jobs:
   gh-pages:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     - run: make -C docs/book build
     - name: Upload artifact
       uses: actions/upload-pages-artifact@v3
