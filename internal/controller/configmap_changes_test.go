@@ -22,10 +22,10 @@ import (
 
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-	"sigs.k8s.io/cluster-api/util/conditions"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -84,7 +84,7 @@ func TestConfigMapChangesAreAppliedToTheProvider(t *testing.T) {
 			return false
 		}
 
-		return conditions.IsTrue(coreProvider, operatorv1.ProviderInstalledCondition)
+		return meta.IsStatusConditionTrue(coreProvider.GetStatus().Conditions, operatorv1.ProviderInstalledCondition)
 	}, timeout).Should(BeTrue())
 
 	t.Log("CoreProvider is installed")
@@ -92,7 +92,11 @@ func TestConfigMapChangesAreAppliedToTheProvider(t *testing.T) {
 	// Manually set ReadyCondition as it's not set automatically in test env
 	patchHelper, err := patch.NewHelper(coreProvider, env)
 	g.Expect(err).ToNot(HaveOccurred())
-	conditions.MarkTrue(coreProvider, clusterv1.ReadyCondition)
+	meta.SetStatusCondition(&coreProvider.Status.Conditions, metav1.Condition{
+		Type:   clusterv1.ReadyCondition,
+		Status: metav1.ConditionTrue,
+		Reason: "Ready",
+	})
 	g.Expect(patchHelper.Patch(ctx, coreProvider)).To(Succeed())
 
 	// Create InfrastructureProvider that uses the ConfigMap
@@ -125,7 +129,7 @@ func TestConfigMapChangesAreAppliedToTheProvider(t *testing.T) {
 			return false
 		}
 
-		return conditions.IsTrue(provider, operatorv1.ProviderInstalledCondition)
+		return meta.IsStatusConditionTrue(provider.GetStatus().Conditions, operatorv1.ProviderInstalledCondition)
 	}, timeout).Should(BeTrue())
 
 	t.Log("Provider is installed")
@@ -203,7 +207,7 @@ func TestConfigMapChangesWithNonMatchingSelector(t *testing.T) {
 			return false
 		}
 
-		return conditions.IsTrue(coreProvider, operatorv1.ProviderInstalledCondition)
+		return meta.IsStatusConditionTrue(coreProvider.GetStatus().Conditions, operatorv1.ProviderInstalledCondition)
 	}, timeout).Should(BeTrue())
 
 	t.Log("CoreProvider is installed")
@@ -211,7 +215,11 @@ func TestConfigMapChangesWithNonMatchingSelector(t *testing.T) {
 	// Manually set ReadyCondition as it's not set automatically in test env
 	patchHelper, err := patch.NewHelper(coreProvider, env)
 	g.Expect(err).ToNot(HaveOccurred())
-	conditions.MarkTrue(coreProvider, clusterv1.ReadyCondition)
+	meta.SetStatusCondition(&coreProvider.Status.Conditions, metav1.Condition{
+		Type:   clusterv1.ReadyCondition,
+		Status: metav1.ConditionTrue,
+		Reason: "Ready",
+	})
 	g.Expect(patchHelper.Patch(ctx, coreProvider)).To(Succeed())
 
 	// Create ConfigMap that won't match any provider selector
@@ -278,7 +286,7 @@ func TestConfigMapChangesWithNonMatchingSelector(t *testing.T) {
 			return false
 		}
 
-		return conditions.IsTrue(provider, operatorv1.ProviderInstalledCondition)
+		return meta.IsStatusConditionTrue(provider.GetStatus().Conditions, operatorv1.ProviderInstalledCondition)
 	}, timeout).Should(BeTrue())
 
 	// Wait for the provider to have a hash annotation (this happens after full reconciliation)
@@ -372,7 +380,7 @@ func TestMultipleConfigMapsError(t *testing.T) {
 			return false
 		}
 
-		return conditions.IsTrue(coreProvider, operatorv1.ProviderInstalledCondition)
+		return meta.IsStatusConditionTrue(coreProvider.GetStatus().Conditions, operatorv1.ProviderInstalledCondition)
 	}, timeout).Should(BeTrue())
 
 	t.Log("CoreProvider is installed")
@@ -380,7 +388,11 @@ func TestMultipleConfigMapsError(t *testing.T) {
 	// Manually set ReadyCondition as it's not set automatically in test env
 	patchHelper, err := patch.NewHelper(coreProvider, env)
 	g.Expect(err).ToNot(HaveOccurred())
-	conditions.MarkTrue(coreProvider, clusterv1.ReadyCondition)
+	meta.SetStatusCondition(&coreProvider.Status.Conditions, metav1.Condition{
+		Type:   clusterv1.ReadyCondition,
+		Status: metav1.ConditionTrue,
+		Reason: "Ready",
+	})
 	g.Expect(patchHelper.Patch(ctx, coreProvider)).To(Succeed())
 
 	// Create multiple ConfigMaps with the same labels (this should cause an error)
@@ -448,8 +460,8 @@ func TestMultipleConfigMapsError(t *testing.T) {
 			return false
 		}
 
-		return conditions.IsFalse(provider, operatorv1.ProviderInstalledCondition) &&
-			conditions.GetReason(provider, operatorv1.ProviderInstalledCondition) != ""
+		condition := meta.FindStatusCondition(provider.GetStatus().Conditions, operatorv1.ProviderInstalledCondition)
+		return condition != nil && condition.Status == metav1.ConditionFalse && condition.Reason != ""
 	}, timeout).Should(BeTrue())
 
 	t.Log("Provider correctly failed with multiple ConfigMaps error")

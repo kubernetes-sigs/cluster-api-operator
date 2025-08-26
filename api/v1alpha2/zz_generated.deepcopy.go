@@ -25,7 +25,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/component-base/config/v1alpha1"
-	"sigs.k8s.io/cluster-api/api/v1beta1"
 	timex "time"
 )
 
@@ -958,7 +957,7 @@ func (in *ProviderStatus) DeepCopyInto(out *ProviderStatus) {
 	}
 	if in.Conditions != nil {
 		in, out := &in.Conditions, &out.Conditions
-		*out = make(v1beta1.Conditions, len(*in))
+		*out = make([]v1.Condition, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}

@@ -22,7 +22,7 @@ import (
 	"fmt"
 
 	. "github.com/onsi/ginkgo/v2" //nolint:staticcheck
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	capiconditions "sigs.k8s.io/cluster-api/util/conditions"
 )
 
@@ -37,7 +37,7 @@ func HaveStatusConditionsTrue(getter capiconditions.Getter, conditions ...cluste
 		for _, condition := range conditions {
 			By(fmt.Sprintf("Checking if %s condition is set...", condition))
 
-			if !capiconditions.IsTrue(getter, condition) {
+			if !capiconditions.IsTrue(getter, string(condition)) {
 				return false
 			}
 		}

@@ -27,6 +27,7 @@ import (
 	apijson "k8s.io/apimachinery/pkg/util/json"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -39,13 +40,12 @@ import (
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
 	"sigs.k8s.io/cluster-api-operator/internal/controller/genericprovider"
 	"sigs.k8s.io/cluster-api-operator/util"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	clusterctlv1 "sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3"
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/cluster"
 	configclient "sigs.k8s.io/cluster-api/cmd/clusterctl/client/config"
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/repository"
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/yamlprocessor"
-	"sigs.k8s.io/cluster-api/util/conditions"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -154,7 +154,7 @@ func (r *Result) IsZero() bool {
 // PhaseError custom error type for phases.
 type PhaseError struct {
 	Reason   string
-	Type     clusterv1.ConditionType
+	Type     string
 	Severity clusterv1.ConditionSeverity
 	Err      error
 }
@@ -163,7 +163,7 @@ func (p *PhaseError) Error() string {
 	return p.Err.Error()
 }
 
-func wrapPhaseError(err error, reason string, condition clusterv1.ConditionType) error {
+func wrapPhaseError(err error, reason string, condition string) error {
 	if err == nil {
 		return nil
 	}
@@ -569,7 +569,7 @@ func (p *PhaseReconciler) validateRepoCAPIVersion(ctx context.Context) error {
 		return fmt.Errorf("invalid provider metadata: version %s for the provider %s does not match any release series", p.options.Version, name)
 	}
 
-	if releaseSeries.Contract != "v1alpha4" && releaseSeries.Contract != "v1beta1" {
+	if releaseSeries.Contract != "v1alpha4" && releaseSeries.Contract != "v1beta1" && releaseSeries.Contract != "v1beta2" {
 		return fmt.Errorf(capiVersionIncompatibilityMessage, clusterv1.GroupVersion.Version, releaseSeries.Contract, name)
 	}
 
@@ -757,7 +757,14 @@ func (p *PhaseReconciler) Upgrade(ctx context.Context) (*Result, error) {
 	}
 
 	log.Info("Provider successfully upgraded")
-	conditions.Set(p.provider, conditions.TrueCondition(operatorv1.ProviderUpgradedCondition))
+	status := p.provider.GetStatus()
+	meta.SetStatusCondition(&status.Conditions, metav1.Condition{
+		Type:    operatorv1.ProviderUpgradedCondition,
+		Status:  metav1.ConditionTrue,
+		Reason:  "ProviderUpgraded",
+		Message: "Provider upgraded successfully",
+	})
+	p.provider.SetStatus(status)
 
 	return &Result{}, nil
 }
@@ -785,7 +792,14 @@ func (p *PhaseReconciler) Install(ctx context.Context) (*Result, error) {
 	}
 
 	log.Info("Provider successfully installed")
-	conditions.Set(p.provider, conditions.TrueCondition(operatorv1.ProviderInstalledCondition))
+	status := p.provider.GetStatus()
+	meta.SetStatusCondition(&status.Conditions, metav1.Condition{
+		Type:    operatorv1.ProviderInstalledCondition,
+		Status:  metav1.ConditionTrue,
+		Reason:  "ProviderInstalled",
+		Message: "Provider installed successfully",
+	})
+	p.provider.SetStatus(status)
 
 	return &Result{}, nil
 }

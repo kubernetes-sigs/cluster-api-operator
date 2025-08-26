@@ -40,7 +40,7 @@ func TestUpgradePlan(t *testing.T) {
 		{
 			name: "no providers",
 			wantedUpgradePlan: upgradePlan{
-				Contract:  "v1beta1",
+				Contract:  "v1beta2",
 				Providers: []upgradeItem{},
 			},
 			wantErr: false,
@@ -49,7 +49,7 @@ func TestUpgradePlan(t *testing.T) {
 		{
 			name: "builtin core provider",
 			wantedUpgradePlan: upgradePlan{
-				Contract: "v1beta1",
+				Contract: "v1beta2",
 				Providers: []upgradeItem{
 					{
 						Name:           "cluster-api",
@@ -74,7 +74,7 @@ func TestUpgradePlan(t *testing.T) {
 			name:      "custom infra provider",
 			customURL: "https://github.com/kubernetes-sigs/cluster-api/releases/latest/core-components.yaml",
 			wantedUpgradePlan: upgradePlan{
-				Contract: "v1beta1",
+				Contract: "v1beta2",
 				Providers: []upgradeItem{
 					{
 						Name:           "docker",

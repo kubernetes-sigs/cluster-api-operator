@@ -27,6 +27,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	kerrors "k8s.io/apimachinery/pkg/util/errors"
@@ -34,10 +35,8 @@ import (
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
 	"sigs.k8s.io/cluster-api-operator/internal/controller/genericprovider"
 	"sigs.k8s.io/cluster-api-operator/util"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	clusterctlv1 "sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3"
 	configclient "sigs.k8s.io/cluster-api/cmd/clusterctl/client/config"
-	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/patch"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -194,12 +193,21 @@ func (r *GenericProviderReconciler) Reconcile(ctx context.Context, req reconcile
 }
 
 func patchProvider(ctx context.Context, provider operatorv1.GenericProvider, patchHelper *patch.Helper, options ...patch.Option) error {
-	conds := []clusterv1.ConditionType{
+	conds := []string{
 		operatorv1.PreflightCheckCondition,
 		operatorv1.ProviderInstalledCondition,
 	}
 
 	options = append(options, patch.WithOwnedConditions{Conditions: conds})
+
+	// Ensure all conditions have non-empty messages before patching
+	status := provider.GetStatus()
+	for i := range status.Conditions {
+		if status.Conditions[i].Message == "" {
+			status.Conditions[i].Message = "Condition updated"
+		}
+	}
+	provider.SetStatus(status)
 
 	return patchHelper.Patch(ctx, provider, options...)
 }
@@ -212,7 +220,18 @@ func (r *GenericProviderReconciler) reconcile(ctx context.Context) (*Result, err
 		if err != nil {
 			var pe *PhaseError
 			if errors.As(err, &pe) {
-				conditions.Set(r.Provider, conditions.FalseCondition(pe.Type, pe.Reason, pe.Severity, "%s", err.Error()))
+				status := r.Provider.GetStatus()
+				message := err.Error()
+				if message == "" {
+					message = "Phase execution failed"
+				}
+				meta.SetStatusCondition(&status.Conditions, metav1.Condition{
+					Type:    pe.Type,
+					Status:  metav1.ConditionFalse,
+					Reason:  pe.Reason,
+					Message: message,
+				})
+				r.Provider.SetStatus(status)
 			}
 		}
 
@@ -242,7 +261,18 @@ func (r *GenericProviderReconciler) reconcileDelete(ctx context.Context, provide
 		if err != nil {
 			var pe *PhaseError
 			if errors.As(err, &pe) {
-				conditions.Set(provider, conditions.FalseCondition(pe.Type, pe.Reason, pe.Severity, "%s", err.Error()))
+				status := provider.GetStatus()
+				message := err.Error()
+				if message == "" {
+					message = "Phase execution failed"
+				}
+				meta.SetStatusCondition(&status.Conditions, metav1.Condition{
+					Type:    pe.Type,
+					Status:  metav1.ConditionFalse,
+					Reason:  pe.Reason,
+					Message: message,
+				})
+				provider.SetStatus(status)
 			}
 		}
 

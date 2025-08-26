@@ -24,7 +24,7 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	clusterctlv1 "sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -42,7 +42,7 @@ func TestPreflightChecks(t *testing.T) {
 		providers         []operatorv1.GenericProvider
 		providerList      genericprovider.GenericProviderList
 		mapper            ProviderTypeMapper
-		expectedCondition clusterv1.Condition
+		expectedCondition metav1.Condition
 		expectedError     bool
 	}{
 		{
@@ -67,9 +67,11 @@ func TestPreflightChecks(t *testing.T) {
 					},
 				},
 			},
-			expectedCondition: clusterv1.Condition{
-				Type:   operatorv1.PreflightCheckCondition,
-				Status: corev1.ConditionTrue,
+			expectedCondition: metav1.Condition{
+				Type:    operatorv1.PreflightCheckCondition,
+				Status:  metav1.ConditionStatus(metav1.ConditionStatus(corev1.ConditionTrue)),
+				Reason:  "PreflightChecksPassed",
+				Message: "All preflight checks passed",
 			},
 			providerList: &operatorv1.CoreProviderList{},
 		},
@@ -96,12 +98,11 @@ func TestPreflightChecks(t *testing.T) {
 					},
 				},
 			},
-			expectedCondition: clusterv1.Condition{
-				Type:     operatorv1.PreflightCheckCondition,
-				Reason:   operatorv1.IncorrectCoreProviderNameReason,
-				Severity: clusterv1.ConditionSeverityError,
-				Message:  "Incorrect CoreProvider name: my-fancy-cluster-api. It should be cluster-api",
-				Status:   corev1.ConditionFalse,
+			expectedCondition: metav1.Condition{
+				Type:    operatorv1.PreflightCheckCondition,
+				Reason:  operatorv1.IncorrectCoreProviderNameReason,
+				Message: "Incorrect CoreProvider name: my-fancy-cluster-api. It should be cluster-api",
+				Status:  metav1.ConditionStatus(metav1.ConditionStatus(corev1.ConditionFalse)),
 			},
 			providerList: &operatorv1.CoreProviderList{},
 		},
@@ -140,12 +141,11 @@ func TestPreflightChecks(t *testing.T) {
 					},
 				},
 			},
-			expectedCondition: clusterv1.Condition{
-				Type:     operatorv1.PreflightCheckCondition,
-				Reason:   operatorv1.MoreThanOneProviderInstanceExistsReason,
-				Severity: clusterv1.ConditionSeverityError,
-				Message:  moreThanOneCoreProviderInstanceExistsMessage,
-				Status:   corev1.ConditionFalse,
+			expectedCondition: metav1.Condition{
+				Type:    operatorv1.PreflightCheckCondition,
+				Status:  metav1.ConditionStatus(corev1.ConditionFalse),
+				Reason:  operatorv1.MoreThanOneProviderInstanceExistsReason,
+				Message: moreThanOneCoreProviderInstanceExistsMessage,
 			},
 			providerList: &operatorv1.CoreProviderList{},
 		},
@@ -183,9 +183,11 @@ func TestPreflightChecks(t *testing.T) {
 					},
 				},
 			},
-			expectedCondition: clusterv1.Condition{
-				Type:   operatorv1.PreflightCheckCondition,
-				Status: corev1.ConditionTrue,
+			expectedCondition: metav1.Condition{
+				Type:    operatorv1.PreflightCheckCondition,
+				Status:  metav1.ConditionStatus(corev1.ConditionTrue),
+				Reason:  "PreflightChecksPassed",
+				Message: "All preflight checks passed",
 			},
 			mapper: func(provider operatorv1.GenericProvider) clusterctlv1.ProviderType {
 				if provider.GetName() == "core-3" {
@@ -231,12 +233,11 @@ func TestPreflightChecks(t *testing.T) {
 					},
 				},
 			},
-			expectedCondition: clusterv1.Condition{
-				Type:     operatorv1.PreflightCheckCondition,
-				Reason:   operatorv1.MoreThanOneProviderInstanceExistsReason,
-				Severity: clusterv1.ConditionSeverityError,
-				Message:  moreThanOneCoreProviderInstanceExistsMessage,
-				Status:   corev1.ConditionFalse,
+			expectedCondition: metav1.Condition{
+				Type:    operatorv1.PreflightCheckCondition,
+				Status:  metav1.ConditionStatus(corev1.ConditionFalse),
+				Reason:  operatorv1.MoreThanOneProviderInstanceExistsReason,
+				Message: moreThanOneCoreProviderInstanceExistsMessage,
 			},
 			providerList: &operatorv1.CoreProviderList{},
 		},
@@ -274,10 +275,10 @@ func TestPreflightChecks(t *testing.T) {
 					},
 					Status: operatorv1.CoreProviderStatus{
 						ProviderStatus: operatorv1.ProviderStatus{
-							Conditions: []clusterv1.Condition{
+							Conditions: []metav1.Condition{
 								{
 									Type:               clusterv1.ReadyCondition,
-									Status:             corev1.ConditionTrue,
+									Status:             metav1.ConditionStatus(corev1.ConditionTrue),
 									LastTransitionTime: metav1.Now(),
 								},
 							},
@@ -285,9 +286,11 @@ func TestPreflightChecks(t *testing.T) {
 					},
 				},
 			},
-			expectedCondition: clusterv1.Condition{
-				Type:   operatorv1.PreflightCheckCondition,
-				Status: corev1.ConditionTrue,
+			expectedCondition: metav1.Condition{
+				Type:    operatorv1.PreflightCheckCondition,
+				Status:  metav1.ConditionStatus(corev1.ConditionTrue),
+				Reason:  "PreflightChecksPassed",
+				Message: "All preflight checks passed",
 			},
 			providerList: &operatorv1.InfrastructureProviderList{},
 		},
@@ -326,10 +329,10 @@ func TestPreflightChecks(t *testing.T) {
 					},
 					Status: operatorv1.CoreProviderStatus{
 						ProviderStatus: operatorv1.ProviderStatus{
-							Conditions: []clusterv1.Condition{
+							Conditions: []metav1.Condition{
 								{
 									Type:               clusterv1.ReadyCondition,
-									Status:             corev1.ConditionFalse,
+									Status:             metav1.ConditionStatus(corev1.ConditionFalse),
 									LastTransitionTime: metav1.Now(),
 								},
 							},
@@ -337,12 +340,11 @@ func TestPreflightChecks(t *testing.T) {
 					},
 				},
 			},
-			expectedCondition: clusterv1.Condition{
-				Type:     operatorv1.PreflightCheckCondition,
-				Status:   corev1.ConditionFalse,
-				Reason:   operatorv1.WaitingForCoreProviderReadyReason,
-				Severity: clusterv1.ConditionSeverityInfo,
-				Message:  "Waiting for the CoreProvider to be installed.",
+			expectedCondition: metav1.Condition{
+				Type:    operatorv1.PreflightCheckCondition,
+				Status:  metav1.ConditionStatus(corev1.ConditionFalse),
+				Reason:  operatorv1.WaitingForCoreProviderReadyReason,
+				Message: "Waiting for the CoreProvider to be installed.",
 			},
 			providerList: &operatorv1.InfrastructureProviderList{},
 		},
@@ -395,10 +397,10 @@ func TestPreflightChecks(t *testing.T) {
 					},
 					Status: operatorv1.CoreProviderStatus{
 						ProviderStatus: operatorv1.ProviderStatus{
-							Conditions: []clusterv1.Condition{
+							Conditions: []metav1.Condition{
 								{
 									Type:               clusterv1.ReadyCondition,
-									Status:             corev1.ConditionTrue,
+									Status:             metav1.ConditionStatus(corev1.ConditionTrue),
 									LastTransitionTime: metav1.Now(),
 								},
 							},
@@ -406,9 +408,11 @@ func TestPreflightChecks(t *testing.T) {
 					},
 				},
 			},
-			expectedCondition: clusterv1.Condition{
-				Type:   operatorv1.PreflightCheckCondition,
-				Status: corev1.ConditionTrue,
+			expectedCondition: metav1.Condition{
+				Type:    operatorv1.PreflightCheckCondition,
+				Status:  metav1.ConditionStatus(corev1.ConditionTrue),
+				Reason:  "PreflightChecksPassed",
+				Message: "All preflight checks passed",
 			},
 			providerList: &operatorv1.InfrastructureProviderList{},
 		},
@@ -461,10 +465,10 @@ func TestPreflightChecks(t *testing.T) {
 					},
 					Status: operatorv1.CoreProviderStatus{
 						ProviderStatus: operatorv1.ProviderStatus{
-							Conditions: []clusterv1.Condition{
+							Conditions: []metav1.Condition{
 								{
 									Type:               clusterv1.ReadyCondition,
-									Status:             corev1.ConditionTrue,
+									Status:             metav1.ConditionStatus(corev1.ConditionTrue),
 									LastTransitionTime: metav1.Now(),
 								},
 							},
@@ -472,9 +476,11 @@ func TestPreflightChecks(t *testing.T) {
 					},
 				},
 			},
-			expectedCondition: clusterv1.Condition{
-				Type:   operatorv1.PreflightCheckCondition,
-				Status: corev1.ConditionTrue,
+			expectedCondition: metav1.Condition{
+				Type:    operatorv1.PreflightCheckCondition,
+				Status:  metav1.ConditionStatus(corev1.ConditionTrue),
+				Reason:  "PreflightChecksPassed",
+				Message: "All preflight checks passed",
 			},
 			providerList: &operatorv1.InfrastructureProviderList{},
 		},
@@ -513,12 +519,11 @@ func TestPreflightChecks(t *testing.T) {
 					},
 				},
 			},
-			expectedCondition: clusterv1.Condition{
-				Type:     operatorv1.PreflightCheckCondition,
-				Reason:   operatorv1.MoreThanOneProviderInstanceExistsReason,
-				Severity: clusterv1.ConditionSeverityError,
-				Message:  fmt.Sprintf(moreThanOneProviderInstanceExistsMessage, "aws", namespaceName2),
-				Status:   corev1.ConditionFalse,
+			expectedCondition: metav1.Condition{
+				Type:    operatorv1.PreflightCheckCondition,
+				Status:  metav1.ConditionStatus(corev1.ConditionFalse),
+				Reason:  operatorv1.MoreThanOneProviderInstanceExistsReason,
+				Message: fmt.Sprintf(moreThanOneProviderInstanceExistsMessage, "aws", namespaceName2),
 			},
 			providerList: &operatorv1.InfrastructureProviderList{},
 		},
@@ -584,9 +589,11 @@ func TestPreflightChecks(t *testing.T) {
 
 				return clusterctlv1.InfrastructureProviderType
 			},
-			expectedCondition: clusterv1.Condition{
-				Type:   operatorv1.PreflightCheckCondition,
-				Status: corev1.ConditionTrue,
+			expectedCondition: metav1.Condition{
+				Type:    operatorv1.PreflightCheckCondition,
+				Status:  metav1.ConditionStatus(corev1.ConditionTrue),
+				Reason:  "PreflightChecksPassed",
+				Message: "All preflight checks passed",
 			},
 			providerList: &operatorv1.InfrastructureProviderList{},
 		},
@@ -610,12 +617,11 @@ func TestPreflightChecks(t *testing.T) {
 					},
 				},
 			},
-			expectedCondition: clusterv1.Condition{
-				Type:     operatorv1.PreflightCheckCondition,
-				Reason:   operatorv1.IncorrectVersionFormatReason,
-				Severity: clusterv1.ConditionSeverityError,
-				Message:  "could not parse \"one\" as version",
-				Status:   corev1.ConditionFalse,
+			expectedCondition: metav1.Condition{
+				Type:    operatorv1.PreflightCheckCondition,
+				Status:  metav1.ConditionStatus(corev1.ConditionFalse),
+				Reason:  operatorv1.IncorrectVersionFormatReason,
+				Message: "could not parse \"one\" as version",
 			},
 			providerList: &operatorv1.InfrastructureProviderList{},
 		},
@@ -640,9 +646,11 @@ func TestPreflightChecks(t *testing.T) {
 					},
 				},
 			},
-			expectedCondition: clusterv1.Condition{
-				Type:   operatorv1.PreflightCheckCondition,
-				Status: corev1.ConditionTrue,
+			expectedCondition: metav1.Condition{
+				Type:    operatorv1.PreflightCheckCondition,
+				Status:  metav1.ConditionStatus(corev1.ConditionTrue),
+				Reason:  "PreflightChecksPassed",
+				Message: "All preflight checks passed",
 			},
 			providerList: &operatorv1.CoreProviderList{},
 		},
@@ -672,12 +680,11 @@ func TestPreflightChecks(t *testing.T) {
 					},
 				},
 			},
-			expectedCondition: clusterv1.Condition{
-				Type:     operatorv1.PreflightCheckCondition,
-				Reason:   operatorv1.FetchConfigValidationErrorReason,
-				Severity: clusterv1.ConditionSeverityError,
-				Message:  "Only one of Selector and URL must be provided, not both",
-				Status:   corev1.ConditionFalse,
+			expectedCondition: metav1.Condition{
+				Type:    operatorv1.PreflightCheckCondition,
+				Status:  metav1.ConditionStatus(corev1.ConditionFalse),
+				Reason:  operatorv1.FetchConfigValidationErrorReason,
+				Message: "Only one of Selector and URL must be provided, not both",
 			},
 			providerList: &operatorv1.InfrastructureProviderList{},
 		},
@@ -700,9 +707,11 @@ func TestPreflightChecks(t *testing.T) {
 					},
 				},
 			},
-			expectedCondition: clusterv1.Condition{
-				Type:   operatorv1.PreflightCheckCondition,
-				Status: corev1.ConditionTrue,
+			expectedCondition: metav1.Condition{
+				Type:    operatorv1.PreflightCheckCondition,
+				Status:  metav1.ConditionStatus(corev1.ConditionTrue),
+				Reason:  "PreflightChecksPassed",
+				Message: "All preflight checks passed",
 			},
 			providerList: &operatorv1.CoreProviderList{},
 		},
@@ -726,12 +735,11 @@ func TestPreflightChecks(t *testing.T) {
 					},
 				},
 			},
-			expectedCondition: clusterv1.Condition{
-				Type:     operatorv1.PreflightCheckCondition,
-				Reason:   operatorv1.FetchConfigValidationErrorReason,
-				Severity: clusterv1.ConditionSeverityError,
-				Message:  "Either Selector, OCI URL or provider URL must be provided for a not predefined provider",
-				Status:   corev1.ConditionFalse,
+			expectedCondition: metav1.Condition{
+				Type:    operatorv1.PreflightCheckCondition,
+				Reason:  operatorv1.FetchConfigValidationErrorReason,
+				Message: "Either Selector, OCI URL or provider URL must be provided for a not predefined provider",
+				Status:  metav1.ConditionStatus(corev1.ConditionFalse),
 			},
 			providerList: &operatorv1.CoreProviderList{},
 		},
@@ -759,12 +767,11 @@ func TestPreflightChecks(t *testing.T) {
 					},
 				},
 			},
-			expectedCondition: clusterv1.Condition{
-				Type:     operatorv1.PreflightCheckCondition,
-				Reason:   operatorv1.FetchConfigValidationErrorReason,
-				Severity: clusterv1.ConditionSeverityError,
-				Message:  "Either Selector, OCI URL or provider URL must be provided for a not predefined provider",
-				Status:   corev1.ConditionFalse,
+			expectedCondition: metav1.Condition{
+				Type:    operatorv1.PreflightCheckCondition,
+				Reason:  operatorv1.FetchConfigValidationErrorReason,
+				Message: "Either Selector, OCI URL or provider URL must be provided for a not predefined provider",
+				Status:  metav1.ConditionStatus(corev1.ConditionFalse),
 			},
 			providerList: &operatorv1.CoreProviderList{},
 		},
@@ -801,7 +808,6 @@ func TestPreflightChecks(t *testing.T) {
 			gs.Expect(tc.providers[0].GetStatus().Conditions[0].Type).To(Equal(tc.expectedCondition.Type))
 			gs.Expect(tc.providers[0].GetStatus().Conditions[0].Status).To(Equal(tc.expectedCondition.Status))
 			gs.Expect(tc.providers[0].GetStatus().Conditions[0].Message).To(Equal(tc.expectedCondition.Message))
-			gs.Expect(tc.providers[0].GetStatus().Conditions[0].Severity).To(Equal(tc.expectedCondition.Severity))
 		})
 	}
 }
@@ -900,11 +906,10 @@ func TestPreflightChecksUpgradesDowngrades(t *testing.T) {
 			// Check if proper condition is returned
 			gs.Expect(provider.GetStatus().Conditions).To(HaveLen(1))
 			gs.Expect(provider.GetStatus().Conditions[0].Type).To(Equal(operatorv1.PreflightCheckCondition))
-			gs.Expect(provider.GetStatus().Conditions[0].Status).To(Equal(tc.expectedConditionStatus))
+			gs.Expect(provider.GetStatus().Conditions[0].Status).To(Equal(metav1.ConditionStatus(tc.expectedConditionStatus)))
 
 			if tc.expectedConditionStatus == corev1.ConditionFalse {
 				gs.Expect(provider.GetStatus().Conditions[0].Reason).To(Equal(operatorv1.UnsupportedProviderDowngradeReason))
-				gs.Expect(provider.GetStatus().Conditions[0].Severity).To(Equal(clusterv1.ConditionSeverityError))
 			}
 		})
 	}

@@ -16,11 +16,9 @@ limitations under the License.
 
 package v1alpha2
 
-import clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-
 const (
 	// PreflightCheckCondition documents a Provider that has not passed preflight checks.
-	PreflightCheckCondition clusterv1.ConditionType = "PreflightCheckPassed"
+	PreflightCheckCondition string = "PreflightCheckPassed"
 
 	// MoreThanOneProviderInstanceExistsReason (Severity=Info) documents that more than one instance of provider
 	// exists in the cluster.
@@ -73,12 +71,15 @@ const (
 
 	// UnsupportedProviderDowngradeReason documents that the provider downgrade is not supported.
 	UnsupportedProviderDowngradeReason = "UnsupportedProviderDowngradeReason"
+
+	// FailedToUpdateProvidersHashReason documents that an error occurred while updating the provider hash.
+	FailedToUpdateProvidersHashReason = "FailedToUpdateProvidersHashReason"
 )
 
 const (
 	// ProviderInstalledCondition documents a Provider that has been installed.
-	ProviderInstalledCondition clusterv1.ConditionType = "ProviderInstalled"
+	ProviderInstalledCondition string = "ProviderInstalled"
 
 	// ProviderUpgradedCondition documents a Provider that has been recently upgraded.
-	ProviderUpgradedCondition clusterv1.ConditionType = "ProviderUpgraded"
+	ProviderUpgradedCondition string = "ProviderUpgraded"
 )
