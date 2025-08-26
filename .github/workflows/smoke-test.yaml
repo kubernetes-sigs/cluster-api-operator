@@ -16,14 +16,11 @@ env:
   KUBERNETES_VERSION: v1.33.0
   CONTROLLER_IMG: cluster-api-operator
   TAG: smoke-test
+  ARCH: amd64
 
 jobs:
   smoke-test:
-    name: Smoke Test (${{ matrix.install-method }})
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        install-method: [legacy, recommended]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -38,24 +35,26 @@ jobs:
       - name: Install tools
         run: |
           # kubectl
-          curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+          curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/${ARCH}/kubectl"
           chmod +x kubectl && sudo mv kubectl /usr/local/bin/
 
           # yq
-          wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O yq
+          wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_${ARCH} -O yq
           chmod +x yq && sudo mv yq /usr/local/bin/
 
           # helm
           curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
 
           # clusterctl
-          curl -L https://github.com/kubernetes-sigs/cluster-api/releases/latest/download/clusterctl-linux-amd64 -o clusterctl
-          chmod +x clusterctl && sudo mv clusterctl /usr/local/bin/
+          VERSION=v1.10.5
+          curl -L "https://github.com/kubernetes-sigs/cluster-api/releases/download/${VERSION}/clusterctl-linux-${ARCH}" -o clusterctl
+          sudo install -o root -g root -m 0755 clusterctl /usr/local/bin/clusterctl
+          clusterctl version
 
       - name: Build Docker image
         run: |
           make docker-build
-          docker tag ${CONTROLLER_IMG}-amd64:${TAG} ${CONTROLLER_IMG}:${TAG}
+          docker tag ${CONTROLLER_IMG}-${ARCH}:${TAG} ${CONTROLLER_IMG}:${TAG}
 
       - name: Build charts
         run: |
@@ -97,8 +96,7 @@ jobs:
             --wait \
             --timeout 5m
 
-      - name: Install Cluster API Operator (Recommended)
-        if: matrix.install-method == 'recommended'
+      - name: Install Cluster API Operator
         run: |
           CHART_PACKAGE="out/package/cluster-api-operator-${HELM_CHART_TAG}.tgz"
           helm install capi-operator "$CHART_PACKAGE" \
@@ -110,7 +108,7 @@ jobs:
             --wait \
             --timeout 90s
 
-      - name: Prepare providers values
+      - name: Deploy providers
         run: |
           cat <<EOF > /tmp/providers-values.yaml
           core:
@@ -138,39 +136,12 @@ jobs:
                 ClusterTopology: true
           EOF
 
-          # Add cluster-api-operator configuration for legacy installation
-          if [ "${{ matrix.install-method }}" = "legacy" ]; then
-            cat <<EOF >> /tmp/providers-values.yaml
-          cluster-api-operator:
-            install: true
-            image:
-              manager:
-                repository: ${CONTROLLER_IMG}
-                tag: ${TAG}
-                pullPolicy: IfNotPresent
-          EOF
-          fi
-
-      - name: Deploy providers (Recommended)
-        if: matrix.install-method == 'recommended'
-        run: |
           PROVIDERS_CHART_PACKAGE="out/package/cluster-api-operator-providers-${HELM_CHART_TAG}.tgz"
           helm install capi-providers "$PROVIDERS_CHART_PACKAGE" \
             -f /tmp/providers-values.yaml \
             --set cluster-api-operator.install=false \
             --set enableHelmHook=false \
             --wait
-
-      - name: Deploy providers (Legacy)
-        if: matrix.install-method == 'legacy'
-        run: |
-          PROVIDERS_CHART_PACKAGE="out/package/cluster-api-operator-providers-${HELM_CHART_TAG}.tgz"
-          helm install capi-providers "$PROVIDERS_CHART_PACKAGE" \
-            --create-namespace \
-            -n capi-operator-system \
-            -f /tmp/providers-values.yaml \
-            --wait \
-            --timeout 300s
 
       - name: Wait for providers
         run: |
@@ -233,7 +204,6 @@ jobs:
       - name: Collect logs on failure
         if: failure()
         run: |
-          echo "=== Installation Method: ${{ matrix.install-method }} ==="
           echo "=== Recent Events ==="
           kubectl get events -A --sort-by='.lastTimestamp' | tail -50
 

@@ -149,7 +149,7 @@ PROD_REGISTRY ?= registry.k8s.io/capi-operator
 
 # Image name
 IMAGE_NAME ?= cluster-api-operator
-PACKAGE_NAME = cluster-api-operator-providers
+PACKAGE_NAME = cluster-api-operator
 CONTROLLER_IMG ?= $(REGISTRY)/$(IMAGE_NAME)
 CONTROLLER_IMG_TAG ?= $(CONTROLLER_IMG)-$(ARCH):$(TAG)
 
@@ -497,7 +497,6 @@ release-chart: $(HELM) $(KUSTOMIZE) $(RELEASE_DIR) $(CHART_DIR) $(CHART_PROVIDER
 
 	# Processing the cluster-api-operator-providers chart
 	cp -rf $(ROOT)/hack/charts/cluster-api-operator-providers/. $(CHART_PROVIDERS_DIR)
-	$(HELM) dependency update $(CHART_PROVIDERS_DIR)
 	$(HELM) package $(CHART_PROVIDERS_DIR) --app-version=$(HELM_CHART_TAG) --version=$(HELM_CHART_TAG) --destination=$(CHART_PACKAGE_DIR)
 
 .PHONY: release-staging
@@ -571,7 +570,7 @@ test-e2e-run: $(GINKGO) $(ENVSUBST) $(HELM) ## Run e2e tests
 		-e2e.artifacts-folder="$(ARTIFACTS)" \
 		-e2e.config="$(E2E_CONF_FILE_ENVSUBST)"  -e2e.components=$(RELEASE_DIR)/operator-components.yaml \
 		-e2e.skip-resource-cleanup=$(SKIP_CLEANUP) -e2e.use-existing-cluster=$(SKIP_CREATE_MGMT_CLUSTER) \
-		-e2e.helm-binary-path=$(HELM) -e2e.chart-path=$(CHART_PACKAGE_DIR)/cluster-api-operator-providers-$(HELM_CHART_TAG).tgz $(E2E_ARGS)
+		-e2e.helm-binary-path=$(HELM) -e2e.chart-path=$(CHART_PACKAGE_DIR)/cluster-api-operator-$(HELM_CHART_TAG).tgz $(E2E_ARGS)
 
 go-version: ## Print the go version we use to compile our binaries and images
 	@echo $(GO_VERSION)

@@ -4,8 +4,3 @@ description: Cluster API Provider Custom Resources
 type: application
 version: 0.0.0
 appVersion: "0.0.0"
-dependencies:
-  - name: cluster-api-operator
-    repository: file://../cluster-api-operator
-    version: 0.0.0
-    condition: cluster-api-operator.install
