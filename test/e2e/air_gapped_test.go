@@ -58,7 +58,7 @@ var _ = Describe("Install ControlPlane, Core, Bootstrap providers in an air-gapp
 							MatchLabels: map[string]string{
 								operatorv1.ConfigMapNameLabel:        coreProviderName,
 								operatorv1.ConfigMapTypeLabel:        "core",
-								operatorv1.ConfigMapVersionLabelName: "v1.7.7",
+								operatorv1.ConfigMapVersionLabelName: "v1.10.4",
 							},
 						},
 					},
@@ -72,12 +72,12 @@ var _ = Describe("Install ControlPlane, Core, Bootstrap providers in an air-gapp
 
 		By("should successfully create ConfigMaps with ControlPlane, Core, and Bootstrap provider manifests")
 		configMapFiles := []string{
-			"core-cluster-api-v1.7.7.yaml",
-			"core-cluster-api-v1.8.0.yaml",
-			"bootstrap-kubeadm-v1.7.7.yaml",
-			"bootstrap-kubeadm-v1.8.0.yaml",
-			"controlplane-kubeadm-v1.7.7.yaml",
-			"controlplane-kubeadm-v1.8.0.yaml",
+			"core-cluster-api-v1.10.4.yaml",
+			"core-cluster-api-v1.11.0.yaml",
+			"bootstrap-kubeadm-v1.10.4.yaml",
+			"bootstrap-kubeadm-v1.11.0.yaml",
+			"controlplane-kubeadm-v1.10.4.yaml",
+			"controlplane-kubeadm-v1.11.0.yaml",
 		}
 
 		for _, fileName := range configMapFiles {
@@ -155,7 +155,7 @@ var _ = Describe("Install ControlPlane, Core, Bootstrap providers in an air-gapp
 		})
 	})
 
-	It("should successfully create, upgrade (v1.7.7 -> v1.8.0) and delete a BootstrapProvider from a ConfigMap", func() {
+	It("should successfully create, upgrade (v1.10.4 -> v1.11.0) and delete a BootstrapProvider from a ConfigMap", func() {
 		bootstrapProvider := &operatorv1.BootstrapProvider{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      customProviderName,
@@ -168,7 +168,7 @@ var _ = Describe("Install ControlPlane, Core, Bootstrap providers in an air-gapp
 							MatchLabels: map[string]string{
 								operatorv1.ConfigMapNameLabel:        "kubeadm",
 								operatorv1.ConfigMapTypeLabel:        "bootstrap",
-								operatorv1.ConfigMapVersionLabelName: "v1.7.7",
+								operatorv1.ConfigMapVersionLabelName: "v1.10.4",
 							},
 						},
 					},
@@ -228,7 +228,7 @@ var _ = Describe("Install ControlPlane, Core, Bootstrap providers in an air-gapp
 			e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 	})
 
-	It("should successfully create, upgrade (v1.7.7 -> v1.8.0) and delete a ControlPlaneProvider from a ConfigMap", func() {
+	It("should successfully create, upgrade (v1.10.4 -> v1.11.0) and delete a ControlPlaneProvider from a ConfigMap", func() {
 		controlPlaneProvider := &operatorv1.ControlPlaneProvider{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      customProviderName,
@@ -241,7 +241,7 @@ var _ = Describe("Install ControlPlane, Core, Bootstrap providers in an air-gapp
 							MatchLabels: map[string]string{
 								operatorv1.ConfigMapNameLabel:        "kubeadm",
 								operatorv1.ConfigMapTypeLabel:        "controlplane",
-								operatorv1.ConfigMapVersionLabelName: "v1.7.7",
+								operatorv1.ConfigMapVersionLabelName: "v1.10.4",
 							},
 						},
 					},
@@ -301,7 +301,7 @@ var _ = Describe("Install ControlPlane, Core, Bootstrap providers in an air-gapp
 			e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 	})
 
-	It("should successfully upgrade CoreProvider (v1.7.7 -> v1.8.0)", func() {
+	It("should successfully upgrade CoreProvider (v1.10.4 -> v1.11.0)", func() {
 		Expect(bootstrapCluster.Get(ctx, client.ObjectKeyFromObject(coreProvider), coreProvider)).To(Succeed())
 
 		By("Updating the CoreProvider to new Custer API version")
