@@ -461,6 +461,7 @@ func TestMultipleConfigMapsError(t *testing.T) {
 		}
 
 		condition := meta.FindStatusCondition(provider.GetStatus().Conditions, operatorv1.ProviderInstalledCondition)
+
 		return condition != nil && condition.Status == metav1.ConditionFalse && condition.Reason != ""
 	}, timeout).Should(BeTrue())
 

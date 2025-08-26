@@ -30,7 +30,6 @@ import (
 	"k8s.io/utils/ptr"
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
 	. "sigs.k8s.io/cluster-api-operator/test/framework"
-	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/cluster-api/test/framework"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
@@ -112,7 +111,7 @@ var _ = Describe("Install ControlPlane, Core, Bootstrap providers in an air-gapp
 
 		By("Waiting for Core provider to be ready")
 		WaitFor(ctx, For(coreProvider).In(bootstrapCluster).ToSatisfy(
-			HaveStatusConditionsTrue(coreProvider, operatorv1.PreflightCheckCondition, operatorv1.ProviderInstalledCondition, clusterv1.ReadyCondition),
+			HaveStatusConditionsTrue(coreProvider, operatorv1.PreflightCheckCondition, operatorv1.ProviderInstalledCondition, "Ready"),
 		), e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
 		By("Validating that status.InstalledVersion is set")
@@ -182,7 +181,7 @@ var _ = Describe("Install ControlPlane, Core, Bootstrap providers in an air-gapp
 
 		By("Waiting for BootstrapProvider to be ready")
 		WaitFor(ctx, For(bootstrapProvider).In(bootstrapCluster).ToSatisfy(
-			HaveStatusConditionsTrue(bootstrapProvider, operatorv1.PreflightCheckCondition, operatorv1.ProviderInstalledCondition, clusterv1.ReadyCondition),
+			HaveStatusConditionsTrue(bootstrapProvider, operatorv1.PreflightCheckCondition, operatorv1.ProviderInstalledCondition, "Ready"),
 		), e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
 		By("Waiting for the BootstrapProvider Deployment to be ready")
@@ -202,7 +201,7 @@ var _ = Describe("Install ControlPlane, Core, Bootstrap providers in an air-gapp
 
 		By("Waiting for BootstrapProvider to be ready")
 		WaitFor(ctx, For(bootstrapProvider).In(bootstrapCluster).ToSatisfy(
-			HaveStatusConditionsTrue(bootstrapProvider, operatorv1.PreflightCheckCondition, operatorv1.ProviderInstalledCondition, operatorv1.ProviderUpgradedCondition, clusterv1.ReadyCondition),
+			HaveStatusConditionsTrue(bootstrapProvider, operatorv1.PreflightCheckCondition, operatorv1.ProviderInstalledCondition, operatorv1.ProviderUpgradedCondition, "Ready"),
 		), e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
 		By("Waiting for the BootstrapProvider Deployment to be ready")
@@ -255,7 +254,7 @@ var _ = Describe("Install ControlPlane, Core, Bootstrap providers in an air-gapp
 
 		By("Waiting for ControlPlaneProvider to be ready")
 		WaitFor(ctx, For(controlPlaneProvider).In(bootstrapCluster).ToSatisfy(
-			HaveStatusConditionsTrue(controlPlaneProvider, operatorv1.PreflightCheckCondition, operatorv1.ProviderInstalledCondition, clusterv1.ReadyCondition),
+			HaveStatusConditionsTrue(controlPlaneProvider, operatorv1.PreflightCheckCondition, operatorv1.ProviderInstalledCondition, "Ready"),
 		), e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
 		By("Waiting for the ControlPlaneProvider Deployment to be ready")
@@ -275,7 +274,7 @@ var _ = Describe("Install ControlPlane, Core, Bootstrap providers in an air-gapp
 
 		By("Waiting for ControlPlaneProvider to be ready")
 		WaitFor(ctx, For(controlPlaneProvider).In(bootstrapCluster).ToSatisfy(
-			HaveStatusConditionsTrue(controlPlaneProvider, operatorv1.PreflightCheckCondition, operatorv1.ProviderInstalledCondition, operatorv1.ProviderUpgradedCondition, clusterv1.ReadyCondition),
+			HaveStatusConditionsTrue(controlPlaneProvider, operatorv1.PreflightCheckCondition, operatorv1.ProviderInstalledCondition, operatorv1.ProviderUpgradedCondition, "Ready"),
 		), e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
 		By("Waiting for the ControlPlaneProvider Deployment to be ready")
@@ -313,7 +312,7 @@ var _ = Describe("Install ControlPlane, Core, Bootstrap providers in an air-gapp
 
 		By("Waiting for CoreProvider to be ready")
 		WaitFor(ctx, For(coreProvider).In(bootstrapCluster).ToSatisfy(
-			HaveStatusConditionsTrue(coreProvider, operatorv1.PreflightCheckCondition, operatorv1.ProviderInstalledCondition, operatorv1.ProviderUpgradedCondition, clusterv1.ReadyCondition),
+			HaveStatusConditionsTrue(coreProvider, operatorv1.PreflightCheckCondition, operatorv1.ProviderInstalledCondition, operatorv1.ProviderUpgradedCondition, "Ready"),
 		), e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
 		By("Waiting for the CoreProvider Deployment to be ready")

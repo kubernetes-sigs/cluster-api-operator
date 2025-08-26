@@ -165,23 +165,7 @@ func (r *GenericProviderHealthCheckReconciler) Reconcile(ctx context.Context, re
 	}
 
 	if deploymentAvailableCondition != nil {
-		reason := deploymentAvailableCondition.Reason
-		if reason == "" {
-			// Default reason if deployment condition doesn't have one
-			if deploymentAvailableCondition.Status == corev1.ConditionTrue {
-				reason = "DeploymentAvailable"
-			} else {
-				reason = "DeploymentNotAvailable"
-			}
-		}
-		status := typedProvider.GetStatus()
-		meta.SetStatusCondition(&status.Conditions, metav1.Condition{
-			Type:    clusterv1.ReadyCondition,
-			Status:  metav1.ConditionStatus(deploymentAvailableCondition.Status),
-			Reason:  reason,
-			Message: fmt.Sprintf("Deployment availability is %s", deploymentAvailableCondition.Status),
-		})
-		typedProvider.SetStatus(status)
+		r.setReadyConditionFromDeployment(typedProvider, deploymentAvailableCondition)
 	} else {
 		status := typedProvider.GetStatus()
 		meta.SetStatusCondition(&status.Conditions, metav1.Condition{
@@ -230,6 +214,26 @@ func getDeploymentCondition(status appsv1.DeploymentStatus, condType appsv1.Depl
 	}
 
 	return nil
+}
+
+func (r *GenericProviderHealthCheckReconciler) setReadyConditionFromDeployment(typedProvider operatorv1.GenericProvider, deploymentAvailableCondition *appsv1.DeploymentCondition) {
+	reason := deploymentAvailableCondition.Reason
+	if reason == "" {
+		// Default reason if deployment condition doesn't have one
+		if deploymentAvailableCondition.Status == corev1.ConditionTrue {
+			reason = "DeploymentAvailable"
+		} else {
+			reason = "DeploymentNotAvailable"
+		}
+	}
+	status := typedProvider.GetStatus()
+	meta.SetStatusCondition(&status.Conditions, metav1.Condition{
+		Type:    clusterv1.ReadyCondition,
+		Status:  metav1.ConditionStatus(deploymentAvailableCondition.Status),
+		Reason:  reason,
+		Message: fmt.Sprintf("Deployment availability is %s", deploymentAvailableCondition.Status),
+	})
+	typedProvider.SetStatus(status)
 }
 
 func (r *GenericProviderHealthCheckReconciler) providerDeploymentPredicates() predicate.Funcs {

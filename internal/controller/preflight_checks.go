@@ -197,6 +197,7 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 
 		if !ready {
 			log.Info(waitingForCoreProviderReadyMessage)
+
 			status := provider.GetStatus()
 			meta.SetStatusCondition(&status.Conditions, metav1.Condition{
 				Type:    operatorv1.PreflightCheckCondition,

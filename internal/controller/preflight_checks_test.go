@@ -69,7 +69,7 @@ func TestPreflightChecks(t *testing.T) {
 			},
 			expectedCondition: metav1.Condition{
 				Type:    operatorv1.PreflightCheckCondition,
-				Status:  metav1.ConditionStatus(metav1.ConditionStatus(corev1.ConditionTrue)),
+				Status:  metav1.ConditionTrue,
 				Reason:  "PreflightChecksPassed",
 				Message: "All preflight checks passed",
 			},
@@ -102,7 +102,7 @@ func TestPreflightChecks(t *testing.T) {
 				Type:    operatorv1.PreflightCheckCondition,
 				Reason:  operatorv1.IncorrectCoreProviderNameReason,
 				Message: "Incorrect CoreProvider name: my-fancy-cluster-api. It should be cluster-api",
-				Status:  metav1.ConditionStatus(metav1.ConditionStatus(corev1.ConditionFalse)),
+				Status:  metav1.ConditionFalse,
 			},
 			providerList: &operatorv1.CoreProviderList{},
 		},

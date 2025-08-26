@@ -22,11 +22,16 @@ import (
 	"fmt"
 
 	. "github.com/onsi/ginkgo/v2" //nolint:staticcheck
-	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
-	capiconditions "sigs.k8s.io/cluster-api/util/conditions"
+	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func HaveStatusConditionsTrue(getter capiconditions.Getter, conditions ...clusterv1.ConditionType) Condition {
+// ConditionsGetter defines an interface for getting conditions.
+type ConditionsGetter interface {
+	GetConditions() []v1.Condition
+}
+
+func HaveStatusConditionsTrue(getter ConditionsGetter, conditions ...string) Condition {
 	return func() bool {
 		if len(conditions) == 0 {
 			By("Empty condition list provided. Can't be validated...")
@@ -37,7 +42,7 @@ func HaveStatusConditionsTrue(getter capiconditions.Getter, conditions ...cluste
 		for _, condition := range conditions {
 			By(fmt.Sprintf("Checking if %s condition is set...", condition))
 
-			if !capiconditions.IsTrue(getter, string(condition)) {
+			if !meta.IsStatusConditionTrue(getter.GetConditions(), condition) {
 				return false
 			}
 		}

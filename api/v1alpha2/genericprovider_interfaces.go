@@ -17,8 +17,8 @@ limitations under the License.
 package v1alpha2
 
 import (
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/cluster-api/util/conditions"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // GenericProvider interface describes operations applicable to the provider type.

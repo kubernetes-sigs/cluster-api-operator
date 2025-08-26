@@ -207,6 +207,7 @@ func patchProvider(ctx context.Context, provider operatorv1.GenericProvider, pat
 			status.Conditions[i].Message = "Condition updated"
 		}
 	}
+
 	provider.SetStatus(status)
 
 	return patchHelper.Patch(ctx, provider, options...)
@@ -222,9 +223,11 @@ func (r *GenericProviderReconciler) reconcile(ctx context.Context) (*Result, err
 			if errors.As(err, &pe) {
 				status := r.Provider.GetStatus()
 				message := err.Error()
+
 				if message == "" {
 					message = "Phase execution failed"
 				}
+
 				meta.SetStatusCondition(&status.Conditions, metav1.Condition{
 					Type:    pe.Type,
 					Status:  metav1.ConditionFalse,
@@ -263,9 +266,11 @@ func (r *GenericProviderReconciler) reconcileDelete(ctx context.Context, provide
 			if errors.As(err, &pe) {
 				status := provider.GetStatus()
 				message := err.Error()
+
 				if message == "" {
 					message = "Phase execution failed"
 				}
+
 				meta.SetStatusCondition(&status.Conditions, metav1.Condition{
 					Type:    pe.Type,
 					Status:  metav1.ConditionFalse,
