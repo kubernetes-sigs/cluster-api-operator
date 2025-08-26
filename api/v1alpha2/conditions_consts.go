@@ -71,9 +71,6 @@ const (
 
 	// UnsupportedProviderDowngradeReason documents that the provider downgrade is not supported.
 	UnsupportedProviderDowngradeReason = "UnsupportedProviderDowngradeReason"
-
-	// FailedToUpdateProvidersHashReason documents that an error occurred while updating the provider hash.
-	FailedToUpdateProvidersHashReason = "FailedToUpdateProvidersHashReason"
 )
 
 const (
