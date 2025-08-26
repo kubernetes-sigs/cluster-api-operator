@@ -1,5 +1,5 @@
 ---
-# Source: cluster-api-operator-providers/charts/cluster-api-operator/templates/operator-components.yaml
+# Source: cluster-api-operator/templates/operator-components.yaml
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -8,7 +8,7 @@ metadata:
   name: capi-operator-manager
   namespace: 'default'
 ---
-# Source: cluster-api-operator-providers/charts/cluster-api-operator/templates/operator-components.yaml
+# Source: cluster-api-operator/templates/operator-components.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -3138,7 +3138,7 @@ spec:
     subresources:
       status: {}
 ---
-# Source: cluster-api-operator-providers/charts/cluster-api-operator/templates/operator-components.yaml
+# Source: cluster-api-operator/templates/operator-components.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -6268,7 +6268,7 @@ spec:
     subresources:
       status: {}
 ---
-# Source: cluster-api-operator-providers/charts/cluster-api-operator/templates/operator-components.yaml
+# Source: cluster-api-operator/templates/operator-components.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -9400,7 +9400,7 @@ spec:
     subresources:
       status: {}
 ---
-# Source: cluster-api-operator-providers/charts/cluster-api-operator/templates/operator-components.yaml
+# Source: cluster-api-operator/templates/operator-components.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -12530,7 +12530,7 @@ spec:
     subresources:
       status: {}
 ---
-# Source: cluster-api-operator-providers/charts/cluster-api-operator/templates/operator-components.yaml
+# Source: cluster-api-operator/templates/operator-components.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -15662,7 +15662,7 @@ spec:
     subresources:
       status: {}
 ---
-# Source: cluster-api-operator-providers/charts/cluster-api-operator/templates/operator-components.yaml
+# Source: cluster-api-operator/templates/operator-components.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -18792,7 +18792,7 @@ spec:
     subresources:
       status: {}
 ---
-# Source: cluster-api-operator-providers/charts/cluster-api-operator/templates/operator-components.yaml
+# Source: cluster-api-operator/templates/operator-components.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -21925,7 +21925,7 @@ spec:
     subresources:
       status: {}
 ---
-# Source: cluster-api-operator-providers/charts/cluster-api-operator/templates/operator-components.yaml
+# Source: cluster-api-operator/templates/operator-components.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -21940,7 +21940,7 @@ rules:
   verbs:
   - '*'
 ---
-# Source: cluster-api-operator-providers/charts/cluster-api-operator/templates/operator-components.yaml
+# Source: cluster-api-operator/templates/operator-components.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
@@ -21956,7 +21956,7 @@ subjects:
   name: capi-operator-manager
   namespace: 'default'
 ---
-# Source: cluster-api-operator-providers/charts/cluster-api-operator/templates/operator-components.yaml
+# Source: cluster-api-operator/templates/operator-components.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
@@ -22004,7 +22004,7 @@ rules:
   - patch
   - delete
 ---
-# Source: cluster-api-operator-providers/charts/cluster-api-operator/templates/operator-components.yaml
+# Source: cluster-api-operator/templates/operator-components.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
@@ -22021,7 +22021,7 @@ subjects:
   name: capi-operator-manager
   namespace: 'default'
 ---
-# Source: cluster-api-operator-providers/charts/cluster-api-operator/templates/operator-components.yaml
+# Source: cluster-api-operator/templates/operator-components.yaml
 apiVersion: v1
 kind: Service
 metadata:
@@ -22037,7 +22037,7 @@ spec:
     clusterctl.cluster.x-k8s.io/core: capi-operator
     control-plane: controller-manager
 ---
-# Source: cluster-api-operator-providers/charts/cluster-api-operator/templates/deployment.yaml
+# Source: cluster-api-operator/templates/deployment.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -22152,25 +22152,7 @@ spec:
         - effect: NoSchedule
           key: node-role.kubernetes.io/control-plane
 ---
-# Source: cluster-api-operator-providers/templates/addon.yaml
-# Addon provider
----
-# Source: cluster-api-operator-providers/templates/bootstrap.yaml
-# Bootstrap provider
----
-# Source: cluster-api-operator-providers/templates/control-plane.yaml
-# Control plane provider
----
-# Source: cluster-api-operator-providers/templates/core.yaml
-# Core provider
----
-# Source: cluster-api-operator-providers/templates/infra.yaml
-# Infrastructure providers
----
-# Source: cluster-api-operator-providers/templates/ipam.yaml
-# IPAM providers
----
-# Source: cluster-api-operator-providers/charts/cluster-api-operator/templates/operator-components.yaml
+# Source: cluster-api-operator/templates/operator-components.yaml
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
@@ -22187,7 +22169,7 @@ spec:
     name: capi-operator-selfsigned-issuer
   secretName: capi-operator-webhook-service-cert
 ---
-# Source: cluster-api-operator-providers/charts/cluster-api-operator/templates/operator-components.yaml
+# Source: cluster-api-operator/templates/operator-components.yaml
 apiVersion: cert-manager.io/v1
 kind: Issuer
 metadata:
@@ -22198,7 +22180,7 @@ metadata:
 spec:
   selfSigned: {}
 ---
-# Source: cluster-api-operator-providers/charts/cluster-api-operator/templates/operator-components.yaml
+# Source: cluster-api-operator/templates/operator-components.yaml
 apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
 metadata:
@@ -22363,7 +22345,7 @@ webhooks:
     - runtimeextensionproviders
   sideEffects: None
 ---
-# Source: cluster-api-operator-providers/charts/cluster-api-operator/templates/operator-components.yaml
+# Source: cluster-api-operator/templates/operator-components.yaml
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
 metadata:
