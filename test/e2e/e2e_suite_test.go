@@ -347,11 +347,11 @@ func deleteClusterAPICRDs(clusterProxy framework.ClusterProxy) {
 	// But we must NOT delete the operator's own CRDs (operator.cluster.x-k8s.io)
 	crds := &apiextensionsv1.CustomResourceDefinitionList{}
 	Expect(clusterProxy.GetClient().List(ctx, crds)).To(Succeed())
-	
+
 	for _, crd := range crds.Items {
 		// Delete CRDs that belong to cluster.x-k8s.io groups, but exclude operator CRDs
-		if strings.Contains(crd.Spec.Group, "cluster.x-k8s.io") && 
-		   crd.Spec.Group != "operator.cluster.x-k8s.io" {
+		if strings.Contains(crd.Spec.Group, "cluster.x-k8s.io") &&
+			crd.Spec.Group != "operator.cluster.x-k8s.io" {
 			Expect(clusterProxy.GetClient().Delete(ctx, &crd)).To(Succeed())
 		}
 	}
