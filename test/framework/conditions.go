@@ -23,7 +23,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2" //nolint:staticcheck
 	"k8s.io/apimachinery/pkg/api/meta"
-	"k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // ConditionsGetter defines an interface for getting conditions.

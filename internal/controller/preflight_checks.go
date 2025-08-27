@@ -159,6 +159,7 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 		// CoreProvider is a singleton resource, more than one instances should not exist
 		if mapper(provider) == clusterctlv1.CoreProviderType && mapper(p) == clusterctlv1.CoreProviderType {
 			log.Info(moreThanOneCoreProviderInstanceExistsMessage)
+
 			status := provider.GetStatus()
 			meta.SetStatusCondition(&status.Conditions, metav1.Condition{
 				Type:    operatorv1.PreflightCheckCondition,
@@ -175,6 +176,7 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 		if mapper(p) != clusterctlv1.CoreProviderType && p.GetName() == provider.GetName() && mapper(p) == mapper(provider) {
 			message := fmt.Sprintf(moreThanOneProviderInstanceExistsMessage, p.GetName(), p.GetNamespace())
 			log.Info(message)
+
 			status := provider.GetStatus()
 			meta.SetStatusCondition(&status.Conditions, metav1.Condition{
 				Type:    operatorv1.PreflightCheckCondition,
@@ -233,6 +235,7 @@ func checkProviderVersion(ctx context.Context, providerVersion string, provider 
 	targetVersion, err := version.ParseSemantic(providerVersion)
 	if err != nil {
 		log.Info("Version contains invalid value")
+
 		status := provider.GetStatus()
 		meta.SetStatusCondition(&status.Conditions, metav1.Condition{
 			Type:    operatorv1.PreflightCheckCondition,

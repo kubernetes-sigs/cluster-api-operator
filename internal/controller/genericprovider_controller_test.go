@@ -640,6 +640,7 @@ func TestReconcilerPreflightConditionsFromCoreProviderEvents(t *testing.T) {
 
 	patchHelper, err := patch.NewHelper(coreProvider, env)
 	g.Expect(err).ToNot(HaveOccurred())
+
 	status := coreProvider.GetStatus()
 	meta.SetStatusCondition(&status.Conditions, metav1.Condition{
 		Type:    clusterv1.ReadyCondition,

@@ -226,6 +226,7 @@ func (r *GenericProviderHealthCheckReconciler) setReadyConditionFromDeployment(t
 			reason = "DeploymentNotAvailable"
 		}
 	}
+
 	status := typedProvider.GetStatus()
 	meta.SetStatusCondition(&status.Conditions, metav1.Condition{
 		Type:    clusterv1.ReadyCondition,
