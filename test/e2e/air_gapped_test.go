@@ -58,7 +58,7 @@ var _ = Describe("Install ControlPlane, Core, Bootstrap providers in an air-gapp
 							MatchLabels: map[string]string{
 								operatorv1.ConfigMapNameLabel:        coreProviderName,
 								operatorv1.ConfigMapTypeLabel:        "core",
-								operatorv1.ConfigMapVersionLabelName: "v1.10.4",
+								operatorv1.ConfigMapVersionLabelName: previousCAPIVersion,
 							},
 						},
 					},
@@ -168,7 +168,7 @@ var _ = Describe("Install ControlPlane, Core, Bootstrap providers in an air-gapp
 							MatchLabels: map[string]string{
 								operatorv1.ConfigMapNameLabel:        "kubeadm",
 								operatorv1.ConfigMapTypeLabel:        "bootstrap",
-								operatorv1.ConfigMapVersionLabelName: "v1.10.4",
+								operatorv1.ConfigMapVersionLabelName: previousCAPIVersion,
 							},
 						},
 					},
@@ -241,7 +241,7 @@ var _ = Describe("Install ControlPlane, Core, Bootstrap providers in an air-gapp
 							MatchLabels: map[string]string{
 								operatorv1.ConfigMapNameLabel:        "kubeadm",
 								operatorv1.ConfigMapTypeLabel:        "controlplane",
-								operatorv1.ConfigMapVersionLabelName: "v1.10.4",
+								operatorv1.ConfigMapVersionLabelName: previousCAPIVersion,
 							},
 						},
 					},

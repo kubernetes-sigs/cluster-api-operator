@@ -37,6 +37,11 @@ import (
 )
 
 var _ = Describe("Create a proper set of manifests when using helm charts", func() {
+	BeforeEach(func() {
+		// Ensure that there are no Cluster API CRDs from previous tests
+		deleteClusterAPICRDs(helmClusterProxy)
+	})
+
 	It("should deploy a quick-start cluster-api-operator chart", func() {
 		clusterProxy := helmClusterProxy.GetClient()
 

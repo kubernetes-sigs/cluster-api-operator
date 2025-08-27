@@ -784,9 +784,9 @@ func (p *PhaseReconciler) Install(ctx context.Context) (*Result, error) {
 	log.Info("Installing provider")
 
 	if err := clusterClient.ProviderComponents().Create(ctx, p.components.Objs()); err != nil {
-		reason := "Install failed"
+		reason := "InstallFailed"
 		if wait.Interrupted(err) {
-			reason = "Timed out waiting for deployment to become ready"
+			reason = "TimedOutWaitingForDeployment"
 		}
 
 		return &Result{}, wrapPhaseError(err, reason, operatorv1.ProviderInstalledCondition)

@@ -46,6 +46,11 @@ const (
 var _ = Describe("Create and delete a provider with manifests that don't fit the configmap", func() {
 	ociInfrastructureConfigMap := &corev1.ConfigMap{}
 
+	BeforeEach(func() {
+		// Ensure that there are no Cluster API CRDs from previous tests
+		deleteClusterAPICRDs(bootstrapClusterProxy)
+	})
+
 	It("should successfully create a CoreProvider", func() {
 		bootstrapCluster := bootstrapClusterProxy.GetClient()
 		coreProvider := &operatorv1.CoreProvider{

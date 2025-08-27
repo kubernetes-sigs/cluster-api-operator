@@ -345,13 +345,17 @@ func ensureCertManager(clusterProxy framework.ClusterProxy, config *clusterctl.E
 }
 
 func deleteClusterAPICRDs(clusterProxy framework.ClusterProxy) {
-	// To remove all Cluster API CRDs we need filter them by labels:
-	//  cluster.x-k8s.io/provider: cluster-api
-	//  clusterctl.cluster.x-k8s.io: ""
-	Expect(clusterProxy.GetClient().DeleteAllOf(ctx, &apiextensionsv1.CustomResourceDefinition{}, client.MatchingLabels{
-		clusterv1.ProviderNameLabel:  configclient.ClusterAPIProviderName,
-		clusterctlv1.ClusterctlLabel: "",
-	})).To(Succeed())
+	// To remove all Cluster API CRDs we need to delete all CRDs that belong to cluster-api groups.
+	// This includes CRDs from all providers (core, bootstrap, control-plane, infrastructure, etc.)
+	crds := &apiextensionsv1.CustomResourceDefinitionList{}
+	Expect(clusterProxy.GetClient().List(ctx, crds)).To(Succeed())
+	
+	for _, crd := range crds.Items {
+		// Delete CRDs that belong to cluster.x-k8s.io, addons.cluster.x-k8s.io, runtime.cluster.x-k8s.io, etc.
+		if strings.Contains(crd.Spec.Group, "cluster.x-k8s.io") {
+			Expect(clusterProxy.GetClient().Delete(ctx, &crd)).To(Succeed())
+		}
+	}
 }
 
 func initHelmChart() {
