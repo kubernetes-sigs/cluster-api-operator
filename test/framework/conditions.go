@@ -23,12 +23,12 @@ import (
 
 	. "github.com/onsi/ginkgo/v2" //nolint:staticcheck
 	"k8s.io/apimachinery/pkg/api/meta"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // ConditionsGetter defines an interface for getting conditions.
 type ConditionsGetter interface {
-	GetConditions() []v1.Condition
+	GetConditions() []metav1.Condition
 }
 
 func HaveStatusConditionsTrue(getter ConditionsGetter, conditions ...string) Condition {

@@ -43,11 +43,6 @@ const (
 )
 
 var _ = Describe("Create, upgrade, downgrade and delete providers with minimal specified configuration", func() {
-	BeforeEach(func() {
-		// Ensure that there are no Cluster API CRDs from previous tests
-		deleteClusterAPICRDs(bootstrapClusterProxy)
-	})
-
 	It("should successfully create a CoreProvider", func() {
 		bootstrapCluster := bootstrapClusterProxy.GetClient()
 

@@ -344,15 +344,14 @@ func ensureCertManager(clusterProxy framework.ClusterProxy, config *clusterctl.E
 func deleteClusterAPICRDs(clusterProxy framework.ClusterProxy) {
 	// To remove all Cluster API CRDs we need to delete all CRDs that belong to cluster-api groups.
 	// This includes CRDs from all providers (core, bootstrap, control-plane, infrastructure, etc.)
-	// But we must NOT delete the operator's own CRDs (operator.cluster.x-k8s.io) or IPAM CRDs (ipam.cluster.x-k8s.io)
+	// But we must NOT delete the operator's own CRDs (operator.cluster.x-k8s.io)
 	crds := &apiextensionsv1.CustomResourceDefinitionList{}
 	Expect(clusterProxy.GetClient().List(ctx, crds)).To(Succeed())
 
 	for _, crd := range crds.Items {
-		// Delete CRDs that belong to cluster.x-k8s.io groups, but exclude operator and IPAM CRDs
+		// Delete CRDs that belong to cluster.x-k8s.io groups, but exclude operator CRDs
 		if strings.Contains(crd.Spec.Group, "cluster.x-k8s.io") &&
-			crd.Spec.Group != "operator.cluster.x-k8s.io" &&
-			crd.Spec.Group != "ipam.cluster.x-k8s.io" {
+			crd.Spec.Group != "operator.cluster.x-k8s.io" {
 			Expect(clusterProxy.GetClient().Delete(ctx, &crd)).To(Succeed())
 		}
 	}
