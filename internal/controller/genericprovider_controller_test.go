@@ -30,6 +30,7 @@ import (
 	"k8s.io/utils/ptr"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	clusterctlv1 "sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3"
+	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -411,7 +412,7 @@ releaseSeries:
 				for _, cond := range provider.GetStatus().Conditions {
 					if cond.Type == operatorv1.PreflightCheckCondition {
 						t.Log(t.Name(), provider.GetName(), cond)
-						if cond.Status == metav1.ConditionStatus(corev1.ConditionTrue) {
+						if cond.Status == metav1.ConditionTrue {
 							return true
 						}
 					}
@@ -420,9 +421,8 @@ releaseSeries:
 				return false
 			}, timeout).Should(BeEquivalentTo(true))
 
-			// Delete the old configmap before creating the new one to avoid conflicts
+			// creating another configmap with another version
 			if tc.newVersion != currentVersion {
-				g.Expect(env.CleanupAndWait(ctx, dummyFutureConfigMap(namespace, currentVersion))).To(Succeed())
 				g.Expect(env.CreateAndWait(ctx, dummyFutureConfigMap(namespace, tc.newVersion))).To(Succeed())
 			}
 
@@ -462,7 +462,7 @@ releaseSeries:
 				for _, cond := range provider.GetStatus().Conditions {
 					if cond.Type == operatorv1.PreflightCheckCondition {
 						t.Log(t.Name(), provider.GetName(), cond)
-						if cond.Status == metav1.ConditionStatus(corev1.ConditionTrue) {
+						if cond.Status == metav1.ConditionTrue {
 							allFound = true
 							break
 						}
@@ -477,7 +477,7 @@ releaseSeries:
 				for _, cond := range provider.GetStatus().Conditions {
 					if cond.Type == operatorv1.ProviderUpgradedCondition {
 						t.Log(t.Name(), provider.GetName(), cond)
-						if cond.Status == metav1.ConditionStatus(corev1.ConditionTrue) {
+						if cond.Status == metav1.ConditionTrue {
 							allFound = tc.newVersion != currentVersion
 							break
 						}
@@ -505,7 +505,7 @@ releaseSeries:
 				for _, cond := range provider.GetStatus().Conditions {
 					if cond.Type == operatorv1.ProviderUpgradedCondition {
 						t.Log(t.Name(), provider.GetName(), cond)
-						if cond.Status == metav1.ConditionStatus(corev1.ConditionTrue) {
+						if cond.Status == metav1.ConditionTrue {
 							allSet = tc.newVersion != currentVersion
 							break
 						}
@@ -631,7 +631,7 @@ func TestReconcilerPreflightConditionsFromCoreProviderEvents(t *testing.T) {
 			return false
 		}
 
-		if meta.IsStatusConditionTrue(coreProvider.GetStatus().Conditions, operatorv1.PreflightCheckCondition) && meta.IsStatusConditionTrue(coreProvider.GetStatus().Conditions, operatorv1.ProviderInstalledCondition) {
+		if conditions.IsTrue(coreProvider, operatorv1.PreflightCheckCondition) && conditions.IsTrue(coreProvider, operatorv1.ProviderInstalledCondition) {
 			return true
 		}
 
@@ -641,14 +641,12 @@ func TestReconcilerPreflightConditionsFromCoreProviderEvents(t *testing.T) {
 	patchHelper, err := patch.NewHelper(coreProvider, env)
 	g.Expect(err).ToNot(HaveOccurred())
 
-	status := coreProvider.GetStatus()
-	meta.SetStatusCondition(&status.Conditions, metav1.Condition{
+	conditions.Set(coreProvider, metav1.Condition{
 		Type:    clusterv1.ReadyCondition,
 		Status:  metav1.ConditionTrue,
 		Reason:  "Ready",
 		Message: "Provider is ready",
 	})
-	coreProvider.SetStatus(status)
 	g.Expect(patchHelper.Patch(ctx, coreProvider)).To(Succeed())
 
 	g.Eventually(func() bool {
@@ -656,7 +654,7 @@ func TestReconcilerPreflightConditionsFromCoreProviderEvents(t *testing.T) {
 			return false
 		}
 
-		if meta.IsStatusConditionTrue(infrastructureProvider.GetStatus().Conditions, operatorv1.PreflightCheckCondition) {
+		if conditions.IsTrue(infrastructureProvider, operatorv1.PreflightCheckCondition) {
 			return true
 		}
 
@@ -759,7 +757,7 @@ func TestProviderConfigSecretChanges(t *testing.T) {
 			g.Expect(env.CreateAndWait(ctx, provider.DeepCopy())).To(Succeed())
 			objs = append(objs, provider)
 
-			g.Eventually(generateExpectedResultChecker(provider, corev1.ConditionTrue, func(s string) bool { return s != "" }), timeout).Should(BeEquivalentTo(true))
+			g.Eventually(generateExpectedResultChecker(provider, metav1.ConditionTrue, func(s string) bool { return s != "" }), timeout).Should(BeEquivalentTo(true))
 
 			initialHash := provider.GetAnnotations()[appliedSpecHashAnnotation]
 
@@ -913,7 +911,7 @@ func TestProviderSpecChanges(t *testing.T) {
 				g.Expect(env.Cleanup(ctx, provider, dummyConfigMap(namespace))).To(Succeed())
 			}()
 
-			g.Eventually(generateExpectedResultChecker(provider, corev1.ConditionTrue, func(s string) bool {
+			g.Eventually(generateExpectedResultChecker(provider, metav1.ConditionTrue, func(s string) bool {
 				return s != ""
 			}), timeout).Should(BeEquivalentTo(true))
 
@@ -940,7 +938,7 @@ func TestProviderSpecChanges(t *testing.T) {
 			}).Should(Succeed())
 
 			if !tc.expectError {
-				g.Eventually(generateExpectedResultChecker(provider, corev1.ConditionTrue, func(s string) bool {
+				g.Eventually(generateExpectedResultChecker(provider, metav1.ConditionTrue, func(s string) bool {
 					if tc.expectHashChange {
 						return s != currentHash
 					}
@@ -948,13 +946,13 @@ func TestProviderSpecChanges(t *testing.T) {
 					return s == currentHash
 				}), timeout).Should(BeEquivalentTo(true))
 			} else {
-				g.Eventually(generateExpectedResultChecker(provider, corev1.ConditionFalse, func(s string) bool { return s == currentHash }), timeout).Should(BeEquivalentTo(true))
+				g.Eventually(generateExpectedResultChecker(provider, metav1.ConditionFalse, func(s string) bool { return s == currentHash }), timeout).Should(BeEquivalentTo(true))
 			}
 		})
 	}
 }
 
-func generateExpectedResultChecker(provider genericprovider.GenericProvider, condStatus corev1.ConditionStatus, hashCheck func(string) bool) func() bool {
+func generateExpectedResultChecker(provider genericprovider.GenericProvider, condStatus metav1.ConditionStatus, hashCheck func(string) bool) func() bool {
 	return func() bool {
 		if err := env.Get(ctx, client.ObjectKeyFromObject(provider), provider); err != nil {
 			return false
@@ -965,9 +963,9 @@ func generateExpectedResultChecker(provider genericprovider.GenericProvider, con
 			return false
 		}
 
-		condition := meta.FindStatusCondition(provider.GetStatus().Conditions, operatorv1.ProviderInstalledCondition)
+		condition := conditions.Get(provider, operatorv1.ProviderInstalledCondition)
 
-		return condition != nil && condition.Status == metav1.ConditionStatus(condStatus)
+		return condition != nil && condition.Status == condStatus
 	}
 }
 

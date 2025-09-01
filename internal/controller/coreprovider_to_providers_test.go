@@ -20,7 +20,6 @@ import (
 	"testing"
 
 	. "github.com/onsi/gomega"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
@@ -51,7 +50,7 @@ func TestCoreProviderToProvidersMapper(t *testing.T) {
 						Conditions: []metav1.Condition{
 							{
 								Type:               clusterv1.ReadyCondition,
-								Status:             metav1.ConditionStatus(corev1.ConditionTrue),
+								Status:             metav1.ConditionTrue,
 								LastTransitionTime: metav1.Now(),
 								Message:            "Provider is ready",
 							},
@@ -91,7 +90,7 @@ func TestCoreProviderToProvidersMapper(t *testing.T) {
 						Conditions: []metav1.Condition{
 							{
 								Type:               operatorv1.PreflightCheckCondition,
-								Status:             metav1.ConditionStatus(corev1.ConditionFalse),
+								Status:             metav1.ConditionFalse,
 								LastTransitionTime: metav1.Now(),
 								Reason:             operatorv1.WaitingForCoreProviderReadyReason,
 								Message:            "Core provider is not ready",
@@ -113,7 +112,7 @@ func TestCoreProviderToProvidersMapper(t *testing.T) {
 						Conditions: []metav1.Condition{
 							{
 								Type:               operatorv1.PreflightCheckCondition,
-								Status:             metav1.ConditionStatus(corev1.ConditionTrue),
+								Status:             metav1.ConditionTrue,
 								LastTransitionTime: metav1.Now(),
 								Message:            "Core provider is ready",
 							},

@@ -27,7 +27,6 @@ import (
 	apijson "k8s.io/apimachinery/pkg/util/json"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -46,6 +45,7 @@ import (
 	configclient "sigs.k8s.io/cluster-api/cmd/clusterctl/client/config"
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/repository"
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/yamlprocessor"
+	"sigs.k8s.io/cluster-api/util/conditions"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -340,7 +340,7 @@ func (p *PhaseReconciler) Load(ctx context.Context) (*Result, error) {
 
 	p.repo, err = p.configmapRepository(ctx, labelSelector, InNamespace(p.provider.GetNamespace()), WithAdditionalManifests(additionalManifests))
 	if err != nil {
-		return &Result{}, wrapPhaseError(err, "failed to load the repository", operatorv1.ProviderInstalledCondition)
+		return &Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.ProviderInstalledCondition)
 	}
 
 	if spec.Version == "" {
@@ -758,14 +758,12 @@ func (p *PhaseReconciler) Upgrade(ctx context.Context) (*Result, error) {
 
 	log.Info("Provider successfully upgraded")
 
-	status := p.provider.GetStatus()
-	meta.SetStatusCondition(&status.Conditions, metav1.Condition{
+	conditions.Set(p.provider, metav1.Condition{
 		Type:    operatorv1.ProviderUpgradedCondition,
 		Status:  metav1.ConditionTrue,
 		Reason:  "ProviderUpgraded",
 		Message: "Provider upgraded successfully",
 	})
-	p.provider.SetStatus(status)
 
 	return &Result{}, nil
 }
@@ -794,14 +792,12 @@ func (p *PhaseReconciler) Install(ctx context.Context) (*Result, error) {
 
 	log.Info("Provider successfully installed")
 
-	status := p.provider.GetStatus()
-	meta.SetStatusCondition(&status.Conditions, metav1.Condition{
+	conditions.Set(p.provider, metav1.Condition{
 		Type:    operatorv1.ProviderInstalledCondition,
 		Status:  metav1.ConditionTrue,
 		Reason:  "ProviderInstalled",
 		Message: "Provider installed successfully",
 	})
-	p.provider.SetStatus(status)
 
 	return &Result{}, nil
 }

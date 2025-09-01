@@ -22,7 +22,6 @@ import (
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 
@@ -32,6 +31,7 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/util/errors"
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
+	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/patch"
 	ctrl "sigs.k8s.io/controller-runtime"
 
@@ -153,7 +153,7 @@ func (r *GenericProviderHealthCheckReconciler) Reconcile(ctx context.Context, re
 	}
 
 	// Compare provider's Ready condition with the deployment's Available condition and stop if they already match.
-	currentReadyCondition := meta.FindStatusCondition(status.Conditions, clusterv1.ReadyCondition)
+	currentReadyCondition := conditions.Get(typedProvider, clusterv1.ReadyCondition)
 	if currentReadyCondition != nil && deploymentAvailableCondition != nil && currentReadyCondition.Status == metav1.ConditionStatus(deploymentAvailableCondition.Status) {
 		return result, nil
 	}
@@ -165,20 +165,25 @@ func (r *GenericProviderHealthCheckReconciler) Reconcile(ctx context.Context, re
 	}
 
 	if deploymentAvailableCondition != nil {
-		r.setReadyConditionFromDeployment(typedProvider, deploymentAvailableCondition)
-	} else {
-		status := typedProvider.GetStatus()
-		meta.SetStatusCondition(&status.Conditions, metav1.Condition{
-			Type:    clusterv1.ReadyCondition,
-			Status:  metav1.ConditionFalse,
-			Reason:  operatorv1.NoDeploymentAvailableConditionReason,
-			Message: "No deployment available to determine readiness",
+		reason := deploymentAvailableCondition.Reason
+		if reason == "" {
+			reason = operatorv1.DeploymentAvailableReason
+		}
+		conditions.Set(typedProvider, metav1.Condition{
+			Type:   clusterv1.ReadyCondition,
+			Status: metav1.ConditionStatus(deploymentAvailableCondition.Status),
+			Reason: reason,
 		})
-		typedProvider.SetStatus(status)
+	} else {
+		conditions.Set(typedProvider, metav1.Condition{
+			Type:   clusterv1.ReadyCondition,
+			Status: metav1.ConditionFalse,
+			Reason: operatorv1.NoDeploymentAvailableConditionReason,
+		})
 	}
 
 	// Don't requeue immediately if the deployment is not ready, but rather wait 5 seconds.
-	if meta.IsStatusConditionFalse(status.Conditions, clusterv1.ReadyCondition) {
+	if conditions.IsFalse(typedProvider, clusterv1.ReadyCondition) {
 		result = ctrl.Result{RequeueAfter: 5 * time.Second}
 	}
 
@@ -214,27 +219,6 @@ func getDeploymentCondition(status appsv1.DeploymentStatus, condType appsv1.Depl
 	}
 
 	return nil
-}
-
-func (r *GenericProviderHealthCheckReconciler) setReadyConditionFromDeployment(typedProvider operatorv1.GenericProvider, deploymentAvailableCondition *appsv1.DeploymentCondition) {
-	reason := deploymentAvailableCondition.Reason
-	if reason == "" {
-		// Default reason if deployment condition doesn't have one
-		if deploymentAvailableCondition.Status == corev1.ConditionTrue {
-			reason = "DeploymentAvailable"
-		} else {
-			reason = "DeploymentNotAvailable"
-		}
-	}
-
-	status := typedProvider.GetStatus()
-	meta.SetStatusCondition(&status.Conditions, metav1.Condition{
-		Type:    clusterv1.ReadyCondition,
-		Status:  metav1.ConditionStatus(deploymentAvailableCondition.Status),
-		Reason:  reason,
-		Message: fmt.Sprintf("Deployment availability is %s", deploymentAvailableCondition.Status),
-	})
-	typedProvider.SetStatus(status)
 }
 
 func (r *GenericProviderHealthCheckReconciler) providerDeploymentPredicates() predicate.Funcs {

@@ -137,6 +137,7 @@ func TestConfigmapRepository(t *testing.T) {
 	}
 	metadata := `
 apiVersion: clusterctl.cluster.x-k8s.io/v1alpha3
+kind: Metadata
 releaseSeries:
   - major: 0
 	minor: 4

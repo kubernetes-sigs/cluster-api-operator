@@ -25,7 +25,6 @@ import (
 	"github.com/google/go-github/v52/github"
 	"golang.org/x/oauth2"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/version"
@@ -69,14 +68,12 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 	// Ensure that the CoreProvider is called "cluster-api".
 	if mapper(provider) == clusterctlv1.CoreProviderType {
 		if provider.ProviderName() != configclient.ClusterAPIProviderName {
-			status := provider.GetStatus()
-			meta.SetStatusCondition(&status.Conditions, metav1.Condition{
+			conditions.Set(provider, metav1.Condition{
 				Type:    operatorv1.PreflightCheckCondition,
 				Status:  metav1.ConditionFalse,
 				Reason:  operatorv1.IncorrectCoreProviderNameReason,
 				Message: fmt.Sprintf(incorrectCoreProviderNameMessage, provider.ProviderName(), configclient.ClusterAPIProviderName),
 			})
-			provider.SetStatus(status)
 
 			return fmt.Errorf("incorrect CoreProvider name: %s, it should be %s", provider.ProviderName(), configclient.ClusterAPIProviderName)
 		}
@@ -90,14 +87,12 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 
 	if !isPredefinedProvider {
 		if spec.FetchConfig == nil || spec.FetchConfig.Selector == nil && spec.FetchConfig.URL == "" && spec.FetchConfig.OCI == "" {
-			status := provider.GetStatus()
-			meta.SetStatusCondition(&status.Conditions, metav1.Condition{
+			conditions.Set(provider, metav1.Condition{
 				Type:    operatorv1.PreflightCheckCondition,
 				Status:  metav1.ConditionFalse,
 				Reason:  operatorv1.FetchConfigValidationErrorReason,
 				Message: "Either Selector, OCI URL or provider URL must be provided for a not predefined provider",
 			})
-			provider.SetStatus(status)
 
 			return fmt.Errorf("either selector, OCI URL or provider URL must be provided for a not predefined provider %s", provider.GetName())
 		}
@@ -105,14 +100,12 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 
 	if spec.FetchConfig != nil && spec.FetchConfig.Selector != nil && spec.FetchConfig.URL != "" {
 		// If FetchConfiguration is not nil, exactly one of `URL` or `Selector` must be specified.
-		status := provider.GetStatus()
-		meta.SetStatusCondition(&status.Conditions, metav1.Condition{
+		conditions.Set(provider, metav1.Condition{
 			Type:    operatorv1.PreflightCheckCondition,
 			Status:  metav1.ConditionFalse,
 			Reason:  operatorv1.FetchConfigValidationErrorReason,
 			Message: "Only one of Selector and URL must be provided, not both",
 		})
-		provider.SetStatus(status)
 
 		return fmt.Errorf("only one of Selector and URL must be provided for provider %s", provider.GetName())
 	}
@@ -131,14 +124,12 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 				&oauth2.Token{AccessToken: string(token)},
 			)))
 			if _, _, err := githubClient.Organizations.List(ctx, "kubernetes-sigs", nil); err != nil {
-				status := provider.GetStatus()
-				meta.SetStatusCondition(&status.Conditions, metav1.Condition{
+				conditions.Set(provider, metav1.Condition{
 					Type:    operatorv1.PreflightCheckCondition,
 					Status:  metav1.ConditionFalse,
 					Reason:  operatorv1.InvalidGithubTokenReason,
 					Message: invalidGithubTokenMessage,
 				})
-				provider.SetStatus(status)
 
 				return fmt.Errorf("failed to validate provided github token: %w", err)
 			}
@@ -160,14 +151,12 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 		if mapper(provider) == clusterctlv1.CoreProviderType && mapper(p) == clusterctlv1.CoreProviderType {
 			log.Info(moreThanOneCoreProviderInstanceExistsMessage)
 
-			status := provider.GetStatus()
-			meta.SetStatusCondition(&status.Conditions, metav1.Condition{
+			conditions.Set(provider, metav1.Condition{
 				Type:    operatorv1.PreflightCheckCondition,
 				Status:  metav1.ConditionFalse,
 				Reason:  operatorv1.MoreThanOneProviderInstanceExistsReason,
 				Message: moreThanOneCoreProviderInstanceExistsMessage,
 			})
-			provider.SetStatus(status)
 
 			return fmt.Errorf("only one instance of CoreProvider is allowed")
 		}
@@ -177,14 +166,12 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 			message := fmt.Sprintf(moreThanOneProviderInstanceExistsMessage, p.GetName(), p.GetNamespace())
 			log.Info(message)
 
-			status := provider.GetStatus()
-			meta.SetStatusCondition(&status.Conditions, metav1.Condition{
+			conditions.Set(provider, metav1.Condition{
 				Type:    operatorv1.PreflightCheckCondition,
 				Status:  metav1.ConditionFalse,
 				Reason:  operatorv1.MoreThanOneProviderInstanceExistsReason,
 				Message: message,
 			})
-			provider.SetStatus(status)
 
 			return fmt.Errorf("only one %s provider is allowed in the cluster", p.GetName())
 		}
@@ -200,27 +187,23 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 		if !ready {
 			log.Info(waitingForCoreProviderReadyMessage)
 
-			status := provider.GetStatus()
-			meta.SetStatusCondition(&status.Conditions, metav1.Condition{
+			conditions.Set(provider, metav1.Condition{
 				Type:    operatorv1.PreflightCheckCondition,
 				Status:  metav1.ConditionFalse,
 				Reason:  operatorv1.WaitingForCoreProviderReadyReason,
 				Message: waitingForCoreProviderReadyMessage,
 			})
-			provider.SetStatus(status)
 
 			return errCoreProviderWait
 		}
 	}
 
-	status := provider.GetStatus()
-	meta.SetStatusCondition(&status.Conditions, metav1.Condition{
+	conditions.Set(provider, metav1.Condition{
 		Type:    operatorv1.PreflightCheckCondition,
 		Status:  metav1.ConditionTrue,
 		Reason:  "PreflightChecksPassed",
 		Message: "All preflight checks passed",
 	})
-	provider.SetStatus(status)
 
 	log.Info("Preflight checks passed")
 
@@ -236,14 +219,12 @@ func checkProviderVersion(ctx context.Context, providerVersion string, provider 
 	if err != nil {
 		log.Info("Version contains invalid value")
 
-		status := provider.GetStatus()
-		meta.SetStatusCondition(&status.Conditions, metav1.Condition{
+		conditions.Set(provider, metav1.Condition{
 			Type:    operatorv1.PreflightCheckCondition,
 			Status:  metav1.ConditionFalse,
 			Reason:  operatorv1.IncorrectVersionFormatReason,
 			Message: err.Error(),
 		})
-		provider.SetStatus(status)
 
 		return fmt.Errorf("version contains invalid value for provider %q", provider.GetName())
 	}
@@ -256,14 +237,12 @@ func checkProviderVersion(ctx context.Context, providerVersion string, provider 
 		}
 
 		if targetVersion.Major() < installedVersion.Major() || targetVersion.Major() == installedVersion.Major() && targetVersion.Minor() < installedVersion.Minor() {
-			status := provider.GetStatus()
-			meta.SetStatusCondition(&status.Conditions, metav1.Condition{
+			conditions.Set(provider, metav1.Condition{
 				Type:    operatorv1.PreflightCheckCondition,
 				Status:  metav1.ConditionFalse,
 				Reason:  operatorv1.UnsupportedProviderDowngradeReason,
 				Message: unsupportedProviderDowngradeMessage,
 			})
-			provider.SetStatus(status)
 
 			return fmt.Errorf("downgrade is not supported for provider %q", provider.GetName())
 		}
