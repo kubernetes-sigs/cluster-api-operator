@@ -23,7 +23,6 @@ import (
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -312,7 +311,7 @@ func TestReconcilerPreflightConditions(t *testing.T) {
 						return false
 					}
 
-					if meta.IsStatusConditionTrue(p.GetStatus().Conditions, operatorv1.PreflightCheckCondition) {
+					if conditions.IsTrue(p, operatorv1.PreflightCheckCondition) {
 						return true
 					}
 				}
