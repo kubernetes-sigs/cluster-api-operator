@@ -167,6 +167,7 @@ func (r *GenericProviderHealthCheckReconciler) Reconcile(ctx context.Context, re
 		if reason == "" {
 			reason = operatorv1.DeploymentAvailableReason
 		}
+
 		conditions.Set(typedProvider, metav1.Condition{
 			Type:   clusterv1.ReadyCondition,
 			Status: metav1.ConditionStatus(deploymentAvailableCondition.Status),
