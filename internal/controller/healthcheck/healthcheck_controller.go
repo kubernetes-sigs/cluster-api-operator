@@ -25,7 +25,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	kerrors "k8s.io/apimachinery/pkg/util/errors"
@@ -147,8 +146,7 @@ func (r *GenericProviderHealthCheckReconciler) Reconcile(ctx context.Context, re
 	typedProvider := r.Provider
 
 	// Stop earlier if this provider is not fully installed yet.
-	status := typedProvider.GetStatus()
-	if !meta.IsStatusConditionTrue(status.Conditions, operatorv1.ProviderInstalledCondition) {
+	if !conditions.IsTrue(typedProvider, operatorv1.ProviderInstalledCondition) {
 		return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
 	}
 

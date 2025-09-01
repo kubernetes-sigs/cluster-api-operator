@@ -22,7 +22,6 @@ import (
 	"testing"
 
 	. "github.com/onsi/gomega"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	clusterctlv1 "sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3"
@@ -143,7 +142,7 @@ func TestPreflightChecks(t *testing.T) {
 			},
 			expectedCondition: metav1.Condition{
 				Type:    operatorv1.PreflightCheckCondition,
-				Status:  metav1.ConditionStatus(corev1.ConditionFalse),
+				Status:  metav1.ConditionFalse,
 				Reason:  operatorv1.MoreThanOneProviderInstanceExistsReason,
 				Message: moreThanOneCoreProviderInstanceExistsMessage,
 			},
@@ -185,7 +184,7 @@ func TestPreflightChecks(t *testing.T) {
 			},
 			expectedCondition: metav1.Condition{
 				Type:    operatorv1.PreflightCheckCondition,
-				Status:  metav1.ConditionStatus(corev1.ConditionTrue),
+				Status:  metav1.ConditionTrue,
 				Reason:  "PreflightChecksPassed",
 				Message: "All preflight checks passed",
 			},
@@ -235,7 +234,7 @@ func TestPreflightChecks(t *testing.T) {
 			},
 			expectedCondition: metav1.Condition{
 				Type:    operatorv1.PreflightCheckCondition,
-				Status:  metav1.ConditionStatus(corev1.ConditionFalse),
+				Status:  metav1.ConditionFalse,
 				Reason:  operatorv1.MoreThanOneProviderInstanceExistsReason,
 				Message: moreThanOneCoreProviderInstanceExistsMessage,
 			},
@@ -278,7 +277,7 @@ func TestPreflightChecks(t *testing.T) {
 							Conditions: []metav1.Condition{
 								{
 									Type:               clusterv1.ReadyCondition,
-									Status:             metav1.ConditionStatus(corev1.ConditionTrue),
+									Status:             metav1.ConditionTrue,
 									LastTransitionTime: metav1.Now(),
 								},
 							},
@@ -288,7 +287,7 @@ func TestPreflightChecks(t *testing.T) {
 			},
 			expectedCondition: metav1.Condition{
 				Type:    operatorv1.PreflightCheckCondition,
-				Status:  metav1.ConditionStatus(corev1.ConditionTrue),
+				Status:  metav1.ConditionTrue,
 				Reason:  "PreflightChecksPassed",
 				Message: "All preflight checks passed",
 			},
@@ -332,7 +331,7 @@ func TestPreflightChecks(t *testing.T) {
 							Conditions: []metav1.Condition{
 								{
 									Type:               clusterv1.ReadyCondition,
-									Status:             metav1.ConditionStatus(corev1.ConditionFalse),
+									Status:             metav1.ConditionFalse,
 									LastTransitionTime: metav1.Now(),
 								},
 							},
@@ -342,7 +341,7 @@ func TestPreflightChecks(t *testing.T) {
 			},
 			expectedCondition: metav1.Condition{
 				Type:    operatorv1.PreflightCheckCondition,
-				Status:  metav1.ConditionStatus(corev1.ConditionFalse),
+				Status:  metav1.ConditionFalse,
 				Reason:  operatorv1.WaitingForCoreProviderReadyReason,
 				Message: "Waiting for the CoreProvider to be installed.",
 			},
@@ -400,7 +399,7 @@ func TestPreflightChecks(t *testing.T) {
 							Conditions: []metav1.Condition{
 								{
 									Type:               clusterv1.ReadyCondition,
-									Status:             metav1.ConditionStatus(corev1.ConditionTrue),
+									Status:             metav1.ConditionTrue,
 									LastTransitionTime: metav1.Now(),
 								},
 							},
@@ -410,7 +409,7 @@ func TestPreflightChecks(t *testing.T) {
 			},
 			expectedCondition: metav1.Condition{
 				Type:    operatorv1.PreflightCheckCondition,
-				Status:  metav1.ConditionStatus(corev1.ConditionTrue),
+				Status:  metav1.ConditionTrue,
 				Reason:  "PreflightChecksPassed",
 				Message: "All preflight checks passed",
 			},
@@ -468,7 +467,7 @@ func TestPreflightChecks(t *testing.T) {
 							Conditions: []metav1.Condition{
 								{
 									Type:               clusterv1.ReadyCondition,
-									Status:             metav1.ConditionStatus(corev1.ConditionTrue),
+									Status:             metav1.ConditionTrue,
 									LastTransitionTime: metav1.Now(),
 								},
 							},
@@ -478,7 +477,7 @@ func TestPreflightChecks(t *testing.T) {
 			},
 			expectedCondition: metav1.Condition{
 				Type:    operatorv1.PreflightCheckCondition,
-				Status:  metav1.ConditionStatus(corev1.ConditionTrue),
+				Status:  metav1.ConditionTrue,
 				Reason:  "PreflightChecksPassed",
 				Message: "All preflight checks passed",
 			},
@@ -521,7 +520,7 @@ func TestPreflightChecks(t *testing.T) {
 			},
 			expectedCondition: metav1.Condition{
 				Type:    operatorv1.PreflightCheckCondition,
-				Status:  metav1.ConditionStatus(corev1.ConditionFalse),
+				Status:  metav1.ConditionFalse,
 				Reason:  operatorv1.MoreThanOneProviderInstanceExistsReason,
 				Message: fmt.Sprintf(moreThanOneProviderInstanceExistsMessage, "aws", namespaceName2),
 			},
@@ -591,7 +590,7 @@ func TestPreflightChecks(t *testing.T) {
 			},
 			expectedCondition: metav1.Condition{
 				Type:    operatorv1.PreflightCheckCondition,
-				Status:  metav1.ConditionStatus(corev1.ConditionTrue),
+				Status:  metav1.ConditionTrue,
 				Reason:  "PreflightChecksPassed",
 				Message: "All preflight checks passed",
 			},
@@ -619,7 +618,7 @@ func TestPreflightChecks(t *testing.T) {
 			},
 			expectedCondition: metav1.Condition{
 				Type:    operatorv1.PreflightCheckCondition,
-				Status:  metav1.ConditionStatus(corev1.ConditionFalse),
+				Status:  metav1.ConditionFalse,
 				Reason:  operatorv1.IncorrectVersionFormatReason,
 				Message: "could not parse \"one\" as version",
 			},
@@ -648,7 +647,7 @@ func TestPreflightChecks(t *testing.T) {
 			},
 			expectedCondition: metav1.Condition{
 				Type:    operatorv1.PreflightCheckCondition,
-				Status:  metav1.ConditionStatus(corev1.ConditionTrue),
+				Status:  metav1.ConditionTrue,
 				Reason:  "PreflightChecksPassed",
 				Message: "All preflight checks passed",
 			},
@@ -682,7 +681,7 @@ func TestPreflightChecks(t *testing.T) {
 			},
 			expectedCondition: metav1.Condition{
 				Type:    operatorv1.PreflightCheckCondition,
-				Status:  metav1.ConditionStatus(corev1.ConditionFalse),
+				Status:  metav1.ConditionFalse,
 				Reason:  operatorv1.FetchConfigValidationErrorReason,
 				Message: "Only one of Selector and URL must be provided, not both",
 			},
@@ -709,7 +708,7 @@ func TestPreflightChecks(t *testing.T) {
 			},
 			expectedCondition: metav1.Condition{
 				Type:    operatorv1.PreflightCheckCondition,
-				Status:  metav1.ConditionStatus(corev1.ConditionTrue),
+				Status:  metav1.ConditionTrue,
 				Reason:  "PreflightChecksPassed",
 				Message: "All preflight checks passed",
 			},
@@ -739,7 +738,7 @@ func TestPreflightChecks(t *testing.T) {
 				Type:    operatorv1.PreflightCheckCondition,
 				Reason:  operatorv1.FetchConfigValidationErrorReason,
 				Message: "Either Selector, OCI URL or provider URL must be provided for a not predefined provider",
-				Status:  metav1.ConditionStatus(corev1.ConditionFalse),
+				Status:  metav1.ConditionFalse,
 			},
 			providerList: &operatorv1.CoreProviderList{},
 		},
@@ -771,7 +770,7 @@ func TestPreflightChecks(t *testing.T) {
 				Type:    operatorv1.PreflightCheckCondition,
 				Reason:  operatorv1.FetchConfigValidationErrorReason,
 				Message: "Either Selector, OCI URL or provider URL must be provided for a not predefined provider",
-				Status:  metav1.ConditionStatus(corev1.ConditionFalse),
+				Status:  metav1.ConditionFalse,
 			},
 			providerList: &operatorv1.CoreProviderList{},
 		},
@@ -817,44 +816,44 @@ func TestPreflightChecksUpgradesDowngrades(t *testing.T) {
 		name                    string
 		installedVersion        string
 		targetVersion           string
-		expectedConditionStatus corev1.ConditionStatus
+		expectedConditionStatus metav1.ConditionStatus
 		expectedError           bool
 	}{
 		{
 			name:                    "upgrade core provider major version",
-			expectedConditionStatus: corev1.ConditionTrue,
+			expectedConditionStatus: metav1.ConditionTrue,
 			installedVersion:        "v1.9.0",
 			targetVersion:           "v2.0.0",
 		},
 		{
 			name:                    "upgrade core provider minor version",
-			expectedConditionStatus: corev1.ConditionTrue,
+			expectedConditionStatus: metav1.ConditionTrue,
 			installedVersion:        "v1.9.0",
 			targetVersion:           "v1.10.0",
 		},
 		{
 			name:                    "downgrade core provider major version",
-			expectedConditionStatus: corev1.ConditionFalse,
+			expectedConditionStatus: metav1.ConditionFalse,
 			installedVersion:        "v2.0.0",
 			targetVersion:           "v1.9.0",
 			expectedError:           true,
 		},
 		{
 			name:                    "downgrade core provider minor version",
-			expectedConditionStatus: corev1.ConditionFalse,
+			expectedConditionStatus: metav1.ConditionFalse,
 			installedVersion:        "v1.10.0",
 			targetVersion:           "v1.9.0",
 			expectedError:           true,
 		},
 		{
 			name:                    "downgrade core provider patch version",
-			expectedConditionStatus: corev1.ConditionTrue,
+			expectedConditionStatus: metav1.ConditionTrue,
 			installedVersion:        "v1.10.1",
 			targetVersion:           "v1.10.0",
 		},
 		{
 			name:                    "same version",
-			expectedConditionStatus: corev1.ConditionTrue,
+			expectedConditionStatus: metav1.ConditionTrue,
 			installedVersion:        "v1.10.0",
 			targetVersion:           "v1.10.0",
 		},
@@ -906,9 +905,9 @@ func TestPreflightChecksUpgradesDowngrades(t *testing.T) {
 			// Check if proper condition is returned
 			gs.Expect(provider.GetStatus().Conditions).To(HaveLen(1))
 			gs.Expect(provider.GetStatus().Conditions[0].Type).To(Equal(operatorv1.PreflightCheckCondition))
-			gs.Expect(provider.GetStatus().Conditions[0].Status).To(Equal(metav1.ConditionStatus(tc.expectedConditionStatus)))
+			gs.Expect(provider.GetStatus().Conditions[0].Status).To(Equal(tc.expectedConditionStatus))
 
-			if tc.expectedConditionStatus == corev1.ConditionFalse {
+			if tc.expectedConditionStatus == metav1.ConditionFalse {
 				gs.Expect(provider.GetStatus().Conditions[0].Reason).To(Equal(operatorv1.UnsupportedProviderDowngradeReason))
 			}
 		})

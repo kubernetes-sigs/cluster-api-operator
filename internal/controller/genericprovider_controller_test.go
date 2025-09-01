@@ -259,7 +259,7 @@ func TestReconcilerPreflightConditions(t *testing.T) {
 							Conditions: []metav1.Condition{
 								{
 									Type:   clusterv1.ReadyCondition,
-									Status: metav1.ConditionStatus(corev1.ConditionTrue),
+									Status: metav1.ConditionTrue,
 								},
 							},
 						},
@@ -560,7 +560,7 @@ func TestProviderShouldNotBeInstalledWhenCoreProviderNotReady(t *testing.T) {
 			return false
 		}
 
-		return meta.FindStatusCondition(coreProvider.GetStatus().Conditions, operatorv1.ProviderInstalledCondition) != nil && meta.IsStatusConditionFalse(coreProvider.GetStatus().Conditions, operatorv1.ProviderInstalledCondition)
+		return conditions.Has(coreProvider, operatorv1.ProviderInstalledCondition) && conditions.IsFalse(coreProvider, operatorv1.ProviderInstalledCondition)
 	}, timeout).Should(BeEquivalentTo(true))
 
 	g.Consistently(func() bool {
@@ -568,9 +568,9 @@ func TestProviderShouldNotBeInstalledWhenCoreProviderNotReady(t *testing.T) {
 			return false
 		}
 
-		return !meta.IsStatusConditionTrue(controlPlaneProvider.GetStatus().Conditions, operatorv1.PreflightCheckCondition) &&
-			!meta.IsStatusConditionTrue(controlPlaneProvider.GetStatus().Conditions, operatorv1.ProviderInstalledCondition) &&
-			!meta.IsStatusConditionTrue(controlPlaneProvider.GetStatus().Conditions, clusterv1.ReadyCondition)
+		return !conditions.IsTrue(controlPlaneProvider, operatorv1.PreflightCheckCondition) &&
+			!conditions.IsTrue(controlPlaneProvider, operatorv1.ProviderInstalledCondition) &&
+			!conditions.IsTrue(controlPlaneProvider, clusterv1.ReadyCondition)
 	}, timeout/3).Should(BeEquivalentTo(true))
 }
 
@@ -619,7 +619,7 @@ func TestReconcilerPreflightConditionsFromCoreProviderEvents(t *testing.T) {
 			return false
 		}
 
-		if meta.FindStatusCondition(infrastructureProvider.GetStatus().Conditions, operatorv1.PreflightCheckCondition) != nil && meta.IsStatusConditionFalse(infrastructureProvider.GetStatus().Conditions, operatorv1.PreflightCheckCondition) {
+		if conditions.Has(infrastructureProvider, operatorv1.PreflightCheckCondition) && conditions.IsFalse(infrastructureProvider, operatorv1.PreflightCheckCondition) {
 			return true
 		}
 

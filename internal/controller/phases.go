@@ -757,7 +757,6 @@ func (p *PhaseReconciler) Upgrade(ctx context.Context) (*Result, error) {
 	}
 
 	log.Info("Provider successfully upgraded")
-
 	conditions.Set(p.provider, metav1.Condition{
 		Type:    operatorv1.ProviderUpgradedCondition,
 		Status:  metav1.ConditionTrue,
@@ -791,7 +790,6 @@ func (p *PhaseReconciler) Install(ctx context.Context) (*Result, error) {
 	}
 
 	log.Info("Provider successfully installed")
-
 	conditions.Set(p.provider, metav1.Condition{
 		Type:    operatorv1.ProviderInstalledCondition,
 		Status:  metav1.ConditionTrue,
