@@ -17,7 +17,7 @@ jobs:
         id: vars
         run: echo "go_version=$(make go-version)" >> $GITHUB_OUTPUT
       - name: Set up Go
-        uses: actions/setup-go@41dfa10bad2bb2ae585af6ee5bb4d7d973ad74ed # tag=v5.1.0
+        uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # tag=v6.0.0
         with:
           go-version: ${{ steps.vars.outputs.go_version }}
       - name: golangci-lint
