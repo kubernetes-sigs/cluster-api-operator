@@ -49,6 +49,9 @@ spec:
 {{- if $core.manifestPatches }}
   manifestPatches: {{ toYaml $core.manifestPatches | nindent 4 }}
 {{- end }}
+{{- if $core.fetchConfig }}
+  fetchConfig: {{ toYaml $core.fetchConfig | nindent 4 }}
+{{- end }}
 {{- if $core.additionalManifests }}
   additionalManifests:
     name: {{ $core.additionalManifests.name }}

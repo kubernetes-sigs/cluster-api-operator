@@ -40,6 +40,9 @@ spec:
 {{- if $bootstrap.manifestPatches }}
   manifestPatches: {{ toYaml $bootstrap.manifestPatches | nindent 4 }}
 {{- end }}
+{{- if $bootstrap.fetchConfig }}
+  fetchConfig: {{ toYaml $bootstrap.fetchConfig | nindent 4 }}
+{{- end }}
 {{- if $bootstrap.additionalManifests }}
   additionalManifests:
     name: {{ $bootstrap.additionalManifests.name }}
