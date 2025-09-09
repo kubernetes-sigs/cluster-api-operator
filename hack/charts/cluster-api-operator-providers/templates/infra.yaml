@@ -71,6 +71,9 @@ spec:
 {{- if $infra.manifestPatches }}
   manifestPatches: {{- toYaml $infra.manifestPatches | nindent 4 }}
 {{- end }} {{/* if $infra.manifestPatches */}}
+{{- if $infra.fetchConfig }}
+  fetchConfig: {{ toYaml $infra.fetchConfig | nindent 4 }}
+{{- end }}
 {{- if $infra.additionalManifests }}
   additionalManifests:
     name: {{ $infra.additionalManifests.name }}

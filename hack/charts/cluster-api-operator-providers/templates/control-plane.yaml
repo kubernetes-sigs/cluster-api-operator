@@ -58,6 +58,9 @@ spec:
 {{- if $controlPlane.manifestPatches }}
   manifestPatches: {{ toYaml $controlPlane.manifestPatches | nindent 4 }}
 {{- end }}
+{{- if $controlPlane.fetchConfig }}
+  fetchConfig: {{ toYaml $controlPlane.fetchConfig | nindent 4 }}
+{{- end }}
 {{- if $controlPlane.additionalManifests }}
   additionalManifests:
     name: {{ $controlPlane.additionalManifests.name }}

@@ -2,150 +2,51 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema#",
   "type": "object",
   "properties": {
-    "logLevel": {
-      "type": "integer",
-      "default": 2
-    },
-    "replicaCount": {
-      "type": "integer",
-      "default": 1
-    },
-    "leaderElection": {
+    "fetchConfig": {
       "type": "object",
-      "properties": {
-        "enabled": {
-          "type": "boolean",
-          "default": true
-        },
-        "leaseDuration": {
-          "type": "string"
-        },
-        "renewDeadline": {
-          "type": "string"
-        },
-        "retryPeriod": {
-          "type": "string"
-        }
-      }
+      "deprecated": true,
+      "description": "This field is deprecated and will be removed in future versions. Prefer declaring fetchConfig under the individual providers instead."
     },
-    "image": {
+    "core": {
+      "oneOf": [
+        { "type": "object" },
+        { "type": "null" }
+      ]
+    },
+    "bootstrap": {
       "type": "object",
-      "properties": {
-        "manager": {
-          "type": "object",
-          "properties": {
-            "repository": {
-              "type": "string"
-            },
-            "tag": {
-              "type": "string"
-            },
-            "pullPolicy": {
-              "type": "string",
-              "enum": ["Always", "IfNotPresent", "Never"]
-            },
-            "registry": {
-              "type": "string"
-            },
-            "digest": {
-              "type": "string"
-            }
-          }
-        }
-      }
+      "oneOf": [
+        { "type": "object" },
+        { "type": "null" }
+      ]
     },
-    "env": {
+    "controlPlane": {
       "type": "object",
-      "properties": {
-        "manager": {
-          "type": "array"
-        }
-      }
+      "oneOf": [
+        { "type": "object" },
+        { "type": "null" }
+      ]
     },
-    "diagnosticsAddress": {
-      "type": "string",
-      "default": ":8443"
-    },
-    "healthAddr": {
-      "type": "string",
-      "default": ":9440"
-    },
-    "profilerAddress": {
-      "type": "string",
-      "default": ":6060"
-    },
-    "contentionProfiling": {
-      "type": "boolean",
-      "default": false
-    },
-    "insecureDiagnostics": {
-      "type": "boolean",
-      "default": false
-    },
-    "watchConfigSecret": {
-      "type": "boolean",
-      "default": false
-    },
-    "imagePullSecrets": {
-      "type": "object"
-    },
-    "resources": {
+    "infrastructure": {
       "type": "object",
-      "properties": {
-        "manager": {
-          "type": "object"
-        }
-      }
+      "oneOf": [
+        { "type": "object" },
+        { "type": "null" }
+      ]
     },
-    "containerSecurityContext": {
-      "type": "object"
-    },
-    "affinity": {
-      "type": "object"
-    },
-    "tolerations": {
-      "type": "array"
-    },
-    "volumes": {
-      "type": "array"
-    },
-    "volumeMounts": {
+    "addon": {
       "type": "object",
-      "properties": {
-        "manager": {
-          "type": "array"
-        }
-      }
+      "oneOf": [
+        { "type": "object" },
+        { "type": "null" }
+      ]
     },
-    "deploymentLabels": {
-      "type": "object"
-    },
-    "deploymentAnnotations": {
-      "type": "object"
-    },
-    "podLabels": {
-      "type": "object"
-    },
-    "podAnnotations": {
-      "type": "object"
-    },
-    "securityContext": {
-      "type": "object"
-    },
-    "strategy": {
-      "type": "object"
-    },
-    "nodeSelector": {
-      "type": "object"
-    },
-    "topologySpreadConstraints": {
-      "type": "array"
-    },
-    "podDnsPolicy": {
-      "type": "string"
-    },
-    "podDnsConfig": {
-      "type": "object"
+    "ipam": {
+      "type": "object",
+      "oneOf": [
+        { "type": "object" },
+        { "type": "null" }
+      ]
     }
   }
 }

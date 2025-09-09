@@ -43,6 +43,9 @@ spec:
 {{- if $addon.manifestPatches }}
   manifestPatches: {{ toYaml $addon.manifestPatches | nindent 4 }}
 {{- end }}
+{{- if $addon.fetchConfig }}
+  fetchConfig: {{ toYaml $addon.fetchConfig | nindent 4 }}
+{{- end }}
 {{- if $addon.additionalManifests }}
   additionalManifests:
     name: {{ $addon.additionalManifests.name }}
