@@ -24,7 +24,7 @@ jobs:
       id: vars
       run: echo "go_version=$(make go-version)" >> $GITHUB_OUTPUT
     - name: Set up Go
-      uses: actions/setup-go@0c52d547c9bc32b1aa3301fd7a9cb496313a4491 # tag=v5.0.0
+      uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # tag=v6.0.0
       with:
         # go-version: ${{ steps.vars.outputs.go_version }} // TODO: we have to use go version consistent with test infra jobs
         go-version: '1.24'
