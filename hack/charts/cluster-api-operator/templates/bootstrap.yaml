@@ -28,21 +28,20 @@ metadata:
     "helm.sh/hook-weight": "2"
     {{- end }}
     "argocd.argoproj.io/sync-wave": "2"
-{{- if or $bootstrapVersion $.Values.configSecret.name }}
+{{- if or $bootstrapVersion $.Values.configSecret.name (($bootstrap).configSecret).name }}
 spec:
 {{- end}}
 {{- if $bootstrapVersion }}
   version: {{ $bootstrapVersion }}
 {{- end }}
-{{- if $.Values.configSecret.name }}
-  configSecret:
-    name: {{ $.Values.configSecret.name }}
-    {{- if $.Values.configSecret.namespace }}
-    namespace: {{ $.Values.configSecret.namespace }}
-    {{- end }}
+{{- if (default (($bootstrap).configSecret).name (($.Values).configSecret).name) }}
+{{- include "capi-operator.configSecret" (dict "ROOT" $ "ARGUMENT" $bootstrap) | nindent 2 }}
 {{- end }}
 {{- if $bootstrap.manifestPatches }}
   manifestPatches: {{ toYaml $bootstrap.manifestPatches | nindent 4 }}
+{{- end }}
+{{- if $bootstrap.fetchConfig }}
+  fetchConfig: {{ toYaml $bootstrap.fetchConfig | nindent 4 }}
 {{- end }}
 {{- if $bootstrap.additionalManifests }}
   additionalManifests:

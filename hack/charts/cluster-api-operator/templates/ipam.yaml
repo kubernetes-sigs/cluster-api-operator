@@ -28,7 +28,7 @@ metadata:
     "helm.sh/hook-weight": "2"
     {{- end }}
     "argocd.argoproj.io/sync-wave": "2"
-{{- if or $ipamVersion $.Values.configSecret.name $.Values.manager $.Values.additionalDeployments }}
+{{- if or $ipamVersion $.Values.configSecret.name $.Values.manager $.Values.additionalDeployments (($ipam).configSecret).name }}
 spec:
 {{- end }}
 {{- if $ipamVersion }}
@@ -57,15 +57,14 @@ spec:
   {{- end }}
 {{- end }}
 {{- end }}
-{{- if $.Values.configSecret.name }}
-  configSecret:
-    name: {{ $.Values.configSecret.name }}
-    {{- if $.Values.configSecret.namespace }}
-    namespace: {{ $.Values.configSecret.namespace }}
-    {{- end }}
+{{- if (default (($ipam).configSecret).name (($.Values).configSecret).name) }}
+{{- include "capi-operator.configSecret" (dict "ROOT" $ "ARGUMENT" $ipam) | nindent 2 }}
 {{- end }}
 {{- if $ipam.manifestPatches }}
   manifestPatches: {{ toYaml $ipam.manifestPatches | nindent 4 }}
+{{- end }}
+{{- if $ipam.fetchConfig }}
+  fetchConfig: {{ toYaml $ipam.fetchConfig | nindent 4 }}
 {{- end }}
 {{- if $.Values.additionalDeployments }}
   additionalDeployments: {{ toYaml $.Values.additionalDeployments | nindent 4 }}

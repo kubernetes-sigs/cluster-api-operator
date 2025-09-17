@@ -28,11 +28,14 @@ metadata:
     "helm.sh/hook-weight": "2"
     {{- end }}
     "argocd.argoproj.io/sync-wave": "2"
-{{- if or $addonVersion $.Values.secretName }}
+{{- if or $addonVersion $.Values.secretName $.Values.configSecret.name (($addon).configSecret).name }}
 spec:
 {{- end}}
 {{- if $addonVersion }}
   version: {{ $addonVersion }}
+{{- end }}
+{{- if (default (($addon).configSecret).name (($.Values).configSecret).name) }}
+{{- include "capi-operator.configSecret" (dict "ROOT" $ "ARGUMENT" $addon) | nindent 2 }}
 {{- end }}
 {{- if $.Values.secretName }}
   secretName: {{ $.Values.secretName }}
@@ -42,6 +45,9 @@ spec:
 {{- end }}
 {{- if $addon.manifestPatches }}
   manifestPatches: {{ toYaml $addon.manifestPatches | nindent 4 }}
+{{- end }}
+{{- if $addon.fetchConfig }}
+  fetchConfig: {{ toYaml $addon.fetchConfig | nindent 4 }}
 {{- end }}
 {{- if $addon.additionalManifests }}
   additionalManifests:

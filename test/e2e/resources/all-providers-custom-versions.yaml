@@ -71,6 +71,9 @@ metadata:
     "argocd.argoproj.io/sync-wave": "2"
 spec:
   version: v0.2.6
+  configSecret:
+    name: test-secret-name
+    namespace: test-secret-namespace
 ---
 # Source: cluster-api-operator/templates/bootstrap.yaml
 apiVersion: operator.cluster.x-k8s.io/v1alpha2
