@@ -22152,24 +22152,6 @@ spec:
         - effect: NoSchedule
           key: node-role.kubernetes.io/control-plane
 ---
-# Source: cluster-api-operator/templates/addon.yaml
-# Addon provider
----
-# Source: cluster-api-operator/templates/bootstrap.yaml
-# Bootstrap provider
----
-# Source: cluster-api-operator/templates/control-plane.yaml
-# Control plane provider
----
-# Source: cluster-api-operator/templates/core.yaml
-# Core provider
----
-# Source: cluster-api-operator/templates/infra.yaml
-# Infrastructure providers
----
-# Source: cluster-api-operator/templates/ipam.yaml
-# IPAM providers
----
 # Source: cluster-api-operator/templates/operator-components.yaml
 apiVersion: cert-manager.io/v1
 kind: Certificate
