@@ -30,7 +30,6 @@ import (
 	"k8s.io/utils/ptr"
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
 	. "sigs.k8s.io/cluster-api-operator/test/framework"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/test/framework"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
@@ -59,7 +58,7 @@ var _ = Describe("Install ControlPlane, Core, Bootstrap providers in an air-gapp
 							MatchLabels: map[string]string{
 								operatorv1.ConfigMapNameLabel:        coreProviderName,
 								operatorv1.ConfigMapTypeLabel:        "core",
-								operatorv1.ConfigMapVersionLabelName: "v1.7.7",
+								operatorv1.ConfigMapVersionLabelName: previousCAPIVersion,
 							},
 						},
 					},
@@ -73,12 +72,12 @@ var _ = Describe("Install ControlPlane, Core, Bootstrap providers in an air-gapp
 
 		By("should successfully create ConfigMaps with ControlPlane, Core, and Bootstrap provider manifests")
 		configMapFiles := []string{
-			"core-cluster-api-v1.7.7.yaml",
-			"core-cluster-api-v1.8.0.yaml",
-			"bootstrap-kubeadm-v1.7.7.yaml",
-			"bootstrap-kubeadm-v1.8.0.yaml",
-			"controlplane-kubeadm-v1.7.7.yaml",
-			"controlplane-kubeadm-v1.8.0.yaml",
+			"core-cluster-api-v1.10.4.yaml",
+			"core-cluster-api-v1.11.0.yaml",
+			"bootstrap-kubeadm-v1.10.4.yaml",
+			"bootstrap-kubeadm-v1.11.0.yaml",
+			"controlplane-kubeadm-v1.10.4.yaml",
+			"controlplane-kubeadm-v1.11.0.yaml",
 		}
 
 		for _, fileName := range configMapFiles {
@@ -112,7 +111,7 @@ var _ = Describe("Install ControlPlane, Core, Bootstrap providers in an air-gapp
 
 		By("Waiting for Core provider to be ready")
 		WaitFor(ctx, For(coreProvider).In(bootstrapCluster).ToSatisfy(
-			HaveStatusConditionsTrue(coreProvider, operatorv1.PreflightCheckCondition, operatorv1.ProviderInstalledCondition, clusterv1.ReadyCondition),
+			HaveStatusConditionsTrue(coreProvider, operatorv1.PreflightCheckCondition, operatorv1.ProviderInstalledCondition, "Ready"),
 		), e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
 		By("Validating that status.InstalledVersion is set")
@@ -156,7 +155,7 @@ var _ = Describe("Install ControlPlane, Core, Bootstrap providers in an air-gapp
 		})
 	})
 
-	It("should successfully create, upgrade (v1.7.7 -> v1.8.0) and delete a BootstrapProvider from a ConfigMap", func() {
+	It("should successfully create, upgrade (v1.10.4 -> v1.11.0) and delete a BootstrapProvider from a ConfigMap", func() {
 		bootstrapProvider := &operatorv1.BootstrapProvider{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      customProviderName,
@@ -169,7 +168,7 @@ var _ = Describe("Install ControlPlane, Core, Bootstrap providers in an air-gapp
 							MatchLabels: map[string]string{
 								operatorv1.ConfigMapNameLabel:        "kubeadm",
 								operatorv1.ConfigMapTypeLabel:        "bootstrap",
-								operatorv1.ConfigMapVersionLabelName: "v1.7.7",
+								operatorv1.ConfigMapVersionLabelName: previousCAPIVersion,
 							},
 						},
 					},
@@ -182,7 +181,7 @@ var _ = Describe("Install ControlPlane, Core, Bootstrap providers in an air-gapp
 
 		By("Waiting for BootstrapProvider to be ready")
 		WaitFor(ctx, For(bootstrapProvider).In(bootstrapCluster).ToSatisfy(
-			HaveStatusConditionsTrue(bootstrapProvider, operatorv1.PreflightCheckCondition, operatorv1.ProviderInstalledCondition, clusterv1.ReadyCondition),
+			HaveStatusConditionsTrue(bootstrapProvider, operatorv1.PreflightCheckCondition, operatorv1.ProviderInstalledCondition, "Ready"),
 		), e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
 		By("Waiting for the BootstrapProvider Deployment to be ready")
@@ -194,15 +193,32 @@ var _ = Describe("Install ControlPlane, Core, Bootstrap providers in an air-gapp
 		By("Validating that status.InstalledVersion is set")
 		Expect(ptr.Equal(bootstrapProvider.Status.InstalledVersion, ptr.To(bootstrapProvider.Spec.Version))).To(BeTrue())
 
+		By("Updating the CoreProvider to new Cluster API version first (required for contract version compatibility)")
+		patch := client.MergeFrom(coreProvider.DeepCopy())
+		coreProvider.Spec.Version = nextCAPIVersion
+		coreProvider.Spec.FetchConfig.Selector.MatchLabels[operatorv1.ConfigMapVersionLabelName] = nextCAPIVersion
+		Expect(bootstrapCluster.Patch(ctx, coreProvider, patch)).To(Succeed())
+
+		By("Waiting for CoreProvider to be ready after upgrade")
+		WaitFor(ctx, For(coreProvider).In(bootstrapCluster).ToSatisfy(
+			HaveStatusConditionsTrue(coreProvider, operatorv1.PreflightCheckCondition, operatorv1.ProviderInstalledCondition, operatorv1.ProviderUpgradedCondition, "Ready"),
+		), e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
+
+		By("Waiting for the Core provider Deployment to be ready after upgrade")
+		framework.WaitForDeploymentsAvailable(ctx, framework.WaitForDeploymentsAvailableInput{
+			Getter:     bootstrapClusterProxy.GetClient(),
+			Deployment: &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: coreProviderDeploymentName, Namespace: capiSystemNamespace}},
+		}, e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
+
 		By("Updating the BootstrapProvider to new Custer API version")
-		patch := client.MergeFrom(bootstrapProvider.DeepCopy())
+		patch = client.MergeFrom(bootstrapProvider.DeepCopy())
 		bootstrapProvider.Spec.Version = nextCAPIVersion
 		bootstrapProvider.Spec.FetchConfig.Selector.MatchLabels[operatorv1.ConfigMapVersionLabelName] = nextCAPIVersion
 		Expect(bootstrapCluster.Patch(ctx, bootstrapProvider, patch)).To(Succeed())
 
 		By("Waiting for BootstrapProvider to be ready")
 		WaitFor(ctx, For(bootstrapProvider).In(bootstrapCluster).ToSatisfy(
-			HaveStatusConditionsTrue(bootstrapProvider, operatorv1.PreflightCheckCondition, operatorv1.ProviderInstalledCondition, operatorv1.ProviderUpgradedCondition, clusterv1.ReadyCondition),
+			HaveStatusConditionsTrue(bootstrapProvider, operatorv1.PreflightCheckCondition, operatorv1.ProviderInstalledCondition, operatorv1.ProviderUpgradedCondition, "Ready"),
 		), e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
 		By("Waiting for the BootstrapProvider Deployment to be ready")
@@ -229,7 +245,7 @@ var _ = Describe("Install ControlPlane, Core, Bootstrap providers in an air-gapp
 			e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 	})
 
-	It("should successfully create, upgrade (v1.7.7 -> v1.8.0) and delete a ControlPlaneProvider from a ConfigMap", func() {
+	It("should successfully create, upgrade (v1.10.4 -> v1.11.0) and delete a ControlPlaneProvider from a ConfigMap", func() {
 		controlPlaneProvider := &operatorv1.ControlPlaneProvider{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      customProviderName,
@@ -242,7 +258,7 @@ var _ = Describe("Install ControlPlane, Core, Bootstrap providers in an air-gapp
 							MatchLabels: map[string]string{
 								operatorv1.ConfigMapNameLabel:        "kubeadm",
 								operatorv1.ConfigMapTypeLabel:        "controlplane",
-								operatorv1.ConfigMapVersionLabelName: "v1.7.7",
+								operatorv1.ConfigMapVersionLabelName: previousCAPIVersion,
 							},
 						},
 					},
@@ -255,7 +271,7 @@ var _ = Describe("Install ControlPlane, Core, Bootstrap providers in an air-gapp
 
 		By("Waiting for ControlPlaneProvider to be ready")
 		WaitFor(ctx, For(controlPlaneProvider).In(bootstrapCluster).ToSatisfy(
-			HaveStatusConditionsTrue(controlPlaneProvider, operatorv1.PreflightCheckCondition, operatorv1.ProviderInstalledCondition, clusterv1.ReadyCondition),
+			HaveStatusConditionsTrue(controlPlaneProvider, operatorv1.PreflightCheckCondition, operatorv1.ProviderInstalledCondition, "Ready"),
 		), e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
 		By("Waiting for the ControlPlaneProvider Deployment to be ready")
@@ -267,15 +283,32 @@ var _ = Describe("Install ControlPlane, Core, Bootstrap providers in an air-gapp
 		By("Validating that status.InstalledVersion is set")
 		Expect(ptr.Equal(controlPlaneProvider.Status.InstalledVersion, ptr.To(controlPlaneProvider.Spec.Version))).To(BeTrue())
 
+		By("Updating the CoreProvider to new Cluster API version first (required for contract version compatibility)")
+		patch := client.MergeFrom(coreProvider.DeepCopy())
+		coreProvider.Spec.Version = nextCAPIVersion
+		coreProvider.Spec.FetchConfig.Selector.MatchLabels[operatorv1.ConfigMapVersionLabelName] = nextCAPIVersion
+		Expect(bootstrapCluster.Patch(ctx, coreProvider, patch)).To(Succeed())
+
+		By("Waiting for CoreProvider to be ready after upgrade")
+		WaitFor(ctx, For(coreProvider).In(bootstrapCluster).ToSatisfy(
+			HaveStatusConditionsTrue(coreProvider, operatorv1.PreflightCheckCondition, operatorv1.ProviderInstalledCondition, operatorv1.ProviderUpgradedCondition, "Ready"),
+		), e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
+
+		By("Waiting for the Core provider Deployment to be ready after upgrade")
+		framework.WaitForDeploymentsAvailable(ctx, framework.WaitForDeploymentsAvailableInput{
+			Getter:     bootstrapClusterProxy.GetClient(),
+			Deployment: &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: coreProviderDeploymentName, Namespace: capiSystemNamespace}},
+		}, e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
+
 		By("Updating the ControlPlaneProvider to new Custer API version")
-		patch := client.MergeFrom(controlPlaneProvider.DeepCopy())
+		patch = client.MergeFrom(controlPlaneProvider.DeepCopy())
 		controlPlaneProvider.Spec.Version = nextCAPIVersion
 		controlPlaneProvider.Spec.FetchConfig.Selector.MatchLabels[operatorv1.ConfigMapVersionLabelName] = nextCAPIVersion
 		Expect(bootstrapCluster.Patch(ctx, controlPlaneProvider, patch)).To(Succeed())
 
 		By("Waiting for ControlPlaneProvider to be ready")
 		WaitFor(ctx, For(controlPlaneProvider).In(bootstrapCluster).ToSatisfy(
-			HaveStatusConditionsTrue(controlPlaneProvider, operatorv1.PreflightCheckCondition, operatorv1.ProviderInstalledCondition, operatorv1.ProviderUpgradedCondition, clusterv1.ReadyCondition),
+			HaveStatusConditionsTrue(controlPlaneProvider, operatorv1.PreflightCheckCondition, operatorv1.ProviderInstalledCondition, operatorv1.ProviderUpgradedCondition, "Ready"),
 		), e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
 		By("Waiting for the ControlPlaneProvider Deployment to be ready")
@@ -302,7 +335,7 @@ var _ = Describe("Install ControlPlane, Core, Bootstrap providers in an air-gapp
 			e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 	})
 
-	It("should successfully upgrade CoreProvider (v1.7.7 -> v1.8.0)", func() {
+	It("should successfully upgrade CoreProvider (v1.10.4 -> v1.11.0)", func() {
 		Expect(bootstrapCluster.Get(ctx, client.ObjectKeyFromObject(coreProvider), coreProvider)).To(Succeed())
 
 		By("Updating the CoreProvider to new Custer API version")
@@ -313,7 +346,7 @@ var _ = Describe("Install ControlPlane, Core, Bootstrap providers in an air-gapp
 
 		By("Waiting for CoreProvider to be ready")
 		WaitFor(ctx, For(coreProvider).In(bootstrapCluster).ToSatisfy(
-			HaveStatusConditionsTrue(coreProvider, operatorv1.PreflightCheckCondition, operatorv1.ProviderInstalledCondition, operatorv1.ProviderUpgradedCondition, clusterv1.ReadyCondition),
+			HaveStatusConditionsTrue(coreProvider, operatorv1.PreflightCheckCondition, operatorv1.ProviderInstalledCondition, operatorv1.ProviderUpgradedCondition, "Ready"),
 		), e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
 		By("Waiting for the CoreProvider Deployment to be ready")

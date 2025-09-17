@@ -137,6 +137,7 @@ func TestConfigmapRepository(t *testing.T) {
 	}
 	metadata := `
 apiVersion: clusterctl.cluster.x-k8s.io/v1alpha3
+kind: Metadata
 releaseSeries:
   - major: 0
 	minor: 4
@@ -471,28 +472,30 @@ func TestRepositoryProxy(t *testing.T) {
 
 	awsMetadata := `
 apiVersion: clusterctl.cluster.x-k8s.io/v1alpha3
+kind: Metadata
 releaseSeries:
   - major: 2
     minor: 4
-    contract: v1beta1
+    contract: v1beta2
   - major: 2
     minor: 3
-    contract: v1beta1`
+    contract: v1beta2`
 
 	awsMetaReleaseSeries := []clusterctlv1.ReleaseSeries{
 		{
 			Major:    2,
 			Minor:    4,
-			Contract: "v1beta1",
+			Contract: "v1beta2",
 		}, {
 			Major:    2,
 			Minor:    3,
-			Contract: "v1beta1",
+			Contract: "v1beta2",
 		},
 	}
 
 	metadata := `
 apiVersion: clusterctl.cluster.x-k8s.io/v1alpha3
+kind: Metadata
 releaseSeries:
   - major: 0
     minor: 4

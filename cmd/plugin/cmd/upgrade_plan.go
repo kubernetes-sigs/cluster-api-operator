@@ -27,7 +27,7 @@ import (
 	"github.com/spf13/cobra"
 	appsv1 "k8s.io/api/apps/v1"
 
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	clusterctlv1 "sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3"
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/cluster"
 	configclient "sigs.k8s.io/cluster-api/cmd/clusterctl/client/config"
@@ -348,7 +348,7 @@ func getInstalledProviders(ctx context.Context, client ctrlclient.Client) ([]ope
 	// Iterate through installed providers and create a list of upgrade plans.
 	genericProviders := []operatorv1.GenericProvider{}
 
-	contract := "v1beta1"
+	contract := "v1beta2"
 
 	// Get Core Providers.
 	var coreProviderList operatorv1.CoreProviderList

@@ -25,10 +25,10 @@ import (
 
 	"github.com/spf13/cobra"
 
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	clusterctlv1 "sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3"
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/cluster"
 	configclient "sigs.k8s.io/cluster-api/cmd/clusterctl/client/config"
@@ -354,7 +354,7 @@ func checkProviderReadiness(ctx context.Context, client ctrlclient.Client, gener
 
 		// Checking Ready condition for the provider.
 		for _, cond := range genericProvider.GetConditions() {
-			if cond.Type == clusterv1.ReadyCondition && cond.Status == corev1.ConditionTrue {
+			if cond.Type == clusterv1.ReadyCondition && cond.Status == metav1.ConditionTrue {
 				log.Info("Provider is ready", "Type", genericProvider.GetType(), "Name", genericProvider.GetName(), "Namespace", genericProvider.GetNamespace())
 
 				return true, nil

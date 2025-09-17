@@ -94,7 +94,7 @@ linters:
         - pkg: sigs.k8s.io/controller-runtime
           alias: ctrl
         # CAPI
-        - pkg: sigs.k8s.io/cluster-api/api/v1beta1
+        - pkg: sigs.k8s.io/cluster-api/api/core/v1beta2
           alias: clusterv1
         - pkg: sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3
           alias: clusterctlv1

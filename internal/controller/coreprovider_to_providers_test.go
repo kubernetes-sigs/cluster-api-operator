@@ -20,11 +20,10 @@ import (
 	"testing"
 
 	. "github.com/onsi/gomega"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -48,10 +47,10 @@ func TestCoreProviderToProvidersMapper(t *testing.T) {
 				},
 				Status: operatorv1.CoreProviderStatus{
 					ProviderStatus: operatorv1.ProviderStatus{
-						Conditions: clusterv1.Conditions{
+						Conditions: []metav1.Condition{
 							{
 								Type:               clusterv1.ReadyCondition,
-								Status:             corev1.ConditionTrue,
+								Status:             metav1.ConditionTrue,
 								LastTransitionTime: metav1.Now(),
 								Message:            "Provider is ready",
 							},
@@ -88,10 +87,10 @@ func TestCoreProviderToProvidersMapper(t *testing.T) {
 				},
 				Status: operatorv1.InfrastructureProviderStatus{
 					ProviderStatus: operatorv1.ProviderStatus{
-						Conditions: clusterv1.Conditions{
+						Conditions: []metav1.Condition{
 							{
 								Type:               operatorv1.PreflightCheckCondition,
-								Status:             corev1.ConditionFalse,
+								Status:             metav1.ConditionFalse,
 								LastTransitionTime: metav1.Now(),
 								Reason:             operatorv1.WaitingForCoreProviderReadyReason,
 								Message:            "Core provider is not ready",
@@ -110,10 +109,10 @@ func TestCoreProviderToProvidersMapper(t *testing.T) {
 				},
 				Status: operatorv1.InfrastructureProviderStatus{
 					ProviderStatus: operatorv1.ProviderStatus{
-						Conditions: clusterv1.Conditions{
+						Conditions: []metav1.Condition{
 							{
 								Type:               operatorv1.PreflightCheckCondition,
-								Status:             corev1.ConditionTrue,
+								Status:             metav1.ConditionTrue,
 								LastTransitionTime: metav1.Now(),
 								Message:            "Core provider is ready",
 							},
