@@ -44,6 +44,12 @@ spec:
 {{- if $bootstrap.manifestPatches }}
   manifestPatches: {{ toYaml $bootstrap.manifestPatches | nindent 4 }}
 {{- end }}
+{{- if and (kindIs "map" $.Values.fetchConfig) (hasKey $.Values.fetchConfig $bootstrapName) }}
+  fetchConfig:
+    {{- range $key, $value := index $.Values.fetchConfig $bootstrapName }}
+      {{ $key }}: {{ $value }}
+    {{- end }}
+{{- end }}
 {{- if $bootstrap.additionalManifests }}
   additionalManifests:
     name: {{ $bootstrap.additionalManifests.name }}

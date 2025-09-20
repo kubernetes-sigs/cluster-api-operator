@@ -40,8 +40,8 @@ spec:
 {{- range $key, $value := $.Values.manager.featureGates }}
   {{- if eq $key $controlPlaneName }}
     featureGates:
-    {{- range $k, $v := $value }}
-      {{ $k }}: {{ $v }}
+    {{- range $key, $value := $value }}
+      {{ $key }}: {{ $value }}
     {{- end }}
   {{- end }}
 {{- end }}
@@ -56,6 +56,12 @@ spec:
 {{- end }}
 {{- if $controlPlane.manifestPatches }}
   manifestPatches: {{ toYaml $controlPlane.manifestPatches | nindent 4 }}
+{{- end }}
+{{- if and (kindIs "map" $.Values.fetchConfig) (hasKey $.Values.fetchConfig $controlPlaneName) }}
+  fetchConfig:
+    {{- range $key, $value := index $.Values.fetchConfig $controlPlaneName }}
+      {{ $key }}: {{ $value }}
+    {{- end }}
 {{- end }}
 {{- if $controlPlane.additionalManifests }}
   additionalManifests:

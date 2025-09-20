@@ -43,6 +43,12 @@ spec:
 {{- if $addon.manifestPatches }}
   manifestPatches: {{ toYaml $addon.manifestPatches | nindent 4 }}
 {{- end }}
+{{- if and (kindIs "map" $.Values.fetchConfig) (hasKey $.Values.fetchConfig $addonName) }}
+  fetchConfig:
+    {{- range $key, $value := index $.Values.fetchConfig $addonName }}
+      {{ $key }}: {{ $value }}
+    {{- end }}
+{{- end }}
 {{- if $addon.additionalManifests }}
   additionalManifests:
     name: {{ $addon.additionalManifests.name }}

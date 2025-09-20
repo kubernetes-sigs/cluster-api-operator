@@ -42,6 +42,10 @@ manager.featureGates: {}
 #     kubeadm:
 #       ClusterTopology: true
 fetchConfig: {}
+# k3s:                    # Name, required, must match any provider type name
+#   oci: ""               # Optional
+#   selector: {}          # Optional
+#   url: ""               # Optional
 # ---
 # Common configuration secret options
 configSecret: {}

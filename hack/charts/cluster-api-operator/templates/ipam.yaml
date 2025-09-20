@@ -40,22 +40,18 @@ spec:
 {{- range $key, $value := $.Values.manager.featureGates }}
   {{- if eq $key $ipamName }}
     featureGates:
-    {{- range $k, $v := $value }}
-      {{ $k }}: {{ $v }}
+    {{- range $key, $value := $value }}
+      {{ $key }}: {{ $value }}
     {{- end }}
   {{- end }}
 {{- end }}
 {{- end }}
 {{- end }}
 {{- if and (kindIs "map" $.Values.fetchConfig) (hasKey $.Values.fetchConfig $ipamName) }}
-{{- range $key, $value := $.Values.fetchConfig }}
-  {{- if eq $key $ipamName }}
   fetchConfig:
-    {{- range $k, $v := $value }}
-      {{ $k }}: {{ $v }}
+    {{- range $key, $value := index $.Values.fetchConfig $ipamName }}
+      {{ $key }}: {{ $value }}
     {{- end }}
-  {{- end }}
-{{- end }}
 {{- end }}
 {{- if $.Values.configSecret.name }}
   configSecret:
