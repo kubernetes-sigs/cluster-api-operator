@@ -1,6 +1,6 @@
 {{- if .Values.infrastructure }}
 
-# Deploy bootstrap, and infrastructure components if not specified
+# Deploy bootstrap, and control plane components if not specified
 {{- if not .Values.bootstrap }}
 ---
 apiVersion: v1
