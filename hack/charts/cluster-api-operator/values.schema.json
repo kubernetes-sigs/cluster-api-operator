@@ -42,6 +42,18 @@
         { "type": "object" },
         { "type": "null" }
       ]
+    },
+    "fetchConfig": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "oci": { "type": "string" },
+          "selector": { "type": "object" },
+          "url": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
     }
   }
 }
