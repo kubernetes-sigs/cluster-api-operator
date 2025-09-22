@@ -19,6 +19,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"os"
 	"strings"
 
@@ -44,7 +45,7 @@ type loadOptions struct {
 	runtimeExtensionProviders []string
 	addonProviders            []string
 	targetNamespace           string
-	ociURL                    string
+	artifactURL               string
 	kubeconfig                string
 	existing                  bool
 }
@@ -67,6 +68,9 @@ var loadCmd = &cobra.Command{
 		Alternatively, for multi-provider OCI artifact, a fully specified name can be used for both metadata and components:
 
 		oras push ttl.sh/infrastructure-provider:tag infrastructure-docker-v1.10.0-beta.0-metadata.yaml infrastructure-docker-v1.10.0-beta.0-components.yaml
+
+        If you want to use a GitHub or GitLab release as artifact source, you must provide a full URL, including scheme, host, path, version and file name, e.g.: https://github.com/kubernetes-sigs/cluster-api/releases/v1.10.5/core-components.yaml
+        In this case, the version is set in the URL, and cannot be specified with the provider argument.
 	`),
 	Example: Examples(`
 		# Load CAPI operator manifests from OCI source
@@ -78,11 +82,20 @@ var loadCmd = &cobra.Command{
 		# Prepare provider ConfigMap from OCI, from the given infrastructure provider.
 		capioperator preload --infrastructure=aws -u ttl.sh/infrastructure-provider
 
+        # Prepare provider ConfigMap from GitHub release, from the given infrastructure provider.
+		capioperator preload --infrastructure=aws -u https://github.com/kubernetes-sigs/cluster-api-provider-aws/releases/v2.9.1/infrastructure-components.yaml
+
 		# Prepare provider ConfigMap from OCI with a specific version of the given infrastructure provider in the default namespace.
 		capioperator preload --infrastructure=aws::v2.3.0 -u ttl.sh/infrastructure-provider
 
+        # Prepare provider ConfigMap from GitHub release with a specific version of the given infrastructure provider in the default namespace.
+		capioperator preload --infrastructure=aws -u https://github.com/kubernetes-sigs/cluster-api-provider-aws/releases/v2.3.0/infrastructure-components.yaml
+
 		# Prepare provider ConfigMap from OCI with a specific namespace and the latest version of the given infrastructure provider.
 		capioperator preload --infrastructure=aws:custom-namespace -u ttl.sh/infrastructure-provider
+
+        # Prepare provider ConfigMap from GitHub release, with a specific namespace.
+        capioperator preload --infrastructure=aws:custom-namespace -u https://github.com/kubernetes-sigs/cluster-api-provider-aws/releases/v2.9.1/infrastructure-components.yaml
 
 		# Prepare provider ConfigMap from OCI with a specific version and namespace of the given infrastructure provider.
 		capioperator preload --infrastructure=aws:custom-namespace:v2.3.0 -u ttl.sh/infrastructure-provider
@@ -119,8 +132,8 @@ func init() {
 		"Add-on providers and versions (e.g. helm:v0.1.0) to add to the management cluster.")
 	loadCmd.Flags().StringVarP(&loadOpts.targetNamespace, "target-namespace", "n", "capi-operator-system",
 		"The target namespace where the operator should be deployed. If unspecified, the 'capi-operator-system' namespace is used.")
-	loadCmd.Flags().StringVarP(&loadOpts.ociURL, "artifact-url", "u", "",
-		"The URL of the OCI artifact to collect component manifests from.")
+	loadCmd.Flags().StringVarP(&loadOpts.artifactURL, "artifact-url", "u", "",
+		"The URL to OCI artifact or GitHub/GitLab release, to collect component manifests from.")
 
 	RootCmd.AddCommand(loadCmd)
 }
@@ -128,7 +141,7 @@ func init() {
 func runPreLoad() error {
 	ctx := context.Background()
 
-	if loadOpts.ociURL == "" {
+	if loadOpts.artifactURL == "" {
 		return fmt.Errorf("missing configMap artifacts url")
 	}
 
@@ -136,7 +149,7 @@ func runPreLoad() error {
 
 	// Load Core Provider.
 	if loadOpts.coreProvider != "" {
-		configMap, err := templateConfigMap(ctx, clusterctlv1.CoreProviderType, loadOpts.ociURL, loadOpts.coreProvider, loadOpts.targetNamespace)
+		configMap, err := templateConfigMap(ctx, clusterctlv1.CoreProviderType, loadOpts.artifactURL, loadOpts.coreProvider, loadOpts.targetNamespace)
 
 		if err != nil {
 			return fmt.Errorf("cannot prepare manifests config map for core provider: %w", err)
@@ -147,7 +160,7 @@ func runPreLoad() error {
 
 	// Load Bootstrap Providers.
 	for _, bootstrapProvider := range loadOpts.bootstrapProviders {
-		configMap, err := templateConfigMap(ctx, clusterctlv1.BootstrapProviderType, loadOpts.ociURL, bootstrapProvider, loadOpts.targetNamespace)
+		configMap, err := templateConfigMap(ctx, clusterctlv1.BootstrapProviderType, loadOpts.artifactURL, bootstrapProvider, loadOpts.targetNamespace)
 		if err != nil {
 			return fmt.Errorf("cannot prepare manifests config map for bootstrap provider: %w", err)
 		}
@@ -157,7 +170,7 @@ func runPreLoad() error {
 
 	// Load Infrastructure Providers.
 	for _, infrastructureProvider := range loadOpts.infrastructureProviders {
-		configMap, err := templateConfigMap(ctx, clusterctlv1.InfrastructureProviderType, loadOpts.ociURL, infrastructureProvider, loadOpts.targetNamespace)
+		configMap, err := templateConfigMap(ctx, clusterctlv1.InfrastructureProviderType, loadOpts.artifactURL, infrastructureProvider, loadOpts.targetNamespace)
 		if err != nil {
 			return fmt.Errorf("cannot prepare manifests config map for infrastructure provider: %w", err)
 		}
@@ -167,7 +180,7 @@ func runPreLoad() error {
 
 	// Load Control Plane Providers.
 	for _, controlPlaneProvider := range loadOpts.controlPlaneProviders {
-		configMap, err := templateConfigMap(ctx, clusterctlv1.ControlPlaneProviderType, loadOpts.ociURL, controlPlaneProvider, loadOpts.targetNamespace)
+		configMap, err := templateConfigMap(ctx, clusterctlv1.ControlPlaneProviderType, loadOpts.artifactURL, controlPlaneProvider, loadOpts.targetNamespace)
 		if err != nil {
 			return fmt.Errorf("cannot prepare manifests config map for controlplane provider: %w", err)
 		}
@@ -177,7 +190,7 @@ func runPreLoad() error {
 
 	// Load Add-on Providers.
 	for _, addonProvider := range loadOpts.addonProviders {
-		configMap, err := templateConfigMap(ctx, clusterctlv1.AddonProviderType, loadOpts.ociURL, addonProvider, loadOpts.targetNamespace)
+		configMap, err := templateConfigMap(ctx, clusterctlv1.AddonProviderType, loadOpts.artifactURL, addonProvider, loadOpts.targetNamespace)
 		if err != nil {
 			return fmt.Errorf("cannot prepare manifests config map for addon provider: %w", err)
 		}
@@ -187,7 +200,7 @@ func runPreLoad() error {
 
 	// Load IPAM Providers.
 	for _, ipamProvider := range loadOpts.ipamProviders {
-		configMap, err := templateConfigMap(ctx, clusterctlv1.IPAMProviderType, loadOpts.ociURL, ipamProvider, loadOpts.targetNamespace)
+		configMap, err := templateConfigMap(ctx, clusterctlv1.IPAMProviderType, loadOpts.artifactURL, ipamProvider, loadOpts.targetNamespace)
 		if err != nil {
 			return fmt.Errorf("cannot prepare manifests config map for IPAM provider: %w", err)
 		}
@@ -197,7 +210,7 @@ func runPreLoad() error {
 
 	// Load Runtime Extension Providers.
 	for _, runtimeExtension := range loadOpts.runtimeExtensionProviders {
-		configMap, err := templateConfigMap(ctx, clusterctlv1.RuntimeExtensionProviderType, loadOpts.ociURL, runtimeExtension, loadOpts.targetNamespace)
+		configMap, err := templateConfigMap(ctx, clusterctlv1.RuntimeExtensionProviderType, loadOpts.artifactURL, runtimeExtension, loadOpts.targetNamespace)
 		if err != nil {
 			return fmt.Errorf("cannot prepare manifests config map for runtime extension provider: %w", err)
 		}
@@ -289,16 +302,37 @@ func fetchProviders(ctx context.Context, cl client.Client, providerList genericP
 	return configMaps, nil
 }
 
-func templateConfigMap(ctx context.Context, providerType clusterctlv1.ProviderType, url, providerInput, defaultNamespace string) (*corev1.ConfigMap, error) {
+func templateConfigMap(ctx context.Context, providerType clusterctlv1.ProviderType, providerURL, providerInput, defaultNamespace string) (*corev1.ConfigMap, error) {
 	provider, err := templateGenericProvider(providerType, providerInput, defaultNamespace, "", "")
 	if err != nil {
 		return nil, err
 	}
 
 	spec := provider.GetSpec()
+
+	parsedURL, err := url.Parse(providerURL)
+	if err != nil {
+		return nil, fmt.Errorf("invalid artifact URL: %w", err)
+	}
+
+	if util.IsGitHubDomain(parsedURL) || util.IsGitLabDomain(parsedURL) {
+		// artifact URL referes to a GitHub/GitLab release.
+		if spec.Version != "" {
+			return nil, fmt.Errorf("version cannot be set when artifact URL is GitHub or GitLab: it is specified in the URL")
+		}
+
+		spec.FetchConfig = &operatorv1.FetchConfiguration{
+			URL: providerURL,
+		}
+		provider.SetSpec(spec)
+
+		return providerConfigMap(ctx, provider)
+	}
+
+	// artifact URL refers to an OCI registry.
 	spec.FetchConfig = &operatorv1.FetchConfiguration{
 		OCIConfiguration: operatorv1.OCIConfiguration{
-			OCI: url,
+			OCI: providerURL,
 		},
 	}
 	provider.SetSpec(spec)
@@ -338,9 +372,11 @@ func providerConfigMap(ctx context.Context, provider operatorv1.GenericProvider)
 		return nil, fmt.Errorf("unable to init memory reader: %w", err)
 	}
 
+	spec := provider.GetSpec()
+
 	// If provided store fetch config url in memory reader.
-	if provider.GetSpec().FetchConfig != nil && provider.GetSpec().FetchConfig.URL != "" {
-		_, err := mr.AddProvider(provider.ProviderName(), util.ClusterctlProviderType(provider), provider.GetSpec().FetchConfig.URL)
+	if spec.FetchConfig != nil && spec.FetchConfig.URL != "" {
+		_, err := mr.AddProvider(provider.ProviderName(), util.ClusterctlProviderType(provider), spec.FetchConfig.URL)
 		if err != nil {
 			return nil, fmt.Errorf("cannot add custom url provider: %w", err)
 		}
@@ -361,6 +397,11 @@ func providerConfigMap(ctx context.Context, provider operatorv1.GenericProvider)
 	repo, err := util.RepositoryFactory(ctx, providerConfig, configClient.Variables())
 	if err != nil {
 		return nil, fmt.Errorf("cannot create repository: %w", err)
+	}
+
+	if spec.Version == "" {
+		spec.Version = repo.DefaultVersion()
+		provider.SetSpec(spec)
 	}
 
 	return providercontroller.RepositoryConfigMap(ctx, provider, repo)
