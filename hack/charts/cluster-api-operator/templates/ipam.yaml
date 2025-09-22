@@ -49,9 +49,7 @@ spec:
 {{- end }}
 {{- if and (kindIs "map" $.Values.fetchConfig) (hasKey $.Values.fetchConfig $ipamName) }}
   fetchConfig:
-    {{- range $key, $value := index $.Values.fetchConfig $ipamName }}
-      {{ $key }}: {{ $value }}
-    {{- end }}
+    {{- index $.Values.fetchConfig $ipamName | toYaml | nindent 4 }}
 {{- end }}
 {{- if $.Values.configSecret.name }}
   configSecret:

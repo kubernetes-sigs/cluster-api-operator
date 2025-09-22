@@ -59,9 +59,7 @@ spec:
 {{- end }}
 {{- if and (kindIs "map" $.Values.fetchConfig) (hasKey $.Values.fetchConfig $controlPlaneName) }}
   fetchConfig:
-    {{- range $key, $value := index $.Values.fetchConfig $controlPlaneName }}
-      {{ $key }}: {{ $value }}
-    {{- end }}
+    {{- index $.Values.fetchConfig $controlPlaneName | toYaml | nindent 4 }}
 {{- end }}
 {{- if $controlPlane.additionalManifests }}
   additionalManifests:

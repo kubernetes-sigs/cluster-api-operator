@@ -46,9 +46,7 @@ spec:
 {{- end }}
 {{- if and (kindIs "map" $.Values.fetchConfig) (hasKey $.Values.fetchConfig $bootstrapName) }}
   fetchConfig:
-    {{- range $key, $value := index $.Values.fetchConfig $bootstrapName }}
-      {{ $key }}: {{ $value }}
-    {{- end }}
+    {{- index $.Values.fetchConfig $bootstrapName | toYaml | nindent 4 }}
 {{- end }}
 {{- if $bootstrap.additionalManifests }}
   additionalManifests:
