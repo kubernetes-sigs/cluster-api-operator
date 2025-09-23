@@ -24,7 +24,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
@@ -33,10 +33,11 @@ import (
 const (
 	testMetadata = `
 apiVersion: clusterctl.cluster.x-k8s.io/v1alpha3
+kind: Metadata
 releaseSeries:
-  - major: 0
-    minor: 4
-    contract: v1alpha4
+  - major: 1
+    minor: 11
+    contract: v1beta2
 `
 	testComponents = `
 apiVersion: apps/v1
@@ -69,7 +70,7 @@ spec:
             cpu: 200m
 `
 
-	testCurrentVersion = "v0.4.2"
+	testCurrentVersion = "v1.11.0"
 )
 
 func insertDummyConfig(provider operatorv1.GenericProvider) {
@@ -173,7 +174,7 @@ func TestReconcilerReadyConditions(t *testing.T) {
 				for _, cond := range provider.GetStatus().Conditions {
 					if cond.Type == clusterv1.ReadyCondition {
 						t.Log(t.Name(), provider.GetName(), cond)
-						if cond.Status == tc.expectedAvailability {
+						if cond.Status == metav1.ConditionStatus(tc.expectedAvailability) {
 							return true
 						}
 					}

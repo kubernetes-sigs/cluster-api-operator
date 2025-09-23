@@ -34,7 +34,6 @@ import (
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
 	"sigs.k8s.io/cluster-api-operator/internal/controller/genericprovider"
 	"sigs.k8s.io/cluster-api-operator/util"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	clusterctlv1 "sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3"
 	configclient "sigs.k8s.io/cluster-api/cmd/clusterctl/client/config"
 	"sigs.k8s.io/cluster-api/util/conditions"
@@ -194,7 +193,7 @@ func (r *GenericProviderReconciler) Reconcile(ctx context.Context, req reconcile
 }
 
 func patchProvider(ctx context.Context, provider operatorv1.GenericProvider, patchHelper *patch.Helper, options ...patch.Option) error {
-	conds := []clusterv1.ConditionType{
+	conds := []string{
 		operatorv1.PreflightCheckCondition,
 		operatorv1.ProviderInstalledCondition,
 	}
@@ -212,7 +211,12 @@ func (r *GenericProviderReconciler) reconcile(ctx context.Context) (*Result, err
 		if err != nil {
 			var pe *PhaseError
 			if errors.As(err, &pe) {
-				conditions.Set(r.Provider, conditions.FalseCondition(pe.Type, pe.Reason, pe.Severity, "%s", err.Error()))
+				conditions.Set(r.Provider, metav1.Condition{
+					Type:    pe.Type,
+					Status:  metav1.ConditionFalse,
+					Reason:  pe.Reason,
+					Message: err.Error(),
+				})
 			}
 		}
 
@@ -242,7 +246,12 @@ func (r *GenericProviderReconciler) reconcileDelete(ctx context.Context, provide
 		if err != nil {
 			var pe *PhaseError
 			if errors.As(err, &pe) {
-				conditions.Set(provider, conditions.FalseCondition(pe.Type, pe.Reason, pe.Severity, "%s", err.Error()))
+				conditions.Set(provider, metav1.Condition{
+					Type:    pe.Type,
+					Status:  metav1.ConditionFalse,
+					Reason:  pe.Reason,
+					Message: err.Error(),
+				})
 			}
 		}
 

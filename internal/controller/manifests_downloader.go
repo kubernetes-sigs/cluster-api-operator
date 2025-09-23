@@ -147,7 +147,7 @@ func (p *PhaseReconciler) Finalize(ctx context.Context) (*Result, error) {
 		ctrl.LoggerFrom(ctx).V(5).Error(err, "Failed to update providers hash")
 	}
 
-	return &Result{}, wrapPhaseError(err, "failed to update providers hash", operatorv1.ProviderInstalledCondition)
+	return &Result{}, wrapPhaseError(err, "FailedToUpdateProvidersHash", operatorv1.ProviderInstalledCondition)
 }
 
 // prepareConfigMapLabels returns labels that identify a config map with downloaded manifests.

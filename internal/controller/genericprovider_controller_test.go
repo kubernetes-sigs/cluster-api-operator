@@ -27,7 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/utils/ptr"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	clusterctlv1 "sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3"
 	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/patch"
@@ -40,10 +40,11 @@ import (
 const (
 	testMetadata = `
 apiVersion: clusterctl.cluster.x-k8s.io/v1alpha3
+kind: Metadata
 releaseSeries:
-  - major: 0
-    minor: 4
-    contract: v1beta1
+  - major: 1
+    minor: 11
+    contract: v1beta2
 `
 	testDeploymentName = "capd-controller-manager"
 	testComponents     = `
@@ -78,7 +79,7 @@ spec:
             cpu: 200m
 `
 
-	testCurrentVersion = "v0.4.2"
+	testCurrentVersion = "v1.11.0"
 )
 
 func insertDummyConfig(provider genericprovider.GenericProvider) {
@@ -254,10 +255,10 @@ func TestReconcilerPreflightConditions(t *testing.T) {
 					},
 					Status: operatorv1.CoreProviderStatus{
 						ProviderStatus: operatorv1.ProviderStatus{
-							Conditions: []clusterv1.Condition{
+							Conditions: []metav1.Condition{
 								{
 									Type:   clusterv1.ReadyCondition,
-									Status: corev1.ConditionTrue,
+									Status: metav1.ConditionTrue,
 								},
 							},
 						},
@@ -325,10 +326,11 @@ func TestAirGappedUpgradeDowngradeProvider(t *testing.T) {
 	currentVersion := "v999.9.2"
 	futureMetadata := `
 apiVersion: clusterctl.cluster.x-k8s.io/v1alpha3
+kind: Metadata
 releaseSeries:
   - major: 999
     minor: 9
-    contract: v1beta1
+    contract: v1beta2
 `
 
 	dummyFutureConfigMap := func(ns, name string) *corev1.ConfigMap {
@@ -409,7 +411,7 @@ releaseSeries:
 				for _, cond := range provider.GetStatus().Conditions {
 					if cond.Type == operatorv1.PreflightCheckCondition {
 						t.Log(t.Name(), provider.GetName(), cond)
-						if cond.Status == corev1.ConditionTrue {
+						if cond.Status == metav1.ConditionTrue {
 							return true
 						}
 					}
@@ -459,7 +461,7 @@ releaseSeries:
 				for _, cond := range provider.GetStatus().Conditions {
 					if cond.Type == operatorv1.PreflightCheckCondition {
 						t.Log(t.Name(), provider.GetName(), cond)
-						if cond.Status == corev1.ConditionTrue {
+						if cond.Status == metav1.ConditionTrue {
 							allFound = true
 							break
 						}
@@ -474,7 +476,7 @@ releaseSeries:
 				for _, cond := range provider.GetStatus().Conditions {
 					if cond.Type == operatorv1.ProviderUpgradedCondition {
 						t.Log(t.Name(), provider.GetName(), cond)
-						if cond.Status == corev1.ConditionTrue {
+						if cond.Status == metav1.ConditionTrue {
 							allFound = tc.newVersion != currentVersion
 							break
 						}
@@ -502,7 +504,7 @@ releaseSeries:
 				for _, cond := range provider.GetStatus().Conditions {
 					if cond.Type == operatorv1.ProviderUpgradedCondition {
 						t.Log(t.Name(), provider.GetName(), cond)
-						if cond.Status == corev1.ConditionTrue {
+						if cond.Status == metav1.ConditionTrue {
 							allSet = tc.newVersion != currentVersion
 							break
 						}
@@ -637,7 +639,13 @@ func TestReconcilerPreflightConditionsFromCoreProviderEvents(t *testing.T) {
 
 	patchHelper, err := patch.NewHelper(coreProvider, env)
 	g.Expect(err).ToNot(HaveOccurred())
-	conditions.MarkTrue(coreProvider, clusterv1.ReadyCondition)
+
+	conditions.Set(coreProvider, metav1.Condition{
+		Type:    clusterv1.ReadyCondition,
+		Status:  metav1.ConditionTrue,
+		Reason:  "Ready",
+		Message: "Provider is ready",
+	})
 	g.Expect(patchHelper.Patch(ctx, coreProvider)).To(Succeed())
 
 	g.Eventually(func() bool {
@@ -748,7 +756,7 @@ func TestProviderConfigSecretChanges(t *testing.T) {
 			g.Expect(env.CreateAndWait(ctx, provider.DeepCopy())).To(Succeed())
 			objs = append(objs, provider)
 
-			g.Eventually(generateExpectedResultChecker(provider, corev1.ConditionTrue, func(s string) bool { return s != "" }), timeout).Should(BeEquivalentTo(true))
+			g.Eventually(generateExpectedResultChecker(provider, metav1.ConditionTrue, func(s string) bool { return s != "" }), timeout).Should(BeEquivalentTo(true))
 
 			initialHash := provider.GetAnnotations()[appliedSpecHashAnnotation]
 
@@ -902,7 +910,7 @@ func TestProviderSpecChanges(t *testing.T) {
 				g.Expect(env.Cleanup(ctx, provider, dummyConfigMap(namespace))).To(Succeed())
 			}()
 
-			g.Eventually(generateExpectedResultChecker(provider, corev1.ConditionTrue, func(s string) bool {
+			g.Eventually(generateExpectedResultChecker(provider, metav1.ConditionTrue, func(s string) bool {
 				return s != ""
 			}), timeout).Should(BeEquivalentTo(true))
 
@@ -929,7 +937,7 @@ func TestProviderSpecChanges(t *testing.T) {
 			}).Should(Succeed())
 
 			if !tc.expectError {
-				g.Eventually(generateExpectedResultChecker(provider, corev1.ConditionTrue, func(s string) bool {
+				g.Eventually(generateExpectedResultChecker(provider, metav1.ConditionTrue, func(s string) bool {
 					if tc.expectHashChange {
 						return s != currentHash
 					}
@@ -937,13 +945,13 @@ func TestProviderSpecChanges(t *testing.T) {
 					return s == currentHash
 				}), timeout).Should(BeEquivalentTo(true))
 			} else {
-				g.Eventually(generateExpectedResultChecker(provider, corev1.ConditionFalse, func(s string) bool { return s == currentHash }), timeout).Should(BeEquivalentTo(true))
+				g.Eventually(generateExpectedResultChecker(provider, metav1.ConditionFalse, func(s string) bool { return s == currentHash }), timeout).Should(BeEquivalentTo(true))
 			}
 		})
 	}
 }
 
-func generateExpectedResultChecker(provider genericprovider.GenericProvider, condStatus corev1.ConditionStatus, hashCheck func(string) bool) func() bool {
+func generateExpectedResultChecker(provider genericprovider.GenericProvider, condStatus metav1.ConditionStatus, hashCheck func(string) bool) func() bool {
 	return func() bool {
 		if err := env.Get(ctx, client.ObjectKeyFromObject(provider), provider); err != nil {
 			return false

@@ -34,6 +34,17 @@ import (
 	"sigs.k8s.io/cluster-api-operator/util"
 )
 
+const testProviderMetadata = `
+apiVersion: clusterctl.cluster.x-k8s.io/v1alpha3
+kind: Metadata
+releaseSeries:
+  - major: 1
+    minor: 11
+    contract: v1beta2
+  - major: 1
+    minor: 10
+    contract: v1beta1`
+
 func TestSecretReader(t *testing.T) {
 	g := NewWithT(t)
 
@@ -135,15 +146,7 @@ func TestConfigmapRepository(t *testing.T) {
 			},
 		},
 	}
-	metadata := `
-apiVersion: clusterctl.cluster.x-k8s.io/v1alpha3
-releaseSeries:
-  - major: 0
-	minor: 4
-	contract: v1alpha4
-  - major: 0
-	minor: 3
-	contract: v1alpha3`
+	metadata := testProviderMetadata
 
 	components := `
 apiVersion: v1
@@ -469,46 +472,30 @@ func TestRepositoryProxy(t *testing.T) {
 		},
 	}
 
-	awsMetadata := `
-apiVersion: clusterctl.cluster.x-k8s.io/v1alpha3
-releaseSeries:
-  - major: 2
-    minor: 4
-    contract: v1beta1
-  - major: 2
-    minor: 3
-    contract: v1beta1`
+	awsMetadata := testProviderMetadata
 
 	awsMetaReleaseSeries := []clusterctlv1.ReleaseSeries{
 		{
-			Major:    2,
-			Minor:    4,
-			Contract: "v1beta1",
+			Major:    1,
+			Minor:    11,
+			Contract: "v1beta2",
 		}, {
-			Major:    2,
-			Minor:    3,
+			Major:    1,
+			Minor:    10,
 			Contract: "v1beta1",
 		},
 	}
 
-	metadata := `
-apiVersion: clusterctl.cluster.x-k8s.io/v1alpha3
-releaseSeries:
-  - major: 0
-    minor: 4
-    contract: v1alpha4
-  - major: 0
-    minor: 3
-    contract: v1alpha3`
+	metadata := testProviderMetadata
 
 	metaReleaseSeries := []clusterctlv1.ReleaseSeries{{
-		Major:    0,
-		Minor:    4,
-		Contract: "v1alpha4",
+		Major:    1,
+		Minor:    11,
+		Contract: "v1beta2",
 	}, {
-		Major:    0,
-		Minor:    3,
-		Contract: "v1alpha3",
+		Major:    1,
+		Minor:    10,
+		Contract: "v1beta1",
 	}}
 
 	tests := []struct {
@@ -527,7 +514,7 @@ releaseSeries:
 			provider:           coreProvider,
 			wantDefaultVersion: testCurrentVersion,
 			genericProviders:   []client.Object{core, provider},
-			metadataErr:        "failed to read \"metadata.yaml\" from the repository for provider \"cluster-api\": unable to get files for version v0.4.2",
+			metadataErr:        "failed to read \"metadata.yaml\" from the repository for provider \"cluster-api\": unable to get files for version v1.11.0",
 		},
 		{
 			name:               "correct configmap with data",
