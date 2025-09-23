@@ -24,7 +24,7 @@ kubectl operator preload [flags]
 | `--runtime-extension` | | Specifies runtime extension providers and versions (e.g., `my-extension:v0.0.1`). |
 | `--addon` | | Specifies add-on providers and versions (e.g., `helm:v0.1.0`). |
 | `--target-namespace` | `-n` | Specifies the target namespace where the operator should be deployed. Defaults to `capi-operator-system`. |
-| `--artifact-url` | `-u` | Specifies the URL of the OCI artifact containing component manifests. |
+| `--artifact-url` | `-u` | Specifies the URL of the OCI artifact or GitHub/GitLab release containing component manifests. |
 
 ## Examples
 
@@ -46,17 +46,35 @@ kubectl operator preload --infrastructure=aws -u my-registry.example.com/infrast
 ```
 This command fetches the latest available version of the `aws` infrastructure provider from the specified OCI registry and creates a ConfigMap.
 
+### Prepare Provider ConfigMap from GitHub for a Specific Infrastructure Provider
+```sh
+kubectl operator preload --infrastructure=aws -u https://github.com/kubernetes-sigs/cluster-api-provider-aws/releases/latest/infrastructure-components.yaml
+```
+This command fetches the latest available version of the `aws` infrastructure provider from the specified GitHub repository and creates a ConfigMap.
+
 ### Prepare Provider ConfigMap with a Specific Version
 ```sh
 kubectl operator preload --infrastructure=aws::v2.3.0 -u my-registry.example.com/infrastructure-provider
 ```
 This command loads the AWS infrastructure provider version `v2.3.0` from the OCI registry into the default namespace.
 
+### Prepare Provider ConfigMap from GitHub with a Specific Version
+```sh
+kubectl operator preload --infrastructure=aws -u https://github.com/kubernetes-sigs/cluster-api-provider-aws/releases/v2.3.0/infrastructure-components.yaml
+```
+This command loads the AWS infrastructure provider version `v2.3.0` from GitHub release into the default namespace. When using Git release as source for manifests you can only specify the desired version in the URL.
+
 ### Prepare Provider ConfigMap with a Custom Namespace
 ```sh
 kubectl operator preload --infrastructure=aws:custom-namespace -u my-registry.example.com/infrastructure-provider
 ```
 This command loads the latest version of the AWS infrastructure provider into the `custom-namespace`.
+
+### Prepare Provider ConfigMap from GitHub with a Custom Namespace
+```sh
+kubectl operator preload --infrastructure=aws:custom-namespace -u https://github.com/kubernetes-sigs/cluster-api-provider-aws/releases/latest/infrastructure-components.yaml
+```
+This command loads the latest version of the AWS infrastructure provider from GitHub release into the `custom-namespace`.
 
 ### Prepare Provider ConfigMap with a Specific Version and Namespace
 ```sh

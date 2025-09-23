@@ -149,7 +149,7 @@ func RepositoryFactory(ctx context.Context, providerConfig configclient.Provider
 	}
 
 	// if the url is a GitHub repository
-	if rURL.Host == githubDomain {
+	if IsGitHubDomain(rURL) {
 		repo, err := repository.NewGitHubRepository(ctx, providerConfig, configVariablesClient)
 		if err != nil {
 			return nil, fmt.Errorf("error creating the GitHub repository client: %w", err)
@@ -159,8 +159,7 @@ func RepositoryFactory(ctx context.Context, providerConfig configclient.Provider
 	}
 
 	// if the url is a GitLab repository starting with gitlab- or gitlab.
-	gitlabHostRegex := regexp.MustCompile(`^` + regexp.QuoteMeta(gitlabHostPrefix) + `(-.*)?\.`) // ^gitlab(-.*)?\. to match gitlab- or gitlab.
-	if gitlabHostRegex.MatchString(rURL.Host) && strings.HasPrefix(rURL.Path, gitlabPackagesAPIPrefix) {
+	if IsGitLabDomain(rURL) {
 		repo, err := repository.NewGitLabRepository(ctx, providerConfig, configVariablesClient)
 		if err != nil {
 			return nil, fmt.Errorf("error creating the GitLab repository client: %w", err)
@@ -170,4 +169,16 @@ func RepositoryFactory(ctx context.Context, providerConfig configclient.Provider
 	}
 
 	return nil, fmt.Errorf("invalid provider url. Only GitHub and GitLab are supported for %q schema", rURL.Scheme)
+}
+
+// IsGitHubDomain returns true if the URL is a GitHub repository.
+func IsGitHubDomain(u *url.URL) bool {
+	return u.Host == githubDomain
+}
+
+// IsGitLabDomain returns true if the URL is a GitLab repository.
+func IsGitLabDomain(u *url.URL) bool {
+	gitlabHostRegex := regexp.MustCompile(`^` + regexp.QuoteMeta(gitlabHostPrefix) + `(-.*)?\.`) // ^gitlab(-.*)?\. to match gitlab- or gitlab.
+
+	return gitlabHostRegex.MatchString(u.Host) && strings.HasPrefix(u.Path, gitlabPackagesAPIPrefix)
 }
