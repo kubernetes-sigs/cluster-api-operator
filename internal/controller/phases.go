@@ -39,7 +39,7 @@ import (
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
 	"sigs.k8s.io/cluster-api-operator/internal/controller/genericprovider"
 	"sigs.k8s.io/cluster-api-operator/util"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	clusterctlv1 "sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3"
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/cluster"
 	configclient "sigs.k8s.io/cluster-api/cmd/clusterctl/client/config"
@@ -154,7 +154,7 @@ func (r *Result) IsZero() bool {
 // PhaseError custom error type for phases.
 type PhaseError struct {
 	Reason   string
-	Type     clusterv1.ConditionType
+	Type     string
 	Severity clusterv1.ConditionSeverity
 	Err      error
 }
@@ -163,7 +163,7 @@ func (p *PhaseError) Error() string {
 	return p.Err.Error()
 }
 
-func wrapPhaseError(err error, reason string, condition clusterv1.ConditionType) error {
+func wrapPhaseError(err error, reason string, condition string) error {
 	if err == nil {
 		return nil
 	}
@@ -340,7 +340,7 @@ func (p *PhaseReconciler) Load(ctx context.Context) (*Result, error) {
 
 	p.repo, err = p.configmapRepository(ctx, labelSelector, InNamespace(p.provider.GetNamespace()), WithAdditionalManifests(additionalManifests))
 	if err != nil {
-		return &Result{}, wrapPhaseError(err, "failed to load the repository", operatorv1.ProviderInstalledCondition)
+		return &Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.ProviderInstalledCondition)
 	}
 
 	if spec.Version == "" {
@@ -569,7 +569,7 @@ func (p *PhaseReconciler) validateRepoCAPIVersion(ctx context.Context) error {
 		return fmt.Errorf("invalid provider metadata: version %s for the provider %s does not match any release series", p.options.Version, name)
 	}
 
-	if releaseSeries.Contract != "v1alpha4" && releaseSeries.Contract != "v1beta1" {
+	if releaseSeries.Contract != "v1beta1" && releaseSeries.Contract != "v1beta2" {
 		return fmt.Errorf(capiVersionIncompatibilityMessage, clusterv1.GroupVersion.Version, releaseSeries.Contract, name)
 	}
 
@@ -757,7 +757,12 @@ func (p *PhaseReconciler) Upgrade(ctx context.Context) (*Result, error) {
 	}
 
 	log.Info("Provider successfully upgraded")
-	conditions.Set(p.provider, conditions.TrueCondition(operatorv1.ProviderUpgradedCondition))
+	conditions.Set(p.provider, metav1.Condition{
+		Type:    operatorv1.ProviderUpgradedCondition,
+		Status:  metav1.ConditionTrue,
+		Reason:  "ProviderUpgraded",
+		Message: "Provider upgraded successfully",
+	})
 
 	return &Result{}, nil
 }
@@ -776,16 +781,21 @@ func (p *PhaseReconciler) Install(ctx context.Context) (*Result, error) {
 	log.Info("Installing provider")
 
 	if err := clusterClient.ProviderComponents().Create(ctx, p.components.Objs()); err != nil {
-		reason := "Install failed"
+		reason := "InstallFailed"
 		if wait.Interrupted(err) {
-			reason = "Timed out waiting for deployment to become ready"
+			reason = "TimedOutWaitingForDeployment"
 		}
 
 		return &Result{}, wrapPhaseError(err, reason, operatorv1.ProviderInstalledCondition)
 	}
 
 	log.Info("Provider successfully installed")
-	conditions.Set(p.provider, conditions.TrueCondition(operatorv1.ProviderInstalledCondition))
+	conditions.Set(p.provider, metav1.Condition{
+		Type:    operatorv1.ProviderInstalledCondition,
+		Status:  metav1.ConditionTrue,
+		Reason:  "ProviderInstalled",
+		Message: "Provider installed successfully",
+	})
 
 	return &Result{}, nil
 }

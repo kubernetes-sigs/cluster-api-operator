@@ -31,20 +31,17 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	clusterctlv1 "sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3"
-	configclient "sigs.k8s.io/cluster-api/cmd/clusterctl/client/config"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/klog/v2"
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 
 	. "sigs.k8s.io/cluster-api-operator/test/framework"
 	"sigs.k8s.io/cluster-api/test/framework"
 	"sigs.k8s.io/cluster-api/test/framework/bootstrap"
 	"sigs.k8s.io/cluster-api/test/framework/clusterctl"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 )
 
@@ -345,13 +342,19 @@ func ensureCertManager(clusterProxy framework.ClusterProxy, config *clusterctl.E
 }
 
 func deleteClusterAPICRDs(clusterProxy framework.ClusterProxy) {
-	// To remove all Cluster API CRDs we need filter them by labels:
-	//  cluster.x-k8s.io/provider: cluster-api
-	//  clusterctl.cluster.x-k8s.io: ""
-	Expect(clusterProxy.GetClient().DeleteAllOf(ctx, &apiextensionsv1.CustomResourceDefinition{}, client.MatchingLabels{
-		clusterv1.ProviderNameLabel:  configclient.ClusterAPIProviderName,
-		clusterctlv1.ClusterctlLabel: "",
-	})).To(Succeed())
+	// To remove all Cluster API CRDs we need to delete all CRDs that belong to cluster-api groups.
+	// This includes CRDs from all providers (core, bootstrap, control-plane, infrastructure, etc.)
+	// But we must NOT delete the operator's own CRDs (operator.cluster.x-k8s.io)
+	crds := &apiextensionsv1.CustomResourceDefinitionList{}
+	Expect(clusterProxy.GetClient().List(ctx, crds)).To(Succeed())
+
+	for _, crd := range crds.Items {
+		// Delete CRDs that belong to cluster.x-k8s.io groups, but exclude operator CRDs
+		if strings.Contains(crd.Spec.Group, "cluster.x-k8s.io") &&
+			crd.Spec.Group != "operator.cluster.x-k8s.io" {
+			Expect(clusterProxy.GetClient().Delete(ctx, &crd)).To(Succeed())
+		}
+	}
 }
 
 func initHelmChart() {

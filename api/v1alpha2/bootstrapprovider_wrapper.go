@@ -17,16 +17,16 @@ limitations under the License.
 package v1alpha2
 
 import (
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var _ GenericProvider = &BootstrapProvider{}
 
-func (b *BootstrapProvider) GetConditions() clusterv1.Conditions {
+func (b *BootstrapProvider) GetConditions() []metav1.Condition {
 	return b.Status.Conditions
 }
 
-func (b *BootstrapProvider) SetConditions(conditions clusterv1.Conditions) {
+func (b *BootstrapProvider) SetConditions(conditions []metav1.Condition) {
 	b.Status.Conditions = conditions
 }
 

@@ -19,7 +19,6 @@ package v1alpha2
 import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 )
 
 const (
@@ -263,7 +262,7 @@ type ProviderStatus struct {
 
 	// Conditions define the current service state of the provider.
 	// +optional
-	Conditions clusterv1.Conditions `json:"conditions,omitempty"`
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
 
 	// ObservedGeneration is the latest generation observed by the controller.
 	// +optional

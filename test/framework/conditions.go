@@ -22,11 +22,10 @@ import (
 	"fmt"
 
 	. "github.com/onsi/ginkgo/v2" //nolint:staticcheck
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	capiconditions "sigs.k8s.io/cluster-api/util/conditions"
 )
 
-func HaveStatusConditionsTrue(getter capiconditions.Getter, conditions ...clusterv1.ConditionType) Condition {
+func HaveStatusConditionsTrue(getter capiconditions.Getter, conditions ...string) Condition {
 	return func() bool {
 		if len(conditions) == 0 {
 			By("Empty condition list provided. Can't be validated...")

@@ -24,7 +24,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -92,7 +92,11 @@ func TestConfigMapChangesAreAppliedToTheProvider(t *testing.T) {
 	// Manually set ReadyCondition as it's not set automatically in test env
 	patchHelper, err := patch.NewHelper(coreProvider, env)
 	g.Expect(err).ToNot(HaveOccurred())
-	conditions.MarkTrue(coreProvider, clusterv1.ReadyCondition)
+	conditions.Set(coreProvider, metav1.Condition{
+		Type:   clusterv1.ReadyCondition,
+		Status: metav1.ConditionTrue,
+		Reason: "Ready",
+	})
 	g.Expect(patchHelper.Patch(ctx, coreProvider)).To(Succeed())
 
 	// Create InfrastructureProvider that uses the ConfigMap
@@ -211,7 +215,11 @@ func TestConfigMapChangesWithNonMatchingSelector(t *testing.T) {
 	// Manually set ReadyCondition as it's not set automatically in test env
 	patchHelper, err := patch.NewHelper(coreProvider, env)
 	g.Expect(err).ToNot(HaveOccurred())
-	conditions.MarkTrue(coreProvider, clusterv1.ReadyCondition)
+	conditions.Set(coreProvider, metav1.Condition{
+		Type:   clusterv1.ReadyCondition,
+		Status: metav1.ConditionTrue,
+		Reason: "Ready",
+	})
 	g.Expect(patchHelper.Patch(ctx, coreProvider)).To(Succeed())
 
 	// Create ConfigMap that won't match any provider selector
@@ -380,7 +388,11 @@ func TestMultipleConfigMapsError(t *testing.T) {
 	// Manually set ReadyCondition as it's not set automatically in test env
 	patchHelper, err := patch.NewHelper(coreProvider, env)
 	g.Expect(err).ToNot(HaveOccurred())
-	conditions.MarkTrue(coreProvider, clusterv1.ReadyCondition)
+	conditions.Set(coreProvider, metav1.Condition{
+		Type:   clusterv1.ReadyCondition,
+		Status: metav1.ConditionTrue,
+		Reason: "Ready",
+	})
 	g.Expect(patchHelper.Patch(ctx, coreProvider)).To(Succeed())
 
 	// Create multiple ConfigMaps with the same labels (this should cause an error)

@@ -33,8 +33,8 @@ const (
 	capiSystemNamespace  = "capi-system"
 	capiOperatorRelease  = "capi-operator"
 
-	previousCAPIVersion        = "v1.7.7"
-	nextCAPIVersion            = "v1.8.0"
+	previousCAPIVersion        = "v1.10.4"
+	nextCAPIVersion            = "v1.11.0"
 	coreProviderName           = configclient.ClusterAPIProviderName
 	coreProviderDeploymentName = "capi-controller-manager"
 
