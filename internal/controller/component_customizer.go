@@ -17,19 +17,16 @@ limitations under the License.
 package controller
 
 import (
-	"fmt"
 	"sort"
 	"strings"
-	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/kubernetes/scheme"
-	configv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	"k8s.io/utils/ptr"
-	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
+	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha3"
 	"sigs.k8s.io/cluster-api/util"
 )
 
@@ -39,8 +36,6 @@ const (
 	managerContainerName = "manager"
 	defaultVerbosity     = 1
 )
-
-var bool2Str = map[bool]string{true: "true", false: "false"}
 
 // customizeObjectsFn apply provider specific customization to a list of manifests.
 func customizeObjectsFn(provider operatorv1.GenericProvider) func(objs []unstructured.Unstructured) ([]unstructured.Unstructured, error) {
@@ -81,7 +76,6 @@ func customizeObjectsFn(provider operatorv1.GenericProvider) func(objs []unstruc
 				}
 
 				providerDeployment := provider.GetSpec().Deployment
-				providerManager := provider.GetSpec().Manager
 
 				// If there are multiple deployments, check if we specify customizations for those deployments.
 				// We need to skip the deployment customization if there are several deployments available
@@ -99,17 +93,21 @@ func customizeObjectsFn(provider operatorv1.GenericProvider) func(objs []unstruc
 
 					additionalProviderCustomization, ok := additionalDeployments[o.GetName()]
 					if !ok {
+						// Skip if there is no customization for the deployment.
 						results = append(results, o)
 						continue
 					}
 
-					providerDeployment = additionalProviderCustomization.Deployment
-					providerManager = additionalProviderCustomization.Manager
+					providerDeployment = &additionalProviderCustomization
 				}
 
-				if err := customizeDeployment(providerDeployment, providerManager, d); err != nil {
-					return nil, err
+				if providerDeployment == nil {
+					// Skip if there is no customization for the deployment.
+					results = append(results, o)
+					continue
 				}
+
+				customizeDeploymentSpec(*providerDeployment, d)
 
 				if err := scheme.Scheme.Convert(d, &o, nil); err != nil {
 					return nil, err
@@ -121,28 +119,6 @@ func customizeObjectsFn(provider operatorv1.GenericProvider) func(objs []unstruc
 
 		return results, nil
 	}
-}
-
-// customizeDeployment customize provider deployment base on provider spec input.
-func customizeDeployment(dSpec *operatorv1.DeploymentSpec, mSpec *operatorv1.ManagerSpec, d *appsv1.Deployment) error {
-	// Customize deployment spec first.
-	if dSpec != nil {
-		customizeDeploymentSpec(*dSpec, d)
-	}
-
-	// Run the customizeManagerContainer after, so it overrides anything in the deploymentSpec.
-	if mSpec != nil {
-		container := findManagerContainer(&d.Spec)
-		if container == nil {
-			return fmt.Errorf("cannot find %q container in deployment %q", managerContainerName, d.Name)
-		}
-
-		if err := customizeManagerContainer(mSpec, container); err != nil {
-			return fmt.Errorf("failed to customize manager container: %w", err)
-		}
-	}
-
-	return nil
 }
 
 func customizeDeploymentSpec(dSpec operatorv1.DeploymentSpec, d *appsv1.Deployment) {
@@ -192,110 +168,21 @@ func findManagerContainer(dSpec *appsv1.DeploymentSpec) *corev1.Container {
 	return nil
 }
 
-// customizeManagerContainer customize manager container base on provider spec input.
-func customizeManagerContainer(mSpec *operatorv1.ManagerSpec, c *corev1.Container) error {
-	// ControllerManagerConfigurationSpec fields
-	if mSpec.Controller != nil {
-		// TODO can't find an arg for CacheSyncTimeout
-		for k, v := range mSpec.Controller.GroupKindConcurrency {
-			c.Args = setArgs(c.Args, "--"+strings.ToLower(k)+"-concurrency", fmt.Sprint(v))
-		}
-	}
-
-	if mSpec.MaxConcurrentReconciles != 0 {
-		c.Args = setArgs(c.Args, "--max-concurrent-reconciles", fmt.Sprint(mSpec.MaxConcurrentReconciles))
-	}
-
-	if mSpec.CacheNamespace != "" {
-		// This field seems somewhat in conflict with:
-		// The `ContainerSpec.Args` will ignore the key `namespace` since the operator
-		// enforces a deployment model where all the providers should be configured to
-		// watch all the namespaces.
-		c.Args = setArgs(c.Args, "--namespace", mSpec.CacheNamespace)
-	}
-
-	// TODO can't find an arg for GracefulShutdownTimeout
-
-	if mSpec.Health.HealthProbeBindAddress != "" {
-		c.Args = setArgs(c.Args, "--health-addr", mSpec.Health.HealthProbeBindAddress)
-	}
-
-	if mSpec.Health.LivenessEndpointName != "" && c.LivenessProbe != nil && c.LivenessProbe.HTTPGet != nil {
-		c.LivenessProbe.HTTPGet.Path = "/" + mSpec.Health.LivenessEndpointName
-	}
-
-	if mSpec.Health.ReadinessEndpointName != "" && c.ReadinessProbe != nil && c.ReadinessProbe.HTTPGet != nil {
-		c.ReadinessProbe.HTTPGet.Path = "/" + mSpec.Health.ReadinessEndpointName
-	}
-
-	if mSpec.LeaderElection != nil && mSpec.LeaderElection.LeaderElect != nil {
-		c.Args = leaderElectionArgs(mSpec.LeaderElection, c.Args)
-	}
-
-	if mSpec.Metrics.BindAddress != "" {
-		c.Args = setArgs(c.Args, "--metrics-bind-addr", mSpec.Metrics.BindAddress)
-	}
-
-	// webhooks
-	if mSpec.Webhook.Host != "" {
-		c.Args = setArgs(c.Args, "--webhook-host", mSpec.Webhook.Host)
-	}
-
-	if mSpec.Webhook.Port != nil {
-		c.Args = setArgs(c.Args, "--webhook-port", fmt.Sprint(*mSpec.Webhook.Port))
-	}
-
-	if mSpec.Webhook.CertDir != "" {
-		c.Args = setArgs(c.Args, "--webhook-cert-dir", mSpec.Webhook.CertDir)
-	}
-
-	// top level fields
-	if mSpec.SyncPeriod != nil {
-		syncPeriod := int(mSpec.SyncPeriod.Duration.Round(time.Second).Seconds())
-		if syncPeriod > 0 {
-			c.Args = setArgs(c.Args, "--sync-period", fmt.Sprintf("%ds", syncPeriod))
-		}
-	}
-
-	if mSpec.ProfilerAddress != "" {
-		c.Args = setArgs(c.Args, "--profiler-address", mSpec.ProfilerAddress)
-	}
-
-	if mSpec.Verbosity != defaultVerbosity {
-		c.Args = setArgs(c.Args, "--v", fmt.Sprint(mSpec.Verbosity))
-	}
-
-	if len(mSpec.FeatureGates) > 0 {
-		fgValue := []string{}
-
-		for fg, val := range mSpec.FeatureGates {
-			fgValue = append(fgValue, fg+"="+bool2Str[val])
-		}
-
-		sort.Strings(fgValue)
-		c.Args = setArgs(c.Args, "--feature-gates", strings.Join(fgValue, ","))
-	}
-
-	for k, v := range mSpec.AdditionalArgs {
-		// Make sure the key is not already in the args
-		for _, arg := range c.Args {
-			if strings.HasPrefix(arg, k+"=") {
-				return fmt.Errorf("arg %q already exists", k)
-			}
-		}
-
-		c.Args = setArgs(c.Args, k, v)
-	}
-
-	return nil
-}
-
 // customizeContainer customize provider container base on provider spec input.
 func customizeContainer(cSpec operatorv1.ContainerSpec, d *appsv1.Deployment) {
 	for j, c := range d.Spec.Template.Spec.Containers {
 		if c.Name == cSpec.Name {
-			for an, av := range cSpec.Args {
-				c.Args = setArgs(c.Args, an, av)
+			// Sort the args map keys to ensure deterministic order
+			argKeys := make([]string, 0, len(cSpec.Args))
+			for k := range cSpec.Args {
+				argKeys = append(argKeys, k)
+			}
+
+			sort.Strings(argKeys)
+
+			// Process args in sorted order
+			for _, an := range argKeys {
+				c.Args = setArgs(c.Args, an, cSpec.Args[an])
 			}
 
 			for _, se := range cSpec.Env {
@@ -323,6 +210,7 @@ func customizeContainer(cSpec operatorv1.ContainerSpec, d *appsv1.Deployment) {
 // setArg set container arguments.
 func setArgs(args []string, name, value string) []string {
 	for i, a := range args {
+		// Replace the argument if it already exists.
 		if strings.HasPrefix(a, name+"=") {
 			args[i] = name + "=" + value
 
@@ -330,6 +218,7 @@ func setArgs(args []string, name, value string) []string {
 		}
 	}
 
+	// Append the argument if it doesn't exist.
 	return append(args, name+"="+value)
 }
 
@@ -344,37 +233,6 @@ func removeEnv(envs []corev1.EnvVar, name string) []corev1.EnvVar {
 	}
 
 	return envs
-}
-
-// leaderElectionArgs set leader election flags.
-func leaderElectionArgs(lec *configv1alpha1.LeaderElectionConfiguration, args []string) []string {
-	args = setArgs(args, "--leader-elect", bool2Str[*lec.LeaderElect])
-
-	if *lec.LeaderElect {
-		if lec.ResourceName != "" && lec.ResourceNamespace != "" {
-			args = setArgs(args, "--leader-election-id", lec.ResourceNamespace+"/"+lec.ResourceName)
-		}
-
-		leaseDuration := int(lec.LeaseDuration.Duration.Round(time.Second).Seconds())
-
-		if leaseDuration > 0 {
-			args = setArgs(args, "--leader-elect-lease-duration", fmt.Sprintf("%ds", leaseDuration))
-		}
-
-		renewDuration := int(lec.RenewDeadline.Duration.Round(time.Second).Seconds())
-
-		if renewDuration > 0 {
-			args = setArgs(args, "--leader-elect-renew-deadline", fmt.Sprintf("%ds", renewDuration))
-		}
-
-		retryDuration := int(lec.RetryPeriod.Duration.Round(time.Second).Seconds())
-
-		if retryDuration > 0 {
-			args = setArgs(args, "--leader-elect-retry-period", fmt.Sprintf("%ds", retryDuration))
-		}
-	}
-
-	return args
 }
 
 // isMultipleDeployments check if there are multiple deployments in the manifests.

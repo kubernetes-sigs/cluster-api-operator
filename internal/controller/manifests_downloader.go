@@ -33,7 +33,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
+	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha3"
 	"sigs.k8s.io/cluster-api-operator/util"
 )
 
@@ -41,7 +41,6 @@ const (
 	configMapSourceLabel      = "provider.cluster.x-k8s.io/source"
 	configMapSourceAnnotation = "provider.cluster.x-k8s.io/source"
 	operatorManagedLabel      = "managed-by.operator.cluster.x-k8s.io"
-	operatorCacheLabel        = "cached-by.operator.cluster.x-k8s.io"
 
 	maxConfigMapSize = 1 * 1024 * 1024
 	ociSource        = "oci"
@@ -229,7 +228,7 @@ func compressData(componentsBuf *bytes.Buffer, data []byte) (err error) {
 		return fmt.Errorf("cannot compress data: %w", err)
 	}
 
-	return
+	return err
 }
 
 // decompressData takes a compressed data, and decompresses it.
