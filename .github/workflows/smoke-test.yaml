@@ -46,7 +46,7 @@ jobs:
           curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
 
           # clusterctl
-          VERSION=v1.10.5
+          VERSION=v1.11.1
           curl -L "https://github.com/kubernetes-sigs/cluster-api/releases/download/${VERSION}/clusterctl-linux-${ARCH}" -o clusterctl
           sudo install -o root -g root -m 0755 clusterctl /usr/local/bin/clusterctl
           clusterctl version
