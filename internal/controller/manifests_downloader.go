@@ -229,7 +229,7 @@ func compressData(componentsBuf *bytes.Buffer, data []byte) (err error) {
 		return fmt.Errorf("cannot compress data: %w", err)
 	}
 
-	return
+	return nil
 }
 
 // decompressData takes a compressed data, and decompresses it.
