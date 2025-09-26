@@ -41052,7 +41052,7 @@ webhooks:
     service:
       name: capi-operator-webhook-service
       namespace: 'default'
-      path: /mutate-operator-cluster-x-k8s-io-v1alpha2-addonprovider
+      path: /mutate-operator-cluster-x-k8s-io-v1alpha3-addonprovider
   failurePolicy: Fail
   matchPolicy: Equivalent
   name: vaddonprovider.kb.io
@@ -41060,7 +41060,7 @@ webhooks:
   - apiGroups:
     - operator.cluster.x-k8s.io
     apiVersions:
-    - v1alpha2
+    - v1alpha3
     operations:
     - CREATE
     - UPDATE
@@ -41074,7 +41074,7 @@ webhooks:
     service:
       name: capi-operator-webhook-service
       namespace: 'default'
-      path: /mutate-operator-cluster-x-k8s-io-v1alpha2-bootstrapprovider
+      path: /mutate-operator-cluster-x-k8s-io-v1alpha3-bootstrapprovider
   failurePolicy: Fail
   matchPolicy: Equivalent
   name: vbootstrapprovider.kb.io
@@ -41082,7 +41082,7 @@ webhooks:
   - apiGroups:
     - operator.cluster.x-k8s.io
     apiVersions:
-    - v1alpha2
+    - v1alpha3
     operations:
     - CREATE
     - UPDATE
@@ -41096,7 +41096,7 @@ webhooks:
     service:
       name: capi-operator-webhook-service
       namespace: 'default'
-      path: /mutate-operator-cluster-x-k8s-io-v1alpha2-controlplaneprovider
+      path: /mutate-operator-cluster-x-k8s-io-v1alpha3-controlplaneprovider
   failurePolicy: Fail
   matchPolicy: Equivalent
   name: vcontrolplaneprovider.kb.io
@@ -41104,7 +41104,7 @@ webhooks:
   - apiGroups:
     - operator.cluster.x-k8s.io
     apiVersions:
-    - v1alpha2
+    - v1alpha3
     operations:
     - CREATE
     - UPDATE
@@ -41118,7 +41118,7 @@ webhooks:
     service:
       name: capi-operator-webhook-service
       namespace: 'default'
-      path: /mutate-operator-cluster-x-k8s-io-v1alpha2-coreprovider
+      path: /mutate-operator-cluster-x-k8s-io-v1alpha3-coreprovider
   failurePolicy: Fail
   matchPolicy: Equivalent
   name: vcoreprovider.kb.io
@@ -41126,7 +41126,7 @@ webhooks:
   - apiGroups:
     - operator.cluster.x-k8s.io
     apiVersions:
-    - v1alpha2
+    - v1alpha3
     operations:
     - CREATE
     - UPDATE
@@ -41140,7 +41140,7 @@ webhooks:
     service:
       name: capi-operator-webhook-service
       namespace: 'default'
-      path: /mutate-operator-cluster-x-k8s-io-v1alpha2-infrastructureprovider
+      path: /mutate-operator-cluster-x-k8s-io-v1alpha3-infrastructureprovider
   failurePolicy: Fail
   matchPolicy: Equivalent
   name: vinfrastructureprovider.kb.io
@@ -41148,7 +41148,7 @@ webhooks:
   - apiGroups:
     - operator.cluster.x-k8s.io
     apiVersions:
-    - v1alpha2
+    - v1alpha3
     operations:
     - CREATE
     - UPDATE
@@ -41162,7 +41162,7 @@ webhooks:
     service:
       name: capi-operator-webhook-service
       namespace: 'default'
-      path: /mutate-operator-cluster-x-k8s-io-v1alpha2-ipamprovider
+      path: /mutate-operator-cluster-x-k8s-io-v1alpha3-ipamprovider
   failurePolicy: Fail
   matchPolicy: Equivalent
   name: vipamprovider.kb.io
@@ -41170,7 +41170,7 @@ webhooks:
   - apiGroups:
     - operator.cluster.x-k8s.io
     apiVersions:
-    - v1alpha2
+    - v1alpha3
     operations:
     - CREATE
     - UPDATE
@@ -41184,7 +41184,7 @@ webhooks:
     service:
       name: capi-operator-webhook-service
       namespace: 'default'
-      path: /mutate-operator-cluster-x-k8s-io-v1alpha2-runtimeextensionprovider
+      path: /mutate-operator-cluster-x-k8s-io-v1alpha3-runtimeextensionprovider
   failurePolicy: Fail
   matchPolicy: Equivalent
   name: vruntimeextensionprovider.kb.io
@@ -41192,7 +41192,7 @@ webhooks:
   - apiGroups:
     - operator.cluster.x-k8s.io
     apiVersions:
-    - v1alpha2
+    - v1alpha3
     operations:
     - CREATE
     - UPDATE
@@ -41217,7 +41217,7 @@ webhooks:
     service:
       name: capi-operator-webhook-service
       namespace: 'default'
-      path: /validate-operator-cluster-x-k8s-io-v1alpha2-addonprovider
+      path: /validate-operator-cluster-x-k8s-io-v1alpha3-addonprovider
   failurePolicy: Fail
   matchPolicy: Equivalent
   name: vaddonprovider.kb.io
@@ -41225,7 +41225,7 @@ webhooks:
   - apiGroups:
     - operator.cluster.x-k8s.io
     apiVersions:
-    - v1alpha2
+    - v1alpha3
     operations:
     - CREATE
     - UPDATE
@@ -41239,7 +41239,7 @@ webhooks:
     service:
       name: capi-operator-webhook-service
       namespace: 'default'
-      path: /validate-operator-cluster-x-k8s-io-v1alpha2-bootstrapprovider
+      path: /validate-operator-cluster-x-k8s-io-v1alpha3-bootstrapprovider
   failurePolicy: Fail
   matchPolicy: Equivalent
   name: vbootstrapprovider.kb.io
@@ -41247,7 +41247,7 @@ webhooks:
   - apiGroups:
     - operator.cluster.x-k8s.io
     apiVersions:
-    - v1alpha2
+    - v1alpha3
     operations:
     - CREATE
     - UPDATE
@@ -41261,7 +41261,7 @@ webhooks:
     service:
       name: capi-operator-webhook-service
       namespace: 'default'
-      path: /validate-operator-cluster-x-k8s-io-v1alpha2-controlplaneprovider
+      path: /validate-operator-cluster-x-k8s-io-v1alpha3-controlplaneprovider
   failurePolicy: Fail
   matchPolicy: Equivalent
   name: vcontrolplaneprovider.kb.io
@@ -41269,7 +41269,7 @@ webhooks:
   - apiGroups:
     - operator.cluster.x-k8s.io
     apiVersions:
-    - v1alpha2
+    - v1alpha3
     operations:
     - CREATE
     - UPDATE
@@ -41283,7 +41283,7 @@ webhooks:
     service:
       name: capi-operator-webhook-service
       namespace: 'default'
-      path: /validate-operator-cluster-x-k8s-io-v1alpha2-coreprovider
+      path: /validate-operator-cluster-x-k8s-io-v1alpha3-coreprovider
   failurePolicy: Fail
   matchPolicy: Equivalent
   name: vcoreprovider.kb.io
@@ -41291,7 +41291,7 @@ webhooks:
   - apiGroups:
     - operator.cluster.x-k8s.io
     apiVersions:
-    - v1alpha2
+    - v1alpha3
     operations:
     - CREATE
     - UPDATE
@@ -41305,7 +41305,7 @@ webhooks:
     service:
       name: capi-operator-webhook-service
       namespace: 'default'
-      path: /validate-operator-cluster-x-k8s-io-v1alpha2-infrastructureprovider
+      path: /validate-operator-cluster-x-k8s-io-v1alpha3-infrastructureprovider
   failurePolicy: Fail
   matchPolicy: Equivalent
   name: vinfrastructureprovider.kb.io
@@ -41313,7 +41313,7 @@ webhooks:
   - apiGroups:
     - operator.cluster.x-k8s.io
     apiVersions:
-    - v1alpha2
+    - v1alpha3
     operations:
     - CREATE
     - UPDATE
@@ -41327,7 +41327,7 @@ webhooks:
     service:
       name: capi-operator-webhook-service
       namespace: 'default'
-      path: /validate-operator-cluster-x-k8s-io-v1alpha2-ipamprovider
+      path: /validate-operator-cluster-x-k8s-io-v1alpha3-ipamprovider
   failurePolicy: Fail
   matchPolicy: Equivalent
   name: vipamprovider.kb.io
@@ -41335,7 +41335,7 @@ webhooks:
   - apiGroups:
     - operator.cluster.x-k8s.io
     apiVersions:
-    - v1alpha2
+    - v1alpha3
     operations:
     - CREATE
     - UPDATE
@@ -41349,7 +41349,7 @@ webhooks:
     service:
       name: capi-operator-webhook-service
       namespace: 'default'
-      path: /validate-operator-cluster-x-k8s-io-v1alpha2-runtimeextensionprovider
+      path: /validate-operator-cluster-x-k8s-io-v1alpha3-runtimeextensionprovider
   failurePolicy: Fail
   matchPolicy: Equivalent
   name: vruntimeextensionprovider.kb.io
@@ -41357,7 +41357,7 @@ webhooks:
   - apiGroups:
     - operator.cluster.x-k8s.io
     apiVersions:
-    - v1alpha2
+    - v1alpha3
     operations:
     - CREATE
     - UPDATE
