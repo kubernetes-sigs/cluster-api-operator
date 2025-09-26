@@ -39,8 +39,8 @@ func (r *CoreProviderWebhook) SetupWebhookWithManager(mgr ctrl.Manager) error {
 		Complete()
 }
 
-//+kubebuilder:webhook:verbs=create;update,path=/validate-operator-cluster-x-k8s-io-v1alpha2-coreprovider,mutating=false,failurePolicy=fail,matchPolicy=Equivalent,groups=operator.cluster.x-k8s.io,resources=coreproviders,versions=v1alpha2,name=vcoreprovider.kb.io,sideEffects=None,admissionReviewVersions=v1;v1beta1
-//+kubebuilder:webhook:verbs=create;update,path=/mutate-operator-cluster-x-k8s-io-v1alpha2-coreprovider,mutating=true,failurePolicy=fail,matchPolicy=Equivalent,failurePolicy=fail,groups=operator.cluster.x-k8s.io,resources=coreproviders,versions=v1alpha2,name=vcoreprovider.kb.io,sideEffects=None,admissionReviewVersions=v1;v1beta1
+//+kubebuilder:webhook:verbs=create;update,path=/validate-operator-cluster-x-k8s-io-v1alpha3-coreprovider,mutating=false,failurePolicy=fail,matchPolicy=Equivalent,groups=operator.cluster.x-k8s.io,resources=coreproviders,versions=v1alpha3,name=vcoreprovider.kb.io,sideEffects=None,admissionReviewVersions=v1;v1beta1
+//+kubebuilder:webhook:verbs=create;update,path=/mutate-operator-cluster-x-k8s-io-v1alpha3-coreprovider,mutating=true,failurePolicy=fail,matchPolicy=Equivalent,failurePolicy=fail,groups=operator.cluster.x-k8s.io,resources=coreproviders,versions=v1alpha3,name=vcoreprovider.kb.io,sideEffects=None,admissionReviewVersions=v1;v1beta1
 
 var (
 	_ webhook.CustomValidator = &CoreProviderWebhook{}

@@ -39,8 +39,8 @@ func (r *IPAMProviderWebhook) SetupWebhookWithManager(mgr ctrl.Manager) error {
 		Complete()
 }
 
-//+kubebuilder:webhook:verbs=create;update,path=/validate-operator-cluster-x-k8s-io-v1alpha2-ipamprovider,mutating=false,failurePolicy=fail,matchPolicy=Equivalent,groups=operator.cluster.x-k8s.io,resources=ipamproviders,versions=v1alpha2,name=vipamprovider.kb.io,sideEffects=None,admissionReviewVersions=v1;v1beta1
-//+kubebuilder:webhook:verbs=create;update,path=/mutate-operator-cluster-x-k8s-io-v1alpha2-ipamprovider,mutating=true,failurePolicy=fail,matchPolicy=Equivalent,matchPolicy=Equivalent,groups=operator.cluster.x-k8s.io,resources=ipamproviders,versions=v1alpha2,name=vipamprovider.kb.io,sideEffects=None,admissionReviewVersions=v1;v1beta1
+//+kubebuilder:webhook:verbs=create;update,path=/validate-operator-cluster-x-k8s-io-v1alpha3-ipamprovider,mutating=false,failurePolicy=fail,matchPolicy=Equivalent,groups=operator.cluster.x-k8s.io,resources=ipamproviders,versions=v1alpha3,name=vipamprovider.kb.io,sideEffects=None,admissionReviewVersions=v1;v1beta1
+//+kubebuilder:webhook:verbs=create;update,path=/mutate-operator-cluster-x-k8s-io-v1alpha3-ipamprovider,mutating=true,failurePolicy=fail,matchPolicy=Equivalent,matchPolicy=Equivalent,groups=operator.cluster.x-k8s.io,resources=ipamproviders,versions=v1alpha3,name=vipamprovider.kb.io,sideEffects=None,admissionReviewVersions=v1;v1beta1
 
 var (
 	_ webhook.CustomValidator = &IPAMProviderWebhook{}
