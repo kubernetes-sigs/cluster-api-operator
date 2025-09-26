@@ -22,7 +22,7 @@ import (
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
+	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha3"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"

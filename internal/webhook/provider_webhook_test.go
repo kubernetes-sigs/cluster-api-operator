@@ -22,7 +22,7 @@ import (
 
 	. "github.com/onsi/gomega"
 
-	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
+	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha3"
 )
 
 const (

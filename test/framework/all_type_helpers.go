@@ -225,7 +225,9 @@ func (h *HelmChart) Run(values map[string]string) (string, error) {
 	fullCommand := append([]string{h.BinaryPath}, args...)
 	klog.Infof("Executing: %s", fullCommand)
 
-	out, err := exec.Command(h.BinaryPath, args...).CombinedOutput() //nolint:gosec
+	ctx := context.Background()
+
+	out, err := exec.CommandContext(ctx, h.BinaryPath, args...).CombinedOutput() //nolint:gosec
 	if err != nil {
 		return "", fmt.Errorf("failed to run helm %s: %w, output: %s", strings.Join(h.Commands.Strings(), " "), err, string(out))
 	}

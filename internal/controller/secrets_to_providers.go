@@ -21,7 +21,7 @@ import (
 	"fmt"
 
 	"github.com/Masterminds/goutils"
-	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
+	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha3"
 	"sigs.k8s.io/cluster-api-operator/internal/controller/genericprovider"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"

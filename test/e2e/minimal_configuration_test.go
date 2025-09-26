@@ -30,7 +30,7 @@ import (
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/content/file"
 	"oras.land/oras-go/v2/registry/remote"
-	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
+	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha3"
 	"sigs.k8s.io/cluster-api/test/framework"
 
 	. "sigs.k8s.io/cluster-api-operator/test/framework"

@@ -19,7 +19,6 @@ package controller
 import (
 	"reflect"
 	"testing"
-	"time"
 
 	"github.com/google/go-cmp/cmp"
 	appsv1 "k8s.io/api/apps/v1"
@@ -29,14 +28,12 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes/scheme"
-	configv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	"k8s.io/utils/ptr"
 
-	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
+	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha3"
 )
 
 func TestCustomizeDeployment(t *testing.T) {
-	sevenHours, _ := time.ParseDuration("7h")
 	memTestQuantity, _ := resource.ParseQuantity("16Gi")
 	managerDepl := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -89,7 +86,6 @@ func TestCustomizeDeployment(t *testing.T) {
 	tests := []struct {
 		name                   string
 		inputDeploymentSpec    *operatorv1.DeploymentSpec
-		inputManagerSpec       *operatorv1.ManagerSpec
 		expectedDeploymentSpec func(*appsv1.DeploymentSpec) (*appsv1.DeploymentSpec, bool)
 		expectedError          bool
 	}{
@@ -479,37 +475,31 @@ func TestCustomizeDeployment(t *testing.T) {
 			},
 		},
 		{
-			name: "all manager options",
-			inputManagerSpec: &operatorv1.ManagerSpec{
-				FeatureGates:    map[string]bool{"TEST": true, "ANOTHER": false},
-				ProfilerAddress: "localhost:1234",
-				Verbosity:       5,
-				ControllerManagerConfiguration: operatorv1.ControllerManagerConfiguration{
-					CacheNamespace: "testNS",
-					SyncPeriod:     &metav1.Duration{Duration: sevenHours},
-					Controller:     &operatorv1.ControllerConfigurationSpec{GroupKindConcurrency: map[string]int{"machine": 3}},
-					Metrics:        operatorv1.ControllerMetrics{BindAddress: ":4567"},
-					Health: operatorv1.ControllerHealth{
-						HealthProbeBindAddress: ":6789",
-						ReadinessEndpointName:  "readyish",
-						LivenessEndpointName:   "mostly",
+			name: "all container args",
+			inputDeploymentSpec: &operatorv1.DeploymentSpec{
+				Containers: []operatorv1.ContainerSpec{
+					{
+						Name: "manager",
+						Args: map[string]string{
+							"--webhook-port":                "3579",
+							"--machine-concurrency":         "3",
+							"--namespace":                   "testNS",
+							"--health-addr":                 ":6789",
+							"--leader-elect":                "true",
+							"--leader-election-id":          "here/foo",
+							"--leader-elect-lease-duration": "25200s",
+							"--leader-elect-renew-deadline": "25200s",
+							"--leader-elect-retry-period":   "25200s",
+							"--metrics-bind-addr":           ":4567",
+							"--webhook-cert-dir":            "/tmp/certs",
+							"--sync-period":                 "25200s",
+							"--profiler-address":            "localhost:1234",
+							"--v":                           "5",
+							"--feature-gates":               "ANOTHER=false,TEST=true",
+							"--test-option":                 "test-value",
+							"--another-option":              "another-value",
+						},
 					},
-					Webhook: operatorv1.ControllerWebhook{
-						Port:    ptr.To(3579),
-						CertDir: "/tmp/certs",
-					},
-					LeaderElection: &configv1alpha1.LeaderElectionConfiguration{
-						LeaderElect:       ptr.To(true),
-						ResourceName:      "foo",
-						ResourceNamespace: "here",
-						LeaseDuration:     metav1.Duration{Duration: sevenHours},
-						RenewDeadline:     metav1.Duration{Duration: sevenHours},
-						RetryPeriod:       metav1.Duration{Duration: sevenHours},
-					},
-				},
-				AdditionalArgs: map[string]string{
-					"--test-option":    "test-value",
-					"--another-option": "another-value",
 				},
 			},
 			expectedDeploymentSpec: func(inputDS *appsv1.DeploymentSpec) (*appsv1.DeploymentSpec, bool) {
@@ -534,28 +524,28 @@ func TestCustomizeDeployment(t *testing.T) {
 										},
 									},
 									Args: []string{
-										"--webhook-port=3579",
-										"--machine-concurrency=3",
-										"--namespace=testNS",
+										"--webhook-port=3579", // Existing arg, replaced in place at position 0
+										"--another-option=another-value",
+										"--feature-gates=ANOTHER=false,TEST=true",
 										"--health-addr=:6789",
 										"--leader-elect=true",
-										"--leader-election-id=here/foo",
 										"--leader-elect-lease-duration=25200s",
 										"--leader-elect-renew-deadline=25200s",
 										"--leader-elect-retry-period=25200s",
+										"--leader-election-id=here/foo",
+										"--machine-concurrency=3",
 										"--metrics-bind-addr=:4567",
-										"--webhook-cert-dir=/tmp/certs",
-										"--sync-period=25200s",
+										"--namespace=testNS",
 										"--profiler-address=localhost:1234",
-										"--v=5",
-										"--feature-gates=ANOTHER=false,TEST=true",
+										"--sync-period=25200s",
 										"--test-option=test-value",
-										"--another-option=another-value",
+										"--v=5",
+										"--webhook-cert-dir=/tmp/certs",
 									},
 									LivenessProbe: &corev1.Probe{
 										ProbeHandler: corev1.ProbeHandler{
 											HTTPGet: &corev1.HTTPGetAction{
-												Path: "/mostly",
+												Path: "/healthz",
 												Port: intstr.FromString("healthz"),
 											},
 										},
@@ -563,7 +553,7 @@ func TestCustomizeDeployment(t *testing.T) {
 									ReadinessProbe: &corev1.Probe{
 										ProbeHandler: corev1.ProbeHandler{
 											HTTPGet: &corev1.HTTPGetAction{
-												Path: "/readyish",
+												Path: "/readyz",
 												Port: intstr.FromString("healthz"),
 											},
 										},
@@ -574,58 +564,38 @@ func TestCustomizeDeployment(t *testing.T) {
 					},
 				}
 
-				return expectedDS, reflect.DeepEqual(inputDS.Template.Spec.Containers[0], expectedDS.Template.Spec.Containers[0])
+				if !reflect.DeepEqual(inputDS.Template.Spec.Containers[1].Name, expectedDS.Template.Spec.Containers[1].Name) {
+					return expectedDS, false
+				}
+				if !reflect.DeepEqual(inputDS.Template.Spec.Containers[1].Image, expectedDS.Template.Spec.Containers[1].Image) {
+					return expectedDS, false
+				}
+				if !reflect.DeepEqual(inputDS.Template.Spec.Containers[1].Env, expectedDS.Template.Spec.Containers[1].Env) {
+					return expectedDS, false
+				}
+				if !reflect.DeepEqual(inputDS.Template.Spec.Containers[1].Args, expectedDS.Template.Spec.Containers[1].Args) {
+					return expectedDS, false
+				}
+				if !reflect.DeepEqual(inputDS.Template.Spec.Containers[1].Resources, expectedDS.Template.Spec.Containers[1].Resources) {
+					return expectedDS, false
+				}
+
+				return expectedDS, true
 			},
-		},
-		{
-			name: "additional arg already in args list with different value",
-			inputManagerSpec: &operatorv1.ManagerSpec{
-				ControllerManagerConfiguration: operatorv1.ControllerManagerConfiguration{
-					Webhook: operatorv1.ControllerWebhook{
-						Port:    ptr.To(3579),
-						CertDir: "/tmp/certs",
-					},
-				},
-				AdditionalArgs: map[string]string{
-					"--test-option":    "test-value",
-					"--webhook-port":   "0000",
-					"--another-option": "another-value",
-				},
-			},
-			expectedError: true,
-		},
-		{
-			name: "additional arg already in args list with same value",
-			inputManagerSpec: &operatorv1.ManagerSpec{
-				ControllerManagerConfiguration: operatorv1.ControllerManagerConfiguration{
-					Webhook: operatorv1.ControllerWebhook{
-						Port:    ptr.To(3579),
-						CertDir: "/tmp/certs",
-					},
-				},
-				AdditionalArgs: map[string]string{
-					"--test-option":    "test-value",
-					"--webhook-port":   "3579",
-					"--another-option": "another-value",
-				},
-			},
-			expectedError: true,
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			deployment := managerDepl.DeepCopy()
-			if err := customizeDeployment(tc.inputDeploymentSpec, tc.inputManagerSpec, deployment); err != nil {
-				if tc.expectedError {
-					return
-				}
-
-				t.Error(err)
+			if tc.inputDeploymentSpec != nil {
+				customizeDeploymentSpec(*tc.inputDeploymentSpec, deployment)
 			}
 
-			if ds, expected := tc.expectedDeploymentSpec(&deployment.Spec); !expected {
-				t.Error(cmp.Diff(ds, deployment.Spec))
+			if tc.expectedDeploymentSpec != nil {
+				if ds, expected := tc.expectedDeploymentSpec(&deployment.Spec); !expected {
+					t.Error(cmp.Diff(ds, deployment.Spec))
+				}
 			}
 		})
 	}
@@ -706,20 +676,16 @@ func TestCustomizeMultipleDeployment(t *testing.T) {
 						Deployment: &operatorv1.DeploymentSpec{
 							Replicas: ptr.To(10),
 						},
-						AdditionalDeployments: map[string]operatorv1.AdditionalDeployments{
+						AdditionalDeployments: map[string]operatorv1.DeploymentSpec{
 							"azureserviceoperator-controller-manager": {
-								Deployment: &operatorv1.DeploymentSpec{
-									Containers: []operatorv1.ContainerSpec{
-										{
-											Name: "manager",
-											Args: map[string]string{
-												"--crd-pattern": ".*",
-											},
+								Containers: []operatorv1.ContainerSpec{
+									{
+										Name: "manager",
+										Args: map[string]string{
+											"--crd-pattern": ".*",
+											"--v":           "1",
 										},
 									},
-								},
-								Manager: &operatorv1.ManagerSpec{
-									Verbosity: 1,
 								},
 							},
 						},
