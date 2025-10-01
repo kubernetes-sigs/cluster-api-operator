@@ -80,6 +80,8 @@ Example layout for a `kubeadm` provider may look like:
 - `control-plane-components.yaml`
 - `bootstrap-components.yaml`
 
+See the [plugin docs](../03_plugin/03_publish_subcommand.md) for more information on how to properly build and publish the OCI artifacts to the air-gapped registry.
+
 To fetch provider components which are stored as an OCI artifact, you can configure `fetchConfig.oci` field to pull them directly from an OCI registry:
 
 ```yaml
@@ -94,6 +96,22 @@ spec:
     name: azure-variables
   fetchConfig:
     oci: "my-oci-registry.example.com/my-provider:v1.9.3"
+```
+
+You can likewise configure `fetchConfig.oci` to use plain http rather than https if so desired. This should only be used for development purposes as it can be insecure:
+
+```yaml
+apiVersion: operator.cluster.x-k8s.io/v1alpha2
+kind: InfrastructureProvider
+metadata:
+  name: azure
+  namespace: capz-system
+spec:
+  version: v1.9.3
+  configSecret:
+    name: azure-variables
+  fetchConfig:
+    oci: "http://my-oci-registry.example.com/my-provider:v1.9.3"
 ```
 
 ## OCI Authentication
