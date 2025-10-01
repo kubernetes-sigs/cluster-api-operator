@@ -17,7 +17,7 @@ require (
 	oras.land/oras-go/v2 v2.6.0
 	sigs.k8s.io/cluster-api v1.11.1
 	sigs.k8s.io/cluster-api-operator v0.0.0-00010101000000-000000000000
-	sigs.k8s.io/cluster-api/test v1.11.0
+	sigs.k8s.io/cluster-api/test v1.11.1
 	sigs.k8s.io/controller-runtime v0.21.0
 	sigs.k8s.io/yaml v1.6.0
 )
@@ -124,7 +124,7 @@ require (
 	k8s.io/component-base v0.33.5 // indirect
 	k8s.io/kube-openapi v0.0.0-20250318190949-c8a335a9a2ff // indirect
 	sigs.k8s.io/json v0.0.0-20241010143419-9aa6b5e7a4b3 // indirect
-	sigs.k8s.io/kind v0.29.0 // indirect
+	sigs.k8s.io/kind v0.30.0 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.6.0 // indirect
 )
