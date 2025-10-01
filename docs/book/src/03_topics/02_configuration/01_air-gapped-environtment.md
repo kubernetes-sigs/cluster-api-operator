@@ -80,8 +80,7 @@ Example layout for a `kubeadm` provider may look like:
 - `control-plane-components.yaml`
 - `bootstrap-components.yaml`
 
-See the [plugin docs](../03_plugin/03_publish_subcommand.md) for more information on how to properly build and publish the OCI artifacts to the air-gapped registry.<br>
-Other tools, such as [oras](https://oras.land/docs/), behvae in a similar fashion and can also be used to build and publish the OCI artifacts.
+See the [plugin docs](../03_plugin/03_publish_subcommand.md) for more information on how to properly build and publish the OCI artifacts to the air-gapped registry.
 
 To fetch provider components which are stored as an OCI artifact, you can configure `fetchConfig.oci` field to pull them directly from an OCI registry:
 
