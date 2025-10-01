@@ -96,6 +96,9 @@ spec:
     oci: "my-oci-registry.example.com/my-provider:v1.9.3"
 ```
 
+See the [plugin docs](../03_plugin/03_publish_subcommand.md) for more information on how to properly build and publish the OCI artifacts to the air-gapped registry.<br>
+Other tools, such as [oras](https://oras.land/docs/), behvae in a similar fashion and can also be used to build and publish the OCI artifacts.
+
 ## OCI Authentication
 
 To securely authenticate with an OCI registry, environment variables are used for user credentials. The following environment variables are involved:
