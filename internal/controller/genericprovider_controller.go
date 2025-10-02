@@ -193,6 +193,9 @@ func (r *GenericProviderReconciler) Reconcile(ctx context.Context, req reconcile
 }
 
 func patchProvider(ctx context.Context, provider operatorv1.GenericProvider, patchHelper *patch.Helper, options ...patch.Option) error {
+	// Fix existing conditions to ensure they have required Reason field
+	normalizeExistingConditions(provider)
+
 	conds := []string{
 		operatorv1.PreflightCheckCondition,
 		operatorv1.ProviderInstalledCondition,
@@ -201,6 +204,26 @@ func patchProvider(ctx context.Context, provider operatorv1.GenericProvider, pat
 	options = append(options, patch.WithOwnedConditions{Conditions: conds})
 
 	return patchHelper.Patch(ctx, provider, options...)
+}
+
+// normalizeExistingConditions ensures all existing conditions have required Reason field.
+func normalizeExistingConditions(provider operatorv1.GenericProvider) {
+	conditions := provider.GetConditions()
+	modified := false
+
+	for i := range conditions {
+		condition := &conditions[i]
+
+		// Set reason to condition type if empty
+		if condition.Reason == "" {
+			condition.Reason = condition.Type
+			modified = true
+		}
+	}
+
+	if modified {
+		provider.SetConditions(conditions)
+	}
 }
 
 func (r *GenericProviderReconciler) reconcile(ctx context.Context) (*Result, error) {
