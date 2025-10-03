@@ -28,24 +28,29 @@ metadata:
     "helm.sh/hook-weight": "2"
     {{- end }}
     "argocd.argoproj.io/sync-wave": "2"
-{{- if or $ipamVersion $.Values.configSecret.name $.Values.manager $.Values.additionalDeployments (($ipam).configSecret).name }}
+{{- if or $ipamVersion $.Values.configSecret.name $ipam.manager $.Values.additionalDeployments (($ipam).configSecret).name }}
 spec:
 {{- end }}
 {{- if $ipamVersion }}
   version: {{ $ipamVersion }}
 {{- end }}
-{{- if $.Values.manager }}
-{{- if and (kindIs "map" $.Values.manager.featureGates) (hasKey $.Values.manager.featureGates $ipamName) }}
+{{- if $ipam.manager }}
   manager:
-{{- range $key, $value := $.Values.manager.featureGates }}
-  {{- if eq $key $ipamName }}
+  {{- if $ipam.manager.featureGates }}
     featureGates:
-    {{- range $k, $v := $value }}
-      {{ $k }}: {{ $v }}
+    {{- range $key, $value := $ipam.manager.featureGates }}
+      {{ $key }}: {{ $value }}
     {{- end }}
   {{- end }}
-{{- end }}
-{{- end }}
+  {{- if $ipam.manager.metrics }}
+    metrics:
+    {{- if $ipam.manager.metrics.insecureDiagnostics }}
+      insecureDiagnostics: {{- $ipam.manager.metrics.insecureDiagnostics }}
+    {{- end }}
+    {{- if $ipam.manager.metrics.diagnosticsAddress }}
+      diagnosticsAddress: {{- $ipam.manager.metrics.diagnosticsAddress }}
+    {{- end }}
+  {{- end }}
 {{- end }}
 {{- if and (kindIs "map" $.Values.fetchConfig) (hasKey $.Values.fetchConfig $ipamName) }}
 {{- range $key, $value := $.Values.fetchConfig }}

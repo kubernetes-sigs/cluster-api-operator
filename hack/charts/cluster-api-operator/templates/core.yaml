@@ -28,20 +28,29 @@ metadata:
     "helm.sh/hook-weight": "2"
     {{- end }}
     "argocd.argoproj.io/sync-wave": "2"
-{{- if or $coreVersion $.Values.configSecret.name $.Values.manager (($core).configSecret).name }}
+{{- if or $coreVersion $.Values.configSecret.name $core.manager (($core).configSecret).name }}
 spec:
 {{- end}}
 {{- if $coreVersion }}
   version: {{ $coreVersion }}
 {{- end }}
-{{- if $.Values.manager }}
-{{- if and $.Values.manager.featureGates $.Values.manager.featureGates.core }}
+{{- if $core.manager }}
   manager:
+  {{- if $core.manager.featureGates }}
     featureGates:
-    {{- range $key, $value := $.Values.manager.featureGates.core }}
+    {{- range $key, $value := $core.manager.featureGates }}
       {{ $key }}: {{ $value }}
     {{- end }}
-{{- end }}
+  {{- end }}
+  {{- if $core.manager.metrics }}
+    metrics:
+    {{- if $core.manager.metrics.insecureDiagnostics }}
+      insecureDiagnostics: {{- $core.manager.metrics.insecureDiagnostics }}
+    {{- end }}
+    {{- if $core.manager.metrics.diagnosticsAddress }}
+      diagnosticsAddress: {{- $core.manager.metrics.diagnosticsAddress }}
+    {{- end }}
+  {{- end }}
 {{- end }}
 {{- if (default (($core).configSecret).name (($.Values).configSecret).name) }}
 {{- include "capi-operator.configSecret" (dict "ROOT" $ "ARGUMENT" $core) | nindent 2 }}

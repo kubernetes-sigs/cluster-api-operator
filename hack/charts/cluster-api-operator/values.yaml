@@ -6,41 +6,63 @@ core: {}
 #   namespace: ""         # Optional
 #   version: ""           # Optional
 #   createNamespace: true # Optional
+#   manager:              # Optional
+#     featureGates:
+#       ClusterTopology: true
+#     metrics:
+#       insecureDiagnostics: true
+#       diagnosticsAddress: localhost:8080
 bootstrap: {}
 # kubeadm: {}             # Name, required
 #   namespace: ""         # Optional
 #   version: ""           # Optional
 #   createNamespace: true # Optional
+#   manager:              # Optional
+#     metrics:
+#       insecureDiagnostics: true
+#       diagnosticsAddress: localhost:8080
 controlPlane: {}
 # kubeadm: {}             # Name, required
 #   namespace: ""         # Optional
 #   version: ""           # Optional
 #   createNamespace: true # Optional
+#   manager:              # Optional
+#     featureGates:
+#       ClusterTopology: true
+#     metrics:
+#       insecureDiagnostics: true
+#       diagnosticsAddress: localhost:8080
 infrastructure: {}
 # docker: {}              # Name, required
 #   namespace: ""         # Optional
 #   version: ""           # Optional
 #   createNamespace: true # Optional
+#   manager:              # Optional
+#     featureGates:
+#       ClusterTopology: true
+#     metrics:
+#       insecureDiagnostics: true
+#       diagnosticsAddress: localhost:8080
 addon: {}
 # helm: {}                # Name, required
 #   namespace: ""         # Optional
 #   version: ""           # Optional
 #   createNamespace: true # Optional
+#   manager:              # Optional
+#     metrics:
+#       insecureDiagnostics: true
+#       diagnosticsAddress: localhost:8080
 ipam: {}
 # in-cluster: {}          # Name, required
 #   namespace: ""         # Optional
 #   version: ""           # Optional
 #   createNamespace: true # Optional
-manager.featureGates: {}
-# Configuration for enabling feature gates in different providers
-# manager: 
-#   featureGates:
-#     proxmox: # Name of the provider
+#   manager:              # Optional
+#     featureGates:
 #       ClusterTopology: true
-#     core:
-#       ClusterTopology: true
-#     kubeadm:
-#       ClusterTopology: true
+#     metrics:
+#       insecureDiagnostics: true
+#       diagnosticsAddress: localhost:8080
 fetchConfig: {}
 # ---
 # Common configuration secret options
