@@ -35,7 +35,6 @@ type CoreProviderStatus struct {
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="InstalledVersion",type="string",JSONPath=".status.installedVersion"
 // +kubebuilder:printcolumn:name="Ready",type="string",JSONPath=".status.conditions[?(@.type=='Ready')].status"
-// +kubebuilder:storageversion
 
 // CoreProvider is the Schema for the coreproviders API.
 type CoreProvider struct {

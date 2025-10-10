@@ -14,6 +14,41 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package v1alpha2 contains the v1alpha2 API implementation.
-// +k8s:conversion-gen=sigs.k8s.io/cluster-api-operator/api/v1alpha3
-package v1alpha2
+package v1alpha3
+
+// IsV1alpha3DeploymentEmpty returns true if all fields in the deployment are zero values.
+func IsV1alpha3DeploymentEmpty(d *DeploymentSpec) bool {
+	if d == nil {
+		return true
+	}
+
+	if d.Replicas != nil {
+		return false
+	}
+
+	if len(d.NodeSelector) > 0 {
+		return false
+	}
+
+	if len(d.Tolerations) > 0 {
+		return false
+	}
+
+	if d.Affinity != nil {
+		return false
+	}
+
+	if len(d.Containers) > 0 {
+		return false
+	}
+
+	if d.ServiceAccountName != "" {
+		return false
+	}
+
+	if len(d.ImagePullSecrets) > 0 {
+		return false
+	}
+
+	return true
+}
