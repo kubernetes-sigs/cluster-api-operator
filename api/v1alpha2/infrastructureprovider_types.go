@@ -35,7 +35,6 @@ type InfrastructureProviderStatus struct {
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="InstalledVersion",type="string",JSONPath=".status.installedVersion"
 // +kubebuilder:printcolumn:name="Ready",type="string",JSONPath=".status.conditions[?(@.type=='Ready')].status"
-// +kubebuilder:storageversion
 
 // InfrastructureProvider is the Schema for the infrastructureproviders API.
 type InfrastructureProvider struct {

@@ -36,7 +36,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
-	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
+	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha3"
 	"sigs.k8s.io/cluster-api-operator/internal/controller/genericprovider"
 	"sigs.k8s.io/cluster-api-operator/util"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"

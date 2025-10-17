@@ -17,7 +17,7 @@ limitations under the License.
 package webhook
 
 import (
-	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
+	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha3"
 )
 
 // setDefaultProviderSpec sets the default values for the provider spec.
