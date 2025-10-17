@@ -85,5 +85,5 @@ metadata:
 spec:
  version: v2.1.4
  configSecret:
-   name: aws-variables
+   name: credentials-secret
 ```
