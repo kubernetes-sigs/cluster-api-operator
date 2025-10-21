@@ -128,7 +128,9 @@ func customizeObjectsFn(provider operatorv1.GenericProvider) func(objs []unstruc
 func customizeDeployment(dSpec *operatorv1.DeploymentSpec, mSpec *operatorv1.ManagerSpec, d *appsv1.Deployment) error {
 	// Customize deployment spec first.
 	if dSpec != nil {
-		customizeDeploymentSpec(*dSpec, d)
+		if err := customizeDeploymentSpec(*dSpec, d); err != nil {
+			return err
+		}
 	}
 
 	// Run the customizeManagerContainer after, so it overrides anything in the deploymentSpec.
@@ -146,7 +148,7 @@ func customizeDeployment(dSpec *operatorv1.DeploymentSpec, mSpec *operatorv1.Man
 	return nil
 }
 
-func customizeDeploymentSpec(dSpec operatorv1.DeploymentSpec, d *appsv1.Deployment) {
+func customizeDeploymentSpec(dSpec operatorv1.DeploymentSpec, d *appsv1.Deployment) error {
 	if dSpec.Replicas != nil {
 		replicas := int32(*dSpec.Replicas) //nolint:gosec
 		d.Spec.Replicas = ptr.To(replicas)
@@ -173,8 +175,12 @@ func customizeDeploymentSpec(dSpec operatorv1.DeploymentSpec, d *appsv1.Deployme
 	}
 
 	for _, pc := range dSpec.Containers {
-		customizeContainer(pc, d)
+		if err := customizeContainer(pc, d); err != nil {
+			return err
+		}
 	}
+
+	return nil
 }
 
 // findManagerContainer finds manager container in the provider deployment.
@@ -299,7 +305,7 @@ func customizeManagerContainer(mSpec *operatorv1.ManagerSpec, c *corev1.Containe
 }
 
 // customizeContainer customize provider container base on provider spec input.
-func customizeContainer(cSpec operatorv1.ContainerSpec, d *appsv1.Deployment) {
+func customizeContainer(cSpec operatorv1.ContainerSpec, d *appsv1.Deployment) error {
 	for j, c := range d.Spec.Template.Spec.Containers {
 		if c.Name == cSpec.Name {
 			for an, av := range cSpec.Args {
@@ -322,10 +328,14 @@ func customizeContainer(cSpec operatorv1.ContainerSpec, d *appsv1.Deployment) {
 			if cSpec.Command != nil {
 				c.Command = cSpec.Command
 			}
-		}
 
-		d.Spec.Template.Spec.Containers[j] = c
+			d.Spec.Template.Spec.Containers[j] = c
+
+			return nil
+		}
 	}
+
+	return fmt.Errorf("cannot find container %q in deployment %q", cSpec.Name, d.Name)
 }
 
 // setArg set container arguments.
