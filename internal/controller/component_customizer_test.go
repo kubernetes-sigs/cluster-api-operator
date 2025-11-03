@@ -611,6 +611,18 @@ func TestCustomizeDeployment(t *testing.T) {
 			},
 			expectedError: true,
 		},
+		{
+			name: "container customization for non-existent container",
+			inputDeploymentSpec: &operatorv1.DeploymentSpec{
+				Containers: []operatorv1.ContainerSpec{
+					{
+						Name:     "NON-EXISTENT",
+						ImageURL: ptr.To("quay.io/dev/mydns:v3.4.2"),
+					},
+				},
+			},
+			expectedError: true,
+		},
 	}
 
 	for _, tc := range tests {
