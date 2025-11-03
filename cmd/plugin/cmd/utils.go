@@ -39,7 +39,8 @@ import (
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	admissionv1 "k8s.io/api/admissionregistration/v1"
-	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
+	operatorv1alpha2 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
+	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha3"
 
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 )
@@ -64,6 +65,7 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(apiextensionsv1.AddToScheme(scheme))
 	utilruntime.Must(operatorv1.AddToScheme(scheme))
+	utilruntime.Must(operatorv1alpha2.AddToScheme(scheme))
 	utilruntime.Must(admissionv1.AddToScheme(scheme))
 	utilruntime.Must(clusterctlv1.AddToScheme(scheme))
 }

@@ -15,4 +15,5 @@ limitations under the License.
 */
 
 // Package v1alpha2 contains the v1alpha2 API implementation.
+// +k8s:conversion-gen=sigs.k8s.io/cluster-api-operator/api/v1alpha3
 package v1alpha2

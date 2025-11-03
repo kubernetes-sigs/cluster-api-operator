@@ -35,7 +35,6 @@ type ControlPlaneProviderStatus struct {
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="InstalledVersion",type="string",JSONPath=".status.installedVersion"
 // +kubebuilder:printcolumn:name="Ready",type="string",JSONPath=".status.conditions[?(@.type=='Ready')].status"
-// +kubebuilder:storageversion
 
 // ControlPlaneProvider is the Schema for the controlplaneproviders API.
 type ControlPlaneProvider struct {

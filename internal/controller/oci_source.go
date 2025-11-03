@@ -28,7 +28,7 @@ import (
 	"oras.land/oras-go/v2/registry/remote"
 	"oras.land/oras-go/v2/registry/remote/auth"
 	"oras.land/oras-go/v2/registry/remote/retry"
-	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
+	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha3"
 	configclient "sigs.k8s.io/cluster-api/cmd/clusterctl/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )

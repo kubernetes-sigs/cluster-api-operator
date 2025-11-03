@@ -26,7 +26,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
-	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
+	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha3"
 )
 
 type RuntimeExtensionProviderWebhook struct{}
@@ -39,8 +39,8 @@ func (r *RuntimeExtensionProviderWebhook) SetupWebhookWithManager(mgr ctrl.Manag
 		Complete()
 }
 
-//+kubebuilder:webhook:verbs=create;update,path=/validate-operator-cluster-x-k8s-io-v1alpha2-runtimeextensionprovider,mutating=false,failurePolicy=fail,matchPolicy=Equivalent,groups=operator.cluster.x-k8s.io,resources=runtimeextensionproviders,versions=v1alpha2,name=vruntimeextensionprovider.kb.io,sideEffects=None,admissionReviewVersions=v1;v1beta1
-//+kubebuilder:webhook:verbs=create;update,path=/mutate-operator-cluster-x-k8s-io-v1alpha2-runtimeextensionprovider,mutating=true,failurePolicy=fail,matchPolicy=Equivalent,matchPolicy=Equivalent,groups=operator.cluster.x-k8s.io,resources=runtimeextensionproviders,versions=v1alpha2,name=vruntimeextensionprovider.kb.io,sideEffects=None,admissionReviewVersions=v1;v1beta1
+//+kubebuilder:webhook:verbs=create;update,path=/validate-operator-cluster-x-k8s-io-v1alpha3-runtimeextensionprovider,mutating=false,failurePolicy=fail,matchPolicy=Equivalent,groups=operator.cluster.x-k8s.io,resources=runtimeextensionproviders,versions=v1alpha3,name=vruntimeextensionprovider.kb.io,sideEffects=None,admissionReviewVersions=v1;v1beta1
+//+kubebuilder:webhook:verbs=create;update,path=/mutate-operator-cluster-x-k8s-io-v1alpha3-runtimeextensionprovider,mutating=true,failurePolicy=fail,matchPolicy=Equivalent,matchPolicy=Equivalent,groups=operator.cluster.x-k8s.io,resources=runtimeextensionproviders,versions=v1alpha3,name=vruntimeextensionprovider.kb.io,sideEffects=None,admissionReviewVersions=v1;v1beta1
 
 var (
 	_ webhook.CustomValidator = &RuntimeExtensionProviderWebhook{}

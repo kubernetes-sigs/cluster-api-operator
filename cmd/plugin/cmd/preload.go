@@ -27,7 +27,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/util/errors"
 	"oras.land/oras-go/v2/registry/remote/auth"
-	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
+	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha3"
 	providercontroller "sigs.k8s.io/cluster-api-operator/internal/controller"
 	"sigs.k8s.io/cluster-api-operator/util"
 	clusterctlv1 "sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3"

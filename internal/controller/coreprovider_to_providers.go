@@ -20,7 +20,7 @@ import (
 	"context"
 	"fmt"
 
-	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
+	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha3"
 	"sigs.k8s.io/cluster-api-operator/internal/controller/genericprovider"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/cluster-api/util/conditions"
