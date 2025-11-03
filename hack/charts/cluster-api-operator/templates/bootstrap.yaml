@@ -28,9 +28,21 @@ metadata:
     "helm.sh/hook-weight": "2"
     {{- end }}
     "argocd.argoproj.io/sync-wave": "2"
-{{- if or $bootstrapVersion $.Values.configSecret.name (($bootstrap).configSecret).name }}
+{{- if or $bootstrapVersion $.Values.configSecret.name $bootstrap.manager (($bootstrap).configSecret).name }}
 spec:
 {{- end}}
+{{- if $bootstrap.manager }}
+  manager:
+  {{- if $bootstrap.manager.metrics }}
+    metrics:
+    {{- if $bootstrap.manager.metrics.insecureDiagnostics }}
+      insecureDiagnostics: {{- $bootstrap.manager.metrics.insecureDiagnostics }}
+    {{- end }}
+    {{- if $bootstrap.manager.metrics.diagnosticsAddress }}
+      diagnosticsAddress: {{- $bootstrap.manager.metrics.diagnosticsAddress }}
+    {{- end }}
+  {{- end }}
+{{- end }}
 {{- if $bootstrapVersion }}
   version: {{ $bootstrapVersion }}
 {{- end }}

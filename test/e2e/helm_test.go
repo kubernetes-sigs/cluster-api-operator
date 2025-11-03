@@ -354,19 +354,19 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 	})
 	It("should deploy core and infra with feature gates enabled", func() {
 		manifests, err := helmChart.Run(map[string]string{
-			"configSecret.name":                         "aws-variables",
-			"configSecret.namespace":                    "default",
-			"infrastructure.aws.version":                "v2.4.0",
-			"ipam.in-cluster.enabled":                   "true",
-			"addon.helm.enabled":                        "true",
-			"image.manager.tag":                         "v0.9.1",
-			"core.cluster-api.version":                  "v1.6.2",
-			"manager.featureGates.core.ClusterTopology": "true",
-			"manager.featureGates.core.MachinePool":     "true",
-			"manager.featureGates.aws.ClusterTopology":  "true",
-			"manager.featureGates.aws.MachinePool":      "true",
-			"manager.featureGates.aws.EKSEnableIAM":     "true",
-			"manager.featureGates.aws.EKSAllowAddRoles": "true",
+			"configSecret.name":                                        "aws-variables",
+			"configSecret.namespace":                                   "default",
+			"infrastructure.aws.version":                               "v2.4.0",
+			"infrastructure.aws.manager.featureGates.ClusterTopology":  "true",
+			"infrastructure.aws.manager.featureGates.MachinePool":      "true",
+			"infrastructure.aws.manager.featureGates.EKSEnableIAM":     "true",
+			"infrastructure.aws.manager.featureGates.EKSAllowAddRoles": "true",
+			"ipam.in-cluster.enabled":                                  "true",
+			"addon.helm.enabled":                                       "true",
+			"image.manager.tag":                                        "v0.9.1",
+			"core.cluster-api.version":                                 "v1.6.2",
+			"core.cluster-api.manager.featureGates.ClusterTopology":    "true",
+			"core.cluster-api.manager.featureGates.MachinePool":        "true",
 		})
 		Expect(err).ToNot(HaveOccurred())
 		Expect(manifests).ToNot(BeEmpty())
@@ -391,14 +391,14 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 	})
 	It("should deploy all providers when manager is defined but another infrastructure spec field is defined", func() {
 		manifests, err := helmChart.Run(map[string]string{
-			"core.cluster-api.enabled":                  "true",
-			"controlPlane.kubeadm.enabled":              "true",
-			"bootstrap.kubeadm.enabled":                 "true",
-			"infrastructure.docker.enabled":             "true",
-			"ipam.in-cluster.enabled":                   "true",
-			"addon.helm.enabled":                        "true",
-			"manager.featureGates.core.ClusterTopology": "true",
-			"manager.featureGates.core.MachinePool":     "true",
+			"core.cluster-api.enabled":                              "true",
+			"core.cluster-api.manager.featureGates.MachinePool":     "true",
+			"core.cluster-api.manager.featureGates.ClusterTopology": "true",
+			"controlPlane.kubeadm.enabled":                          "true",
+			"bootstrap.kubeadm.enabled":                             "true",
+			"infrastructure.docker.enabled":                         "true",
+			"ipam.in-cluster.enabled":                               "true",
+			"addon.helm.enabled":                                    "true",
 		})
 		Expect(err).ToNot(HaveOccurred())
 		Expect(manifests).ToNot(BeEmpty())
@@ -408,14 +408,14 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 	})
 	It("should deploy kubeadm control plane with manager specified", func() {
 		manifests, err := helmChart.Run(map[string]string{
-			"core.cluster-api.enabled":                     "true",
-			"controlPlane.kubeadm.enabled":                 "true",
-			"bootstrap.kubeadm.enabled":                    "true",
-			"infrastructure.docker.enabled":                "true",
-			"ipam.in-cluster.enabled":                      "true",
-			"addon.helm.enabled":                           "true",
-			"manager.featureGates.kubeadm.ClusterTopology": "true",
-			"manager.featureGates.kubeadm.MachinePool":     "true",
+			"core.cluster-api.enabled":                                  "true",
+			"controlPlane.kubeadm.enabled":                              "true",
+			"controlPlane.kubeadm.manager.featureGates.MachinePool":     "true",
+			"controlPlane.kubeadm.manager.featureGates.ClusterTopology": "true",
+			"bootstrap.kubeadm.enabled":                                 "true",
+			"infrastructure.docker.enabled":                             "true",
+			"ipam.in-cluster.enabled":                                   "true",
+			"addon.helm.enabled":                                        "true",
 		})
 		Expect(err).ToNot(HaveOccurred())
 		Expect(manifests).ToNot(BeEmpty())

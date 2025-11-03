@@ -28,24 +28,29 @@ metadata:
     "helm.sh/hook-weight": "2"
     {{- end }}
     "argocd.argoproj.io/sync-wave": "2"
-{{- if or $infrastructureVersion $.Values.configSecret.name $.Values.manager $.Values.additionalDeployments (($infra).configSecret).name }}
+{{- if or $infrastructureVersion $.Values.configSecret.name $infra.manager $.Values.additionalDeployments (($infra).configSecret).name }}
 spec:
 {{- end }}
 {{- if $infrastructureVersion }}
   version: {{ $infrastructureVersion }}
 {{- end }}
-{{- if $.Values.manager }}
-{{- if and (kindIs "map" $.Values.manager.featureGates) (hasKey $.Values.manager.featureGates $infrastructureName) }}
+{{- if $infra.manager }}
   manager:
-{{- range $key, $value := $.Values.manager.featureGates }}
-  {{- if eq $key $infrastructureName }}
+  {{- if $infra.manager.featureGates }}
     featureGates:
-    {{- range $k, $v := $value }}
-      {{ $k }}: {{ $v }}
+    {{- range $key, $value := $infra.manager.featureGates }}
+      {{ $key }}: {{ $value }}
     {{- end }}
   {{- end }}
-{{- end }}
-{{- end }}
+  {{- if $infra.manager.metrics }}
+    metrics:
+    {{- if $infra.manager.metrics.insecureDiagnostics }}
+      insecureDiagnostics: {{- $infra.manager.metrics.insecureDiagnostics }}
+    {{- end }}
+    {{- if $infra.manager.metrics.diagnosticsAddress }}
+      diagnosticsAddress: {{- $infra.manager.metrics.diagnosticsAddress }}
+    {{- end }}
+  {{- end }}
 {{- end }}
 {{- if and (kindIs "map" $.Values.fetchConfig) (hasKey $.Values.fetchConfig $infrastructureName) }}
 {{- range $key, $value := $.Values.fetchConfig }}
