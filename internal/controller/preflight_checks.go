@@ -241,7 +241,7 @@ func checkProviderVersion(ctx context.Context, providerVersion string, provider 
 				Type:    operatorv1.PreflightCheckCondition,
 				Status:  metav1.ConditionFalse,
 				Reason:  operatorv1.UnsupportedProviderDowngradeReason,
-				Message: unsupportedProviderDowngradeMessage,
+				Message: fmt.Sprintf(unsupportedProviderDowngradeMessage, provider.GetName()),
 			})
 
 			return fmt.Errorf("downgrade is not supported for provider %q", provider.GetName())
