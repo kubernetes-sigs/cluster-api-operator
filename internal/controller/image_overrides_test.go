@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/distribution/reference"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -203,7 +204,7 @@ func TestAlterImage(t *testing.T) {
 			component: "cluster-api",
 			image:     "example.com/controller:v1.0.0",
 			mockFunc: func(component, image string) (string, error) {
-				return "", fmt.Errorf("couldn't parse image name: repository name must be canonical")
+				return "", reference.ErrNameNotCanonical
 			},
 			want:    "example.com/controller:v1.0.0",
 			wantErr: false,
@@ -250,18 +251,23 @@ func TestIsCanonicalError(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "canonical error with 'repository name must be canonical'",
-			err:  fmt.Errorf("repository name must be canonical"),
+			name: "ErrNameNotCanonical returns true",
+			err:  reference.ErrNameNotCanonical,
 			want: true,
 		},
 		{
-			name: "canonical error with 'couldn't parse image name'",
-			err:  fmt.Errorf("couldn't parse image name: invalid format"),
+			name: "wrapped ErrNameNotCanonical returns true",
+			err:  fmt.Errorf("parse error: %w", reference.ErrNameNotCanonical),
 			want: true,
 		},
 		{
 			name: "other error returns false",
 			err:  fmt.Errorf("test"),
+			want: false,
+		},
+		{
+			name: "couldn't parse image name error returns false",
+			err:  fmt.Errorf("couldn't parse image name: invalid format"),
 			want: false,
 		},
 		{
