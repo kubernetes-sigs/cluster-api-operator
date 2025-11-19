@@ -17,9 +17,10 @@ limitations under the License.
 package controller
 
 import (
+	"errors"
 	"fmt"
-	"strings"
 
+	"github.com/distribution/reference"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/kubernetes/scheme"
 
@@ -63,16 +64,9 @@ func alterImage(component, imageString string, imageMeta configclient.ImageMetaC
 	return result, nil
 }
 
-// isCanonicalError checks if error is about non nanonical image format.
+// isCanonicalError checks if error is about non canonical image format.
 func isCanonicalError(err error) bool {
-	if err == nil {
-		return false
-	}
-
-	msg := err.Error()
-
-	return strings.Contains(msg, "repository name must be canonical") ||
-		strings.Contains(msg, "couldn't parse image name")
+	return errors.Is(err, reference.ErrNameNotCanonical)
 }
 
 // fixImages alters images using the give alter func
