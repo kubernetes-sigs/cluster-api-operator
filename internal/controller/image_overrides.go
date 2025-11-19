@@ -18,6 +18,7 @@ package controller
 
 import (
 	"fmt"
+	"strings"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -39,11 +40,39 @@ func imageOverrides(component string, overrides configclient.Client) func(objs [
 		}
 
 		return fixImages(objs, func(image string) (string, error) {
-			return overrides.ImageMeta().AlterImage(component, image)
+			return alterImage(component, image, overrides.ImageMeta())
 		})
 	}
 
 	return imageOverridesWrapper
+}
+
+// alterImage accepts images as is, including non canonical formats.
+// If image overrides fail due to non canonical format, the original image is returned unchanged.
+// Allowing non canonical formats is designed for advanced users who may want to use such formats intentionally.
+func alterImage(component, imageString string, imageMeta configclient.ImageMetaClient) (string, error) {
+	result, err := imageMeta.AlterImage(component, imageString)
+	if err != nil {
+		if isCanonicalError(err) {
+			return imageString, nil
+		}
+
+		return "", err
+	}
+
+	return result, nil
+}
+
+// isCanonicalError checks if error is about non nanonical image format.
+func isCanonicalError(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	msg := err.Error()
+
+	return strings.Contains(msg, "repository name must be canonical") ||
+		strings.Contains(msg, "couldn't parse image name")
 }
 
 // fixImages alters images using the give alter func
