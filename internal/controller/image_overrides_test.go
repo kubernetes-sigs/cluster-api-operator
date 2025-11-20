@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/distribution/reference"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -166,6 +167,120 @@ func TestFixImages(t *testing.T) {
 			gotImages, err := inspectImages(got)
 			g.Expect(err).ToNot(HaveOccurred())
 			g.Expect(gotImages).To(Equal(tt.want))
+		})
+	}
+}
+
+// mockImageMetaClient is a test double for configclient.ImageMetaClient.
+type mockImageMetaClient struct {
+	alterFunc func(component, image string) (string, error)
+}
+
+func (m *mockImageMetaClient) AlterImage(component, image string) (string, error) {
+	return m.alterFunc(component, image)
+}
+
+func TestAlterImage(t *testing.T) {
+	tests := []struct {
+		name      string
+		component string
+		image     string
+		mockFunc  func(component, image string) (string, error)
+		want      string
+		wantErr   bool
+	}{
+		{
+			name:      "canonical image with override applies override",
+			component: "cluster-api",
+			image:     "example.com/controller:v1.0.0",
+			mockFunc: func(component, image string) (string, error) {
+				return "example.com/custom:v2.0.0", nil
+			},
+			want:    "example.com/custom:v2.0.0",
+			wantErr: false,
+		},
+		{
+			name:      "non-canonical image returns original on canonical error",
+			component: "cluster-api",
+			image:     "example.com/controller:v1.0.0",
+			mockFunc: func(component, image string) (string, error) {
+				return "", reference.ErrNameNotCanonical
+			},
+			want:    "example.com/controller:v1.0.0",
+			wantErr: false,
+		},
+		{
+			name:      "other errors are propagated",
+			component: "cluster-api",
+			image:     "example.com/controller:v1.0.0",
+			mockFunc: func(component, image string) (string, error) {
+				return "", fmt.Errorf("test")
+			},
+			want:    "",
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := NewWithT(t)
+
+			mock := &mockImageMetaClient{alterFunc: tt.mockFunc}
+			result, err := alterImage(tt.component, tt.image, mock)
+
+			if tt.wantErr {
+				g.Expect(err).To(HaveOccurred())
+				return
+			}
+
+			g.Expect(err).ToNot(HaveOccurred())
+			g.Expect(result).To(Equal(tt.want))
+		})
+	}
+}
+
+func TestIsCanonicalError(t *testing.T) {
+	tests := []struct {
+		name string
+		err  error
+		want bool
+	}{
+		{
+			name: "nil error returns false",
+			err:  nil,
+			want: false,
+		},
+		{
+			name: "ErrNameNotCanonical returns true",
+			err:  reference.ErrNameNotCanonical,
+			want: true,
+		},
+		{
+			name: "wrapped ErrNameNotCanonical returns true",
+			err:  fmt.Errorf("parse error: %w", reference.ErrNameNotCanonical),
+			want: true,
+		},
+		{
+			name: "other error returns false",
+			err:  fmt.Errorf("test"),
+			want: false,
+		},
+		{
+			name: "couldn't parse image name error returns false",
+			err:  fmt.Errorf("couldn't parse image name: invalid format"),
+			want: false,
+		},
+		{
+			name: "empty error message returns false",
+			err:  fmt.Errorf(""),
+			want: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := NewWithT(t)
+			g.Expect(isCanonicalError(tt.err)).To(Equal(tt.want))
 		})
 	}
 }
