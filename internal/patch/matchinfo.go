@@ -19,6 +19,9 @@ package patch
 import (
 	"fmt"
 
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/labels"
+	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
 	"sigs.k8s.io/yaml"
 )
 
@@ -41,4 +44,40 @@ func parseYAMLMatchInfo(raw []byte) (matchInfo, error) {
 	}
 
 	return m, nil
+}
+
+func matchSelector(obj *unstructured.Unstructured, sel *operatorv1.PatchSelector, ls labels.Selector) bool {
+	if sel == nil {
+		return true
+	}
+
+	gvk := obj.GroupVersionKind()
+
+	if sel.Group != "" && sel.Group != gvk.Group {
+		return false
+	}
+
+	if sel.Version != "" && sel.Version != gvk.Version {
+		return false
+	}
+
+	if sel.Kind != "" && sel.Kind != gvk.Kind {
+		return false
+	}
+
+	if sel.Name != "" && sel.Name != obj.GetName() {
+		return false
+	}
+
+	if sel.Namespace != "" && sel.Namespace != obj.GetNamespace() {
+		return false
+	}
+
+	if sel.LabelSelector != "" {
+		if !ls.Matches(labels.Set(obj.GetLabels())) {
+			return false
+		}
+	}
+
+	return true
 }

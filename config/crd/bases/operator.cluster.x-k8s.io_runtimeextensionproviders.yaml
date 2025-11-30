@@ -3039,14 +3039,58 @@ spec:
                   provider manifests. Patches are applied in the order they are specified.
                   The `kind` field must match the target object, and
                   if `apiVersion` is specified it will only be applied to matching objects.
-                  This should be an inline yaml blob-string https://datatracker.ietf.org/doc/html/rfc7396
+                  This should be an inline yaml blob-string https://datatracker.ietf.org/doc/html/rfc7396.
+                  This will be deprecated in future releases in favor of `patches`.
                 items:
                   type: string
+                type: array
+              patches:
+                description: |-
+                  Patches are applied to the rendered provider manifests to customize the
+                  provider manifests. Patches support both strategic merge patch and RFC6902 JSON patches.
+                  Both `patches` and `manifestPatches` cannot be set at the same time.
+                items:
+                  description: Patch defines a generic patch to be applied to provider
+                    manifests.
+                  properties:
+                    patch:
+                      description: Patch is content of the patch to be applied. It
+                        should be an inline yaml blob-string.
+                      type: string
+                    target:
+                      description: Target defines the target object to which the patch
+                        should be applied.
+                      properties:
+                        group:
+                          description: Group is the API Group of the target object.
+                          type: string
+                        kind:
+                          description: Kind is the kind of the target object.
+                          type: string
+                        labelSelector:
+                          description: |-
+                            LabelSelector is a string that follows the label selection expression
+                            https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#api
+                          type: string
+                        name:
+                          description: Name is the name of the target object.
+                          type: string
+                        namespace:
+                          description: Namespace is the namespace of the target object.
+                          type: string
+                        version:
+                          description: Version is the API version of the target object.
+                          type: string
+                      type: object
+                  type: object
                 type: array
               version:
                 description: Version indicates the provider version.
                 type: string
             type: object
+            x-kubernetes-validations:
+            - message: Cannot set both 'patches' and 'manifestPatches'
+              rule: '!(has(self.manifestPatches) && has(self.patches))'
           status:
             description: RuntimeExtensionProviderStatus defines the observed state
               of RuntimeExtensionProvider.
