@@ -33,6 +33,12 @@ spec:
 {{- end}}
 {{- if $bootstrap.manager }}
   manager:
+  {{- if $bootstrap.manager.featureGates }}
+    featureGates:
+    {{- range $key, $value := $bootstrap.manager.featureGates }}
+      {{ $key }}: {{ $value }}
+    {{- end }}
+  {{- end }}
   {{- if $bootstrap.manager.metrics }}
     metrics:
     {{- if $bootstrap.manager.metrics.insecureDiagnostics }}
