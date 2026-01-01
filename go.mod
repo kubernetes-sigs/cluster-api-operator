@@ -11,7 +11,7 @@ require (
 	github.com/go-logr/logr v1.4.3
 	github.com/google/go-cmp v0.7.0
 	github.com/google/go-github/v52 v52.0.0
-	github.com/onsi/gomega v1.38.2
+	github.com/onsi/gomega v1.38.3
 	github.com/opencontainers/image-spec v1.1.1
 	github.com/spf13/cobra v1.10.1
 	github.com/spf13/pflag v1.0.10
