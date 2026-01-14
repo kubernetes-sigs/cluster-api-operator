@@ -19,8 +19,13 @@ limitations under the License.
 package e2e
 
 import (
+	"bytes"
+	"compress/gzip"
 	"context"
+	"fmt"
 
+	corev1 "k8s.io/api/core/v1"
+	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
 	configclient "sigs.k8s.io/cluster-api/cmd/clusterctl/client/config"
 )
 
@@ -33,8 +38,8 @@ const (
 	capiSystemNamespace  = "capi-system"
 	capiOperatorRelease  = "capi-operator"
 
-	previousCAPIVersion        = "v1.10.4"
-	nextCAPIVersion            = "v1.11.0"
+	previousCAPIVersion        = "v1.11.0"
+	nextCAPIVersion            = "v1.12.0"
 	coreProviderName           = configclient.ClusterAPIProviderName
 	coreProviderDeploymentName = "capi-controller-manager"
 
@@ -56,4 +61,53 @@ const (
 
 	customManifestsFolder = "resources"
 	customProviderName    = "kubeadm-custom"
+
+	// configMapMaxSize is the maximum size of a ConfigMap in bytes (1MB).
+	configMapMaxSize = 1048576
 )
+
+// compressConfigMapData compresses the "components" field of a ConfigMap if it exceeds
+// the maximum ConfigMap size limit. This uses gzip compression and stores the result
+// in BinaryData, following the same pattern as the compressData function in
+// internal/controller/manifests_downloader.go.
+func compressConfigMapData(cm *corev1.ConfigMap) error {
+	components, ok := cm.Data[operatorv1.ComponentsConfigMapKey]
+	if !ok {
+		// No components data to compress
+		return nil
+	}
+
+	// Check if compression is needed
+	if len(components) < configMapMaxSize {
+		return nil
+	}
+
+	// Compress the data
+	var buf bytes.Buffer
+	zw := gzip.NewWriter(&buf)
+
+	if _, err := zw.Write([]byte(components)); err != nil {
+		return fmt.Errorf("failed to write compressed data: %w", err)
+	}
+
+	if err := zw.Close(); err != nil {
+		return fmt.Errorf("failed to close gzip writer: %w", err)
+	}
+
+	// Move compressed data to BinaryData
+	if cm.BinaryData == nil {
+		cm.BinaryData = make(map[string][]byte)
+	}
+
+	cm.BinaryData[operatorv1.ComponentsConfigMapKey] = buf.Bytes()
+	delete(cm.Data, operatorv1.ComponentsConfigMapKey)
+
+	// Set the compressed annotation
+	if cm.Annotations == nil {
+		cm.Annotations = make(map[string]string)
+	}
+
+	cm.Annotations[operatorv1.CompressedAnnotation] = operatorv1.TrueValue
+
+	return nil
+}

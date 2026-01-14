@@ -72,12 +72,12 @@ var _ = Describe("Install ControlPlane, Core, Bootstrap providers in an air-gapp
 
 		By("should successfully create ConfigMaps with ControlPlane, Core, and Bootstrap provider manifests")
 		configMapFiles := []string{
-			"core-cluster-api-v1.10.4.yaml",
 			"core-cluster-api-v1.11.0.yaml",
-			"bootstrap-kubeadm-v1.10.4.yaml",
+			"core-cluster-api-v1.12.0.yaml",
 			"bootstrap-kubeadm-v1.11.0.yaml",
-			"controlplane-kubeadm-v1.10.4.yaml",
+			"bootstrap-kubeadm-v1.12.0.yaml",
 			"controlplane-kubeadm-v1.11.0.yaml",
+			"controlplane-kubeadm-v1.12.0.yaml",
 		}
 
 		for _, fileName := range configMapFiles {
@@ -87,6 +87,9 @@ var _ = Describe("Install ControlPlane, Core, Bootstrap providers in an air-gapp
 			var configMap corev1.ConfigMap
 
 			Expect(yaml.Unmarshal(providerComponents, &configMap)).To(Succeed())
+
+			// Compress ConfigMap data if it exceeds the size limit
+			Expect(compressConfigMapData(&configMap)).To(Succeed())
 
 			configMaps = append(configMaps, configMap)
 		}
@@ -155,7 +158,7 @@ var _ = Describe("Install ControlPlane, Core, Bootstrap providers in an air-gapp
 		})
 	})
 
-	It("should successfully create, upgrade (v1.10.4 -> v1.11.0) and delete a BootstrapProvider from a ConfigMap", func() {
+	It("should successfully create, upgrade (v1.11.0 -> v1.12.0) and delete a BootstrapProvider from a ConfigMap", func() {
 		bootstrapProvider := &operatorv1.BootstrapProvider{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      customProviderName,
@@ -245,7 +248,7 @@ var _ = Describe("Install ControlPlane, Core, Bootstrap providers in an air-gapp
 			e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 	})
 
-	It("should successfully create, upgrade (v1.10.4 -> v1.11.0) and delete a ControlPlaneProvider from a ConfigMap", func() {
+	It("should successfully create, upgrade (v1.11.0 -> v1.12.0) and delete a ControlPlaneProvider from a ConfigMap", func() {
 		controlPlaneProvider := &operatorv1.ControlPlaneProvider{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      customProviderName,
@@ -335,7 +338,7 @@ var _ = Describe("Install ControlPlane, Core, Bootstrap providers in an air-gapp
 			e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 	})
 
-	It("should successfully upgrade CoreProvider (v1.10.4 -> v1.11.0)", func() {
+	It("should successfully upgrade CoreProvider (v1.11.0 -> v1.12.0)", func() {
 		Expect(bootstrapCluster.Get(ctx, client.ObjectKeyFromObject(coreProvider), coreProvider)).To(Succeed())
 
 		By("Updating the CoreProvider to new Custer API version")
