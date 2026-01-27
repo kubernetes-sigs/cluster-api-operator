@@ -12,7 +12,7 @@ jobs:
         working-directory:
           - ""
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # tag=v4.2.2
+      - uses: actions/checkout@0c366fd6a839edf440554fa01a7085ccba70ac98 # tag=v4.2.2
       - name: Calculate go version
         id: vars
         run: echo "go_version=$(make go-version)" >> $GITHUB_OUTPUT
