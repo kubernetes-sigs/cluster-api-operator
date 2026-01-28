@@ -322,7 +322,7 @@ metadata:
 			e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 	})
 
-	It("should successfully upgrade a CoreProvider (v1.7.7 -> latest)", func() {
+	It("should successfully upgrade a CoreProvider (to latest)", func() {
 		bootstrapCluster := bootstrapClusterProxy.GetClient()
 		coreProvider := &operatorv1.CoreProvider{ObjectMeta: metav1.ObjectMeta{
 			Name:      coreProviderName,
