@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	. "github.com/onsi/gomega"
+	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
 	utilyaml "sigs.k8s.io/cluster-api/util/yaml"
 )
 
@@ -57,6 +58,106 @@ func TestApplyPatches(t *testing.T) {
 			g.Expect(err).NotTo(HaveOccurred())
 
 			g.Expect(string(resultYaml)).To(Equal(tc.expectedPatchedObjectsYaml))
+		})
+	}
+}
+
+func TestApplyGenericPatches(t *testing.T) {
+	testCases := []struct {
+		name               string
+		objectsToPatchYaml string
+		patches            []*operatorv1.Patch
+		expectError        bool
+		expectedOutput     string
+	}{
+		{
+			name:               "strategic merge test",
+			objectsToPatchYaml: testObjectsToPatchYaml,
+			expectedOutput:     expectedTestPatchedObjectsYaml,
+			patches: []*operatorv1.Patch{
+				{
+					Patch: addServiceAccoungPatchRBAC,
+					Target: &operatorv1.PatchSelector{
+						Group: "rbac.authorization.k8s.io",
+						Kind:  "ClusterRoleBinding",
+					},
+				},
+				{
+					Patch: addLabelPatchService,
+					Target: &operatorv1.PatchSelector{
+						Kind: "Service",
+					},
+				},
+				{
+					Patch: removeSelectorPatchService,
+					Target: &operatorv1.PatchSelector{
+						Kind: "Service",
+					},
+				},
+				{
+					Patch: addSelectorPatchService,
+					Target: &operatorv1.PatchSelector{
+						Kind: "Service",
+					},
+				},
+				{
+					Patch: changePortOnSecondService,
+					Target: &operatorv1.PatchSelector{
+						Kind:      "Service",
+						Name:      "service-name-2",
+						Namespace: "namespace-name",
+					},
+				},
+			},
+		},
+		{
+			name:               "rfc6902 patch test add",
+			objectsToPatchYaml: testObjectsToPatchYaml,
+			expectedOutput:     expectedTestPatchedObjectsYaml,
+			patches: []*operatorv1.Patch{
+				{
+					Patch: rfc6902PatchAdd,
+					Target: &operatorv1.PatchSelector{
+						Group: "rbac.authorization.k8s.io",
+						Kind:  "ClusterRoleBinding",
+					},
+				},
+				{
+					Patch: rfc6902PatchesService,
+					Target: &operatorv1.PatchSelector{
+						Kind: "Service",
+					},
+				},
+				{
+					Patch: rfc6902PatchChangePortOnSecondService,
+					Target: &operatorv1.PatchSelector{
+						Kind:      "Service",
+						Name:      "service-name-2",
+						Namespace: "namespace-name",
+					},
+				},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			g := NewWithT(t)
+
+			objectToPatch, err := utilyaml.ToUnstructured([]byte(tc.objectsToPatchYaml))
+			g.Expect(err).NotTo(HaveOccurred())
+
+			res, err := ApplyGenericPatches(objectToPatch, tc.patches)
+			if tc.expectError {
+				g.Expect(err).To(HaveOccurred())
+			}
+
+			g.Expect(err).NotTo(HaveOccurred())
+
+			resultYaml, err := utilyaml.FromUnstructured(res)
+			g.Expect(err).NotTo(HaveOccurred())
+
+			g.Expect(string(resultYaml)).To(Equal(tc.expectedOutput))
 		})
 	}
 }
@@ -191,3 +292,33 @@ spec:
     targetPort: webhook-server
   selector:
     test-label: test-value`
+
+const rfc6902PatchAdd = `---
+- op: add
+  path: /subjects/-
+  value:
+    kind: ServiceAccount
+    name: test-service-account
+    namespace: test-namespace
+`
+
+const rfc6902PatchesService = `---
+- op: add
+  path: /metadata/labels/test-label
+  value: test-value
+- op: remove
+  path: /spec/selector
+- op: add
+  path: /spec/selector
+  value:
+    test-label: test-value
+`
+
+const rfc6902PatchChangePortOnSecondService = `---
+- op: replace
+  path: /spec/ports/0/port
+  value: 7777
+- op: replace
+  path: /spec/ports/0/targetPort
+  value: webhook-server
+`

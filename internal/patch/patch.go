@@ -17,12 +17,21 @@ limitations under the License.
 package patch
 
 import (
+	"encoding/json"
 	"fmt"
 
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/labels"
+	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
 	utilyaml "sigs.k8s.io/cluster-api/util/yaml"
 	"sigs.k8s.io/yaml"
 )
+
+// Patch defines an interface for applying patches to unstructured objects.
+type Patch interface {
+	Apply(obj *unstructured.Unstructured) error
+}
 
 // ApplyPatches patches a list of unstructured objects with a list of patches.
 // Patches match if their kind and apiVersion match a document, with the exception
@@ -65,4 +74,79 @@ func ApplyPatches(toPatch []unstructured.Unstructured, patches []string) ([]unst
 	}
 
 	return result, nil
+}
+
+// ApplyGenericPatches patches a list of unstructured objects with a list of patches.
+// It is similar to the above function except in the fact that the list of patches could be strategic merge patch or RFC6902 json patches.
+func ApplyGenericPatches(toPatches []unstructured.Unstructured, patches []*operatorv1.Patch) ([]unstructured.Unstructured, error) {
+	afterPatch := make([]unstructured.Unstructured, len(toPatches))
+	copy(afterPatch, toPatches)
+
+	for patchIdx, p := range patches {
+		patchJSON, err := yaml.YAMLToJSON([]byte(p.Patch))
+		if err != nil {
+			return nil, fmt.Errorf("failed to convert patch YAML to JSON: %w", err)
+		}
+
+		var ls labels.Selector
+		if p.Target != nil && p.Target.LabelSelector != "" {
+			ls, err = labels.Parse(p.Target.LabelSelector)
+			if err != nil {
+				return nil, fmt.Errorf("patch %d: failed to parse label selector %q: %w", patchIdx, p.Target.LabelSelector, err)
+			}
+		}
+
+		for i := range afterPatch {
+			obj := &afterPatch[i]
+
+			match := matchSelector(obj, p.Target, ls)
+
+			if !match {
+				continue
+			}
+
+			err = inferAndApplyPatchType(obj, patchJSON)
+			if err != nil {
+				return nil, fmt.Errorf("patch %d: failed to apply patch to %s/%s: %w", patchIdx, obj.GetNamespace(), obj.GetName(), err)
+			}
+		}
+	}
+
+	return afterPatch, nil
+}
+
+func inferAndApplyPatchType(obj *unstructured.Unstructured, patchByte []byte) error {
+	var (
+		patch          Patch
+		rfc6902Patches []*RFC6902
+	)
+
+	if err := json.Unmarshal(patchByte, &rfc6902Patches); err == nil {
+		patch = NewRFC6902Patch(rfc6902Patches)
+		if patch == nil {
+			return fmt.Errorf("rfc6902 patch is nil")
+		}
+
+		if err := patch.Apply(obj); err != nil {
+			return err
+		}
+
+		return nil
+	}
+
+	var strategicMerge apiextensionsv1.JSON
+	if err := json.Unmarshal(patchByte, &strategicMerge); err == nil {
+		patch = NewStrategicMergePatch(&strategicMerge)
+		if patch == nil {
+			return fmt.Errorf("strategic merge patch is nil")
+		}
+
+		if err = patch.Apply(obj); err != nil {
+			return fmt.Errorf("failed to apply strategic merge patch: %w", err)
+		}
+
+		return nil
+	}
+
+	return fmt.Errorf("unable to infer patch type")
 }

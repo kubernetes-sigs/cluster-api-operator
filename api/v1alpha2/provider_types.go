@@ -37,6 +37,7 @@ const (
 )
 
 // ProviderSpec is the desired state of the Provider.
+// +kubebuilder:validation:XValidation:rule="!(has(self.manifestPatches) && has(self.patches))",message="Cannot set both 'patches' and 'manifestPatches'"
 type ProviderSpec struct {
 	// Version indicates the provider version.
 	// +optional
@@ -79,15 +80,58 @@ type ProviderSpec struct {
 	// provider manifests. Patches are applied in the order they are specified.
 	// The `kind` field must match the target object, and
 	// if `apiVersion` is specified it will only be applied to matching objects.
-	// This should be an inline yaml blob-string https://datatracker.ietf.org/doc/html/rfc7396
+	// This should be an inline yaml blob-string https://datatracker.ietf.org/doc/html/rfc7396.
+	// This will be deprecated in future releases in favor of `patches`.
 	// +optional
 	ManifestPatches []string `json:"manifestPatches,omitempty"`
+
+	// Patches are applied to the rendered provider manifests to customize the
+	// provider manifests. Patches support both strategic merge patch and RFC6902 JSON patches.
+	// Both `patches` and `manifestPatches` cannot be set at the same time.
+	// +optional
+	Patches []*Patch `json:"patches,omitempty"`
 
 	// AdditionalDeployments is a map of additional deployments that the provider
 	// should manage. The key is the name of the deployment and the value is the
 	// DeploymentSpec.
 	// +optional
 	AdditionalDeployments map[string]AdditionalDeployments `json:"additionalDeployments,omitempty"`
+}
+
+// Patch defines a generic patch to be applied to provider manifests.
+type Patch struct {
+	// Patch is content of the patch to be applied. It should be an inline yaml blob-string.
+	// +optional
+	Patch string `json:"patch,omitempty"`
+	// Target defines the target object to which the patch should be applied.
+	Target *PatchSelector `json:"target,omitempty"`
+}
+
+type PatchSelector struct {
+	// Group is the API Group of the target object.
+	// +optional
+	Group string `json:"group,omitempty"`
+
+	// Version is the API version of the target object.
+	// +optional
+	Version string `json:"version,omitempty"`
+
+	// Kind is the kind of the target object.
+	// +optional
+	Kind string `json:"kind,omitempty"`
+
+	// Name is the name of the target object.
+	// +optional
+	Name string `json:"name,omitempty"`
+
+	// Namespace is the namespace of the target object.
+	// +optional
+	Namespace string `json:"namespace,omitempty"`
+
+	// LabelSelector is a string that follows the label selection expression
+	// https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#api
+	// +optional
+	LabelSelector string `json:"labelSelector,omitempty"`
 }
 
 // AdditionalDeployments defines the properties that can be enabled on the controller
