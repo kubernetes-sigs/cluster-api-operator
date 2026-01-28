@@ -18,6 +18,9 @@ bootstrap: {}
 #   version: ""           # Optional
 #   createNamespace: true # Optional
 #   manager:              # Optional
+#     featureGates:
+#       ClusterTopology: true
+#       MachinePool: true
 #     metrics:
 #       insecureDiagnostics: true
 #       diagnosticsAddress: localhost:8080
