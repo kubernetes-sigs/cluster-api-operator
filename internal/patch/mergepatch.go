@@ -19,12 +19,29 @@ package patch
 import (
 	"fmt"
 
+	jsonpatch "github.com/evanphx/json-patch/v5"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/yaml"
 )
 
 type mergePatch struct {
 	json      []byte
 	matchInfo matchInfo
+}
+
+type strategicMergePatch struct {
+	Patch *apiextensionsv1.JSON `json:",inline"`
+}
+
+func NewStrategicMergePatch(patch *apiextensionsv1.JSON) Patch {
+	if patch == nil {
+		return nil
+	}
+
+	return &strategicMergePatch{
+		Patch: patch,
+	}
 }
 
 func parseMergePatches(rawPatches []string) ([]mergePatch, error) {
@@ -48,4 +65,21 @@ func parseMergePatches(rawPatches []string) ([]mergePatch, error) {
 	}
 
 	return patches, nil
+}
+
+func (s *strategicMergePatch) Apply(obj *unstructured.Unstructured) error {
+	objJSON, err := obj.MarshalJSON()
+	if err != nil {
+		return fmt.Errorf("failed to marshal object to JSON: %w", err)
+	}
+
+	if patched, err := jsonpatch.MergePatch(objJSON, s.Patch.Raw); err == nil {
+		if err = obj.UnmarshalJSON(patched); err != nil {
+			return fmt.Errorf("failed to unmarshal patched JSON to object: %w", err)
+		}
+
+		return nil
+	}
+
+	return fmt.Errorf("failed to apply merge patch: %w", err)
 }

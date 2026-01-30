@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+	"errors"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
@@ -30,13 +31,18 @@ func applyPatches(ctx context.Context, provider operatorv1.GenericProvider) func
 	log := ctrl.LoggerFrom(ctx)
 
 	return func(objs []unstructured.Unstructured) ([]unstructured.Unstructured, error) {
-		if len(provider.GetSpec().ManifestPatches) == 0 {
+		switch {
+		case len(provider.GetSpec().Patches) != 0 && len(provider.GetSpec().ManifestPatches) != 0:
+			return objs, errors.New("cannot use both 'patches' and 'manifestPatches'; please choose one")
+		case len(provider.GetSpec().Patches) != 0:
+			log.V(5).Info("Applying generic resource patches")
+			return patch.ApplyGenericPatches(objs, provider.GetSpec().Patches)
+		case len(provider.GetSpec().ManifestPatches) != 0:
+			log.V(5).Info("Applying manifest resource patches")
+			return patch.ApplyPatches(objs, provider.GetSpec().ManifestPatches)
+		default:
 			log.V(5).Info("No resource patches to apply")
 			return objs, nil
 		}
-
-		log.V(5).Info("Applying resource patches")
-
-		return patch.ApplyPatches(objs, provider.GetSpec().ManifestPatches)
 	}
 }
