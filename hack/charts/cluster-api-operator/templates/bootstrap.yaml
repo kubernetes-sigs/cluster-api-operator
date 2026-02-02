@@ -28,9 +28,12 @@ metadata:
     "helm.sh/hook-weight": "2"
     {{- end }}
     "argocd.argoproj.io/sync-wave": "2"
-{{- if or $bootstrapVersion $.Values.configSecret.name $bootstrap.manager (($bootstrap).configSecret).name }}
+{{- if or $bootstrapVersion $.Values.configSecret.name $bootstrap.manager $bootstrap.deployment (($bootstrap).configSecret).name }}
 spec:
 {{- end}}
+{{- if $bootstrap.deployment }}
+  deployment: {{ toYaml $bootstrap.deployment | nindent 4 }}
+{{- end }}
 {{- if $bootstrap.manager }}
   manager:
   {{- if $bootstrap.manager.featureGates }}

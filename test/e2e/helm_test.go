@@ -422,6 +422,39 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 		Expect(err).ToNot(HaveOccurred())
 		Expect(manifests).To(Equal(string(expectedManifests)))
 	})
+	It("should deploy all providers with deployment spec", func() {
+		manifests, err := helmChart.Run(map[string]string{
+			"configSecret.name":                                         "test-secret-name",
+			"configSecret.namespace":                                    "test-secret-namespace",
+			"core.cluster-api.version":                                  "v1.7.7",
+			"core.cluster-api.deployment.replicas":                      "2",
+			"core.cluster-api.deployment.nodeSelector.tier":             "control-plane",
+			"bootstrap.kubeadm.version":                                 "v1.7.7",
+			"bootstrap.kubeadm.deployment.replicas":                     "2",
+			"bootstrap.kubeadm.deployment.tolerations[0].key":           "node-role",
+			"bootstrap.kubeadm.deployment.tolerations[0].operator":      "Exists",
+			"bootstrap.kubeadm.deployment.tolerations[0].effect":        "NoSchedule",
+			"controlPlane.kubeadm.version":                              "v1.7.7",
+			"controlPlane.kubeadm.deployment.replicas":                  "2",
+			"controlPlane.kubeadm.deployment.serviceAccountName":        "custom-cp-sa",
+			"infrastructure.docker.version":                             "v1.7.7",
+			"infrastructure.docker.deployment.replicas":                 "3",
+			"infrastructure.docker.deployment.imagePullSecrets[0].name": "my-registry-secret",
+			"ipam.in-cluster.version":                                   "v1.0.0",
+			"ipam.in-cluster.deployment.replicas":                       "1",
+			"ipam.in-cluster.deployment.nodeSelector.disktype":          "ssd",
+			"addon.helm.version":                                        "v0.2.6",
+			"addon.helm.deployment.replicas":                            "1",
+			"addon.helm.deployment.serviceAccountName":                  "addon-sa",
+		})
+		Expect(err).ToNot(HaveOccurred())
+		Expect(manifests).ToNot(BeEmpty())
+
+		expectedManifests, err := os.ReadFile(filepath.Join(customManifestsFolder, "all-providers-deployment-spec.yaml"))
+		Expect(err).ToNot(HaveOccurred())
+		Expect(manifests).To(Equal(string(expectedManifests)))
+	})
+
 	It("should deploy kubeadm control plane with manager specified", func() {
 		manifests, err := helmChart.Run(map[string]string{
 			"core.cluster-api.enabled":                                  "true",

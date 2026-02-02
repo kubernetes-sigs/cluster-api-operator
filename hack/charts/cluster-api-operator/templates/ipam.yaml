@@ -28,11 +28,14 @@ metadata:
     "helm.sh/hook-weight": "2"
     {{- end }}
     "argocd.argoproj.io/sync-wave": "2"
-{{- if or $ipamVersion $.Values.configSecret.name $ipam.manager $.Values.additionalDeployments (($ipam).configSecret).name }}
+{{- if or $ipamVersion $.Values.configSecret.name $ipam.manager $ipam.deployment $.Values.additionalDeployments (($ipam).configSecret).name }}
 spec:
 {{- end }}
 {{- if $ipamVersion }}
   version: {{ $ipamVersion }}
+{{- end }}
+{{- if $ipam.deployment }}
+  deployment: {{ toYaml $ipam.deployment | nindent 4 }}
 {{- end }}
 {{- if $ipam.manager }}
   manager:
