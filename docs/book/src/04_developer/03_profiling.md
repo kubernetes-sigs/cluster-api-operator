@@ -11,7 +11,7 @@ profilerAddress: ":6060"
 contentionProfiling: true
 ```
 
-Install with these custom values using [Helm chart installation methods](../02_installation/04_helm-chart-installation.md)
+Install with these custom values using [Helm chart installation methods](../installation/helm-chart-installation.md)
 
 ### Enabling Port-Forwarding
 
