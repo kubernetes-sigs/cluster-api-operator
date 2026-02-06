@@ -13,7 +13,7 @@ require (
 	github.com/google/go-github/v52 v52.0.0
 	github.com/onsi/gomega v1.38.3
 	github.com/opencontainers/image-spec v1.1.1
-	github.com/spf13/cobra v1.10.1
+	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
 	golang.org/x/oauth2 v0.34.0
 	k8s.io/api v0.34.2
