@@ -106,7 +106,7 @@ spec:
 
 5. As an admin, I would like to use the default fetch configurations by simply specifying the expected Cluster API provider names such as `aws`, `vsphere`, `azure`, `kubeadm`, `talos`, or `cluster-api` instead of having to explicitly specify the fetch configuration. In the example below, since we are using 'vsphere' as the name of the InfrastructureProvider the operator will fetch it's configuration from `url: https://github.com/kubernetes-sigs/cluster-api-provider-vsphere/releases` by default.
 
-See more examples in the [air-gapped environment section](./01_air-gapped-environtment.md)
+See more examples in the [air-gapped environment section](air-gapped-environtment.md)
 
 ```yaml
 ---
