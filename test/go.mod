@@ -9,16 +9,16 @@ require (
 	github.com/onsi/gomega v1.39.0
 	github.com/opencontainers/image-spec v1.1.1
 	golang.org/x/tools v0.41.0
-	k8s.io/api v0.34.2
-	k8s.io/apiextensions-apiserver v0.34.2
-	k8s.io/apimachinery v0.34.2
+	k8s.io/api v0.34.3
+	k8s.io/apiextensions-apiserver v0.34.3
+	k8s.io/apimachinery v0.34.3
 	k8s.io/klog/v2 v2.130.1
 	k8s.io/utils v0.0.0-20250604170112-4c0f3b243397
 	oras.land/oras-go/v2 v2.6.0
-	sigs.k8s.io/cluster-api v1.12.0
+	sigs.k8s.io/cluster-api v1.12.2
 	sigs.k8s.io/cluster-api-operator v0.0.0-00010101000000-000000000000
 	sigs.k8s.io/cluster-api/test v1.12.0
-	sigs.k8s.io/controller-runtime v0.22.4
+	sigs.k8s.io/controller-runtime v0.22.5
 	sigs.k8s.io/yaml v1.6.0
 )
 
@@ -120,10 +120,10 @@ require (
 	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/apiserver v0.34.2 // indirect
-	k8s.io/client-go v0.34.2 // indirect
+	k8s.io/apiserver v0.34.3 // indirect
+	k8s.io/client-go v0.34.3 // indirect
 	k8s.io/cluster-bootstrap v0.34.2 // indirect
-	k8s.io/component-base v0.34.2 // indirect
+	k8s.io/component-base v0.34.3 // indirect
 	k8s.io/kube-openapi v0.0.0-20250710124328-f3f2b991d03b // indirect
 	sigs.k8s.io/json v0.0.0-20241014173422-cfa47c3a1cc8 // indirect
 	sigs.k8s.io/kind v0.31.0 // indirect
