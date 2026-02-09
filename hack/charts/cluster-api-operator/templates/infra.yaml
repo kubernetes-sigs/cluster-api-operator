@@ -28,11 +28,14 @@ metadata:
     "helm.sh/hook-weight": "2"
     {{- end }}
     "argocd.argoproj.io/sync-wave": "2"
-{{- if or $infrastructureVersion $.Values.configSecret.name $infra.manager $.Values.additionalDeployments (($infra).configSecret).name }}
+{{- if or $infrastructureVersion $.Values.configSecret.name $infra.manager $infra.deployment $.Values.additionalDeployments (($infra).configSecret).name }}
 spec:
 {{- end }}
 {{- if $infrastructureVersion }}
   version: {{ $infrastructureVersion }}
+{{- end }}
+{{- if $infra.deployment }}
+  deployment: {{ toYaml $infra.deployment | nindent 4 }}
 {{- end }}
 {{- if $infra.manager }}
   manager:
