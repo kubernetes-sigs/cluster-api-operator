@@ -280,9 +280,16 @@ func customizeManagerContainer(mSpec *operatorv1.ManagerSpec, c *corev1.Containe
 	}
 
 	if len(mSpec.FeatureGates) > 0 {
-		fgValue := []string{}
+		// Start with existing feature gates from the manifest (defaults from upstream)
+		mergedGates := parseFeatureGates(c.Args)
 
+		// Merge user-specified feature gates (user values override defaults)
 		for fg, val := range mSpec.FeatureGates {
+			mergedGates[fg] = val
+		}
+
+		fgValue := []string{}
+		for fg, val := range mergedGates {
 			fgValue = append(fgValue, fg+"="+bool2Str[val])
 		}
 
@@ -336,6 +343,27 @@ func customizeContainer(cSpec operatorv1.ContainerSpec, d *appsv1.Deployment) er
 	}
 
 	return fmt.Errorf("cannot find container %q in deployment %q", cSpec.Name, d.Name)
+}
+
+// parseFeatureGates parses existing --feature-gates argument and returns a map of feature gates.
+// This allows user-specified feature gates to be merged with defaults instead of replacing them entirely.
+func parseFeatureGates(args []string) map[string]bool {
+	gates := make(map[string]bool)
+
+	for _, arg := range args {
+		if strings.HasPrefix(arg, "--feature-gates=") {
+			value := strings.TrimPrefix(arg, "--feature-gates=")
+			for _, gate := range strings.Split(value, ",") {
+				parts := strings.SplitN(gate, "=", 2)
+				if len(parts) == 2 {
+					gates[parts[0]] = parts[1] == "true"
+				}
+			}
+			break
+		}
+	}
+
+	return gates
 }
 
 // setArg set container arguments.

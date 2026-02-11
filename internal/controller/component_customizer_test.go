@@ -780,3 +780,109 @@ func TestCustomizeMultipleDeployment(t *testing.T) {
 		})
 	}
 }
+
+func TestParseFeatureGates(t *testing.T) {
+	tests := []struct {
+		name     string
+		args     []string
+		expected map[string]bool
+	}{
+		{
+			name:     "no feature gates",
+			args:     []string{"--webhook-port=2345"},
+			expected: map[string]bool{},
+		},
+		{
+			name:     "single feature gate",
+			args:     []string{"--feature-gates=MachinePool=true"},
+			expected: map[string]bool{"MachinePool": true},
+		},
+		{
+			name:     "multiple feature gates",
+			args:     []string{"--feature-gates=MachinePool=true,ClusterTopology=false,RuntimeSDK=true"},
+			expected: map[string]bool{"MachinePool": true, "ClusterTopology": false, "RuntimeSDK": true},
+		},
+		{
+			name:     "feature gates among other args",
+			args:     []string{"--webhook-port=2345", "--feature-gates=MachinePool=true,ClusterTopology=false", "--v=5"},
+			expected: map[string]bool{"MachinePool": true, "ClusterTopology": false},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := parseFeatureGates(tt.args)
+			if !reflect.DeepEqual(result, tt.expected) {
+				t.Errorf("parseFeatureGates() = %v, want %v", result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestAdditiveFeatureGates(t *testing.T) {
+	deplWithExistingGates := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "manager",
+			Namespace: metav1.NamespaceSystem,
+		},
+		Spec: appsv1.DeploymentSpec{
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "manager",
+				},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name:  "manager",
+							Image: "registry.k8s.io/a-manager:1.6.2",
+							Args: []string{
+								"--webhook-port=2345",
+								"--feature-gates=MachinePool=true,MachineSetPreflightChecks=true,PriorityQueue=false",
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	managerSpec := &operatorv1.ManagerSpec{
+		FeatureGates: map[string]bool{
+			"ClusterTopology":          true,
+			"MachineSetPreflightChecks": false,
+		},
+	}
+
+	container := findManagerContainer(&deplWithExistingGates.Spec)
+	if container == nil {
+		t.Fatal("expected container to be found")
+	}
+
+	if err := customizeManagerContainer(managerSpec, container); err != nil {
+		t.Fatalf("customizeManagerContainer failed: %v", err)
+	}
+
+	featureGatesArg := ""
+	for _, arg := range container.Args {
+		if len(arg) > 16 && arg[:16] == "--feature-gates=" {
+			featureGatesArg = arg[16:]
+			break
+		}
+	}
+
+	if featureGatesArg == "" {
+		t.Fatal("expected --feature-gates arg to be present")
+	}
+
+	actualGates := parseFeatureGates([]string{"--feature-gates=" + featureGatesArg})
+	expectedGates := map[string]bool{
+		"MachinePool":              true,
+		"ClusterTopology":          true,
+		"MachineSetPreflightChecks": false,
+		"PriorityQueue":            false,
+	}
+
+	if !reflect.DeepEqual(actualGates, expectedGates) {
+		t.Errorf("Feature gates not merged correctly.\nGot: %v\nWant: %v", actualGates, expectedGates)
+	}
+}
