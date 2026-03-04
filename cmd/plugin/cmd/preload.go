@@ -150,7 +150,6 @@ func runPreLoad() error {
 	// Load Core Provider.
 	if loadOpts.coreProvider != "" {
 		configMap, err := templateConfigMap(ctx, clusterctlv1.CoreProviderType, loadOpts.artifactURL, loadOpts.coreProvider, loadOpts.targetNamespace)
-
 		if err != nil {
 			return fmt.Errorf("cannot prepare manifests config map for core provider: %w", err)
 		} else {

@@ -55,7 +55,7 @@ func (b *AddonProvider) ProviderName() string {
 }
 
 func (b *AddonProviderList) GetItems() []GenericProvider {
-	providers := []GenericProvider{}
+	providers := make([]GenericProvider, 0, len(b.Items))
 
 	for index := range b.Items {
 		providers = append(providers, &b.Items[index])

@@ -84,6 +84,7 @@ func compressConfigMapData(cm *corev1.ConfigMap) error {
 
 	// Compress the data
 	var buf bytes.Buffer
+
 	zw := gzip.NewWriter(&buf)
 
 	if _, err := zw.Write([]byte(components)); err != nil {

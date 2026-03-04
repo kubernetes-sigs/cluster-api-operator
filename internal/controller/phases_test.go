@@ -604,6 +604,7 @@ func TestRepositoryProxy(t *testing.T) {
 
 			if tt.defaultRepository {
 				var err error
+
 				p.repo, err = p.configmapRepository(ctx, &metav1.LabelSelector{
 					MatchLabels: map[string]string{
 						operatorManagedLabel: "true",

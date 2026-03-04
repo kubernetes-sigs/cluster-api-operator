@@ -98,6 +98,7 @@ metadata:
 		}, e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
 		By("Checking for deployment to have additional labels")
+
 		deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: coreProviderDeploymentName, Namespace: operatorNamespace}}
 		WaitFor(ctx, For(deployment).In(bootstrapCluster).ToSatisfy(func() bool {
 			if v, ok := deployment.Labels["test-label"]; ok {
@@ -118,6 +119,7 @@ metadata:
 		}), e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
 		By("Checking if additional manifests are applied")
+
 		cm := &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test-config-map",
@@ -211,6 +213,7 @@ metadata:
 			Name:      infraProviderDeploymentName,
 			Namespace: operatorNamespace,
 		}}
+
 		Expect(bootstrapCluster.Create(ctx, infraProvider)).To(Succeed())
 
 		By("Waiting for the infrastructure provider deployment to be ready")
@@ -253,6 +256,7 @@ metadata:
 			Name:      addonProviderDeploymentName,
 			Namespace: operatorNamespace,
 		}}
+
 		Expect(bootstrapCluster.Create(ctx, addonProvider)).To(Succeed())
 
 		By("Waiting for the addon provider deployment to be ready")
@@ -297,6 +301,7 @@ metadata:
 			Name:      ipamProviderDeploymentName,
 			Namespace: operatorNamespace,
 		}}
+
 		Expect(bootstrapCluster.Create(ctx, ipamProvider)).To(Succeed())
 
 		By("Waiting for the ipam provider deployment to be ready")
@@ -359,22 +364,26 @@ metadata:
 			Expect(fs.Close()).To(Succeed())
 		}()
 
-		fds := []v1.Descriptor{}
+		fds := make([]v1.Descriptor, 0, 4)
 
 		fileDescriptor, err := fs.Add(ctx, "infrastructure-custom-v0.0.1-metadata.yaml", mediaType, "")
 		Expect(err).ToNot(HaveOccurred())
+
 		fds = append(fds, fileDescriptor)
 
 		fileDescriptor, err = fs.Add(ctx, "infrastructure-custom-v0.0.1-components.yaml", mediaType, "")
 		Expect(err).ToNot(HaveOccurred())
+
 		fds = append(fds, fileDescriptor)
 
 		fileDescriptor, err = fs.Add(ctx, "infrastructure-docker-v0.0.1-metadata.yaml", mediaType, "")
 		Expect(err).ToNot(HaveOccurred())
+
 		fds = append(fds, fileDescriptor)
 
 		fileDescriptor, err = fs.Add(ctx, "infrastructure-docker-v0.0.1-components.yaml", mediaType, "")
 		Expect(err).ToNot(HaveOccurred())
+
 		fds = append(fds, fileDescriptor)
 
 		opts := oras.PackManifestOptions{
@@ -413,6 +422,7 @@ metadata:
 			Name:      "busybox",
 			Namespace: operatorNamespace,
 		}}
+
 		Expect(bootstrapCluster.Create(ctx, provider)).To(Succeed())
 
 		By("Waiting for the custom provider deployment to be ready")
@@ -446,22 +456,26 @@ metadata:
 			Expect(fs.Close()).To(Succeed())
 		}()
 
-		fds := []v1.Descriptor{}
+		fds := make([]v1.Descriptor, 0, 4)
 
 		fileDescriptor, err := fs.Add(ctx, "infrastructure-custom-v0.0.1-metadata.yaml", mediaType, "")
 		Expect(err).ToNot(HaveOccurred())
+
 		fds = append(fds, fileDescriptor)
 
 		fileDescriptor, err = fs.Add(ctx, "infrastructure-custom-v0.0.1-components.yaml", mediaType, "")
 		Expect(err).ToNot(HaveOccurred())
+
 		fds = append(fds, fileDescriptor)
 
 		fileDescriptor, err = fs.Add(ctx, "infrastructure-docker-v0.0.1-metadata.yaml", mediaType, "")
 		Expect(err).ToNot(HaveOccurred())
+
 		fds = append(fds, fileDescriptor)
 
 		fileDescriptor, err = fs.Add(ctx, "infrastructure-docker-v0.0.1-components.yaml", mediaType, "")
 		Expect(err).ToNot(HaveOccurred())
+
 		fds = append(fds, fileDescriptor)
 
 		opts := oras.PackManifestOptions{
@@ -500,6 +514,7 @@ metadata:
 			Name:      "busybox",
 			Namespace: operatorNamespace,
 		}}
+
 		Expect(bootstrapCluster.Create(ctx, provider)).To(Succeed())
 
 		By("Waiting for the docker provider deployment to be ready")
@@ -533,22 +548,26 @@ metadata:
 			Expect(fs.Close()).To(Succeed())
 		}()
 
-		fds := []v1.Descriptor{}
+		fds := make([]v1.Descriptor, 0, 4)
 
 		fileDescriptor, err := fs.Add(ctx, "infrastructure-docker-v0.0.1-metadata.yaml", mediaType, "")
 		Expect(err).ToNot(HaveOccurred())
+
 		fds = append(fds, fileDescriptor)
 
 		fileDescriptor, err = fs.Add(ctx, "infrastructure-docker-v0.0.1-components.yaml", mediaType, "")
 		Expect(err).ToNot(HaveOccurred())
+
 		fds = append(fds, fileDescriptor)
 
 		fileDescriptor, err = fs.Add(ctx, "infrastructure-docker-v0.0.2-metadata.yaml", mediaType, "")
 		Expect(err).ToNot(HaveOccurred())
+
 		fds = append(fds, fileDescriptor)
 
 		fileDescriptor, err = fs.Add(ctx, "infrastructure-docker-v0.0.2-components.yaml", mediaType, "")
 		Expect(err).ToNot(HaveOccurred())
+
 		fds = append(fds, fileDescriptor)
 
 		opts := oras.PackManifestOptions{
@@ -587,6 +606,7 @@ metadata:
 			Name:      "busybox",
 			Namespace: operatorNamespace,
 		}}
+
 		Expect(bootstrapCluster.Create(ctx, provider)).To(Succeed())
 
 		By("Waiting for the docker provider deployment to be ready")
@@ -606,6 +626,7 @@ metadata:
 		}), e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
 		By("Updating verion to v0.0.2 to initiate upgrade")
+
 		provider.Spec.Version = "v0.0.2"
 		Expect(bootstrapCluster.Update(ctx, provider)).To(Succeed())
 

@@ -288,7 +288,7 @@ func customizeManagerContainer(mSpec *operatorv1.ManagerSpec, c *corev1.Containe
 			mergedGates[fg] = val
 		}
 
-		fgValue := []string{}
+		fgValue := make([]string, 0, len(mergedGates))
 		for fg, val := range mergedGates {
 			fgValue = append(fgValue, fg+"="+bool2Str[val])
 		}

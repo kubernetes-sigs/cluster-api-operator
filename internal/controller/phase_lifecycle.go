@@ -143,6 +143,7 @@ func (p *PhaseReconciler) Delete(ctx context.Context) (*Result, error) {
 
 func clusterctlProviderName(provider operatorv1.GenericProvider) client.ObjectKey {
 	prefix := ""
+
 	switch provider.(type) {
 	case *operatorv1.BootstrapProvider:
 		prefix = "bootstrap-"

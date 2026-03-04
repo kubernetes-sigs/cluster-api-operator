@@ -55,7 +55,7 @@ func (p *RuntimeExtensionProvider) ProviderName() string {
 }
 
 func (p *RuntimeExtensionProviderList) GetItems() []GenericProvider {
-	providers := []GenericProvider{}
+	providers := make([]GenericProvider, 0, len(p.Items))
 
 	for index := range p.Items {
 		providers = append(providers, &p.Items[index])

@@ -174,9 +174,11 @@ func TestPreloadCommand(t *testing.T) {
 			g := NewWithT(t)
 
 			dir, err := os.MkdirTemp("", "manifests")
+
 			defer func() {
 				g.Expect(os.RemoveAll(dir)).To(Succeed())
 			}()
+
 			g.Expect(err).To(Succeed())
 
 			opts := cmp.Or(tt.publishOpts, &publishOptions{})
@@ -224,6 +226,7 @@ func TestPreloadCommand(t *testing.T) {
 			g.Eventually(func(g Gomega) {
 				configMaps, err = preloadExisting(ctx, env)
 				g.Expect(tt.expectedConfigMaps).To(Equal(len(configMaps)))
+
 				if tt.wantErr {
 					g.Expect(err).To(HaveOccurred())
 				} else {

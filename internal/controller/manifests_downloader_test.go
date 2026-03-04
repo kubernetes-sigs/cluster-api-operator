@@ -135,6 +135,7 @@ func TestCompressDecompressRoundtrip(t *testing.T) {
 	original := []byte("apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: test\n")
 
 	var buf bytes.Buffer
+
 	err := compressData(&buf, original)
 	g.Expect(err).ToNot(HaveOccurred())
 	g.Expect(buf.Len()).To(BeNumerically(">", 0))
@@ -148,6 +149,7 @@ func TestCompressDataEmptyInput(t *testing.T) {
 	g := NewWithT(t)
 
 	var buf bytes.Buffer
+
 	err := compressData(&buf, []byte{})
 	g.Expect(err).ToNot(HaveOccurred())
 
@@ -174,6 +176,7 @@ func TestCompressDecompressLargeData(t *testing.T) {
 	g.Expect(needToCompress([]byte("small"))).To(BeFalse())
 
 	var buf bytes.Buffer
+
 	err := compressData(&buf, largeData)
 	g.Expect(err).ToNot(HaveOccurred())
 

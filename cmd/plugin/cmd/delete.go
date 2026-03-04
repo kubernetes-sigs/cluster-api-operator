@@ -237,6 +237,7 @@ func (d *DeleteGroup) execute(ctx context.Context, cl ctrlclient.Client) error {
 
 	if err := wait.ExponentialBackoff(opts, func() (bool, error) {
 		ready := true
+
 		for i := range d.providers {
 			if done, err := deleteProviders(ctx, cl, d.providers[i], ctrlclient.MatchingFieldsSelector{
 				Selector: fields.SelectorFromSet(d.selectors[i]),

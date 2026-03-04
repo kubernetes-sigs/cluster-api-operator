@@ -140,7 +140,6 @@ func TestE2E(t *testing.T) {
 // The bootstrap cluster is created once and shared across all the tests.
 var _ = SynchronizedBeforeSuite(func() []byte {
 	// Before all ParallelNodes.
-
 	Expect(componentsPath).To(BeAnExistingFile(), "Invalid test suite argument. e2e.components should be an existing file.")
 	Expect(configPath).To(BeAnExistingFile(), "Invalid test suite argument. e2e.config should be an existing file.")
 	Expect(os.MkdirAll(artifactFolder, 0o755)).To(Succeed(), "Invalid test suite argument. Can't create e2e.artifacts-folder %q", artifactFolder)
@@ -148,6 +147,7 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 	Expect(chartPath).To(BeAnExistingFile(), "Invalid test suite argument. chart-path should be an existing file.")
 
 	By("Initializing a runtime.Scheme with all the GVK relevant for this test")
+
 	scheme := initScheme()
 
 	By(fmt.Sprintf("Loading the e2e test configuration from %q", configPath))
@@ -157,12 +157,14 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 	clusterctlConfigPath = createClusterctlLocalRepository(e2eConfig, filepath.Join(artifactFolder, "repository"))
 
 	By("Setting up the bootstrap cluster")
+
 	bootstrapClusterProvider, bootstrapClusterProxy = setupCluster(e2eConfig, scheme, useExistingCluster, "bootstrap")
 
 	By("Initializing the bootstrap cluster")
 	initBootstrapCluster(bootstrapClusterProxy, e2eConfig, clusterctlConfigPath, artifactFolder)
 
 	By("Setting up the helm test cluster")
+
 	helmClusterProvider, helmClusterProxy = setupCluster(&clusterctl.E2EConfig{
 		ManagementClusterName: "helm",
 		Images:                e2eConfig.Images,
@@ -185,7 +187,6 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 	)
 }, func(data []byte) {
 	// Before each ParallelNode.
-
 	parts := strings.Split(string(data), ",")
 	Expect(parts).To(HaveLen(5))
 
@@ -374,11 +375,11 @@ var _ = SynchronizedAfterSuite(func() {
 	// After each ParallelNode.
 }, func() {
 	// After all ParallelNodes.
-
 	dumpClusterLogs(bootstrapClusterProxy)
 	dumpClusterLogs(helmClusterProxy)
 
 	By("Tearing down the management clusters")
+
 	if !skipCleanup {
 		tearDown(bootstrapClusterProvider, bootstrapClusterProxy)
 		tearDown(helmClusterProvider, helmClusterProxy)
