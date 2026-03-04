@@ -50,6 +50,18 @@ var (
 	errCoreProviderWait = errors.New(waitingForCoreProviderReadyMessage)
 )
 
+// setPreflightFailed sets a failed preflight check condition on the provider and returns the message as an error.
+func setPreflightFailed(provider genericprovider.GenericProvider, reason, message string) error {
+	conditions.Set(provider, metav1.Condition{
+		Type:    operatorv1.PreflightCheckCondition,
+		Status:  metav1.ConditionFalse,
+		Reason:  reason,
+		Message: message,
+	})
+
+	return errors.New(message)
+}
+
 // preflightChecks performs preflight checks before installing provider.
 func preflightChecks(ctx context.Context, c client.Client, provider genericprovider.GenericProvider, providerList genericprovider.GenericProviderList, mapper ProviderTypeMapper, lister ProviderLister) error {
 	log := ctrl.LoggerFrom(ctx)
@@ -68,14 +80,8 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 	// Ensure that the CoreProvider is called "cluster-api".
 	if mapper(provider) == clusterctlv1.CoreProviderType {
 		if provider.ProviderName() != configclient.ClusterAPIProviderName {
-			conditions.Set(provider, metav1.Condition{
-				Type:    operatorv1.PreflightCheckCondition,
-				Status:  metav1.ConditionFalse,
-				Reason:  operatorv1.IncorrectCoreProviderNameReason,
-				Message: fmt.Sprintf(incorrectCoreProviderNameMessage, provider.ProviderName(), configclient.ClusterAPIProviderName),
-			})
-
-			return fmt.Errorf("incorrect CoreProvider name: %s, it should be %s", provider.ProviderName(), configclient.ClusterAPIProviderName)
+			return setPreflightFailed(provider, operatorv1.IncorrectCoreProviderNameReason,
+				fmt.Sprintf(incorrectCoreProviderNameMessage, provider.ProviderName(), configclient.ClusterAPIProviderName))
 		}
 	}
 
@@ -87,27 +93,15 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 
 	if !isPredefinedProvider {
 		if spec.FetchConfig == nil || spec.FetchConfig.Selector == nil && spec.FetchConfig.URL == "" && spec.FetchConfig.OCI == "" {
-			conditions.Set(provider, metav1.Condition{
-				Type:    operatorv1.PreflightCheckCondition,
-				Status:  metav1.ConditionFalse,
-				Reason:  operatorv1.FetchConfigValidationErrorReason,
-				Message: "Either Selector, OCI URL or provider URL must be provided for a not predefined provider",
-			})
-
-			return fmt.Errorf("either selector, OCI URL or provider URL must be provided for a not predefined provider %s", provider.GetName())
+			return setPreflightFailed(provider, operatorv1.FetchConfigValidationErrorReason,
+				"Either Selector, OCI URL or provider URL must be provided for a not predefined provider")
 		}
 	}
 
 	if spec.FetchConfig != nil && spec.FetchConfig.Selector != nil && spec.FetchConfig.URL != "" {
 		// If FetchConfiguration is not nil, exactly one of `URL` or `Selector` must be specified.
-		conditions.Set(provider, metav1.Condition{
-			Type:    operatorv1.PreflightCheckCondition,
-			Status:  metav1.ConditionFalse,
-			Reason:  operatorv1.FetchConfigValidationErrorReason,
-			Message: "Only one of Selector and URL must be provided, not both",
-		})
-
-		return fmt.Errorf("only one of Selector and URL must be provided for provider %s", provider.GetName())
+		return setPreflightFailed(provider, operatorv1.FetchConfigValidationErrorReason,
+			"Only one of Selector and URL must be provided, not both")
 	}
 
 	// Validate that provided GitHub token works and has repository access.
@@ -124,12 +118,7 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 				&oauth2.Token{AccessToken: string(token)},
 			)))
 			if _, _, err := githubClient.Organizations.List(ctx, "kubernetes-sigs", nil); err != nil {
-				conditions.Set(provider, metav1.Condition{
-					Type:    operatorv1.PreflightCheckCondition,
-					Status:  metav1.ConditionFalse,
-					Reason:  operatorv1.InvalidGithubTokenReason,
-					Message: invalidGithubTokenMessage,
-				})
+				_ = setPreflightFailed(provider, operatorv1.InvalidGithubTokenReason, invalidGithubTokenMessage)
 
 				return fmt.Errorf("failed to validate provided github token: %w", err)
 			}
@@ -151,14 +140,8 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 		if mapper(provider) == clusterctlv1.CoreProviderType && mapper(p) == clusterctlv1.CoreProviderType {
 			log.Info(moreThanOneCoreProviderInstanceExistsMessage)
 
-			conditions.Set(provider, metav1.Condition{
-				Type:    operatorv1.PreflightCheckCondition,
-				Status:  metav1.ConditionFalse,
-				Reason:  operatorv1.MoreThanOneProviderInstanceExistsReason,
-				Message: moreThanOneCoreProviderInstanceExistsMessage,
-			})
-
-			return fmt.Errorf("only one instance of CoreProvider is allowed")
+			return setPreflightFailed(provider, operatorv1.MoreThanOneProviderInstanceExistsReason,
+				moreThanOneCoreProviderInstanceExistsMessage)
 		}
 
 		// For any other provider we should check that instances with similar name exist in any namespace
@@ -166,14 +149,7 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 			message := fmt.Sprintf(moreThanOneProviderInstanceExistsMessage, p.GetName(), p.GetNamespace())
 			log.Info(message)
 
-			conditions.Set(provider, metav1.Condition{
-				Type:    operatorv1.PreflightCheckCondition,
-				Status:  metav1.ConditionFalse,
-				Reason:  operatorv1.MoreThanOneProviderInstanceExistsReason,
-				Message: message,
-			})
-
-			return fmt.Errorf("only one %s provider is allowed in the cluster", p.GetName())
+			return setPreflightFailed(provider, operatorv1.MoreThanOneProviderInstanceExistsReason, message)
 		}
 	}
 
@@ -186,13 +162,7 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 
 		if !ready {
 			log.Info(waitingForCoreProviderReadyMessage)
-
-			conditions.Set(provider, metav1.Condition{
-				Type:    operatorv1.PreflightCheckCondition,
-				Status:  metav1.ConditionFalse,
-				Reason:  operatorv1.WaitingForCoreProviderReadyReason,
-				Message: waitingForCoreProviderReadyMessage,
-			})
+			_ = setPreflightFailed(provider, operatorv1.WaitingForCoreProviderReadyReason, waitingForCoreProviderReadyMessage)
 
 			return errCoreProviderWait
 		}
@@ -219,14 +189,7 @@ func checkProviderVersion(ctx context.Context, providerVersion string, provider 
 	if err != nil {
 		log.Info("Version contains invalid value")
 
-		conditions.Set(provider, metav1.Condition{
-			Type:    operatorv1.PreflightCheckCondition,
-			Status:  metav1.ConditionFalse,
-			Reason:  operatorv1.IncorrectVersionFormatReason,
-			Message: err.Error(),
-		})
-
-		return fmt.Errorf("version contains invalid value for provider %q", provider.GetName())
+		return setPreflightFailed(provider, operatorv1.IncorrectVersionFormatReason, err.Error())
 	}
 
 	// Cluster API doesn't support downgrades by design. We need to report that for the user.
@@ -237,14 +200,8 @@ func checkProviderVersion(ctx context.Context, providerVersion string, provider 
 		}
 
 		if targetVersion.Major() < installedVersion.Major() || targetVersion.Major() == installedVersion.Major() && targetVersion.Minor() < installedVersion.Minor() {
-			conditions.Set(provider, metav1.Condition{
-				Type:    operatorv1.PreflightCheckCondition,
-				Status:  metav1.ConditionFalse,
-				Reason:  operatorv1.UnsupportedProviderDowngradeReason,
-				Message: unsupportedProviderDowngradeMessage,
-			})
-
-			return fmt.Errorf("downgrade is not supported for provider %q", provider.GetName())
+			return setPreflightFailed(provider, operatorv1.UnsupportedProviderDowngradeReason,
+				unsupportedProviderDowngradeMessage)
 		}
 	}
 
