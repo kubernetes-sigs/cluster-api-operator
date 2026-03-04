@@ -485,8 +485,6 @@ func (p *PhaseReconciler) ApplyFromCache(ctx context.Context) (*Result, error) {
 
 	log.Info("Applying provider configuration from cache")
 
-	errs := []error{}
-
 	mr := configclient.NewMemoryReader()
 
 	if err := mr.Init(ctx, ""); err != nil {
@@ -498,56 +496,9 @@ func (p *PhaseReconciler) ApplyFromCache(ctx context.Context) (*Result, error) {
 		return &Result{}, err
 	}
 
-	for _, manifest := range secret.Data {
-		if secret.GetAnnotations()[operatorv1.CompressedAnnotation] == operatorv1.TrueValue {
-			break
-		}
+	compressed := secret.GetAnnotations()[operatorv1.CompressedAnnotation] == operatorv1.TrueValue
 
-		manifests := []unstructured.Unstructured{}
-
-		err := json.Unmarshal(manifest, &manifests)
-		if err != nil {
-			log.Error(err, "failed to convert yaml to unstructured")
-
-			return &Result{}, err
-		}
-
-		for _, manifest := range manifests {
-			if err := p.ctrlClient.Patch(ctx, &manifest, client.Apply, client.ForceOwnership, client.FieldOwner(cacheOwner)); err != nil {
-				errs = append(errs, err)
-			}
-		}
-	}
-
-	for _, binaryManifest := range secret.Data {
-		if secret.GetAnnotations()[operatorv1.CompressedAnnotation] != operatorv1.TrueValue {
-			break
-		}
-
-		manifest, err := decompressData(binaryManifest)
-		if err != nil {
-			log.Error(err, "failed to decompress yaml")
-
-			return &Result{}, err
-		}
-
-		manifests := []unstructured.Unstructured{}
-
-		err = json.Unmarshal(manifest, &manifests)
-		if err != nil {
-			log.Error(err, "failed to convert yaml to unstructured")
-
-			return &Result{}, err
-		}
-
-		for _, manifest := range manifests {
-			if err := p.ctrlClient.Patch(ctx, &manifest, client.Apply, client.ForceOwnership, client.FieldOwner(cacheOwner)); err != nil {
-				errs = append(errs, err)
-			}
-		}
-	}
-
-	if err := kerrors.NewAggregate(errs); err != nil {
+	if err := p.applyManifestsFromData(ctx, secret.Data, compressed); err != nil {
 		log.Error(err, "failed to apply objects from cache")
 
 		return &Result{}, err
@@ -556,6 +507,45 @@ func (p *PhaseReconciler) ApplyFromCache(ctx context.Context) (*Result, error) {
 	log.Info("Applied all objects from cache")
 
 	return &Result{Completed: true}, nil
+}
+
+// applyManifestsFromData unmarshals and applies manifests via server-side apply.
+// If compressed is true, each data value is decompressed before processing.
+func (p *PhaseReconciler) applyManifestsFromData(ctx context.Context, data map[string][]byte, compressed bool) error {
+	log := log.FromContext(ctx)
+
+	var errs []error
+
+	for _, raw := range data {
+		manifest := raw
+
+		if compressed {
+			var err error
+
+			manifest, err = decompressData(raw)
+			if err != nil {
+				log.Error(err, "failed to decompress yaml")
+
+				return err
+			}
+		}
+
+		var manifests []unstructured.Unstructured
+
+		if err := json.Unmarshal(manifest, &manifests); err != nil {
+			log.Error(err, "failed to convert yaml to unstructured")
+
+			return err
+		}
+
+		for i := range manifests {
+			if err := p.ctrlClient.Patch(ctx, &manifests[i], client.Apply, client.ForceOwnership, client.FieldOwner(cacheOwner)); err != nil {
+				errs = append(errs, err)
+			}
+		}
+	}
+
+	return kerrors.NewAggregate(errs)
 }
 
 // setCacheHash calculates current provider and secret hash, and updates it on the secret.
