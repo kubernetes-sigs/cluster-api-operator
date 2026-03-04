@@ -17,7 +17,9 @@ limitations under the License.
 package controller
 
 import (
+	"bytes"
 	"context"
+	"strings"
 	"testing"
 
 	. "github.com/onsi/gomega"
@@ -125,4 +127,60 @@ func TestProviderDownloadWithOverrides(t *testing.T) {
 
 	g.Expect(p.components.Images()).To(HaveExactElements([]string{"registry.k8s.io/cluster-api/cluster-api-controller:v1.4.3"}))
 	g.Expect(p.components.Version()).To(Equal("v1.4.3"))
+}
+
+func TestCompressDecompressRoundtrip(t *testing.T) {
+	g := NewWithT(t)
+
+	original := []byte("apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: test\n")
+
+	var buf bytes.Buffer
+	err := compressData(&buf, original)
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(buf.Len()).To(BeNumerically(">", 0))
+
+	decompressed, err := decompressData(buf.Bytes())
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(decompressed).To(Equal(original))
+}
+
+func TestCompressDataEmptyInput(t *testing.T) {
+	g := NewWithT(t)
+
+	var buf bytes.Buffer
+	err := compressData(&buf, []byte{})
+	g.Expect(err).ToNot(HaveOccurred())
+
+	decompressed, err := decompressData(buf.Bytes())
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(decompressed).To(BeEmpty())
+}
+
+func TestDecompressDataInvalidInput(t *testing.T) {
+	g := NewWithT(t)
+
+	_, err := decompressData([]byte("not gzip data"))
+	g.Expect(err).To(HaveOccurred())
+	g.Expect(err.Error()).To(ContainSubstring("cannot open gzip reader"))
+}
+
+func TestCompressDecompressLargeData(t *testing.T) {
+	g := NewWithT(t)
+
+	// Create data larger than maxConfigMapSize to test needToCompress
+	largeData := []byte(strings.Repeat("x", maxConfigMapSize+1))
+
+	g.Expect(needToCompress(largeData)).To(BeTrue())
+	g.Expect(needToCompress([]byte("small"))).To(BeFalse())
+
+	var buf bytes.Buffer
+	err := compressData(&buf, largeData)
+	g.Expect(err).ToNot(HaveOccurred())
+
+	// Compressed size should be much smaller than original for repetitive data
+	g.Expect(buf.Len()).To(BeNumerically("<", len(largeData)))
+
+	decompressed, err := decompressData(buf.Bytes())
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(decompressed).To(Equal(largeData))
 }

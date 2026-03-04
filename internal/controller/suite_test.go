@@ -87,6 +87,39 @@ func TestMain(m *testing.M) {
 		panic(fmt.Sprintf("Failed to start ControlPlaneProviderReconciler: %v", err))
 	}
 
+	if err := (&GenericProviderReconciler{
+		Provider:                 &operatorv1.AddonProvider{},
+		ProviderList:             &operatorv1.AddonProviderList{},
+		Client:                   env,
+		WatchConfigSecretChanges: true,
+		WatchConfigMapChanges:    true,
+		WatchCoreProviderChanges: true,
+	}).SetupWithManager(ctx, env.Manager, controller.Options{MaxConcurrentReconciles: 1}); err != nil {
+		panic(fmt.Sprintf("Failed to start AddonProviderReconciler: %v", err))
+	}
+
+	if err := (&GenericProviderReconciler{
+		Provider:                 &operatorv1.IPAMProvider{},
+		ProviderList:             &operatorv1.IPAMProviderList{},
+		Client:                   env,
+		WatchConfigSecretChanges: true,
+		WatchConfigMapChanges:    true,
+		WatchCoreProviderChanges: true,
+	}).SetupWithManager(ctx, env.Manager, controller.Options{MaxConcurrentReconciles: 1}); err != nil {
+		panic(fmt.Sprintf("Failed to start IPAMProviderReconciler: %v", err))
+	}
+
+	if err := (&GenericProviderReconciler{
+		Provider:                 &operatorv1.RuntimeExtensionProvider{},
+		ProviderList:             &operatorv1.RuntimeExtensionProviderList{},
+		Client:                   env,
+		WatchConfigSecretChanges: true,
+		WatchConfigMapChanges:    true,
+		WatchCoreProviderChanges: true,
+	}).SetupWithManager(ctx, env.Manager, controller.Options{MaxConcurrentReconciles: 1}); err != nil {
+		panic(fmt.Sprintf("Failed to start RuntimeExtensionProviderReconciler: %v", err))
+	}
+
 	go func() {
 		if err := env.Start(ctx); err != nil {
 			panic(fmt.Sprintf("Failed to start the envtest manager: %v", err))
