@@ -67,7 +67,7 @@ func customizeObjectsFn(provider operatorv1.GenericProvider) func(objs []unstruc
 
 				o.SetOwnerReferences(util.EnsureOwnerRef(ownerReferences,
 					metav1.OwnerReference{
-						APIVersion: operatorv1.GroupVersion.String(),
+						APIVersion: provider.GetObjectKind().GroupVersionKind().GroupVersion().String(),
 						Kind:       provider.GetObjectKind().GroupVersionKind().Kind,
 						Name:       provider.GetName(),
 						UID:        provider.GetUID(),
