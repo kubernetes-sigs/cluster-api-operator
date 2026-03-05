@@ -161,6 +161,7 @@ func (m mapStore) restoreDuplicates(ctx context.Context, desc ocispec.Descriptor
 				Digest:    successor.Digest,
 				Size:      successor.Size,
 			}
+
 			rc, err := m.source.Fetch(ctx, desc)
 			if err != nil {
 				return fmt.Errorf("%q: %s: %w", file, desc.MediaType, err)

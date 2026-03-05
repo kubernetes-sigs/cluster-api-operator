@@ -45,6 +45,7 @@ import (
 
 func init() {
 	var err error
+
 	deploymentPredicate, err = predicate.LabelSelectorPredicate(metav1.LabelSelector{
 		MatchExpressions: []metav1.LabelSelectorRequirement{{
 			Key:      providerLabelKey,

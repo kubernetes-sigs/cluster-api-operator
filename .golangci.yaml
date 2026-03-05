@@ -1,6 +1,6 @@
 version: "2"
 run:
-  go: "1.24"
+  go: "1.25.7"
   allow-parallel-runners: true
 linters:
   default: none
@@ -55,8 +55,12 @@ linters:
     - usestdlibvars
     - wastedassign
     - whitespace
-    - wsl
+    - wsl_v5
   settings:
+    wsl_v5:
+      allow-first-in-block: true
+      allow-whole-block: false
+      branch-max-lines: 2
     goheader:
       values:
         regexp:
@@ -153,7 +157,7 @@ linters:
       - linters:
           - dogsled
           - gosec
-          - wsl
+          - wsl_v5
         path: internal/envtest/environment.go
       # Not all platforms are supported by this operator, those which aren't
       # supported will be caught by the default case in the switches.

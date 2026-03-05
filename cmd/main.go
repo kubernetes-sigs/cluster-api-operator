@@ -142,6 +142,7 @@ func main() {
 	pflag.Parse()
 
 	ctrl.SetLogger(textlogger.NewLogger(textlogger.NewConfig()))
+
 	restConfig := ctrl.GetConfigOrDie()
 
 	tlsOptions, metricsOptions, err := flags.GetManagerOptions(managerOptions)

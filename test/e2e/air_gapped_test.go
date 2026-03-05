@@ -71,6 +71,7 @@ var _ = Describe("Install ControlPlane, Core, Bootstrap providers in an air-gapp
 		deleteClusterAPICRDs(bootstrapClusterProxy)
 
 		By("should successfully create ConfigMaps with ControlPlane, Core, and Bootstrap provider manifests")
+
 		configMapFiles := []string{
 			"core-cluster-api-v1.11.0.yaml",
 			"core-cluster-api-v1.12.0.yaml",
@@ -95,6 +96,7 @@ var _ = Describe("Install ControlPlane, Core, Bootstrap providers in an air-gapp
 		}
 
 		By("Creating provider namespaces")
+
 		for _, namespaceName := range namespaces {
 			namespace := &corev1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
@@ -105,6 +107,7 @@ var _ = Describe("Install ControlPlane, Core, Bootstrap providers in an air-gapp
 		}
 
 		By("Applying provider manifests to the cluster")
+
 		for _, cm := range configMaps {
 			Expect(bootstrapCluster.Create(ctx, &cm)).To(Succeed())
 		}
@@ -142,11 +145,13 @@ var _ = Describe("Install ControlPlane, Core, Bootstrap providers in an air-gapp
 				e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
 			By("Deleting ConfigMaps with ControlPlane, Core, and Bootstrap provider manifests")
+
 			for _, cm := range configMaps {
 				Expect(bootstrapCluster.Delete(ctx, &cm)).To(Succeed())
 			}
 
 			By("Deleting provider namespaces")
+
 			for _, namespaceName := range namespaces {
 				namespace := &corev1.Namespace{
 					ObjectMeta: metav1.ObjectMeta{
@@ -197,6 +202,7 @@ var _ = Describe("Install ControlPlane, Core, Bootstrap providers in an air-gapp
 		Expect(ptr.Equal(bootstrapProvider.Status.InstalledVersion, ptr.To(bootstrapProvider.Spec.Version))).To(BeTrue())
 
 		By("Updating the CoreProvider to new Cluster API version first (required for contract version compatibility)")
+
 		patch := client.MergeFrom(coreProvider.DeepCopy())
 		coreProvider.Spec.Version = nextCAPIVersion
 		coreProvider.Spec.FetchConfig.Selector.MatchLabels[operatorv1.ConfigMapVersionLabelName] = nextCAPIVersion
@@ -214,6 +220,7 @@ var _ = Describe("Install ControlPlane, Core, Bootstrap providers in an air-gapp
 		}, e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
 		By("Updating the BootstrapProvider to new Custer API version")
+
 		patch = client.MergeFrom(bootstrapProvider.DeepCopy())
 		bootstrapProvider.Spec.Version = nextCAPIVersion
 		bootstrapProvider.Spec.FetchConfig.Selector.MatchLabels[operatorv1.ConfigMapVersionLabelName] = nextCAPIVersion
@@ -287,6 +294,7 @@ var _ = Describe("Install ControlPlane, Core, Bootstrap providers in an air-gapp
 		Expect(ptr.Equal(controlPlaneProvider.Status.InstalledVersion, ptr.To(controlPlaneProvider.Spec.Version))).To(BeTrue())
 
 		By("Updating the CoreProvider to new Cluster API version first (required for contract version compatibility)")
+
 		patch := client.MergeFrom(coreProvider.DeepCopy())
 		coreProvider.Spec.Version = nextCAPIVersion
 		coreProvider.Spec.FetchConfig.Selector.MatchLabels[operatorv1.ConfigMapVersionLabelName] = nextCAPIVersion
@@ -304,6 +312,7 @@ var _ = Describe("Install ControlPlane, Core, Bootstrap providers in an air-gapp
 		}, e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
 		By("Updating the ControlPlaneProvider to new Custer API version")
+
 		patch = client.MergeFrom(controlPlaneProvider.DeepCopy())
 		controlPlaneProvider.Spec.Version = nextCAPIVersion
 		controlPlaneProvider.Spec.FetchConfig.Selector.MatchLabels[operatorv1.ConfigMapVersionLabelName] = nextCAPIVersion
@@ -342,6 +351,7 @@ var _ = Describe("Install ControlPlane, Core, Bootstrap providers in an air-gapp
 		Expect(bootstrapCluster.Get(ctx, client.ObjectKeyFromObject(coreProvider), coreProvider)).To(Succeed())
 
 		By("Updating the CoreProvider to new Custer API version")
+
 		patch := client.MergeFrom(coreProvider.DeepCopy())
 		coreProvider.Spec.Version = nextCAPIVersion
 		coreProvider.Spec.FetchConfig.Selector.MatchLabels[operatorv1.ConfigMapVersionLabelName] = nextCAPIVersion

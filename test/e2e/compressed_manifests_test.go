@@ -105,6 +105,7 @@ var _ = Describe("Create and delete a provider with manifests that don't fit the
 		}), e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
 		By("Ensure that the created config map has correct annotation")
+
 		cmName := fmt.Sprintf("infrastructure-%s-%s", ociInfrastructureProviderName, ociInfrastructureProviderVersion)
 		key := client.ObjectKey{Namespace: operatorNamespace, Name: cmName}
 
@@ -179,6 +180,7 @@ var _ = Describe("Create and delete a provider with manifests that don't fit the
 		}), e2eConfig.GetIntervals(bootstrapClusterProxy.GetName(), "wait-controllers")...)
 
 		By("Ensure that the created config map has correct annotation")
+
 		cm := &corev1.ConfigMap{}
 		cmName := fmt.Sprintf("infrastructure-%s-%s", ociInfrastructureProviderName, ociInfrastructureProviderVersion)
 		key := client.ObjectKey{Namespace: operatorNamespace, Name: cmName}

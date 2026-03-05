@@ -174,6 +174,7 @@ func TestReconcilerReadyConditions(t *testing.T) {
 				for _, cond := range provider.GetStatus().Conditions {
 					if cond.Type == clusterv1.ReadyCondition {
 						t.Log(t.Name(), provider.GetName(), cond)
+
 						if cond.Status == metav1.ConditionStatus(tc.expectedAvailability) {
 							return true
 						}
@@ -183,7 +184,8 @@ func TestReconcilerReadyConditions(t *testing.T) {
 				return false
 			}, timeout).Should(BeTrue())
 
-			objs := []client.Object{provider}
+			objs := make([]client.Object, 0, 2)
+			objs = append(objs, provider)
 
 			objs = append(objs, &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{

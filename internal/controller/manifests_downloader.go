@@ -41,7 +41,6 @@ const (
 	configMapSourceLabel      = "provider.cluster.x-k8s.io/source"
 	configMapSourceAnnotation = "provider.cluster.x-k8s.io/source"
 	operatorManagedLabel      = "managed-by.operator.cluster.x-k8s.io"
-	operatorCacheLabel        = "cached-by.operator.cluster.x-k8s.io"
 
 	maxConfigMapSize = 1 * 1024 * 1024
 	ociSource        = "oci"
@@ -220,12 +219,14 @@ func TemplateManifestsConfigMap(provider operatorv1.GenericProvider, labels map[
 func compressData(componentsBuf *bytes.Buffer, data []byte) (err error) {
 	zw := gzip.NewWriter(componentsBuf)
 
-	_, err = zw.Write(data)
 	defer func() {
-		err = zw.Close()
+		closeErr := zw.Close()
+		if err == nil {
+			err = closeErr
+		}
 	}()
 
-	if err != nil {
+	if _, err = zw.Write(data); err != nil {
 		return fmt.Errorf("cannot compress data: %w", err)
 	}
 
@@ -240,7 +241,10 @@ func decompressData(compressedData []byte) (data []byte, err error) {
 	}
 
 	defer func() {
-		err = zr.Close()
+		closeErr := zr.Close()
+		if err == nil {
+			err = closeErr
+		}
 	}()
 
 	decompressedData, err := io.ReadAll(zr)

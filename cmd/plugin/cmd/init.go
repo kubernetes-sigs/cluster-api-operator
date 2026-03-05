@@ -330,6 +330,7 @@ func initProviders(ctx context.Context, client ctrlclient.Client, initOpts *init
 
 			go func(provider operatorv1.GenericProvider) {
 				defer wg.Done()
+
 				checkProviderReadiness(ctx, client, provider, time.Duration(initOpts.waitProviderTimeout)*time.Second)
 			}(createdProviders[providerIndex])
 		}

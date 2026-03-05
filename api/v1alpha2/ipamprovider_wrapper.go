@@ -55,7 +55,7 @@ func (p *IPAMProvider) ProviderName() string {
 }
 
 func (p *IPAMProviderList) GetItems() []GenericProvider {
-	providers := []GenericProvider{}
+	providers := make([]GenericProvider, 0, len(p.Items))
 
 	for index := range p.Items {
 		providers = append(providers, &p.Items[index])

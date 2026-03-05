@@ -91,6 +91,7 @@ func WaitForDelete(ctx context.Context, input GetterInterface, intervals ...inte
 			if apierrors.IsNotFound(err) {
 				return true
 			}
+
 			klog.Infof("Failed to get an object: %+v", err)
 		}
 
@@ -102,6 +103,7 @@ func WaitForDelete(ctx context.Context, input GetterInterface, intervals ...inte
 func WaitFor(ctx context.Context, input ConditionalInterface, intervals ...interface{}) {
 	Eventually(func() bool {
 		By(fmt.Sprintf("Waiting for %s...", client.ObjectKeyFromObject(input.GetObject())))
+
 		if err := input.GetReader().Get(ctx, client.ObjectKeyFromObject(input.GetObject()), input.GetObject()); err != nil {
 			klog.Infof("Failed to get an object: %+v", err)
 			return false
@@ -134,7 +136,7 @@ const (
 )
 
 func (c HelmCommands) Strings() []string {
-	commands := []string{}
+	commands := make([]string, 0, len(c))
 	for _, command := range c {
 		commands = append(commands, strings.ToLower(command.String()))
 	}

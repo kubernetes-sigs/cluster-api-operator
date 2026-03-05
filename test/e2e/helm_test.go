@@ -171,6 +171,7 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 		})
 		Expect(err).ToNot(HaveOccurred())
 		Expect(manifests).ToNot(BeEmpty())
+
 		expectedManifests, err := os.ReadFile(filepath.Join(customManifestsFolder, "all-providers-custom-ns-versions.yaml"))
 		Expect(err).ToNot(HaveOccurred())
 		Expect(manifests).To(Equal(string(expectedManifests)))
@@ -189,6 +190,7 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 		})
 		Expect(err).ToNot(HaveOccurred())
 		Expect(manifests).ToNot(BeEmpty())
+
 		expectedManifests, err := os.ReadFile(filepath.Join(customManifestsFolder, "all-providers-custom-versions.yaml"))
 		Expect(err).ToNot(HaveOccurred())
 		Expect(manifests).To(Equal(string(expectedManifests)))
@@ -207,6 +209,7 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 		})
 		Expect(err).ToNot(HaveOccurred())
 		Expect(manifests).ToNot(BeEmpty())
+
 		expectedManifests, err := os.ReadFile(filepath.Join(customManifestsFolder, "all-providers-latest-versions.yaml"))
 		Expect(err).ToNot(HaveOccurred())
 		Expect(manifests).To(Equal(string(expectedManifests)))
@@ -220,6 +223,7 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 		})
 		Expect(err).ToNot(HaveOccurred())
 		Expect(manifests).ToNot(BeEmpty())
+
 		expectedManifests, err := os.ReadFile(filepath.Join(customManifestsFolder, "only-infra.yaml"))
 		Expect(err).ToNot(HaveOccurred())
 		Expect(manifests).To(Equal(string(expectedManifests)))
@@ -233,6 +237,7 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 		})
 		Expect(err).ToNot(HaveOccurred())
 		Expect(manifests).ToNot(BeEmpty())
+
 		expectedManifests, err := os.ReadFile(filepath.Join(customManifestsFolder, "only-bootstrap.yaml"))
 		Expect(err).ToNot(HaveOccurred())
 		Expect(manifests).To(Equal(string(expectedManifests)))
@@ -246,6 +251,7 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 		})
 		Expect(err).ToNot(HaveOccurred())
 		Expect(manifests).ToNot(BeEmpty())
+
 		expectedManifests, err := os.ReadFile(filepath.Join(customManifestsFolder, "only-control-plane.yaml"))
 		Expect(err).ToNot(HaveOccurred())
 		Expect(manifests).To(Equal(string(expectedManifests)))
@@ -259,6 +265,7 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 		})
 		Expect(err).ToNot(HaveOccurred())
 		Expect(manifests).ToNot(BeEmpty())
+
 		expectedManifests, err := os.ReadFile(filepath.Join(customManifestsFolder, "only-ipam.yaml"))
 		Expect(err).ToNot(HaveOccurred())
 		Expect(manifests).To(Equal(string(expectedManifests)))
@@ -273,6 +280,7 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 		})
 		Expect(err).ToNot(HaveOccurred())
 		Expect(manifests).ToNot(BeEmpty())
+
 		expectedManifests, err := os.ReadFile(filepath.Join(customManifestsFolder, "only-infra-and-ipam.yaml"))
 		Expect(err).ToNot(HaveOccurred())
 		Expect(manifests).To(Equal(string(expectedManifests)))
@@ -289,6 +297,7 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 		})
 		Expect(err).ToNot(HaveOccurred())
 		Expect(manifests).ToNot(BeEmpty())
+
 		expectedManifests, err := os.ReadFile(filepath.Join(customManifestsFolder, "multiple-infra-custom-ns-versions.yaml"))
 		Expect(err).ToNot(HaveOccurred())
 		Expect(manifests).To(Equal(string(expectedManifests)))
@@ -305,6 +314,7 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 		})
 		Expect(err).ToNot(HaveOccurred())
 		Expect(manifests).ToNot(BeEmpty())
+
 		expectedManifests, err := os.ReadFile(filepath.Join(customManifestsFolder, "multiple-control-plane-custom-ns-versions.yaml"))
 		Expect(err).ToNot(HaveOccurred())
 		Expect(manifests).To(Equal(string(expectedManifests)))
@@ -321,6 +331,7 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 		})
 		Expect(err).ToNot(HaveOccurred())
 		Expect(manifests).ToNot(BeEmpty())
+
 		expectedManifests, err := os.ReadFile(filepath.Join(customManifestsFolder, "multiple-bootstrap-custom-ns-versions.yaml"))
 		Expect(err).ToNot(HaveOccurred())
 		Expect(manifests).To(Equal(string(expectedManifests)))
@@ -334,6 +345,7 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 		})
 		Expect(err).ToNot(HaveOccurred())
 		Expect(manifests).ToNot(BeEmpty())
+
 		expectedManifests, err := os.ReadFile(filepath.Join(customManifestsFolder, "only-addon.yaml"))
 		Expect(err).ToNot(HaveOccurred())
 		Expect(manifests).To(Equal(string(expectedManifests)))
@@ -348,6 +360,7 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 		})
 		Expect(err).ToNot(HaveOccurred())
 		Expect(manifests).ToNot(BeEmpty())
+
 		expectedManifests, err := os.ReadFile(filepath.Join(customManifestsFolder, "only-infra-and-addon.yaml"))
 		Expect(err).ToNot(HaveOccurred())
 		Expect(manifests).To(Equal(string(expectedManifests)))
@@ -370,6 +383,7 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 		})
 		Expect(err).ToNot(HaveOccurred())
 		Expect(manifests).ToNot(BeEmpty())
+
 		expectedManifests, err := os.ReadFile(filepath.Join(customManifestsFolder, "feature-gates.yaml"))
 		Expect(err).ToNot(HaveOccurred())
 		Expect(manifests).To(Equal(string(expectedManifests)))
@@ -385,6 +399,7 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 		})
 		Expect(err).ToNot(HaveOccurred())
 		Expect(manifests).ToNot(BeEmpty())
+
 		expectedManifests, err := os.ReadFile(filepath.Join(customManifestsFolder, "all-providers-manager-defined-no-feature-gates.yaml"))
 		Expect(err).ToNot(HaveOccurred())
 		Expect(manifests).To(Equal(string(expectedManifests)))
@@ -402,6 +417,7 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 		})
 		Expect(err).ToNot(HaveOccurred())
 		Expect(manifests).ToNot(BeEmpty())
+
 		expectedManifests, err := os.ReadFile(filepath.Join(customManifestsFolder, "manager-defined-missing-other-infra-spec.yaml"))
 		Expect(err).ToNot(HaveOccurred())
 		Expect(manifests).To(Equal(string(expectedManifests)))
@@ -419,6 +435,7 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 		})
 		Expect(err).ToNot(HaveOccurred())
 		Expect(manifests).ToNot(BeEmpty())
+
 		expectedManifests, err := os.ReadFile(filepath.Join(customManifestsFolder, "kubeadm-manager-defined.yaml"))
 		Expect(err).ToNot(HaveOccurred())
 		Expect(manifests).To(Equal(string(expectedManifests)))

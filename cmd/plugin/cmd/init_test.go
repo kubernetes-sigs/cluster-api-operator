@@ -91,6 +91,7 @@ func TestCheckCAPIOperatorAvailability(t *testing.T) {
 
 				g.Eventually(func() (bool, error) {
 					deploymentFromServer := &appsv1.Deployment{}
+
 					err := env.Get(ctx, ctrlclient.ObjectKeyFromObject(deployment), deploymentFromServer)
 					if err != nil {
 						return false, err
@@ -112,6 +113,7 @@ func TestCheckCAPIOperatorAvailability(t *testing.T) {
 
 				g.Eventually(func() (bool, error) {
 					deploymentFromServer := &appsv1.Deployment{}
+
 					err := env.Get(ctx, ctrlclient.ObjectKeyFromObject(deployment), deploymentFromServer)
 					if err != nil {
 						return false, err
@@ -129,6 +131,7 @@ func TestCheckCAPIOperatorAvailability(t *testing.T) {
 
 				g.Eventually(func() (bool, error) {
 					deploymentFromServer := &appsv1.Deployment{}
+
 					err := env.Get(ctx, ctrlclient.ObjectKeyFromObject(deploymentClone), deploymentFromServer)
 					if err != nil {
 						return false, err

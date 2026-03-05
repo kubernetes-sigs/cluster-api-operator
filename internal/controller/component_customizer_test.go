@@ -100,15 +100,19 @@ func TestCustomizeDeployment(t *testing.T) {
 				if !reflect.DeepEqual(inputDS.Replicas, managerDepl.Spec.Replicas) {
 					return &managerDepl.Spec, false
 				}
+
 				if !reflect.DeepEqual(inputDS.Template.Spec.NodeSelector, managerDepl.Spec.Template.Spec.NodeSelector) {
 					return &managerDepl.Spec, false
 				}
+
 				if !reflect.DeepEqual(inputDS.Template.Spec.Tolerations, managerDepl.Spec.Template.Spec.Tolerations) {
 					return &managerDepl.Spec, false
 				}
+
 				if !reflect.DeepEqual(inputDS.Template.Spec.Affinity, managerDepl.Spec.Template.Spec.Affinity) {
 					return &managerDepl.Spec, false
 				}
+
 				if !reflect.DeepEqual(inputDS.Template.Spec.Containers, managerDepl.Spec.Template.Spec.Containers) {
 					return &managerDepl.Spec, false
 				}
@@ -316,15 +320,19 @@ func TestCustomizeDeployment(t *testing.T) {
 				if !reflect.DeepEqual(inputDS.Template.Spec.Containers[0].Name, expectedDS.Template.Spec.Containers[0].Name) {
 					return expectedDS, false
 				}
+
 				if !reflect.DeepEqual(inputDS.Template.Spec.Containers[0].Image, expectedDS.Template.Spec.Containers[0].Image) {
 					return expectedDS, false
 				}
+
 				if !reflect.DeepEqual(inputDS.Template.Spec.Containers[0].Env, expectedDS.Template.Spec.Containers[0].Env) {
 					return expectedDS, false
 				}
+
 				if !reflect.DeepEqual(inputDS.Template.Spec.Containers[0].Args, expectedDS.Template.Spec.Containers[0].Args) {
 					return expectedDS, false
 				}
+
 				if !reflect.DeepEqual(inputDS.Template.Spec.Containers[0].Resources, expectedDS.Template.Spec.Containers[0].Resources) {
 					return expectedDS, false
 				}
@@ -447,30 +455,39 @@ func TestCustomizeDeployment(t *testing.T) {
 				if !reflect.DeepEqual(inputDS.Replicas, expectedDS.Replicas) {
 					return expectedDS, false
 				}
+
 				if !reflect.DeepEqual(inputDS.Template.Spec.NodeSelector, expectedDS.Template.Spec.NodeSelector) {
 					return expectedDS, false
 				}
+
 				if !reflect.DeepEqual(inputDS.Template.Spec.Tolerations, expectedDS.Template.Spec.Tolerations) {
 					return expectedDS, false
 				}
+
 				if !reflect.DeepEqual(inputDS.Template.Spec.Affinity, expectedDS.Template.Spec.Affinity) {
 					return expectedDS, false
 				}
+
 				if !reflect.DeepEqual(inputDS.Template.Spec.Containers[0].Name, expectedDS.Template.Spec.Containers[0].Name) {
 					return expectedDS, false
 				}
+
 				if !reflect.DeepEqual(inputDS.Template.Spec.Containers[0].Image, expectedDS.Template.Spec.Containers[0].Image) {
 					return expectedDS, false
 				}
+
 				if !reflect.DeepEqual(inputDS.Template.Spec.Containers[0].Env, expectedDS.Template.Spec.Containers[0].Env) {
 					return expectedDS, false
 				}
+
 				if !reflect.DeepEqual(inputDS.Template.Spec.Containers[0].Args, expectedDS.Template.Spec.Containers[0].Args) {
 					return expectedDS, false
 				}
+
 				if !reflect.DeepEqual(inputDS.Template.Spec.Containers[0].Resources, expectedDS.Template.Spec.Containers[0].Resources) {
 					return expectedDS, false
 				}
+
 				if !reflect.DeepEqual(inputDS.Template.Spec.Containers[0].Command, expectedDS.Template.Spec.Containers[0].Command) {
 					return expectedDS, false
 				}

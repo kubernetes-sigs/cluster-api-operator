@@ -159,7 +159,7 @@ func testDeploymentLabelValueGetter(deploymentNS, deploymentName string) func() 
 
 func TestConfigSecretChangesAreAppliedToTheDeployment(t *testing.T) {
 	g := NewWithT(t)
-	objs := []client.Object{}
+	objs := make([]client.Object, 0, 1)
 
 	defer func() {
 		g.Expect(env.CleanupAndWait(ctx, objs...)).To(Succeed())
@@ -411,6 +411,7 @@ releaseSeries:
 				for _, cond := range provider.GetStatus().Conditions {
 					if cond.Type == operatorv1.PreflightCheckCondition {
 						t.Log(t.Name(), provider.GetName(), cond)
+
 						if cond.Status == metav1.ConditionTrue {
 							return true
 						}
@@ -458,9 +459,11 @@ releaseSeries:
 				}
 
 				allFound := false
+
 				for _, cond := range provider.GetStatus().Conditions {
 					if cond.Type == operatorv1.PreflightCheckCondition {
 						t.Log(t.Name(), provider.GetName(), cond)
+
 						if cond.Status == metav1.ConditionTrue {
 							allFound = true
 							break
@@ -473,9 +476,11 @@ releaseSeries:
 				}
 
 				allFound = tc.newVersion == currentVersion
+
 				for _, cond := range provider.GetStatus().Conditions {
 					if cond.Type == operatorv1.ProviderUpgradedCondition {
 						t.Log(t.Name(), provider.GetName(), cond)
+
 						if cond.Status == metav1.ConditionTrue {
 							allFound = tc.newVersion != currentVersion
 							break
@@ -501,9 +506,11 @@ releaseSeries:
 
 			g.Consistently(func() bool {
 				allSet := tc.newVersion == currentVersion
+
 				for _, cond := range provider.GetStatus().Conditions {
 					if cond.Type == operatorv1.ProviderUpgradedCondition {
 						t.Log(t.Name(), provider.GetName(), cond)
+
 						if cond.Status == metav1.ConditionTrue {
 							allSet = tc.newVersion != currentVersion
 							break
@@ -697,7 +704,7 @@ func TestProviderConfigSecretChanges(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			g := NewWithT(t)
-			objs := []client.Object{}
+			objs := make([]client.Object, 0, 3)
 
 			defer func() {
 				g.Expect(env.CleanupAndWait(ctx, objs...)).To(Succeed())
@@ -929,6 +936,7 @@ func TestProviderSpecChanges(t *testing.T) {
 				if labels == nil {
 					labels = map[string]string{}
 				}
+
 				labels["my-label"] = "some-value"
 				provider.SetLabels(labels)
 				provider.SetManagedFields(nil)

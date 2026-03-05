@@ -139,6 +139,7 @@ func TestConfigMapChangesAreAppliedToTheProvider(t *testing.T) {
 		if err := env.Get(ctx, client.ObjectKeyFromObject(provider), provider); err != nil {
 			return false
 		}
+
 		hash := provider.GetAnnotations()[appliedSpecHashAnnotation]
 
 		return hash != ""
@@ -294,6 +295,7 @@ func TestConfigMapChangesWithNonMatchingSelector(t *testing.T) {
 		if err := env.Get(ctx, client.ObjectKeyFromObject(provider), provider); err != nil {
 			return false
 		}
+
 		hash := provider.GetAnnotations()[appliedSpecHashAnnotation]
 
 		return hash != ""
