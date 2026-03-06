@@ -798,6 +798,61 @@ func TestCustomizeMultipleDeployment(t *testing.T) {
 	}
 }
 
+func TestInsecureDiagnostics(t *testing.T) {
+	baseContainer := func() corev1.Container {
+		return corev1.Container{
+			Name:  "manager",
+			Image: "registry.k8s.io/a-manager:1.6.2",
+			Args:  []string{},
+		}
+	}
+
+	t.Run("not set when false (default)", func(t *testing.T) {
+		c := baseContainer()
+		mSpec := &operatorv1.ManagerSpec{
+			ControllerManagerConfiguration: operatorv1.ControllerManagerConfiguration{
+				Metrics: operatorv1.ControllerMetrics{InsecureDiagnostics: false},
+			},
+		}
+
+		if err := customizeManagerContainer(mSpec, &c); err != nil {
+			t.Fatalf("customizeManagerContainer failed: %v", err)
+		}
+
+		for _, arg := range c.Args {
+			if len(arg) >= 21 && arg[:21] == "--insecure-diagnostics" {
+				t.Errorf("expected --insecure-diagnostics to be absent when false, but got %q", arg)
+			}
+		}
+	})
+
+	t.Run("set to true when enabled", func(t *testing.T) {
+		c := baseContainer()
+		mSpec := &operatorv1.ManagerSpec{
+			ControllerManagerConfiguration: operatorv1.ControllerManagerConfiguration{
+				Metrics: operatorv1.ControllerMetrics{InsecureDiagnostics: true},
+			},
+		}
+
+		if err := customizeManagerContainer(mSpec, &c); err != nil {
+			t.Fatalf("customizeManagerContainer failed: %v", err)
+		}
+
+		found := false
+
+		for _, arg := range c.Args {
+			if arg == "--insecure-diagnostics=true" {
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			t.Errorf("expected --insecure-diagnostics=true in args, got %v", c.Args)
+		}
+	})
+}
+
 func TestParseFeatureGates(t *testing.T) {
 	tests := []struct {
 		name     string

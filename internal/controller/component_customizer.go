@@ -35,13 +35,9 @@ import (
 )
 
 const (
-	deploymentKind       = "Deployment"
-	namespaceKind        = "Namespace"
 	managerContainerName = "manager"
 	defaultVerbosity     = 1
 )
-
-var bool2Str = map[bool]string{true: "true", false: "false"}
 
 // customizeObjectsFn apply provider specific customization to a list of manifests.
 func customizeObjectsFn(provider operatorv1.GenericProvider) func(objs []unstructured.Unstructured) ([]unstructured.Unstructured, error) {
@@ -213,20 +209,31 @@ func customizeManagerContainer(mSpec *operatorv1.ManagerSpec, c *corev1.Containe
 		c.Args = setArgs(c.Args, "--max-concurrent-reconciles", fmt.Sprint(mSpec.MaxConcurrentReconciles))
 	}
 
-	if mSpec.CacheNamespace != "" {
-		// This field seems somewhat in conflict with:
-		// The `ContainerSpec.Args` will ignore the key `namespace` since the operator
-		// enforces a deployment model where all the providers should be configured to
-		// watch all the namespaces.
-		c.Args = setArgs(c.Args, "--namespace", mSpec.CacheNamespace)
+	// Data-driven string field → CLI arg mappings.
+	// NOTE: CacheNamespace maps to --namespace, which may conflict with the operator's
+	// deployment model where providers watch all namespaces. The ContainerSpec.Args
+	// will ignore the key "namespace" for this reason.
+	stringArgMappings := []struct {
+		arg, value string
+	}{
+		{"--namespace", mSpec.CacheNamespace},
+		{"--health-addr", mSpec.Health.HealthProbeBindAddress},
+		{"--metrics-bind-addr", mSpec.Metrics.BindAddress},
+		{"--diagnostics-address", mSpec.Metrics.DiagnosticsAddress},
+		{"--webhook-host", mSpec.Webhook.Host},
+		{"--webhook-cert-dir", mSpec.Webhook.CertDir},
+		{"--profiler-address", mSpec.ProfilerAddress},
+	}
+
+	for _, m := range stringArgMappings {
+		if m.value != "" {
+			c.Args = setArgs(c.Args, m.arg, m.value)
+		}
 	}
 
 	// TODO can't find an arg for GracefulShutdownTimeout
 
-	if mSpec.Health.HealthProbeBindAddress != "" {
-		c.Args = setArgs(c.Args, "--health-addr", mSpec.Health.HealthProbeBindAddress)
-	}
-
+	// Health probe endpoints
 	if mSpec.Health.LivenessEndpointName != "" && c.LivenessProbe != nil && c.LivenessProbe.HTTPGet != nil {
 		c.LivenessProbe.HTTPGet.Path = "/" + mSpec.Health.LivenessEndpointName
 	}
@@ -235,37 +242,24 @@ func customizeManagerContainer(mSpec *operatorv1.ManagerSpec, c *corev1.Containe
 		c.ReadinessProbe.HTTPGet.Path = "/" + mSpec.Health.ReadinessEndpointName
 	}
 
+	// Leader election
 	if mSpec.LeaderElection != nil && mSpec.LeaderElection.LeaderElect != nil {
 		c.Args = leaderElectionArgs(mSpec.LeaderElection, c.Args)
 	}
 
-	// metrics
-	if mSpec.Metrics.BindAddress != "" {
-		c.Args = setArgs(c.Args, "--metrics-bind-addr", mSpec.Metrics.BindAddress)
-	}
-
-	if mSpec.Metrics.DiagnosticsAddress != "" {
-		c.Args = setArgs(c.Args, "--diagnostics-address", mSpec.Metrics.DiagnosticsAddress)
-	}
-
+	// Only pass --insecure-diagnostics when true. Some providers (e.g. CAPO) do not
+	// register this flag via AddManagerOptions, and passing it unconditionally causes
+	// those providers to fail on startup.
 	if mSpec.Metrics.InsecureDiagnostics {
-		c.Args = setArgs(c.Args, "--insecure-diagnostics", strconv.FormatBool(mSpec.Metrics.InsecureDiagnostics))
+		c.Args = setArgs(c.Args, "--insecure-diagnostics", "true")
 	}
 
-	// webhooks
-	if mSpec.Webhook.Host != "" {
-		c.Args = setArgs(c.Args, "--webhook-host", mSpec.Webhook.Host)
-	}
-
+	// Webhook port (pointer field requires separate handling)
 	if mSpec.Webhook.Port != nil {
 		c.Args = setArgs(c.Args, "--webhook-port", fmt.Sprint(*mSpec.Webhook.Port))
 	}
 
-	if mSpec.Webhook.CertDir != "" {
-		c.Args = setArgs(c.Args, "--webhook-cert-dir", mSpec.Webhook.CertDir)
-	}
-
-	// top level fields
+	// Sync period (duration conversion)
 	if mSpec.SyncPeriod != nil {
 		syncPeriod := int(mSpec.SyncPeriod.Duration.Round(time.Second).Seconds())
 		if syncPeriod > 0 {
@@ -273,10 +267,7 @@ func customizeManagerContainer(mSpec *operatorv1.ManagerSpec, c *corev1.Containe
 		}
 	}
 
-	if mSpec.ProfilerAddress != "" {
-		c.Args = setArgs(c.Args, "--profiler-address", mSpec.ProfilerAddress)
-	}
-
+	// Verbosity (only override when non-default)
 	if mSpec.Verbosity != defaultVerbosity {
 		c.Args = setArgs(c.Args, "--v", fmt.Sprint(mSpec.Verbosity))
 	}
@@ -292,7 +283,7 @@ func customizeManagerContainer(mSpec *operatorv1.ManagerSpec, c *corev1.Containe
 
 		fgValue := make([]string, 0, len(mergedGates))
 		for fg, val := range mergedGates {
-			fgValue = append(fgValue, fg+"="+bool2Str[val])
+			fgValue = append(fgValue, fg+"="+strconv.FormatBool(val))
 		}
 
 		sort.Strings(fgValue)
@@ -400,7 +391,7 @@ func removeEnv(envs []corev1.EnvVar, name string) []corev1.EnvVar {
 
 // leaderElectionArgs set leader election flags.
 func leaderElectionArgs(lec *configv1alpha1.LeaderElectionConfiguration, args []string) []string {
-	args = setArgs(args, "--leader-elect", bool2Str[*lec.LeaderElect])
+	args = setArgs(args, "--leader-elect", strconv.FormatBool(*lec.LeaderElect))
 
 	if *lec.LeaderElect {
 		if lec.ResourceName != "" && lec.ResourceNamespace != "" {
