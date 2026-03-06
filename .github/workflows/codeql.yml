@@ -1,0 +1,50 @@
+name: "CodeQL"
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+  schedule:
+    - cron: "0 6 * * 1" # Every Monday at 06:00 UTC
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: Analyze
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        language: ["go"]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@0c366fd6a839edf440554fa01a7085ccba70ac98 # tag=v4.2.2
+        with:
+          fetch-depth: 0
+
+      - name: Calculate go version
+        id: vars
+        run: echo "go_version=$(make go-version)" >> $GITHUB_OUTPUT
+
+      - name: Set up Go
+        uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # tag=v6.0.0
+        with:
+          go-version: ${{ steps.vars.outputs.go_version }}
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@ff0a06e83cb2de871e5a09832bc6a81e7276941f # tag=v3.28.18
+        with:
+          languages: ${{ matrix.language }}
+
+      - name: Build
+        run: make operator plugin
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@ff0a06e83cb2de871e5a09832bc6a81e7276941f # tag=v3.28.18
+        with:
+          category: "/language:${{ matrix.language }}"
