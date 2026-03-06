@@ -19,19 +19,17 @@ package controller
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/distribution/reference"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 
 	configclient "sigs.k8s.io/cluster-api/cmd/clusterctl/client/config"
-)
-
-const (
-	daemonSetKind = "DaemonSet"
 )
 
 func imageOverrides(component string, overrides configclient.Client) func(objs []unstructured.Unstructured) ([]unstructured.Unstructured, error) {
@@ -86,41 +84,43 @@ func fixImages(objs []unstructured.Unstructured, alterImageFunc func(image strin
 	return objs, nil
 }
 
-func fixDeploymentImages(o *unstructured.Unstructured, alterImageFunc func(image string) (string, error)) error {
-	if o.GetKind() != deploymentKind {
+// fixWorkloadImages is a generic helper that converts an unstructured object into a typed
+// workload, applies image fixups to its PodSpec, and converts it back. This eliminates
+// duplication between Deployment and DaemonSet image fixing.
+func fixWorkloadImages[T runtime.Object](
+	o *unstructured.Unstructured,
+	kind string,
+	target T,
+	getPodSpec func(T) *corev1.PodSpec,
+	alterImageFunc func(image string) (string, error),
+) error {
+	if o.GetKind() != kind {
 		return nil
 	}
 
-	// Convert Unstructured into a typed object
-	d := &appsv1.Deployment{}
-	if err := scheme.Scheme.Convert(o, d, nil); err != nil {
+	if err := scheme.Scheme.Convert(o, target, nil); err != nil {
 		return err
 	}
 
-	if err := fixPodSpecImages(&d.Spec.Template.Spec, alterImageFunc); err != nil {
-		return fmt.Errorf("%w: failed to fix containers in deployment %s", err, d.Name)
+	if err := fixPodSpecImages(getPodSpec(target), alterImageFunc); err != nil {
+		return fmt.Errorf("%w: failed to fix containers in %s %s", err, strings.ToLower(kind), o.GetName())
 	}
 
-	// Convert typed object back to Unstructured
-	return scheme.Scheme.Convert(d, o, nil)
+	return scheme.Scheme.Convert(target, o, nil)
+}
+
+func fixDeploymentImages(o *unstructured.Unstructured, alterImageFunc func(image string) (string, error)) error {
+	return fixWorkloadImages(o, deploymentKind, &appsv1.Deployment{},
+		func(d *appsv1.Deployment) *corev1.PodSpec { return &d.Spec.Template.Spec },
+		alterImageFunc,
+	)
 }
 
 func fixDaemonSetImages(o *unstructured.Unstructured, alterImageFunc func(image string) (string, error)) error {
-	if o.GetKind() != daemonSetKind {
-		return nil
-	}
-
-	// Convert Unstructured into a typed object
-	d := &appsv1.DaemonSet{}
-	if err := scheme.Scheme.Convert(o, d, nil); err != nil {
-		return err
-	}
-
-	if err := fixPodSpecImages(&d.Spec.Template.Spec, alterImageFunc); err != nil {
-		return fmt.Errorf("%w: failed to fix containers in deamonSet %s", err, d.Name)
-	}
-	// Convert typed object back to Unstructured
-	return scheme.Scheme.Convert(d, o, nil)
+	return fixWorkloadImages(o, daemonSetKind, &appsv1.DaemonSet{},
+		func(d *appsv1.DaemonSet) *corev1.PodSpec { return &d.Spec.Template.Spec },
+		alterImageFunc,
+	)
 }
 
 func fixPodSpecImages(podSpec *corev1.PodSpec, alterImageFunc func(image string) (string, error)) error {
