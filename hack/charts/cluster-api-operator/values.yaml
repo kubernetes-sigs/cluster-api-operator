@@ -6,6 +6,14 @@ core: {}
 #   namespace: ""         # Optional
 #   version: ""           # Optional
 #   createNamespace: true # Optional
+#   deployment:           # Optional
+#     replicas: 1
+#     nodeSelector: {}
+#     tolerations: []
+#     affinity: {}
+#     containers: []
+#     serviceAccountName: ""
+#     imagePullSecrets: []
 #   manager:              # Optional
 #     featureGates:
 #       ClusterTopology: true
@@ -17,6 +25,14 @@ bootstrap: {}
 #   namespace: ""         # Optional
 #   version: ""           # Optional
 #   createNamespace: true # Optional
+#   deployment:           # Optional
+#     replicas: 1
+#     nodeSelector: {}
+#     tolerations: []
+#     affinity: {}
+#     containers: []
+#     serviceAccountName: ""
+#     imagePullSecrets: []
 #   manager:              # Optional
 #     featureGates:
 #       ClusterTopology: true
@@ -29,6 +45,14 @@ controlPlane: {}
 #   namespace: ""         # Optional
 #   version: ""           # Optional
 #   createNamespace: true # Optional
+#   deployment:           # Optional
+#     replicas: 1
+#     nodeSelector: {}
+#     tolerations: []
+#     affinity: {}
+#     containers: []
+#     serviceAccountName: ""
+#     imagePullSecrets: []
 #   manager:              # Optional
 #     featureGates:
 #       ClusterTopology: true
@@ -40,6 +64,14 @@ infrastructure: {}
 #   namespace: ""         # Optional
 #   version: ""           # Optional
 #   createNamespace: true # Optional
+#   deployment:           # Optional
+#     replicas: 1
+#     nodeSelector: {}
+#     tolerations: []
+#     affinity: {}
+#     containers: []
+#     serviceAccountName: ""
+#     imagePullSecrets: []
 #   manager:              # Optional
 #     featureGates:
 #       ClusterTopology: true
@@ -51,6 +83,14 @@ addon: {}
 #   namespace: ""         # Optional
 #   version: ""           # Optional
 #   createNamespace: true # Optional
+#   deployment:           # Optional
+#     replicas: 1
+#     nodeSelector: {}
+#     tolerations: []
+#     affinity: {}
+#     containers: []
+#     serviceAccountName: ""
+#     imagePullSecrets: []
 #   manager:              # Optional
 #     metrics:
 #       insecureDiagnostics: true
@@ -60,6 +100,14 @@ ipam: {}
 #   namespace: ""         # Optional
 #   version: ""           # Optional
 #   createNamespace: true # Optional
+#   deployment:           # Optional
+#     replicas: 1
+#     nodeSelector: {}
+#     tolerations: []
+#     affinity: {}
+#     containers: []
+#     serviceAccountName: ""
+#     imagePullSecrets: []
 #   manager:              # Optional
 #     featureGates:
 #       ClusterTopology: true
