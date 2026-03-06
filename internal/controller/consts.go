@@ -19,4 +19,9 @@ package controller
 const (
 	// configPath is the path to the clusterctl config file.
 	configPath = "/config/clusterctl.yaml"
+
+	// Kubernetes resource kind constants used across controller files.
+	deploymentKind = "Deployment"
+	daemonSetKind  = "DaemonSet"
+	namespaceKind  = "Namespace"
 )
