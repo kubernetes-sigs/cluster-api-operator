@@ -99,7 +99,9 @@ func (p *PhaseReconciler) DownloadManifests(ctx context.Context) (*Result, error
 
 	// Fetch the provider metadata and components yaml files from the provided repository GitHub/GitLab or OCI source
 	if p.provider.GetSpec().FetchConfig != nil && p.provider.GetSpec().FetchConfig.OCI != "" {
-		configMap, err = OCIConfigMap(ctx, p.provider, OCIAuthentication(p.configClient.Variables()))
+		caCertString, _ := p.configClient.Variables().Get(OCICACert)
+		caCert := []byte(caCertString)
+		configMap, err = OCIConfigMap(ctx, p.provider, OCIAuthentication(p.configClient.Variables()), caCert)
 		if err != nil {
 			return &Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.ProviderInstalledCondition)
 		}
@@ -252,8 +254,8 @@ func decompressData(compressedData []byte) (data []byte, err error) {
 }
 
 // OCIConfigMap templates config from the OCI source.
-func OCIConfigMap(ctx context.Context, provider operatorv1.GenericProvider, auth *auth.Credential) (*corev1.ConfigMap, error) {
-	store, err := FetchOCI(ctx, provider, auth)
+func OCIConfigMap(ctx context.Context, provider operatorv1.GenericProvider, auth *auth.Credential, caCert []byte) (*corev1.ConfigMap, error) {
+	store, err := FetchOCI(ctx, provider, auth, caCert)
 	if err != nil {
 		return nil, err
 	}
