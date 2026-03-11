@@ -928,6 +928,8 @@ func TestAdditiveFeatureGates(t *testing.T) {
 	container := findManagerContainer(&deplWithExistingGates.Spec)
 	if container == nil {
 		t.Fatal("expected container to be found")
+
+		return
 	}
 
 	if err := customizeManagerContainer(managerSpec, container); err != nil {
