@@ -32,7 +32,7 @@ jobs:
         run: echo "go_version=$(make go-version)" >> $GITHUB_OUTPUT
 
       - name: Set up Go
-        uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # tag=v6.0.0
+        uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # tag=v6.3.0
         with:
           go-version: ${{ steps.vars.outputs.go_version }}
 
