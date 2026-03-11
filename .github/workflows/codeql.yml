@@ -37,7 +37,7 @@ jobs:
           go-version: ${{ steps.vars.outputs.go_version }}
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@ff0a06e83cb2de871e5a09832bc6a81e7276941f # tag=v3.28.18
+        uses: github/codeql-action/init@0d579ffd059c29b07949a3cce3983f0780820c98 # tag=v4.32.6
         with:
           languages: ${{ matrix.language }}
 
@@ -45,6 +45,6 @@ jobs:
         run: make operator plugin
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@ff0a06e83cb2de871e5a09832bc6a81e7276941f # tag=v3.28.18
+        uses: github/codeql-action/analyze@0d579ffd059c29b07949a3cce3983f0780820c98 # tag=v4.32.6
         with:
           category: "/language:${{ matrix.language }}"
