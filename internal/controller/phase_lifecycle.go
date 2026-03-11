@@ -40,15 +40,19 @@ func (p *PhaseReconciler) Upgrade(ctx context.Context) (*Result, error) {
 
 	// Nothing to do if it's a fresh installation.
 	if p.provider.GetStatus().InstalledVersion == nil {
+		log.V(2).Info("Skipping upgrade, fresh installation detected")
+
 		return &Result{}, nil
 	}
 
 	// Provider needs to be re-installed
 	if *p.provider.GetStatus().InstalledVersion == p.provider.GetSpec().Version {
+		log.V(2).Info("Skipping upgrade, versions match", "version", p.provider.GetSpec().Version)
+
 		return &Result{}, nil
 	}
 
-	log.Info("Version changes detected, updating existing components")
+	log.Info("Version changes detected, updating existing components", "installedVersion", *p.provider.GetStatus().InstalledVersion, "targetVersion", p.provider.GetSpec().Version)
 
 	provider := p.providerConverter(p.provider)
 	if provider.Version == "" {
@@ -62,7 +66,7 @@ func (p *PhaseReconciler) Upgrade(ctx context.Context) (*Result, error) {
 		return &Result{}, wrapPhaseError(err, operatorv1.ComponentsUpgradeErrorReason, operatorv1.ProviderUpgradedCondition)
 	}
 
-	log.Info("Provider successfully upgraded")
+	log.Info("Provider successfully upgraded", "version", p.provider.GetSpec().Version)
 	conditions.Set(p.provider, metav1.Condition{
 		Type:    operatorv1.ProviderUpgradedCondition,
 		Status:  metav1.ConditionTrue,
@@ -79,12 +83,14 @@ func (p *PhaseReconciler) Install(ctx context.Context) (*Result, error) {
 
 	// Provider was upgraded, nothing to do
 	if p.provider.GetStatus().InstalledVersion != nil && *p.provider.GetStatus().InstalledVersion != p.provider.GetSpec().Version {
+		log.V(2).Info("Skipping install, provider was upgraded in this reconciliation")
+
 		return &Result{}, nil
 	}
 
 	clusterClient := p.newClusterClient()
 
-	log.Info("Installing provider")
+	log.Info("Installing provider", "version", p.provider.GetSpec().Version)
 
 	if err := clusterClient.ProviderComponents().Create(ctx, p.components.Objs()); err != nil {
 		reason := "InstallFailed"
@@ -95,7 +101,7 @@ func (p *PhaseReconciler) Install(ctx context.Context) (*Result, error) {
 		return &Result{}, wrapPhaseError(err, reason, operatorv1.ProviderInstalledCondition)
 	}
 
-	log.Info("Provider successfully installed")
+	log.Info("Provider successfully installed", "version", p.provider.GetSpec().Version)
 	conditions.Set(p.provider, metav1.Condition{
 		Type:    operatorv1.ProviderInstalledCondition,
 		Status:  metav1.ConditionTrue,
@@ -123,7 +129,7 @@ func convertProvider(provider operatorv1.GenericProvider) clusterctlv1.Provider 
 // Delete deletes the provider components using clusterctl library.
 func (p *PhaseReconciler) Delete(ctx context.Context) (*Result, error) {
 	log := ctrl.LoggerFrom(ctx)
-	log.Info("Deleting provider")
+	log.Info("Deleting provider", "version", p.provider.GetSpec().Version)
 
 	clusterClient := p.newClusterClient()
 
@@ -137,6 +143,9 @@ func (p *PhaseReconciler) Delete(ctx context.Context) (*Result, error) {
 		IncludeNamespace: false,
 		IncludeCRDs:      false,
 	})
+	if err == nil {
+		log.Info("Provider successfully deleted", "version", p.provider.GetSpec().Version)
+	}
 
 	return &Result{}, wrapPhaseError(err, operatorv1.OldComponentsDeletionErrorReason, operatorv1.ProviderInstalledCondition)
 }

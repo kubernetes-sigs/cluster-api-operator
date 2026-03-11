@@ -299,16 +299,16 @@ func deleteProviders(ctx context.Context, client ctrlclient.Client, providerList
 	if err := client.List(ctx, providerList, selector); meta.IsNoMatchError(err) || apierrors.IsNotFound(err) {
 		return true, nil
 	} else if err != nil {
-		log.Error(err, fmt.Sprintf("Unable to list providers to delete, %#v", err))
+		log.Error(err, "Unable to list providers to delete")
 		return false, err
 	}
 
 	for _, provider := range providerList.GetItems() {
-		log.Info(fmt.Sprintf("Deleting %s %s/%s", provider.GetType(), provider.GetName(), provider.GetNamespace()))
+		log.Info("Deleting provider", "type", provider.GetType(), "name", provider.GetName(), "namespace", provider.GetNamespace())
 
 		provider, ok := provider.(genericProvider)
 		if !ok {
-			log.Info(fmt.Sprintf("Expected to get GenericProvider for %s", gvk))
+			log.Info("Expected to get GenericProvider", "gvk", gvk)
 			continue
 		}
 
@@ -318,7 +318,7 @@ func deleteProviders(ctx context.Context, client ctrlclient.Client, providerList
 
 		if deleteOpts.includeNamespace {
 			if strings.HasPrefix(provider.GetNamespace(), "kube-") || provider.GetNamespace() == "default" {
-				log.Info(fmt.Sprintf("Skipping system namespace %s", provider.GetNamespace()))
+				log.Info("Skipping system namespace", "namespace", provider.GetNamespace())
 				continue
 			}
 
@@ -330,7 +330,7 @@ func deleteProviders(ctx context.Context, client ctrlclient.Client, providerList
 	}
 
 	if len(providerList.GetItems()) > 0 {
-		log.Info(fmt.Sprintf("%d items remaning...", len(providerList.GetItems())))
+		log.Info("Items remaining", "count", len(providerList.GetItems()))
 		return false, nil
 	}
 

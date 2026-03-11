@@ -49,6 +49,8 @@ func (p *PhaseReconciler) Fetch(ctx context.Context) (*Result, error) {
 	// Check if components exceed the resource size.
 	p.needsCompression = needToCompress(componentsFile)
 
+	log.V(2).Info("Fetched components file", "size", len(componentsFile), "needsCompression", p.needsCompression)
+
 	// Generate a set of new objects using the clusterctl library. NewComponents() will do the yaml processing,
 	// like ensure all the provider components are in proper namespace, replace variables, etc. See the clusterctl
 	// documentation for more details.
@@ -95,7 +97,6 @@ func (p *PhaseReconciler) Store(ctx context.Context) (*Result, error) {
 
 	kinds, _, err := scheme.Scheme.ObjectKinds(&corev1.Secret{})
 	if err != nil || len(kinds) == 0 {
-		log.Error(err, "cannot fetch kind of the Secret resource")
 		err = fmt.Errorf("cannot fetch kind of the Secret resource: %w", err)
 
 		return &Result{}, wrapPhaseError(err, operatorv1.ComponentsCustomizationErrorReason, operatorv1.ProviderInstalledCondition)
@@ -147,8 +148,6 @@ func (p *PhaseReconciler) Store(ctx context.Context) (*Result, error) {
 	}
 
 	if err := p.ctrlClient.Patch(ctx, secret, client.Apply, client.ForceOwnership, client.FieldOwner(cacheOwner)); err != nil {
-		log.Error(err, "failed to apply cache config map")
-
 		return &Result{}, wrapPhaseError(err, operatorv1.ComponentsCustomizationErrorReason, operatorv1.ProviderInstalledCondition)
 	}
 
@@ -182,12 +181,16 @@ func addNamespaceIfMissing(objs []unstructured.Unstructured, targetNamespace str
 	return objs
 }
 
-func (p *PhaseReconciler) ReportStatus(_ context.Context) (*Result, error) {
+func (p *PhaseReconciler) ReportStatus(ctx context.Context) (*Result, error) {
+	log := ctrl.LoggerFrom(ctx)
+
 	status := p.provider.GetStatus()
 	status.Contract = &p.contract
 	installedVersion := p.components.Version()
 	status.InstalledVersion = &installedVersion
 	p.provider.SetStatus(status)
+
+	log.V(2).Info("Reported provider status", "contract", p.contract, "installedVersion", installedVersion)
 
 	return &Result{}, nil
 }

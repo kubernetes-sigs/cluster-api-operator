@@ -77,6 +77,8 @@ func (p *PhaseReconciler) Load(ctx context.Context) (*Result, error) {
 			return &Result{}, wrapPhaseError(err, fmt.Sprintf("failed to get the latest version for provider %q", p.provider.GetName()), operatorv1.ProviderInstalledCondition)
 		}
 
+		log.Info("Auto-detected latest provider version", "version", spec.Version)
+
 		// Add latest version to the provider spec.
 		p.provider.SetSpec(spec)
 	}
@@ -98,6 +100,8 @@ func (p *PhaseReconciler) Load(ctx context.Context) (*Result, error) {
 // configmapRepository use clusterctl NewMemoryRepository structure to store the manifests
 // and metadata from a given configmap.
 func (p *PhaseReconciler) configmapRepository(ctx context.Context, labelSelector *metav1.LabelSelector, options ...ConfigMapRepositoryOption) (repository.Repository, error) {
+	log := ctrl.LoggerFrom(ctx)
+
 	mr := repository.NewMemoryRepository()
 	mr.WithPaths("", "components.yaml")
 
@@ -119,6 +123,8 @@ func (p *PhaseReconciler) configmapRepository(ctx context.Context, labelSelector
 	if err = p.ctrlClient.List(ctx, cml, &client.ListOptions{LabelSelector: selector, Namespace: settings.namespace}); err != nil {
 		return nil, err
 	}
+
+	log.V(2).Info("Found ConfigMaps for provider", "count", len(cml.Items), "selector", labelSelector.String())
 
 	if len(cml.Items) == 0 {
 		return nil, fmt.Errorf("no ConfigMaps found with selector %s", labelSelector.String())

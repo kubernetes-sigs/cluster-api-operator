@@ -73,7 +73,7 @@ func (p *PhaseReconciler) DownloadManifests(ctx context.Context) (*Result, error
 		return &Result{}, nil
 	}
 
-	log.Info("Downloading provider manifests")
+	log.Info("Downloading provider manifests", "version", p.provider.GetSpec().Version)
 
 	if p.providerConfig.URL() != fakeURL {
 		p.repo, err = util.RepositoryFactory(ctx, p.providerConfig, p.configClient.Variables())
@@ -90,6 +90,8 @@ func (p *PhaseReconciler) DownloadManifests(ctx context.Context) (*Result, error
 		// User didn't set the version, try to get repository default.
 		spec.Version = p.repo.DefaultVersion()
 
+		log.Info("Using repository default version", "version", spec.Version)
+
 		// Add version to the provider spec.
 		p.provider.SetSpec(spec)
 	}
@@ -98,11 +100,15 @@ func (p *PhaseReconciler) DownloadManifests(ctx context.Context) (*Result, error
 
 	// Fetch the provider metadata and components yaml files from the provided repository GitHub/GitLab or OCI source
 	if p.provider.GetSpec().FetchConfig != nil && p.provider.GetSpec().FetchConfig.OCI != "" {
+		log.Info("Downloading manifests from OCI source", "oci", p.provider.GetSpec().FetchConfig.OCI)
+
 		configMap, err = OCIConfigMap(ctx, p.provider, OCIAuthentication(p.configClient.Variables()))
 		if err != nil {
 			return &Result{}, wrapPhaseError(err, operatorv1.ComponentsFetchErrorReason, operatorv1.ProviderInstalledCondition)
 		}
 	} else {
+		log.Info("Downloading manifests from repository", "url", p.providerConfig.URL())
+
 		configMap, err = RepositoryConfigMap(ctx, p.provider, p.repo)
 		if err != nil {
 			err = fmt.Errorf("failed to create config map for provider %q: %w", p.provider.GetName(), err)
@@ -141,9 +147,13 @@ func (p *PhaseReconciler) checkConfigMapExists(ctx context.Context, labelSelecto
 
 // Finalize applies combined hash to a configMap, in order to mark provider provisioning completed.
 func (p *PhaseReconciler) Finalize(ctx context.Context) (*Result, error) {
+	log := ctrl.LoggerFrom(ctx)
+
 	err := setCacheHash(ctx, p.ctrlClient, p.provider)
 	if err != nil {
-		ctrl.LoggerFrom(ctx).V(5).Error(err, "Failed to update providers hash")
+		log.V(5).Error(err, "Failed to update providers hash")
+	} else {
+		log.Info("Provider reconciliation finalized successfully")
 	}
 
 	return &Result{}, wrapPhaseError(err, "FailedToUpdateProvidersHash", operatorv1.ProviderInstalledCondition)
