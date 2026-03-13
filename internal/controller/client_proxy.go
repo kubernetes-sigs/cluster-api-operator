@@ -27,11 +27,11 @@ import (
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/rest"
-	"k8s.io/klog/v2"
 
 	clusterctlv1 "sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3"
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/cluster"
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/repository"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -107,6 +107,7 @@ func (k *controllerProxy) GetResourceNames(ctx context.Context, groupVersion, ki
 
 // ListResources lists namespaced and cluster-wide resources for a component matching the labels.
 func (k *controllerProxy) ListResources(ctx context.Context, labels map[string]string, namespaces ...string) ([]unstructured.Unstructured, error) {
+	log := ctrl.LoggerFrom(ctx)
 	resourceList := []*metav1.APIResourceList{
 		{
 			GroupVersion: "v1",
@@ -160,7 +161,7 @@ func (k *controllerProxy) ListResources(ctx context.Context, labels map[string]s
 						return nil, err
 					}
 
-					klog.V(3).InfoS("listed", "kind", resourceKind.Kind, "count", len(objList.Items))
+					log.V(2).Info("Listed resources", "kind", resourceKind.Kind, "count", len(objList.Items))
 
 					ret = append(ret, objList.Items...)
 				}
@@ -170,7 +171,7 @@ func (k *controllerProxy) ListResources(ctx context.Context, labels map[string]s
 					return nil, err
 				}
 
-				klog.V(3).InfoS("listed", "kind", resourceKind.Kind, "count", len(objList.Items))
+				log.V(2).Info("Listed resources", "kind", resourceKind.Kind, "count", len(objList.Items))
 
 				ret = append(ret, objList.Items...)
 			}

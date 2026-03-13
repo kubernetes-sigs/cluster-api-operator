@@ -64,7 +64,7 @@ func newConfigMapToProviderFuncMapForProviderList(k8sClient client.Client, provi
 			}
 
 			if selector.Matches(configMapLabels) {
-				log.V(1).Info("ConfigMap matches provider selector, enqueueing reconcile request")
+				log.Info("ConfigMap matches provider selector, enqueueing reconcile request")
 
 				requests = append(requests, reconcile.Request{NamespacedName: client.ObjectKeyFromObject(provider)})
 			}

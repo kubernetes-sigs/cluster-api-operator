@@ -215,15 +215,11 @@ func parseOCISource(url string, version string) (string, string, bool) {
 
 // CopyOCIStore collects artifacts from the provider OCI url and creates a map of file contents.
 func CopyOCIStore(ctx context.Context, url string, version string, store *mapStore, credential *auth.Credential) error {
-	log := log.FromContext(ctx)
-
 	url, version, plainHTTP := parseOCISource(url, version)
 
 	repo, err := remote.NewRepository(url)
 	if err != nil {
-		log.Error(err, "Invalid registry URL specified")
-
-		return err
+		return fmt.Errorf("invalid registry URL specified: %w", err)
 	}
 
 	if credential != nil {
@@ -245,9 +241,7 @@ func CopyOCIStore(ctx context.Context, url string, version string, store *mapSto
 		},
 	})
 	if err != nil {
-		log.Error(err, "Unable to copy OCI content to store")
-
-		return err
+		return fmt.Errorf("unable to copy OCI content to store: %w", err)
 	}
 
 	return nil
@@ -276,16 +270,14 @@ func OCIAuthentication(c configclient.VariablesClient) *auth.Credential {
 func FetchOCI(ctx context.Context, provider operatorv1.GenericProvider, cred *auth.Credential) (*mapStore, error) {
 	log := log.FromContext(ctx)
 
-	log.Info("Custom fetch configuration OCI url was provided")
+	log.V(2).Info("Custom fetch configuration OCI url was provided")
 
 	// Prepare components store for the provider type.
 	store := NewMapStore(provider)
 
 	err := CopyOCIStore(ctx, provider.GetSpec().FetchConfig.OCI, provider.GetSpec().Version, &store, cred)
 	if err != nil {
-		log.Error(err, "Unable to copy OCI content")
-
-		return nil, err
+		return nil, fmt.Errorf("unable to copy OCI content: %w", err)
 	}
 
 	return &store, nil

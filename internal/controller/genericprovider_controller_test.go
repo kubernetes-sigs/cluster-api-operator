@@ -17,6 +17,8 @@ limitations under the License.
 package controller
 
 import (
+	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -983,4 +985,140 @@ func setupScheme() *runtime.Scheme {
 	utilruntime.Must(clusterctlv1.AddToScheme(scheme))
 
 	return scheme
+}
+
+func TestReconcile_PhasesExecuteSequentially(t *testing.T) {
+	g := NewWithT(t)
+
+	provider := &operatorv1.CoreProvider{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "cluster-api",
+			Namespace: "test-ns",
+		},
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "CoreProvider",
+			APIVersion: "operator.cluster.x-k8s.io/v1alpha2",
+		},
+	}
+
+	executionOrder := []string{}
+
+	r := &GenericProviderReconciler{
+		Provider: provider,
+		ReconcilePhases: []PhaseFn{
+			func(ctx context.Context) (*Result, error) {
+				executionOrder = append(executionOrder, "phase1")
+				return &Result{}, nil
+			},
+			func(ctx context.Context) (*Result, error) {
+				executionOrder = append(executionOrder, "phase2")
+				return &Result{}, nil
+			},
+			func(ctx context.Context) (*Result, error) {
+				executionOrder = append(executionOrder, "phase3")
+				return &Result{}, nil
+			},
+		},
+	}
+
+	result, err := r.reconcile(context.Background())
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(result.IsZero()).To(BeTrue())
+	g.Expect(executionOrder).To(Equal([]string{"phase1", "phase2", "phase3"}))
+}
+
+func TestReconcile_ErrorStopsExecution(t *testing.T) {
+	g := NewWithT(t)
+
+	provider := &operatorv1.CoreProvider{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "cluster-api",
+			Namespace: "test-ns",
+		},
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "CoreProvider",
+			APIVersion: "operator.cluster.x-k8s.io/v1alpha2",
+		},
+	}
+
+	thirdPhaseCalled := false
+
+	r := &GenericProviderReconciler{
+		Provider: provider,
+		ReconcilePhases: []PhaseFn{
+			func(ctx context.Context) (*Result, error) {
+				return &Result{}, nil
+			},
+			func(ctx context.Context) (*Result, error) {
+				return &Result{}, fmt.Errorf("phase2 failed")
+			},
+			func(ctx context.Context) (*Result, error) {
+				thirdPhaseCalled = true
+				return &Result{}, nil
+			},
+		},
+	}
+
+	_, err := r.reconcile(context.Background())
+	g.Expect(err).To(HaveOccurred())
+	g.Expect(err.Error()).To(ContainSubstring("phase2 failed"))
+	g.Expect(thirdPhaseCalled).To(BeFalse())
+}
+
+func TestNormalizeExistingConditions(t *testing.T) {
+	tests := []struct {
+		name             string
+		conditions       []metav1.Condition
+		expectReasonSet  bool
+		expectedReasonAt int
+		expectedReason   string
+	}{
+		{
+			name: "condition with empty reason gets type as reason",
+			conditions: []metav1.Condition{
+				{
+					Type:   operatorv1.PreflightCheckCondition,
+					Status: metav1.ConditionTrue,
+					Reason: "",
+				},
+			},
+			expectReasonSet:  true,
+			expectedReasonAt: 0,
+			expectedReason:   operatorv1.PreflightCheckCondition,
+		},
+		{
+			name: "condition with existing reason is unchanged",
+			conditions: []metav1.Condition{
+				{
+					Type:   operatorv1.PreflightCheckCondition,
+					Status: metav1.ConditionTrue,
+					Reason: "CustomReason",
+				},
+			},
+			expectReasonSet:  true,
+			expectedReasonAt: 0,
+			expectedReason:   "CustomReason",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := NewWithT(t)
+
+			provider := &operatorv1.CoreProvider{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "cluster-api",
+					Namespace: "test-ns",
+				},
+			}
+			provider.SetConditions(tt.conditions)
+
+			normalizeExistingConditions(provider)
+
+			if tt.expectReasonSet {
+				conds := provider.GetConditions()
+				g.Expect(conds[tt.expectedReasonAt].Reason).To(Equal(tt.expectedReason))
+			}
+		})
+	}
 }

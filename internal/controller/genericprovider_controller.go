@@ -140,6 +140,8 @@ func (r *GenericProviderReconciler) Reconcile(ctx context.Context, req reconcile
 		if apierrors.IsNotFound(err) {
 			// Object not found, return. Created objects are automatically garbage collected.
 			// For additional cleanup logic use finalizers.
+			log.Info("Provider not found, skipping reconciliation")
+
 			return ctrl.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
@@ -167,12 +169,16 @@ func (r *GenericProviderReconciler) Reconcile(ctx context.Context, req reconcile
 
 	// Add finalizer first if not exist to avoid the race condition between init and delete
 	if !controllerutil.ContainsFinalizer(r.Provider, operatorv1.ProviderFinalizer) {
+		log.Info("Adding finalizer, requeueing")
 		controllerutil.AddFinalizer(r.Provider, operatorv1.ProviderFinalizer)
+
 		return ctrl.Result{}, nil
 	}
 
 	// Handle deletion reconciliation loop.
 	if !r.Provider.GetDeletionTimestamp().IsZero() {
+		log.Info("Provider marked for deletion, entering delete reconciliation")
+
 		res, err := r.reconcileDelete(ctx, r.Provider)
 		if err != nil {
 			return reconcile.Result{}, err
@@ -381,25 +387,17 @@ func addObjectToHash(hash hash.Hash, object interface{}) error {
 
 // providerHash calculates hash for provider and referenced objects.
 func providerHash(ctx context.Context, client client.Client, hash hash.Hash, provider genericprovider.GenericProvider) error {
-	log := log.FromContext(ctx)
-
 	err := addObjectToHash(hash, provider.GetSpec())
 	if err != nil {
-		log.Error(err, "failed to calculate provider hash")
-
-		return err
+		return fmt.Errorf("failed to calculate provider hash: %w", err)
 	}
 
 	if err := addConfigSecretToHash(ctx, client, hash, provider); err != nil {
-		log.Error(err, "failed to calculate secret hash")
-
-		return err
+		return fmt.Errorf("failed to calculate secret hash: %w", err)
 	}
 
 	if err := addConfigMapToHash(ctx, client, hash, provider); err != nil {
-		log.Error(err, "failed to calculate configmap hash")
-
-		return err
+		return fmt.Errorf("failed to calculate configmap hash: %w", err)
 	}
 
 	return nil
@@ -444,23 +442,17 @@ func (p *PhaseReconciler) ApplyFromCache(ctx context.Context) (*Result, error) {
 		// secret does not exist, nothing to apply
 		return &Result{}, nil
 	} else if err != nil {
-		log.Error(err, "failed to get provider cache")
-
 		return &Result{}, fmt.Errorf("failed to get provider cache: %w", err)
 	}
 
 	// calculate combined hash for provider and config map cache
 	hash := sha256.New()
 	if err := providerHash(ctx, p.ctrlClient, hash, p.provider); err != nil {
-		log.Error(err, "failed to calculate provider hash")
-
 		return &Result{}, err
 	}
 
 	if err := addObjectToHash(hash, secret.Data); err != nil {
-		log.Error(err, "failed to calculate config map hash")
-
-		return &Result{}, err
+		return &Result{}, fmt.Errorf("failed to calculate config map hash: %w", err)
 	}
 
 	data, err := os.ReadFile(configPath)
@@ -471,9 +463,7 @@ func (p *PhaseReconciler) ApplyFromCache(ctx context.Context) (*Result, error) {
 	}
 
 	if err := addObjectToHash(hash, data); err != nil {
-		log.Error(err, "failed to calculate clusterctl.yaml file hash")
-
-		return &Result{}, nil
+		return &Result{}, err
 	}
 
 	cacheHash := fmt.Sprintf("%x", hash.Sum(nil))
@@ -499,8 +489,6 @@ func (p *PhaseReconciler) ApplyFromCache(ctx context.Context) (*Result, error) {
 	compressed := secret.GetAnnotations()[operatorv1.CompressedAnnotation] == operatorv1.TrueValue
 
 	if err := p.applyManifestsFromData(ctx, secret.Data, compressed); err != nil {
-		log.Error(err, "failed to apply objects from cache")
-
 		return &Result{}, err
 	}
 
@@ -514,6 +502,8 @@ func (p *PhaseReconciler) ApplyFromCache(ctx context.Context) (*Result, error) {
 func (p *PhaseReconciler) applyManifestsFromData(ctx context.Context, data map[string][]byte, compressed bool) error {
 	log := log.FromContext(ctx)
 
+	log.V(2).Info("Applying manifests from cache", "entries", len(data), "compressed", compressed)
+
 	var errs []error
 
 	for _, raw := range data {
@@ -524,18 +514,14 @@ func (p *PhaseReconciler) applyManifestsFromData(ctx context.Context, data map[s
 
 			manifest, err = decompressData(raw)
 			if err != nil {
-				log.Error(err, "failed to decompress yaml")
-
-				return err
+				return fmt.Errorf("failed to decompress yaml: %w", err)
 			}
 		}
 
 		var manifests []unstructured.Unstructured
 
 		if err := json.Unmarshal(manifest, &manifests); err != nil {
-			log.Error(err, "failed to convert yaml to unstructured")
-
-			return err
+			return fmt.Errorf("failed to convert yaml to unstructured: %w", err)
 		}
 
 		for i := range manifests {
@@ -550,6 +536,8 @@ func (p *PhaseReconciler) applyManifestsFromData(ctx context.Context, data map[s
 
 // setCacheHash calculates current provider and secret hash, and updates it on the secret.
 func setCacheHash(ctx context.Context, cl client.Client, provider genericprovider.GenericProvider) error {
+	log := log.FromContext(ctx)
+
 	secret := &corev1.Secret{}
 	if err := cl.Get(ctx, client.ObjectKey{Name: ProviderCacheName(provider), Namespace: provider.GetNamespace()}, secret); err != nil {
 		return fmt.Errorf("failed to get cache secret: %w", err)
@@ -582,6 +570,8 @@ func setCacheHash(ctx context.Context, cl client.Client, provider genericprovide
 	}
 
 	cacheHash := fmt.Sprintf("%x", hash.Sum(nil))
+
+	log.V(2).Info("Setting cache hash", "hash", cacheHash, "provider", provider.GetName())
 
 	annotations := secret.GetAnnotations()
 	if annotations == nil {

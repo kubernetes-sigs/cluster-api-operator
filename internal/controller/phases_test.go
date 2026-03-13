@@ -772,3 +772,39 @@ func TestGetLatestVersion(t *testing.T) {
 		})
 	}
 }
+
+func TestResultIsZero(t *testing.T) {
+	tests := []struct {
+		name   string
+		result *Result
+		want   bool
+	}{
+		{
+			name:   "nil result",
+			result: nil,
+			want:   true,
+		},
+		{
+			name:   "zero result",
+			result: &Result{},
+			want:   true,
+		},
+		{
+			name:   "completed result",
+			result: &Result{Completed: true},
+			want:   false,
+		},
+		{
+			name:   "requeue result",
+			result: &Result{Requeue: true},
+			want:   false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := NewWithT(t)
+			g.Expect(tt.result.IsZero()).To(Equal(tt.want))
+		})
+	}
+}

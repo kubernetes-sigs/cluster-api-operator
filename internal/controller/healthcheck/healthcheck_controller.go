@@ -148,12 +148,16 @@ func (r *GenericProviderHealthCheckReconciler) Reconcile(ctx context.Context, re
 
 	// Stop earlier if this provider is not fully installed yet.
 	if !conditions.IsTrue(typedProvider, operatorv1.ProviderInstalledCondition) {
+		log.V(2).Info("Provider not fully installed yet, requeueing")
+
 		return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
 	}
 
 	// Compare provider's Ready condition with the deployment's Available condition and stop if they already match.
 	currentReadyCondition := conditions.Get(typedProvider, clusterv1.ReadyCondition)
 	if currentReadyCondition != nil && deploymentAvailableCondition != nil && currentReadyCondition.Status == metav1.ConditionStatus(deploymentAvailableCondition.Status) {
+		log.V(5).Info("Health check conditions already in sync, skipping")
+
 		return result, nil
 	}
 
@@ -168,6 +172,8 @@ func (r *GenericProviderHealthCheckReconciler) Reconcile(ctx context.Context, re
 		if reason == "" {
 			reason = operatorv1.DeploymentAvailableReason
 		}
+
+		log.Info("Updating provider health status", "available", deploymentAvailableCondition.Status)
 
 		conditions.Set(typedProvider, metav1.Condition{
 			Type:   clusterv1.ReadyCondition,

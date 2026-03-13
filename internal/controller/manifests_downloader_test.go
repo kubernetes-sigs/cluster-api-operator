@@ -187,3 +187,39 @@ func TestCompressDecompressLargeData(t *testing.T) {
 	g.Expect(err).ToNot(HaveOccurred())
 	g.Expect(decompressed).To(Equal(largeData))
 }
+
+func TestProviderCacheName(t *testing.T) {
+	tests := []struct {
+		name     string
+		provider operatorv1.GenericProvider
+		expected string
+	}{
+		{
+			name: "core provider",
+			provider: &operatorv1.CoreProvider{
+				ObjectMeta: metav1.ObjectMeta{Name: "cluster-api"},
+				Spec: operatorv1.CoreProviderSpec{
+					ProviderSpec: operatorv1.ProviderSpec{Version: "v1.5.0"},
+				},
+			},
+			expected: "core-cluster-api-v1.5.0-cache",
+		},
+		{
+			name: "infrastructure provider",
+			provider: &operatorv1.InfrastructureProvider{
+				ObjectMeta: metav1.ObjectMeta{Name: "aws"},
+				Spec: operatorv1.InfrastructureProviderSpec{
+					ProviderSpec: operatorv1.ProviderSpec{Version: "v2.0.0"},
+				},
+			},
+			expected: "infrastructure-aws-v2.0.0-cache",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := NewWithT(t)
+			g.Expect(ProviderCacheName(tt.provider)).To(Equal(tt.expected))
+		})
+	}
+}

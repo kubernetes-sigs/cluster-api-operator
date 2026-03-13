@@ -114,6 +114,8 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 		}
 
 		if token, ok := secret.Data[configclient.GitHubTokenVariable]; ok {
+			log.V(2).Info("Validating GitHub token access")
+
 			githubClient := github.NewClient(oauth2.NewClient(ctx, oauth2.StaticTokenSource(
 				&oauth2.Token{AccessToken: string(token)},
 			)))
@@ -138,8 +140,6 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 
 		// CoreProvider is a singleton resource, more than one instances should not exist
 		if mapper(provider) == clusterctlv1.CoreProviderType && mapper(p) == clusterctlv1.CoreProviderType {
-			log.Info(moreThanOneCoreProviderInstanceExistsMessage)
-
 			return setPreflightFailed(provider, operatorv1.MoreThanOneProviderInstanceExistsReason,
 				moreThanOneCoreProviderInstanceExistsMessage)
 		}
@@ -147,7 +147,6 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 		// For any other provider we should check that instances with similar name exist in any namespace
 		if mapper(p) != clusterctlv1.CoreProviderType && p.GetName() == provider.GetName() && mapper(p) == mapper(provider) {
 			message := fmt.Sprintf(moreThanOneProviderInstanceExistsMessage, p.GetName(), p.GetNamespace())
-			log.Info(message)
 
 			return setPreflightFailed(provider, operatorv1.MoreThanOneProviderInstanceExistsReason, message)
 		}
@@ -187,7 +186,7 @@ func checkProviderVersion(ctx context.Context, providerVersion string, provider 
 	// Check that provider version contains a valid value if it's not empty.
 	targetVersion, err := version.ParseSemantic(providerVersion)
 	if err != nil {
-		log.Info("Version contains invalid value")
+		log.Error(err, "Version contains invalid value", "version", providerVersion)
 
 		return setPreflightFailed(provider, operatorv1.IncorrectVersionFormatReason, err.Error())
 	}
@@ -200,6 +199,8 @@ func checkProviderVersion(ctx context.Context, providerVersion string, provider 
 		}
 
 		if targetVersion.Major() < installedVersion.Major() || targetVersion.Major() == installedVersion.Major() && targetVersion.Minor() < installedVersion.Minor() {
+			log.V(2).Info("Provider downgrade detected", "installedVersion", installedVersion.String(), "targetVersion", targetVersion.String())
+
 			return setPreflightFailed(provider, operatorv1.UnsupportedProviderDowngradeReason,
 				unsupportedProviderDowngradeMessage)
 		}

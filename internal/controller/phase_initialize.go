@@ -40,7 +40,7 @@ func initReaderVariables(ctx context.Context, cl client.Client, reader configcli
 
 	// Fetch configuration variables from the secret. See API field docs for more info.
 	if provider.GetSpec().ConfigSecret == nil {
-		log.Info("No configuration secret was specified")
+		log.V(2).Info("No configuration secret was specified")
 
 		return nil
 	}
@@ -49,20 +49,24 @@ func initReaderVariables(ctx context.Context, cl client.Client, reader configcli
 	key := types.NamespacedName{Namespace: provider.GetSpec().ConfigSecret.Namespace, Name: provider.GetSpec().ConfigSecret.Name}
 
 	if err := cl.Get(ctx, key, secret); err != nil {
-		log.Error(err, "failed to get referenced secret")
-
-		return err
+		return fmt.Errorf("failed to get referenced secret: %w", err)
 	}
 
 	for k, v := range secret.Data {
 		reader.Set(k, string(v))
 	}
 
+	log.V(2).Info("Loaded configuration variables from secret", "secret", key, "variableCount", len(secret.Data))
+
 	return nil
 }
 
 // InitializePhaseReconciler initializes phase reconciler.
 func (p *PhaseReconciler) InitializePhaseReconciler(ctx context.Context) (*Result, error) {
+	log := ctrl.LoggerFrom(ctx)
+
+	log.Info("Initializing phase reconciler")
+
 	path := configPath
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
 		path = ""
@@ -113,6 +117,8 @@ func (p *PhaseReconciler) InitializePhaseReconciler(ctx context.Context) (*Resul
 		return &Result{}, wrapPhaseError(err, operatorv1.UnknownProviderReason, operatorv1.ProviderInstalledCondition)
 	}
 
+	log.V(2).Info("Resolved provider config", "name", p.providerConfig.Name(), "url", p.providerConfig.URL())
+
 	return &Result{}, nil
 }
 
@@ -147,12 +153,12 @@ func (p *PhaseReconciler) secretReader(ctx context.Context, providers ...configc
 	// If provided store fetch config url in memory reader.
 	if p.provider.GetSpec().FetchConfig != nil {
 		if p.provider.GetSpec().FetchConfig.URL != "" {
-			log.Info("Custom fetch configuration url was provided")
+			log.V(2).Info("Custom fetch configuration url was provided")
 			return mr.AddProvider(p.provider.ProviderName(), p.providerTypeMapper(p.provider), p.provider.GetSpec().FetchConfig.URL)
 		}
 
 		if p.provider.GetSpec().FetchConfig.Selector != nil {
-			log.Info("Custom fetch configuration config map was provided")
+			log.V(2).Info("Custom fetch configuration config map was provided")
 
 			// To register a new provider from the config map, we need to specify a URL with a valid
 			// format. However, since we're using data from a local config map, URLs are not needed.
