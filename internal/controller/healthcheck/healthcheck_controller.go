@@ -17,16 +17,15 @@ limitations under the License.
 package healthcheck
 
 import (
+	"cmp"
 	"context"
 	"fmt"
-	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	kerrors "k8s.io/apimachinery/pkg/util/errors"
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
@@ -38,7 +37,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -59,12 +58,10 @@ const providerLabelKey = "cluster.x-k8s.io/provider"
 
 var deploymentPredicate predicate.Predicate
 
-type ProviderHealthCheckReconciler struct {
-	Client client.Client
-}
+type ProviderHealthCheckReconciler struct{}
 
 type GenericProviderHealthCheckReconciler struct {
-	Client      client.Client
+	client.Client
 	Provider    operatorv1.GenericProvider
 	providerGVK schema.GroupVersionKind
 }
@@ -103,7 +100,7 @@ func (r *ProviderHealthCheckReconciler) SetupWithManager(mgr ctrl.Manager, optio
 }
 
 func (r *GenericProviderHealthCheckReconciler) SetupWithManager(mgr ctrl.Manager, options controller.Options) error {
-	kinds, _, err := r.Client.Scheme().ObjectKinds(r.Provider)
+	kinds, _, err := r.Scheme().ObjectKinds(r.Provider)
 	if err != nil {
 		return err
 	}
@@ -116,42 +113,60 @@ func (r *GenericProviderHealthCheckReconciler) SetupWithManager(mgr ctrl.Manager
 
 	return ctrl.NewControllerManagedBy(mgr).
 		Named(name).
-		For(&appsv1.Deployment{}, builder.WithPredicates(r.providerDeploymentPredicates())).
+		For(&appsv1.Deployment{}, builder.WithPredicates(predicate.NewPredicateFuncs(r.isProviderDeployment))).
+		Watches(r.Provider, handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, provider client.Object) []reconcile.Request {
+			deploymentList := &appsv1.DeploymentList{}
+			if err := r.List(ctx, deploymentList, client.InNamespace(provider.GetNamespace()), client.HasLabels{providerLabelKey}); err != nil {
+				ctrl.LoggerFrom(ctx).Error(err, "Failed to list deployments for provider", "provider", client.ObjectKeyFromObject(provider))
+				return nil
+			}
+
+			requests := []reconcile.Request{}
+
+			for _, dep := range deploymentList.Items {
+				if r.getProviderName(&dep) == provider.GetName() {
+					requests = append(requests, reconcile.Request{
+						NamespacedName: client.ObjectKeyFromObject(&dep),
+					})
+				}
+			}
+
+			return requests
+		})).
 		WithEventFilter(deploymentPredicate).
 		WithOptions(options).
-		Complete(r)
+		Complete(reconcile.AsReconciler(mgr.GetClient(), r))
 }
 
-func (r *GenericProviderHealthCheckReconciler) Reconcile(ctx context.Context, req reconcile.Request) (_ reconcile.Result, reterr error) {
-	log := ctrl.LoggerFrom(ctx)
-
-	log.Info("Checking provider health")
+func (r *GenericProviderHealthCheckReconciler) Reconcile(ctx context.Context, deployment *appsv1.Deployment) (_ reconcile.Result, reterr error) {
+	log := ctrl.LoggerFrom(ctx, "provider", r.providerGVK.Kind, "providerName", r.getProviderName(deployment), "deployment", client.ObjectKeyFromObject(deployment))
 
 	result := ctrl.Result{}
 
-	deployment := &appsv1.Deployment{}
+	typedProvider, ok := r.Provider.DeepCopyObject().(operatorv1.GenericProvider)
+	if !ok {
+		log.Error(fmt.Errorf("failed to cast provider object as GenericProvider"), "unexpected provider type")
 
-	if err := r.Client.Get(ctx, req.NamespacedName, deployment); err != nil {
-		// Error reading the object - requeue the request.
-		return result, err
+		return result, nil
 	}
 
 	// There should be one owner pointing to the Provider resource.
-	if err := r.Client.Get(ctx, r.getProviderKey(deployment), r.Provider); err != nil {
+	if err := r.Get(ctx, r.getProviderKey(deployment), typedProvider); err != nil {
 		// Error reading the object - requeue the request.
+		log.Error(err, "Failed to get provider for deployment")
 		return result, err
 	}
 
 	deploymentAvailableCondition := getDeploymentCondition(deployment.Status, appsv1.DeploymentAvailable)
 
-	typedProvider := r.Provider
-
 	// Stop earlier if this provider is not fully installed yet.
 	if !conditions.IsTrue(typedProvider, operatorv1.ProviderInstalledCondition) {
 		log.V(2).Info("Provider not fully installed yet, requeueing")
 
-		return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
+		return result, nil
 	}
+
+	log.Info("Checking provider health")
 
 	// Compare provider's Ready condition with the deployment's Available condition and stop if they already match.
 	currentReadyCondition := conditions.Get(typedProvider, clusterv1.ReadyCondition)
@@ -167,35 +182,37 @@ func (r *GenericProviderHealthCheckReconciler) Reconcile(ctx context.Context, re
 		return result, err
 	}
 
-	if deploymentAvailableCondition != nil {
-		reason := deploymentAvailableCondition.Reason
-		if reason == "" {
-			reason = operatorv1.DeploymentAvailableReason
-		}
+	defer func() {
+		if err := patchHelper.Patch(ctx, typedProvider, patch.WithOwnedConditions{Conditions: []string{clusterv1.ReadyCondition}}); err != nil {
+			log.Error(err, "Failed to patch provider status")
 
+			reterr = kerrors.NewAggregate([]error{reterr, err})
+		}
+	}()
+
+	if deploymentAvailableCondition != nil {
 		log.Info("Updating provider health status", "available", deploymentAvailableCondition.Status)
 
 		conditions.Set(typedProvider, metav1.Condition{
-			Type:   clusterv1.ReadyCondition,
-			Status: metav1.ConditionStatus(deploymentAvailableCondition.Status),
-			Reason: reason,
+			Type:    clusterv1.ReadyCondition,
+			Status:  metav1.ConditionStatus(deploymentAvailableCondition.Status),
+			Reason:  cmp.Or(deploymentAvailableCondition.Reason, operatorv1.DeploymentAvailableReason),
+			Message: deploymentAvailableCondition.Message,
 		})
 	} else {
 		conditions.Set(typedProvider, metav1.Condition{
-			Type:   clusterv1.ReadyCondition,
-			Status: metav1.ConditionFalse,
-			Reason: operatorv1.NoDeploymentAvailableConditionReason,
+			Type:    clusterv1.ReadyCondition,
+			Status:  metav1.ConditionFalse,
+			Reason:  operatorv1.NoDeploymentAvailableConditionReason,
+			Message: "No minimum availability condition found on the provider deployment",
 		})
 	}
 
-	// Don't requeue immediately if the deployment is not ready, but rather wait 5 seconds.
-	if conditions.IsFalse(typedProvider, clusterv1.ReadyCondition) {
-		result = ctrl.Result{RequeueAfter: 5 * time.Second}
+	if !conditions.IsTrue(typedProvider, clusterv1.ReadyCondition) {
+		log.V(2).Info("Provider is not ready yet")
 	}
 
-	options := patch.WithOwnedConditions{Conditions: []string{clusterv1.ReadyCondition}}
-
-	return result, patchHelper.Patch(ctx, typedProvider, options)
+	return result, nil
 }
 
 func (r *GenericProviderHealthCheckReconciler) getProviderName(deploy client.Object) string {
@@ -227,20 +244,11 @@ func getDeploymentCondition(status appsv1.DeploymentStatus, condType appsv1.Depl
 	return nil
 }
 
-func (r *GenericProviderHealthCheckReconciler) providerDeploymentPredicates() predicate.Funcs {
-	isProviderDeployment := func(obj runtime.Object) bool {
-		deployment, ok := obj.(*appsv1.Deployment)
-		if !ok {
-			panic("expected to get an of object of type appsv1.Deployment")
-		}
-
-		return r.getProviderName(deployment) != ""
+func (r *GenericProviderHealthCheckReconciler) isProviderDeployment(obj client.Object) bool {
+	deployment, ok := obj.(*appsv1.Deployment)
+	if !ok {
+		panic("expected to get an of object of type appsv1.Deployment")
 	}
 
-	return predicate.Funcs{
-		CreateFunc:  func(e event.CreateEvent) bool { return false },
-		UpdateFunc:  func(e event.UpdateEvent) bool { return isProviderDeployment(e.ObjectNew) },
-		GenericFunc: func(e event.GenericEvent) bool { return false },
-		DeleteFunc:  func(e event.DeleteEvent) bool { return false },
-	}
+	return r.getProviderName(deployment) != ""
 }

@@ -321,9 +321,7 @@ func setupReconcilers(ctx context.Context, mgr ctrl.Manager, watchConfigSecretCh
 		os.Exit(1)
 	}
 
-	if err := (&healtchcheckcontroller.ProviderHealthCheckReconciler{
-		Client: mgr.GetClient(),
-	}).SetupWithManager(mgr, concurrency(concurrencyNumber)); err != nil {
+	if err := (&healtchcheckcontroller.ProviderHealthCheckReconciler{}).SetupWithManager(mgr, concurrency(concurrencyNumber)); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Healthcheck")
 		os.Exit(1)
 	}
