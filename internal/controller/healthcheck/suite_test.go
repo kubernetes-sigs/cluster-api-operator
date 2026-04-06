@@ -52,9 +52,7 @@ func TestMain(m *testing.M) {
 		panic(fmt.Sprintf("Failed to start CoreProviderReconciler: %v", err))
 	}
 
-	if err := (&ProviderHealthCheckReconciler{
-		Client: env,
-	}).SetupWithManager(env.Manager, controller.Options{MaxConcurrentReconciles: 1}); err != nil {
+	if err := (&ProviderHealthCheckReconciler{}).SetupWithManager(env.Manager, controller.Options{MaxConcurrentReconciles: 1}); err != nil {
 		panic(fmt.Sprintf("Failed to start Healthcheck controller: %v", err))
 	}
 
