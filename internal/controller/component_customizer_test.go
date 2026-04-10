@@ -153,12 +153,12 @@ func TestCustomizeDeployment(t *testing.T) {
 		{
 			name: "only tolerations modified",
 			inputDeploymentSpec: &operatorv1.DeploymentSpec{
-				Tolerations: []corev1.Toleration{
+				Tolerations: ptr.To([]corev1.Toleration{
 					{
 						Key:    "node-role.kubernetes.io/master",
 						Effect: corev1.TaintEffectNoSchedule,
 					},
-				},
+				}),
 			},
 			expectedDeploymentSpec: func(inputDS *appsv1.DeploymentSpec) (*appsv1.DeploymentSpec, bool) {
 				expectedDS := &appsv1.DeploymentSpec{
@@ -345,12 +345,12 @@ func TestCustomizeDeployment(t *testing.T) {
 			inputDeploymentSpec: &operatorv1.DeploymentSpec{
 				Replicas:     ptr.To(3),
 				NodeSelector: map[string]string{"a": "b"},
-				Tolerations: []corev1.Toleration{
+				Tolerations: ptr.To([]corev1.Toleration{
 					{
 						Key:    "node-role.kubernetes.io/master",
 						Effect: corev1.TaintEffectNoSchedule,
 					},
-				},
+				}),
 				Affinity: &corev1.Affinity{
 					NodeAffinity: &corev1.NodeAffinity{
 						RequiredDuringSchedulingIgnoredDuringExecution: &corev1.NodeSelector{
@@ -657,6 +657,31 @@ func TestCustomizeDeployment(t *testing.T) {
 				t.Error(cmp.Diff(ds, deployment.Spec))
 			}
 		})
+	}
+}
+
+func TestCustomizeDeployment_ClearsTolerationsWhenExplicitlyEmpty(t *testing.T) {
+	deployment := &appsv1.Deployment{
+		Spec: appsv1.DeploymentSpec{
+			Template: corev1.PodTemplateSpec{
+				Spec: corev1.PodSpec{
+					Tolerations: []corev1.Toleration{{
+						Key:    "node-role.kubernetes.io/control-plane",
+						Effect: corev1.TaintEffectNoSchedule,
+					}},
+				},
+			},
+		},
+	}
+
+	if err := customizeDeploymentSpec(operatorv1.DeploymentSpec{
+		Tolerations: ptr.To([]corev1.Toleration{}),
+	}, deployment); err != nil {
+		t.Fatalf("customizeDeploymentSpec() error = %v", err)
+	}
+
+	if len(deployment.Spec.Template.Spec.Tolerations) != 0 {
+		t.Fatalf("expected tolerations to be cleared, got %#v", deployment.Spec.Template.Spec.Tolerations)
 	}
 }
 

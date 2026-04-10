@@ -613,9 +613,13 @@ func (in *DeploymentSpec) DeepCopyInto(out *DeploymentSpec) {
 	}
 	if in.Tolerations != nil {
 		in, out := &in.Tolerations, &out.Tolerations
-		*out = make([]corev1.Toleration, len(*in))
-		for i := range *in {
-			(*in)[i].DeepCopyInto(&(*out)[i])
+		*out = new([]corev1.Toleration)
+		if **in != nil {
+			in, out := *in, *out
+			*out = make([]corev1.Toleration, len(*in))
+			for i := range *in {
+				(*in)[i].DeepCopyInto(&(*out)[i])
+			}
 		}
 	}
 	if in.Affinity != nil {

@@ -159,7 +159,7 @@ func customizeDeploymentSpec(dSpec operatorv1.DeploymentSpec, d *appsv1.Deployme
 	}
 
 	if dSpec.Tolerations != nil {
-		d.Spec.Template.Spec.Tolerations = dSpec.Tolerations
+		d.Spec.Template.Spec.Tolerations = *dSpec.Tolerations
 	}
 
 	if dSpec.ServiceAccountName != "" {
