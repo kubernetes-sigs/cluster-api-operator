@@ -45,10 +45,10 @@ spec:
   {{- if $bootstrap.manager.metrics }}
     metrics:
     {{- if $bootstrap.manager.metrics.insecureDiagnostics }}
-      insecureDiagnostics: {{- $bootstrap.manager.metrics.insecureDiagnostics }}
+      insecureDiagnostics: {{ $bootstrap.manager.metrics.insecureDiagnostics }}
     {{- end }}
     {{- if $bootstrap.manager.metrics.diagnosticsAddress }}
-      diagnosticsAddress: {{- $bootstrap.manager.metrics.diagnosticsAddress }}
+      diagnosticsAddress: {{ $bootstrap.manager.metrics.diagnosticsAddress }}
     {{- end }}
   {{- end }}
 {{- end }}
