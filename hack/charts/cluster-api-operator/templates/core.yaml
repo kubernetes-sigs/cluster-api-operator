@@ -48,10 +48,10 @@ spec:
   {{- if $core.manager.metrics }}
     metrics:
     {{- if $core.manager.metrics.insecureDiagnostics }}
-      insecureDiagnostics: {{- $core.manager.metrics.insecureDiagnostics }}
+      insecureDiagnostics: {{ $core.manager.metrics.insecureDiagnostics }}
     {{- end }}
     {{- if $core.manager.metrics.diagnosticsAddress }}
-      diagnosticsAddress: {{- $core.manager.metrics.diagnosticsAddress }}
+      diagnosticsAddress: {{ $core.manager.metrics.diagnosticsAddress }}
     {{- end }}
   {{- end }}
 {{- end }}

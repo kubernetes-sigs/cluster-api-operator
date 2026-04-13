@@ -48,10 +48,10 @@ spec:
   {{- if $controlPlane.manager.metrics }}
     metrics:
     {{- if $controlPlane.manager.metrics.insecureDiagnostics }}
-      insecureDiagnostics: {{- $controlPlane.manager.metrics.insecureDiagnostics }}
+      insecureDiagnostics: {{ $controlPlane.manager.metrics.insecureDiagnostics }}
     {{- end }}
     {{- if $controlPlane.manager.metrics.diagnosticsAddress }}
-      diagnosticsAddress: {{- $controlPlane.manager.metrics.diagnosticsAddress }}
+      diagnosticsAddress: {{ $controlPlane.manager.metrics.diagnosticsAddress }}
     {{- end }}
   {{- end }}
 {{- end }}
