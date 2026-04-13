@@ -48,10 +48,10 @@ spec:
   {{- if $infra.manager.metrics }}
     metrics:
     {{- if $infra.manager.metrics.insecureDiagnostics }}
-      insecureDiagnostics: {{- $infra.manager.metrics.insecureDiagnostics }}
+      insecureDiagnostics: {{ $infra.manager.metrics.insecureDiagnostics }}
     {{- end }}
     {{- if $infra.manager.metrics.diagnosticsAddress }}
-      diagnosticsAddress: {{- $infra.manager.metrics.diagnosticsAddress }}
+      diagnosticsAddress: {{ $infra.manager.metrics.diagnosticsAddress }}
     {{- end }}
   {{- end }}
 {{- end }}
@@ -74,6 +74,9 @@ spec:
 {{- if $infra.manifestPatches }}
   manifestPatches: {{- toYaml $infra.manifestPatches | nindent 4 }}
 {{- end }} {{/* if $infra.manifestPatches */}}
+{{- if $infra.patches }}
+  patches: {{ toYaml $infra.patches | nindent 4 }}
+{{- end }} {{/* if $infra.patches */}}
 {{- if $infra.fetchConfig }}
   fetchConfig: {{ toYaml $infra.fetchConfig | nindent 4 }}
 {{- end }}

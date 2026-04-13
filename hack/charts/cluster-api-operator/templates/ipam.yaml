@@ -48,10 +48,10 @@ spec:
   {{- if $ipam.manager.metrics }}
     metrics:
     {{- if $ipam.manager.metrics.insecureDiagnostics }}
-      insecureDiagnostics: {{- $ipam.manager.metrics.insecureDiagnostics }}
+      insecureDiagnostics: {{ $ipam.manager.metrics.insecureDiagnostics }}
     {{- end }}
     {{- if $ipam.manager.metrics.diagnosticsAddress }}
-      diagnosticsAddress: {{- $ipam.manager.metrics.diagnosticsAddress }}
+      diagnosticsAddress: {{ $ipam.manager.metrics.diagnosticsAddress }}
     {{- end }}
   {{- end }}
 {{- end }}
