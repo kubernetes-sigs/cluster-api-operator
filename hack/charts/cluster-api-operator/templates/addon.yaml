@@ -45,6 +45,7 @@ spec:
       diagnosticsAddress: {{- $addon.manager.metrics.diagnosticsAddress }}
     {{- end }}
   {{- end }}
+    verbosity: {{ default 1 $addon.manager.verbosity }}
 {{- end }}
 {{- if $addonVersion }}
   version: {{ $addonVersion }}

@@ -54,6 +54,7 @@ spec:
       diagnosticsAddress: {{- $core.manager.metrics.diagnosticsAddress }}
     {{- end }}
   {{- end }}
+    verbosity: {{ default 1 $core.manager.verbosity }}
 {{- end }}
 {{- if (default (($core).configSecret).name (($.Values).configSecret).name) }}
 {{- include "capi-operator.configSecret" (dict "ROOT" $ "ARGUMENT" $core) | nindent 2 }}
