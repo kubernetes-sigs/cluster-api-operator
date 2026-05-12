@@ -54,6 +54,7 @@ spec:
       diagnosticsAddress: {{- $ipam.manager.metrics.diagnosticsAddress }}
     {{- end }}
   {{- end }}
+    verbosity: {{ default 1 $ipam.manager.verbosity }}
 {{- end }}
 {{- if and (kindIs "map" $.Values.fetchConfig) (hasKey $.Values.fetchConfig $ipamName) }}
 {{- range $key, $value := $.Values.fetchConfig }}

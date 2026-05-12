@@ -51,6 +51,7 @@ spec:
       diagnosticsAddress: {{- $bootstrap.manager.metrics.diagnosticsAddress }}
     {{- end }}
   {{- end }}
+    verbosity: {{ default 1 $bootstrap.manager.verbosity }}
 {{- end }}
 {{- if $bootstrapVersion }}
   version: {{ $bootstrapVersion }}

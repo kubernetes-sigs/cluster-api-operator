@@ -54,6 +54,7 @@ spec:
       diagnosticsAddress: {{- $infra.manager.metrics.diagnosticsAddress }}
     {{- end }}
   {{- end }}
+    verbosity: {{ default 1 $infra.manager.verbosity }}
 {{- end }}
 {{- if and (kindIs "map" $.Values.fetchConfig) (hasKey $.Values.fetchConfig $infrastructureName) }}
 {{- range $key, $value := $.Values.fetchConfig }}
