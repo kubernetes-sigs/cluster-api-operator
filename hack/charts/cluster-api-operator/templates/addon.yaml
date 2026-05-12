@@ -39,10 +39,10 @@ spec:
   {{- if $addon.manager.metrics }}
     metrics:
     {{- if $addon.manager.metrics.insecureDiagnostics }}
-      insecureDiagnostics: {{- $addon.manager.metrics.insecureDiagnostics }}
+      insecureDiagnostics: {{ $addon.manager.metrics.insecureDiagnostics }}
     {{- end }}
     {{- if $addon.manager.metrics.diagnosticsAddress }}
-      diagnosticsAddress: {{- $addon.manager.metrics.diagnosticsAddress }}
+      diagnosticsAddress: {{ $addon.manager.metrics.diagnosticsAddress }}
     {{- end }}
   {{- end }}
 {{- end }}
