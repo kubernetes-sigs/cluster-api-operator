@@ -39,6 +39,12 @@ spec:
 {{- end }}
 {{- if $core.manager }}
   manager:
+  {{- if $core.manager.additionalArgs }}
+    additionalArgs:
+    {{- range $key, $value := $core.manager.additionalArgs }}
+      {{ $key }}: {{ $value }}
+    {{- end }}
+  {{- end }}
   {{- if $core.manager.featureGates }}
     featureGates:
     {{- range $key, $value := $core.manager.featureGates }}
