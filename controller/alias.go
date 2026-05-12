@@ -25,6 +25,7 @@ import (
 	internalhealthcheck "sigs.k8s.io/cluster-api-operator/internal/controller/healthcheck"
 )
 
+// Test patch
 // GenericProviderReconciler wraps the internal GenericProviderReconciler.
 type GenericProviderReconciler = providercontroller.GenericProviderReconciler
 

@@ -24,5 +24,5 @@ cd "${REPO_ROOT}" || exit 1
 # shellcheck source=./hack/ensure-go.sh
 source "${REPO_ROOT}/hack/ensure-go.sh"
 
-echo "*** Testing Cluster API Operator ***"
+echo "*** TEST PR Testing Cluster API Operator ***"
 make test-junit
