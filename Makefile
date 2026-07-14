@@ -23,7 +23,7 @@ ROOT:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 
 .DEFAULT_GOAL:=help
 
-GO_VERSION ?= 1.25.10
+GO_VERSION ?= 1.26.5
 GO_BASE_CONTAINER ?= docker.io/library/golang
 GO_CONTAINER_IMAGE = $(GO_BASE_CONTAINER):$(GO_VERSION)
 
