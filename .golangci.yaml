@@ -1,6 +1,6 @@
 version: "2"
 run:
-  go: "1.25.10"
+  go: "1.26.5"
   allow-parallel-runners: true
 linters:
   default: none
@@ -138,18 +138,18 @@ linters:
         text: 'SA1019: ("sigs.k8s.io/controller-runtime/pkg/config/v1alpha1"|ctrlconfigv1.*) is deprecated: The component config package has been deprecated and will be removed in a future release.'
       - linters:
           - staticcheck
-        text: 'ST1016: methods on the same type should have the same receiver name'
+        text: "ST1016: methods on the same type should have the same receiver name"
         path: api/(.+)\.go$
       - linters:
           - staticcheck
-        text: 'ST1003: should not use underscores in Go names;'
-        path: api/(.+)\.go$      
+        text: "ST1003: should not use underscores in Go names;"
+        path: api/(.+)\.go$
       - linters:
           - staticcheck
-        text: 'QF1008: could remove embedded field'
+        text: "QF1008: could remove embedded field"
       - linters:
           - staticcheck
-        text: 'ST1000: at least one file in a package should have a package comment'
+        text: "ST1000: at least one file in a package should have a package comment"
       # Exclude some linters from running on tests files.
       - linters:
           - gosec
