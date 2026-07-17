@@ -30,6 +30,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/utils/ptr"
 	clusterctlv1 "sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -400,4 +401,48 @@ func TestProviderHash_ChangesWithSpec(t *testing.T) {
 	sum2 := fmt.Sprintf("%x", hash2.Sum(nil))
 
 	g.Expect(sum1).ToNot(Equal(sum2), "hashes must differ when spec changes")
+}
+
+func TestProviderHash_ChangesWhenEmptyTolerationsAreExplicitlySet(t *testing.T) {
+	g := NewWithT(t)
+
+	cl := fake.NewClientBuilder().WithScheme(cacheTestScheme()).Build()
+	providerWithoutTolerations := &operatorv1.CoreProvider{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "cluster-api",
+			Namespace: "default",
+		},
+		Spec: operatorv1.CoreProviderSpec{
+			ProviderSpec: operatorv1.ProviderSpec{
+				Deployment: &operatorv1.DeploymentSpec{
+					Replicas: ptr.To(1),
+				},
+			},
+		},
+	}
+
+	providerWithEmptyTolerations := &operatorv1.CoreProvider{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "cluster-api",
+			Namespace: "default",
+		},
+		Spec: operatorv1.CoreProviderSpec{
+			ProviderSpec: operatorv1.ProviderSpec{
+				Deployment: &operatorv1.DeploymentSpec{
+					Replicas:    ptr.To(1),
+					Tolerations: ptr.To([]corev1.Toleration{}),
+				},
+			},
+		},
+	}
+
+	hash1 := sha256.New()
+	g.Expect(providerHash(context.Background(), cl, hash1, providerWithoutTolerations)).To(Succeed())
+	sum1 := fmt.Sprintf("%x", hash1.Sum(nil))
+
+	hash2 := sha256.New()
+	g.Expect(providerHash(context.Background(), cl, hash2, providerWithEmptyTolerations)).To(Succeed())
+	sum2 := fmt.Sprintf("%x", hash2.Sum(nil))
+
+	g.Expect(sum1).ToNot(Equal(sum2), "explicit empty tolerations should change the provider hash")
 }

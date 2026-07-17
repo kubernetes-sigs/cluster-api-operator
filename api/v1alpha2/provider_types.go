@@ -216,7 +216,7 @@ type DeploymentSpec struct {
 
 	// If specified, the pod's tolerations.
 	// +optional
-	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
+	Tolerations *[]corev1.Toleration `json:"tolerations,omitempty"`
 
 	// If specified, the pod's scheduling constraints
 	// +optional
