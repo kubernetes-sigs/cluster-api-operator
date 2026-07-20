@@ -15,6 +15,7 @@ core: {}
 #     serviceAccountName: ""
 #     imagePullSecrets: []
 #   manager:              # Optional
+#     additionalArgs: {}
 #     featureGates:
 #       ClusterTopology: true
 #     metrics:
