@@ -22,7 +22,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/google/go-github/v82/github"
+	"github.com/google/go-github/v90/github"
 	"golang.org/x/oauth2"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -116,9 +116,15 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 		if token, ok := secret.Data[configclient.GitHubTokenVariable]; ok {
 			log.V(2).Info("Validating GitHub token access")
 
-			githubClient := github.NewClient(oauth2.NewClient(ctx, oauth2.StaticTokenSource(
+			githubClient, err := github.NewClient(github.WithHTTPClient(oauth2.NewClient(ctx, oauth2.StaticTokenSource(
 				&oauth2.Token{AccessToken: string(token)},
-			)))
+			))))
+			if err != nil {
+				_ = setPreflightFailed(provider, operatorv1.InvalidGithubTokenReason, invalidGithubTokenMessage)
+
+				return fmt.Errorf("failed to create github client: %w", err)
+			}
+
 			if _, _, err := githubClient.Organizations.List(ctx, "kubernetes-sigs", nil); err != nil {
 				_ = setPreflightFailed(provider, operatorv1.InvalidGithubTokenReason, invalidGithubTokenMessage)
 

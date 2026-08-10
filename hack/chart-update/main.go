@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/go-github/v82/github"
+	"github.com/google/go-github/v90/github"
 	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/chart/loader"
 	"helm.sh/helm/v3/pkg/repo"
@@ -77,7 +77,11 @@ func loadIndexFile(tag string) *repo.IndexFile {
 }
 
 func findChartReleaseAsset(tag string) *github.ReleaseAsset {
-	ghClient := github.NewClient(nil)
+	ghClient, err := github.NewClient()
+	if err != nil {
+		fmt.Println("❌ Error creating github client: ", err)
+		os.Exit(1)
+	}
 
 	release, _, err := ghClient.Repositories.GetReleaseByTag(context.TODO(), gitHubOrgName, repoName, tag)
 	if err != nil {
