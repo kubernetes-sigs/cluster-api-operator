@@ -67,9 +67,9 @@ var loadCmd = &cobra.Command{
 
 		Alternatively, for multi-provider OCI artifact, a fully specified name can be used for both metadata and components:
 
-		oras push ttl.sh/infrastructure-provider:tag infrastructure-docker-v1.10.0-beta.0-metadata.yaml infrastructure-docker-v1.10.0-beta.0-components.yaml
+		oras push ttl.sh/infrastructure-provider:tag infrastructure-docker-v1.14.0-metadata.yaml infrastructure-docker-v1.14.0-components.yaml
 
-        If you want to use a GitHub or GitLab release as artifact source, you must provide a full URL, including scheme, host, path, version and file name, e.g.: https://github.com/kubernetes-sigs/cluster-api/releases/v1.10.5/core-components.yaml
+        If you want to use a GitHub or GitLab release as artifact source, you must provide a full URL, including scheme, host, path, version and file name, e.g.: https://github.com/kubernetes-sigs/cluster-api/releases/v1.14.0/core-components.yaml
         In this case, the version is set in the URL, and cannot be specified with the provider argument.
 	`),
 	Example: Examples(`

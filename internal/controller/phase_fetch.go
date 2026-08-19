@@ -129,7 +129,7 @@ func (p *PhaseReconciler) Store(ctx context.Context) (*Result, error) {
 	})
 
 	if p.needsCompression {
-		secret.Annotations[operatorv1.CompressedAnnotation] = "true"
+		secret.Annotations[operatorv1.CompressedAnnotation] = operatorv1.TrueValue
 	}
 
 	manifests, err := apijson.Marshal(addNamespaceIfMissing(p.components.Objs(), p.provider.GetNamespace()))

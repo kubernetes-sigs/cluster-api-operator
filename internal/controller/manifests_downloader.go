@@ -208,7 +208,7 @@ func TemplateManifestsConfigMap(provider operatorv1.GenericProvider, labels map[
 		}
 
 		// Setting the annotation to mark these manifests as compressed.
-		configMap.SetAnnotations(map[string]string{operatorv1.CompressedAnnotation: "true"})
+		configMap.SetAnnotations(map[string]string{operatorv1.CompressedAnnotation: operatorv1.TrueValue})
 	}
 
 	gvk := provider.GetObjectKind().GroupVersionKind()
@@ -345,7 +345,7 @@ func ProviderLabels(provider operatorv1.GenericProvider) map[string]string {
 		operatorv1.ConfigMapVersionLabelName: provider.GetSpec().Version,
 		operatorv1.ConfigMapTypeLabel:        provider.GetType(),
 		operatorv1.ConfigMapNameLabel:        provider.GetName(),
-		operatorManagedLabel:                 "true",
+		operatorManagedLabel:                 operatorv1.TrueValue,
 	}
 
 	if provider.GetSpec().FetchConfig != nil && provider.GetSpec().FetchConfig.OCI != "" {

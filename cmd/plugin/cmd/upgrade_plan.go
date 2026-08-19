@@ -37,6 +37,8 @@ import (
 	"sigs.k8s.io/cluster-api-operator/util"
 )
 
+const contractV1Beta2 = "v1beta2"
+
 type upgradePlanOptions struct {
 	kubeconfig        string
 	kubeconfigContext string
@@ -348,7 +350,7 @@ func getInstalledProviders(ctx context.Context, client ctrlclient.Client) ([]ope
 	// Iterate through installed providers and create a list of upgrade plans.
 	genericProviders := []operatorv1.GenericProvider{}
 
-	contract := "v1beta2"
+	contract := contractV1Beta2
 
 	// Get Core Providers.
 	var coreProviderList operatorv1.CoreProviderList

@@ -150,9 +150,18 @@ linters:
       - linters:
           - staticcheck
         text: "ST1000: at least one file in a package should have a package comment"
+      - linters:
+          - goconst
+        path: internal/controller/(configmaps_to_providers|coreprovider_to_providers|secrets_to_providers)\.go
+        text: 'string `name` has'
+      - linters:
+          - goconst
+        path: internal/controller/phase_fetch\.go
+        text: 'string `(apiVersion|kind|metadata)` has'
       # Exclude some linters from running on tests files.
       - linters:
           - gosec
+          - goconst
         path: _test\.go
       - linters:
           - dogsled

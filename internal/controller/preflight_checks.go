@@ -38,6 +38,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+const (
+	preflightChecksPassedReason  = "PreflightChecksPassed"
+	preflightChecksPassedMessage = "All preflight checks passed" //nolint:gosec // false positive: "Passed" matches gosec's credential-name heuristic, not an actual secret
+)
+
 var (
 	moreThanOneCoreProviderInstanceExistsMessage = "CoreProvider already exists in the cluster. Only one is allowed."
 	moreThanOneProviderInstanceExistsMessage     = "There is already a %s with name %s in the cluster. Only one is allowed."
@@ -170,8 +175,8 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 	conditions.Set(provider, metav1.Condition{
 		Type:    operatorv1.PreflightCheckCondition,
 		Status:  metav1.ConditionTrue,
-		Reason:  "PreflightChecksPassed",
-		Message: "All preflight checks passed",
+		Reason:  preflightChecksPassedReason,
+		Message: preflightChecksPassedMessage,
 	})
 
 	log.Info("Preflight checks passed")

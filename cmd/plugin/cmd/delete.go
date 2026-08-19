@@ -40,6 +40,8 @@ import (
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
 )
 
+const defaultNamespace = "default"
+
 type deleteOptions struct {
 	kubeconfig                string
 	kubeconfigContext         string
@@ -317,7 +319,7 @@ func deleteProviders(ctx context.Context, client ctrlclient.Client, providerList
 		}
 
 		if deleteOpts.includeNamespace {
-			if strings.HasPrefix(provider.GetNamespace(), "kube-") || provider.GetNamespace() == "default" {
+			if strings.HasPrefix(provider.GetNamespace(), "kube-") || provider.GetNamespace() == defaultNamespace {
 				log.Info("Skipping system namespace", "namespace", provider.GetNamespace())
 				continue
 			}

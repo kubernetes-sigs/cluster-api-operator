@@ -36,6 +36,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+const (
+	contractV1Beta1 = "v1beta1"
+	contractV1Beta2 = "v1beta2"
+)
+
 // Load provider specific configuration into phaseReconciler object.
 func (p *PhaseReconciler) Load(ctx context.Context) (*Result, error) {
 	log := ctrl.LoggerFrom(ctx)
@@ -194,7 +199,7 @@ func fetchAdditionalManifests(ctx context.Context, cl client.Client, provider ge
 // getComponentsData returns components data based on if it's compressed or not.
 func getComponentsData(cm corev1.ConfigMap) (string, error) {
 	// Data is not compressed, return it immediately.
-	if cm.GetAnnotations()[operatorv1.CompressedAnnotation] != "true" {
+	if cm.GetAnnotations()[operatorv1.CompressedAnnotation] != operatorv1.TrueValue {
 		components, ok := cm.Data[operatorv1.ComponentsConfigMapKey]
 		if !ok {
 			return "", fmt.Errorf("ConfigMap %s/%s Data has no components", cm.Namespace, cm.Name)
@@ -245,7 +250,7 @@ func (p *PhaseReconciler) validateRepoCAPIVersion(ctx context.Context) error {
 		return fmt.Errorf("invalid provider metadata: version %s for the provider %s does not match any release series", p.options.Version, name)
 	}
 
-	if releaseSeries.Contract != "v1beta1" && releaseSeries.Contract != "v1beta2" {
+	if releaseSeries.Contract != contractV1Beta1 && releaseSeries.Contract != contractV1Beta2 {
 		return fmt.Errorf(capiVersionIncompatibilityMessage, clusterv1.GroupVersion.Version, releaseSeries.Contract, name)
 	}
 
