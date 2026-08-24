@@ -525,7 +525,9 @@ func (p *PhaseReconciler) applyManifestsFromData(ctx context.Context, data map[s
 		}
 
 		for i := range manifests {
-			if err := p.ctrlClient.Patch(ctx, &manifests[i], client.Apply, client.ForceOwnership, client.FieldOwner(cacheOwner)); err != nil {
+			applyConfig := client.ApplyConfigurationFromUnstructured(&manifests[i])
+
+			if err := p.ctrlClient.Apply(ctx, applyConfig, client.ForceOwnership, client.FieldOwner(cacheOwner)); err != nil {
 				errs = append(errs, err)
 			}
 		}

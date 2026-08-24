@@ -21,9 +21,7 @@ import (
 	"fmt"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
@@ -32,8 +30,7 @@ import (
 type RuntimeExtensionProviderWebhook struct{}
 
 func (r *RuntimeExtensionProviderWebhook) SetupWebhookWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewWebhookManagedBy(mgr).
-		For(&operatorv1.RuntimeExtensionProvider{}).
+	return ctrl.NewWebhookManagedBy(mgr, &operatorv1.RuntimeExtensionProvider{}).
 		WithValidator(r).
 		WithDefaulter(r).
 		Complete()
@@ -43,30 +40,29 @@ func (r *RuntimeExtensionProviderWebhook) SetupWebhookWithManager(mgr ctrl.Manag
 //+kubebuilder:webhook:verbs=create;update,path=/mutate-operator-cluster-x-k8s-io-v1alpha2-runtimeextensionprovider,mutating=true,failurePolicy=fail,matchPolicy=Equivalent,matchPolicy=Equivalent,groups=operator.cluster.x-k8s.io,resources=runtimeextensionproviders,versions=v1alpha2,name=vruntimeextensionprovider.kb.io,sideEffects=None,admissionReviewVersions=v1;v1beta1
 
 var (
-	_ webhook.CustomValidator = &RuntimeExtensionProviderWebhook{}
-	_ webhook.CustomDefaulter = &RuntimeExtensionProviderWebhook{}
+	_ admission.Validator[*operatorv1.RuntimeExtensionProvider] = &RuntimeExtensionProviderWebhook{}
+	_ admission.Defaulter[*operatorv1.RuntimeExtensionProvider] = &RuntimeExtensionProviderWebhook{}
 )
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type.
-func (r *RuntimeExtensionProviderWebhook) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+func (r *RuntimeExtensionProviderWebhook) ValidateCreate(ctx context.Context, obj *operatorv1.RuntimeExtensionProvider) (admission.Warnings, error) {
 	return nil, nil
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type.
-func (r *RuntimeExtensionProviderWebhook) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
+func (r *RuntimeExtensionProviderWebhook) ValidateUpdate(ctx context.Context, oldObj, newObj *operatorv1.RuntimeExtensionProvider) (admission.Warnings, error) {
 	return nil, nil
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type.
-func (r *RuntimeExtensionProviderWebhook) ValidateDelete(_ context.Context, obj runtime.Object) (admission.Warnings, error) {
+func (r *RuntimeExtensionProviderWebhook) ValidateDelete(_ context.Context, obj *operatorv1.RuntimeExtensionProvider) (admission.Warnings, error) {
 	return nil, nil
 }
 
 // Default implements webhook.Default so a webhook will be registered for the type.
-func (r *RuntimeExtensionProviderWebhook) Default(ctx context.Context, obj runtime.Object) error {
-	runtimeExtensionProvider, ok := obj.(*operatorv1.RuntimeExtensionProvider)
-	if !ok {
-		return apierrors.NewBadRequest(fmt.Sprintf("expected a RuntimeExtensionProvider but got a %T", obj))
+func (r *RuntimeExtensionProviderWebhook) Default(ctx context.Context, runtimeExtensionProvider *operatorv1.RuntimeExtensionProvider) error {
+	if runtimeExtensionProvider == nil {
+		return apierrors.NewBadRequest(fmt.Sprintf("expected a RuntimeExtensionProvider but got a %T", runtimeExtensionProvider))
 	}
 
 	setDefaultProviderSpec(&runtimeExtensionProvider.Spec.ProviderSpec, runtimeExtensionProvider.Namespace)

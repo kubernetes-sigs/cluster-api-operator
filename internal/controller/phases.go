@@ -24,7 +24,6 @@ import (
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
 	"sigs.k8s.io/cluster-api-operator/internal/controller/genericprovider"
 	"sigs.k8s.io/cluster-api-operator/util"
-	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	clusterctlv1 "sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3"
 	configclient "sigs.k8s.io/cluster-api/cmd/clusterctl/client/config"
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/repository"
@@ -133,10 +132,9 @@ func (r *Result) IsZero() bool {
 
 // PhaseError custom error type for phases.
 type PhaseError struct {
-	Reason   string
-	Type     string
-	Severity clusterv1.ConditionSeverity
-	Err      error
+	Reason string
+	Type   string
+	Err    error
 }
 
 func (p *PhaseError) Error() string {
@@ -149,10 +147,9 @@ func wrapPhaseError(err error, reason string, condition string) error {
 	}
 
 	return &PhaseError{
-		Err:      err,
-		Type:     condition,
-		Reason:   reason,
-		Severity: clusterv1.ConditionSeverityWarning,
+		Err:    err,
+		Type:   condition,
+		Reason: reason,
 	}
 }
 
