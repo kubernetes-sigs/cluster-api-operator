@@ -1,6 +1,6 @@
 module sigs.k8s.io/cluster-api-operator/test
 
-go 1.26.5
+go 1.26.6
 
 replace sigs.k8s.io/cluster-api-operator => ../
 
