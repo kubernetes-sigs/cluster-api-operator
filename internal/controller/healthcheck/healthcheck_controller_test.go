@@ -36,7 +36,7 @@ apiVersion: clusterctl.cluster.x-k8s.io/v1alpha3
 kind: Metadata
 releaseSeries:
   - major: 1
-    minor: 11
+    minor: 13
     contract: v1beta2
 `
 	testComponents = `
@@ -70,7 +70,7 @@ spec:
             cpu: 200m
 `
 
-	testCurrentVersion = "v1.11.0"
+	testCurrentVersion = "v1.13.0"
 )
 
 func insertDummyConfig(provider operatorv1.GenericProvider) {

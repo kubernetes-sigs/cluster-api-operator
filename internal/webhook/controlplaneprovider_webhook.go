@@ -18,12 +18,8 @@ package webhook
 
 import (
 	"context"
-	"fmt"
 
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
@@ -32,8 +28,7 @@ import (
 type ControlPlaneProviderWebhook struct{}
 
 func (r *ControlPlaneProviderWebhook) SetupWebhookWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewWebhookManagedBy(mgr).
-		For(&operatorv1.ControlPlaneProvider{}).
+	return ctrl.NewWebhookManagedBy(mgr, &operatorv1.ControlPlaneProvider{}).
 		WithValidator(r).
 		WithDefaulter(r).
 		Complete()
@@ -43,32 +38,27 @@ func (r *ControlPlaneProviderWebhook) SetupWebhookWithManager(mgr ctrl.Manager) 
 //+kubebuilder:webhook:verbs=create;update,path=/mutate-operator-cluster-x-k8s-io-v1alpha2-controlplaneprovider,mutating=true,failurePolicy=fail,matchPolicy=Equivalent,groups=operator.cluster.x-k8s.io,resources=controlplaneproviders,versions=v1alpha2,name=vcontrolplaneprovider.kb.io,sideEffects=None,admissionReviewVersions=v1;v1beta1
 
 var (
-	_ webhook.CustomValidator = &ControlPlaneProviderWebhook{}
-	_ webhook.CustomDefaulter = &ControlPlaneProviderWebhook{}
+	_ admission.Validator[*operatorv1.ControlPlaneProvider] = &ControlPlaneProviderWebhook{}
+	_ admission.Defaulter[*operatorv1.ControlPlaneProvider] = &ControlPlaneProviderWebhook{}
 )
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type.
-func (r *ControlPlaneProviderWebhook) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+func (r *ControlPlaneProviderWebhook) ValidateCreate(ctx context.Context, obj *operatorv1.ControlPlaneProvider) (admission.Warnings, error) {
 	return nil, nil
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type.
-func (r *ControlPlaneProviderWebhook) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
+func (r *ControlPlaneProviderWebhook) ValidateUpdate(ctx context.Context, oldObj, newObj *operatorv1.ControlPlaneProvider) (admission.Warnings, error) {
 	return nil, nil
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type.
-func (r *ControlPlaneProviderWebhook) ValidateDelete(_ context.Context, obj runtime.Object) (admission.Warnings, error) {
+func (r *ControlPlaneProviderWebhook) ValidateDelete(_ context.Context, obj *operatorv1.ControlPlaneProvider) (admission.Warnings, error) {
 	return nil, nil
 }
 
 // Default implements webhook.Default so a webhook will be registered for the type.
-func (r *ControlPlaneProviderWebhook) Default(ctx context.Context, obj runtime.Object) error {
-	controlPlaneProvider, ok := obj.(*operatorv1.ControlPlaneProvider)
-	if !ok {
-		return apierrors.NewBadRequest(fmt.Sprintf("expected a ControlPlaneProvider but got a %T", obj))
-	}
-
+func (r *ControlPlaneProviderWebhook) Default(ctx context.Context, controlPlaneProvider *operatorv1.ControlPlaneProvider) error {
 	setDefaultProviderSpec(&controlPlaneProvider.Spec.ProviderSpec, controlPlaneProvider.Namespace)
 
 	return nil

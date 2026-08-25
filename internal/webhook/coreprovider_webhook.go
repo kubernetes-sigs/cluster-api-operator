@@ -18,12 +18,8 @@ package webhook
 
 import (
 	"context"
-	"fmt"
 
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
@@ -32,10 +28,9 @@ import (
 type CoreProviderWebhook struct{}
 
 func (r *CoreProviderWebhook) SetupWebhookWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewWebhookManagedBy(mgr).
+	return ctrl.NewWebhookManagedBy(mgr, &operatorv1.CoreProvider{}).
 		WithValidator(r).
 		WithDefaulter(r).
-		For(&operatorv1.CoreProvider{}).
 		Complete()
 }
 
@@ -43,32 +38,27 @@ func (r *CoreProviderWebhook) SetupWebhookWithManager(mgr ctrl.Manager) error {
 //+kubebuilder:webhook:verbs=create;update,path=/mutate-operator-cluster-x-k8s-io-v1alpha2-coreprovider,mutating=true,failurePolicy=fail,matchPolicy=Equivalent,failurePolicy=fail,groups=operator.cluster.x-k8s.io,resources=coreproviders,versions=v1alpha2,name=vcoreprovider.kb.io,sideEffects=None,admissionReviewVersions=v1;v1beta1
 
 var (
-	_ webhook.CustomValidator = &CoreProviderWebhook{}
-	_ webhook.CustomDefaulter = &CoreProviderWebhook{}
+	_ admission.Validator[*operatorv1.CoreProvider] = &CoreProviderWebhook{}
+	_ admission.Defaulter[*operatorv1.CoreProvider] = &CoreProviderWebhook{}
 )
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type.
-func (r *CoreProviderWebhook) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+func (r *CoreProviderWebhook) ValidateCreate(ctx context.Context, obj *operatorv1.CoreProvider) (admission.Warnings, error) {
 	return nil, nil
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type.
-func (r *CoreProviderWebhook) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
+func (r *CoreProviderWebhook) ValidateUpdate(ctx context.Context, oldObj, newObj *operatorv1.CoreProvider) (admission.Warnings, error) {
 	return nil, nil
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type.
-func (r *CoreProviderWebhook) ValidateDelete(_ context.Context, obj runtime.Object) (admission.Warnings, error) {
+func (r *CoreProviderWebhook) ValidateDelete(_ context.Context, obj *operatorv1.CoreProvider) (admission.Warnings, error) {
 	return nil, nil
 }
 
 // Default implements webhook.Default so a webhook will be registered for the type.
-func (r *CoreProviderWebhook) Default(ctx context.Context, obj runtime.Object) error {
-	coreProvider, ok := obj.(*operatorv1.CoreProvider)
-	if !ok {
-		return apierrors.NewBadRequest(fmt.Sprintf("expected a CoreProvider but got a %T", obj))
-	}
-
+func (r *CoreProviderWebhook) Default(ctx context.Context, coreProvider *operatorv1.CoreProvider) error {
 	setDefaultProviderSpec(&coreProvider.Spec.ProviderSpec, coreProvider.Namespace)
 
 	return nil

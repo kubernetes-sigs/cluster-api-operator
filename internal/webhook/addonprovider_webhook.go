@@ -18,12 +18,8 @@ package webhook
 
 import (
 	"context"
-	"fmt"
 
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
@@ -32,8 +28,7 @@ import (
 type AddonProviderWebhook struct{}
 
 func (r *AddonProviderWebhook) SetupWebhookWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewWebhookManagedBy(mgr).
-		For(&operatorv1.AddonProvider{}).
+	return ctrl.NewWebhookManagedBy(mgr, &operatorv1.AddonProvider{}).
 		WithValidator(r).
 		WithDefaulter(r).
 		Complete()
@@ -43,32 +38,27 @@ func (r *AddonProviderWebhook) SetupWebhookWithManager(mgr ctrl.Manager) error {
 //+kubebuilder:webhook:verbs=create;update,path=/mutate-operator-cluster-x-k8s-io-v1alpha2-addonprovider,mutating=true,failurePolicy=fail,matchPolicy=Equivalent,matchPolicy=Equivalent,groups=operator.cluster.x-k8s.io,resources=addonproviders,versions=v1alpha2,name=vaddonprovider.kb.io,sideEffects=None,admissionReviewVersions=v1;v1beta1
 
 var (
-	_ webhook.CustomValidator = &AddonProviderWebhook{}
-	_ webhook.CustomDefaulter = &AddonProviderWebhook{}
+	_ admission.Validator[*operatorv1.AddonProvider] = &AddonProviderWebhook{}
+	_ admission.Defaulter[*operatorv1.AddonProvider] = &AddonProviderWebhook{}
 )
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type.
-func (r *AddonProviderWebhook) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+func (r *AddonProviderWebhook) ValidateCreate(ctx context.Context, obj *operatorv1.AddonProvider) (admission.Warnings, error) {
 	return nil, nil
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type.
-func (r *AddonProviderWebhook) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
+func (r *AddonProviderWebhook) ValidateUpdate(ctx context.Context, oldObj, newObj *operatorv1.AddonProvider) (admission.Warnings, error) {
 	return nil, nil
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type.
-func (r *AddonProviderWebhook) ValidateDelete(_ context.Context, obj runtime.Object) (admission.Warnings, error) {
+func (r *AddonProviderWebhook) ValidateDelete(_ context.Context, obj *operatorv1.AddonProvider) (admission.Warnings, error) {
 	return nil, nil
 }
 
 // Default implements webhook.Default so a webhook will be registered for the type.
-func (r *AddonProviderWebhook) Default(ctx context.Context, obj runtime.Object) error {
-	addonProvider, ok := obj.(*operatorv1.AddonProvider)
-	if !ok {
-		return apierrors.NewBadRequest(fmt.Sprintf("expected a AddonProvider but got a %T", obj))
-	}
-
+func (r *AddonProviderWebhook) Default(ctx context.Context, addonProvider *operatorv1.AddonProvider) error {
 	setDefaultProviderSpec(&addonProvider.Spec.ProviderSpec, addonProvider.Namespace)
 
 	return nil

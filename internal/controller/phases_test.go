@@ -39,10 +39,10 @@ apiVersion: clusterctl.cluster.x-k8s.io/v1alpha3
 kind: Metadata
 releaseSeries:
   - major: 1
-    minor: 11
+    minor: 13
     contract: v1beta2
   - major: 1
-    minor: 10
+    minor: 12
     contract: v1beta1`
 
 func TestSecretReader(t *testing.T) {
@@ -477,11 +477,11 @@ func TestRepositoryProxy(t *testing.T) {
 	awsMetaReleaseSeries := []clusterctlv1.ReleaseSeries{
 		{
 			Major:    1,
-			Minor:    11,
+			Minor:    13,
 			Contract: "v1beta2",
 		}, {
 			Major:    1,
-			Minor:    10,
+			Minor:    12,
 			Contract: "v1beta1",
 		},
 	}
@@ -490,11 +490,11 @@ func TestRepositoryProxy(t *testing.T) {
 
 	metaReleaseSeries := []clusterctlv1.ReleaseSeries{{
 		Major:    1,
-		Minor:    11,
+		Minor:    13,
 		Contract: "v1beta2",
 	}, {
 		Major:    1,
-		Minor:    10,
+		Minor:    12,
 		Contract: "v1beta1",
 	}}
 
@@ -514,7 +514,7 @@ func TestRepositoryProxy(t *testing.T) {
 			provider:           coreProvider,
 			wantDefaultVersion: testCurrentVersion,
 			genericProviders:   []client.Object{core, provider},
-			metadataErr:        "failed to read \"metadata.yaml\" from the repository for provider \"cluster-api\": unable to get files for version v1.11.0",
+			metadataErr:        "failed to read \"metadata.yaml\" from the repository for provider \"cluster-api\": unable to get files for version v1.13.0",
 		},
 		{
 			name:               "correct configmap with data",

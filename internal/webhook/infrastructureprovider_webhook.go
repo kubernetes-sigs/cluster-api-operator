@@ -18,12 +18,8 @@ package webhook
 
 import (
 	"context"
-	"fmt"
 
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
@@ -32,10 +28,9 @@ import (
 type InfrastructureProviderWebhook struct{}
 
 func (r *InfrastructureProviderWebhook) SetupWebhookWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewWebhookManagedBy(mgr).
+	return ctrl.NewWebhookManagedBy(mgr, &operatorv1.InfrastructureProvider{}).
 		WithValidator(r).
 		WithDefaulter(r).
-		For(&operatorv1.InfrastructureProvider{}).
 		Complete()
 }
 
@@ -43,32 +38,27 @@ func (r *InfrastructureProviderWebhook) SetupWebhookWithManager(mgr ctrl.Manager
 //+kubebuilder:webhook:verbs=create;update,path=/mutate-operator-cluster-x-k8s-io-v1alpha2-infrastructureprovider,mutating=true,failurePolicy=fail,matchPolicy=Equivalent,failurePolicy=fail,groups=operator.cluster.x-k8s.io,resources=infrastructureproviders,versions=v1alpha2,name=vinfrastructureprovider.kb.io,sideEffects=None,admissionReviewVersions=v1;v1beta1
 
 var (
-	_ webhook.CustomValidator = &InfrastructureProviderWebhook{}
-	_ webhook.CustomDefaulter = &InfrastructureProviderWebhook{}
+	_ admission.Validator[*operatorv1.InfrastructureProvider] = &InfrastructureProviderWebhook{}
+	_ admission.Defaulter[*operatorv1.InfrastructureProvider] = &InfrastructureProviderWebhook{}
 )
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type.
-func (r *InfrastructureProviderWebhook) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+func (r *InfrastructureProviderWebhook) ValidateCreate(ctx context.Context, obj *operatorv1.InfrastructureProvider) (admission.Warnings, error) {
 	return nil, nil
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type.
-func (r *InfrastructureProviderWebhook) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
+func (r *InfrastructureProviderWebhook) ValidateUpdate(ctx context.Context, oldObj, newObj *operatorv1.InfrastructureProvider) (admission.Warnings, error) {
 	return nil, nil
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type.
-func (r *InfrastructureProviderWebhook) ValidateDelete(_ context.Context, obj runtime.Object) (admission.Warnings, error) {
+func (r *InfrastructureProviderWebhook) ValidateDelete(_ context.Context, obj *operatorv1.InfrastructureProvider) (admission.Warnings, error) {
 	return nil, nil
 }
 
 // Default implements webhook.Default so a webhook will be registered for the type.
-func (r *InfrastructureProviderWebhook) Default(ctx context.Context, obj runtime.Object) error {
-	infrastructureProvider, ok := obj.(*operatorv1.InfrastructureProvider)
-	if !ok {
-		return apierrors.NewBadRequest(fmt.Sprintf("expected a InfrastructureProvider but got a %T", obj))
-	}
-
+func (r *InfrastructureProviderWebhook) Default(ctx context.Context, infrastructureProvider *operatorv1.InfrastructureProvider) error {
 	setDefaultProviderSpec(&infrastructureProvider.Spec.ProviderSpec, infrastructureProvider.Namespace)
 
 	return nil

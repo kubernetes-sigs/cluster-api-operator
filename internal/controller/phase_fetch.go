@@ -24,6 +24,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	apijson "k8s.io/apimachinery/pkg/util/json"
 	"k8s.io/client-go/kubernetes/scheme"
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
@@ -147,7 +148,16 @@ func (p *PhaseReconciler) Store(ctx context.Context) (*Result, error) {
 		secret.StringData["cache"] = string(manifests)
 	}
 
-	if err := p.ctrlClient.Patch(ctx, secret, client.Apply, client.ForceOwnership, client.FieldOwner(cacheOwner)); err != nil {
+	// Convert the typed Secret into an unstructured object so it can be used
+	// as a server-side apply configuration (client.Apply patch type is deprecated).
+	secretObj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(secret)
+	if err != nil {
+		return &Result{}, wrapPhaseError(err, operatorv1.ComponentsCustomizationErrorReason, operatorv1.ProviderInstalledCondition)
+	}
+
+	applyConfig := client.ApplyConfigurationFromUnstructured(&unstructured.Unstructured{Object: secretObj})
+
+	if err := p.ctrlClient.Apply(ctx, applyConfig, client.ForceOwnership, client.FieldOwner(cacheOwner)); err != nil {
 		return &Result{}, wrapPhaseError(err, operatorv1.ComponentsCustomizationErrorReason, operatorv1.ProviderInstalledCondition)
 	}
 
