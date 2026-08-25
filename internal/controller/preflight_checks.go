@@ -106,30 +106,8 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 
 	// Validate that provided GitHub token works and has repository access.
 	if spec.ConfigSecret != nil {
-		secret := &corev1.Secret{}
-		key := types.NamespacedName{Namespace: provider.GetSpec().ConfigSecret.Namespace, Name: provider.GetSpec().ConfigSecret.Name}
-
-		if err := c.Get(ctx, key, secret); err != nil {
-			return fmt.Errorf("failed to get providers secret: %w", err)
-		}
-
-		if token, ok := secret.Data[configclient.GitHubTokenVariable]; ok {
-			log.V(2).Info("Validating GitHub token access")
-
-			githubClient, err := github.NewClient(github.WithHTTPClient(oauth2.NewClient(ctx, oauth2.StaticTokenSource(
-				&oauth2.Token{AccessToken: string(token)},
-			))))
-			if err != nil {
-				_ = setPreflightFailed(provider, operatorv1.InvalidGithubTokenReason, invalidGithubTokenMessage)
-
-				return fmt.Errorf("failed to create github client: %w", err)
-			}
-
-			if _, _, err := githubClient.Organizations.List(ctx, "kubernetes-sigs", nil); err != nil {
-				_ = setPreflightFailed(provider, operatorv1.InvalidGithubTokenReason, invalidGithubTokenMessage)
-
-				return fmt.Errorf("failed to validate provided github token: %w", err)
-			}
+		if err := validateConfigSecret(ctx, c, provider); err != nil {
+			return err
 		}
 	}
 
@@ -181,6 +159,43 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 	})
 
 	log.Info("Preflight checks passed")
+
+	return nil
+}
+
+// validateConfigSecret validates the config secret associated with the provider,
+// including verifying that a provided GitHub token has proper access.
+func validateConfigSecret(ctx context.Context, c client.Client, provider genericprovider.GenericProvider) error {
+	log := ctrl.LoggerFrom(ctx)
+
+	secret := &corev1.Secret{}
+	key := types.NamespacedName{Namespace: provider.GetSpec().ConfigSecret.Namespace, Name: provider.GetSpec().ConfigSecret.Name}
+
+	if err := c.Get(ctx, key, secret); err != nil {
+		return fmt.Errorf("failed to get providers secret: %w", err)
+	}
+
+	token, ok := secret.Data[configclient.GitHubTokenVariable]
+	if !ok {
+		return nil
+	}
+
+	log.V(2).Info("Validating GitHub token access")
+
+	githubClient, err := github.NewClient(github.WithHTTPClient(oauth2.NewClient(ctx, oauth2.StaticTokenSource(
+		&oauth2.Token{AccessToken: string(token)},
+	))))
+	if err != nil {
+		_ = setPreflightFailed(provider, operatorv1.InvalidGithubTokenReason, invalidGithubTokenMessage)
+
+		return fmt.Errorf("failed to create github client: %w", err)
+	}
+
+	if _, _, err := githubClient.Organizations.List(ctx, "kubernetes-sigs", nil); err != nil {
+		_ = setPreflightFailed(provider, operatorv1.InvalidGithubTokenReason, invalidGithubTokenMessage)
+
+		return fmt.Errorf("failed to validate provided github token: %w", err)
+	}
 
 	return nil
 }
