@@ -1,6 +1,6 @@
 apiVersion: v1
 data:
-  components: | 
+  components: |
     apiVersion: v1
     kind: Namespace
     metadata:
@@ -14,7 +14,7 @@ data:
     metadata:
       annotations:
         cert-manager.io/inject-ca-from: capi-kubeadm-bootstrap-system/capi-kubeadm-bootstrap-serving-cert
-        controller-gen.kubebuilder.io/version: v0.20.0
+        controller-gen.kubebuilder.io/version: v0.21.0
       labels:
         cluster.x-k8s.io/provider: bootstrap-kubeadm
         cluster.x-k8s.io/v1beta1: v1beta1
@@ -1304,6 +1304,18 @@ data:
                           description: content is the actual content of the file.
                           maxLength: 10240
                           minLength: 1
+                          type: string
+                        contentFormat:
+                          description: |-
+                            contentFormat specifies how to interpret content after it is resolved (inline or from contentFrom).
+                            When set to "Template", content is rendered as a Go text/template.
+                            Available template variables:
+                              - .controlPlane.version: the Kubernetes version of the control plane (e.g. "v1.35.0").
+                                Only set when the cluster has a control plane reference that exposes spec.version.
+                            When set to "Raw" or omitted, content is used verbatim.
+                          enum:
+                          - Raw
+                          - Template
                           type: string
                         contentFrom:
                           description: contentFrom is a referenced source of content to
@@ -3694,6 +3706,18 @@ data:
                           maxLength: 10240
                           minLength: 1
                           type: string
+                        contentFormat:
+                          description: |-
+                            contentFormat specifies how to interpret content after it is resolved (inline or from contentFrom).
+                            When set to "Template", content is rendered as a Go text/template.
+                            Available template variables:
+                              - .controlPlane.version: the Kubernetes version of the control plane (e.g. "v1.35.0").
+                                Only set when the cluster has a control plane reference that exposes spec.version.
+                            When set to "Raw" or omitted, content is used verbatim.
+                          enum:
+                          - Raw
+                          - Template
+                          type: string
                         contentFrom:
                           description: contentFrom is a referenced source of content to
                             populate the file.
@@ -4923,7 +4947,7 @@ data:
     metadata:
       annotations:
         cert-manager.io/inject-ca-from: capi-kubeadm-bootstrap-system/capi-kubeadm-bootstrap-serving-cert
-        controller-gen.kubebuilder.io/version: v0.20.0
+        controller-gen.kubebuilder.io/version: v0.21.0
       labels:
         cluster.x-k8s.io/provider: bootstrap-kubeadm
         cluster.x-k8s.io/v1beta1: v1beta1
@@ -6270,6 +6294,18 @@ data:
                                   description: content is the actual content of the file.
                                   maxLength: 10240
                                   minLength: 1
+                                  type: string
+                                contentFormat:
+                                  description: |-
+                                    contentFormat specifies how to interpret content after it is resolved (inline or from contentFrom).
+                                    When set to "Template", content is rendered as a Go text/template.
+                                    Available template variables:
+                                      - .controlPlane.version: the Kubernetes version of the control plane (e.g. "v1.35.0").
+                                        Only set when the cluster has a control plane reference that exposes spec.version.
+                                    When set to "Raw" or omitted, content is used verbatim.
+                                  enum:
+                                  - Raw
+                                  - Template
                                   type: string
                                 contentFrom:
                                   description: contentFrom is a referenced source of content
@@ -8584,6 +8620,18 @@ data:
                                   maxLength: 10240
                                   minLength: 1
                                   type: string
+                                contentFormat:
+                                  description: |-
+                                    contentFormat specifies how to interpret content after it is resolved (inline or from contentFrom).
+                                    When set to "Template", content is rendered as a Go text/template.
+                                    Available template variables:
+                                      - .controlPlane.version: the Kubernetes version of the control plane (e.g. "v1.35.0").
+                                        Only set when the cluster has a control plane reference that exposes spec.version.
+                                    When set to "Raw" or omitted, content is used verbatim.
+                                  enum:
+                                  - Raw
+                                  - Template
+                                  type: string
                                 contentFrom:
                                   description: contentFrom is a referenced source of content
                                     to populate the file.
@@ -9781,6 +9829,14 @@ data:
       - get
       - list
       - watch
+    - apiGroups:
+      - controlplane.cluster.x-k8s.io
+      resources:
+      - kubeadmcontrolplanes
+      verbs:
+      - get
+      - list
+      - watch
     ---
     apiVersion: rbac.authorization.k8s.io/v1
     kind: RoleBinding
@@ -9869,7 +9925,7 @@ data:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.uid
-            image: registry.k8s.io/cluster-api/kubeadm-bootstrap-controller:v1.13.0
+            image: registry.k8s.io/cluster-api/kubeadm-bootstrap-controller:v1.14.0
             imagePullPolicy: IfNotPresent
             livenessProbe:
               httpGet:
@@ -10030,9 +10086,17 @@ data:
         - kubeadmconfigtemplates
       sideEffects: None
   metadata: |
+    # maps release series of major.minor to cluster-api contract version
+    # the contract version may change between minor or major versions, but *not*
+    # between patch versions.
+    #
+    # update this file only when a new major or minor version is released
     apiVersion: clusterctl.cluster.x-k8s.io/v1alpha3
     kind: Metadata
     releaseSeries:
+      - major: 1
+        minor: 14
+        contract: v1beta2
       - major: 1
         minor: 13
         contract: v1beta2
@@ -10080,6 +10144,6 @@ metadata:
   labels:
     provider.cluster.x-k8s.io/name: kubeadm
     provider.cluster.x-k8s.io/type: bootstrap
-    provider.cluster.x-k8s.io/version: v1.13.0
-  name: bootstrap-kubeadm-v1.13.0
+    provider.cluster.x-k8s.io/version: v1.14.0
+  name: bootstrap-kubeadm-v1.14.0
   namespace: capi-kubeadm-bootstrap-system

@@ -52,7 +52,7 @@ func TestManifestsDownloader(t *testing.T) {
 			},
 			Spec: operatorv1.CoreProviderSpec{
 				ProviderSpec: operatorv1.ProviderSpec{
-					Version: "v1.4.3",
+					Version: "v1.14.0",
 				},
 			},
 		},
@@ -87,7 +87,7 @@ func TestProviderDownloadWithOverrides(t *testing.T) {
 	fakeclient := fake.NewClientBuilder().WithObjects().Build()
 
 	reader := configclient.NewMemoryReader()
-	_, err := reader.AddProvider("cluster-api", clusterctlv1.CoreProviderType, "https://github.com/kubernetes-sigs/cluster-api/releases/v1.4.3/core-components.yaml")
+	_, err := reader.AddProvider("cluster-api", clusterctlv1.CoreProviderType, "https://github.com/kubernetes-sigs/cluster-api/releases/v1.14.0/core-components.yaml")
 	g.Expect(err).ToNot(HaveOccurred())
 
 	overridesClient, err := configclient.New(ctx, "", configclient.InjectReader(reader))
@@ -125,8 +125,8 @@ func TestProviderDownloadWithOverrides(t *testing.T) {
 	_, err = p.Fetch(ctx)
 	g.Expect(err).ToNot(HaveOccurred())
 
-	g.Expect(p.components.Images()).To(HaveExactElements([]string{"registry.k8s.io/cluster-api/cluster-api-controller:v1.4.3"}))
-	g.Expect(p.components.Version()).To(Equal("v1.4.3"))
+	g.Expect(p.components.Images()).To(HaveExactElements([]string{"registry.k8s.io/cluster-api/cluster-api-controller:v1.14.0"}))
+	g.Expect(p.components.Version()).To(Equal("v1.14.0"))
 }
 
 func TestCompressDecompressRoundtrip(t *testing.T) {

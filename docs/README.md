@@ -199,7 +199,7 @@ metadata:
   name: cluster-api
   namespace: capi-system
 spec:
-  version: v1.4.3
+  version: v1.14.0
 ```
 
 **Note:** Only one CoreProvider can be installed at the same time on a single cluster.
@@ -555,7 +555,7 @@ metadata:
  name: kubeadm
  namespace: capi-kubeadm-control-plane-system
 spec:
- version: v1.4.3
+ version: v1.14.0
  configSecret: 
    name: capi-variables
  deployment:

@@ -33,7 +33,7 @@ helm install capi-operator capi-operator/cluster-api-operator --create-namespace
 ```
 
 ```bash
-helm install capi-operator capi-operator/cluster-api-operator --create-namespace -n capi-operator-system --set core.cluster-api.version=v1.4.2 --set controlPlane.kubeadm.version=v1.4.2 --set bootstrap.kubeadm.version=v1.4.2  --set infrastructure.docker.version=v1.4.2  --wait --timeout 90s
+helm install capi-operator capi-operator/cluster-api-operator --create-namespace -n capi-operator-system --set core.cluster-api.version=v1.14.0 --set controlPlane.kubeadm.version=v1.14.0 --set bootstrap.kubeadm.version=v1.14.0  --set infrastructure.docker.version=v1.14.0  --wait --timeout 90s
 ```
 
 For more complex operations, please refer to our API documentation.

@@ -35,6 +35,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+const (
+	defaultNamespace   = "default"
+	configMapKind      = "ConfigMap"
+	appsV1GroupVersion = "apps/v1"
+)
+
 // clientProxy implements the Proxy interface from the clusterctl. It is used to
 // interact with the management cluster.
 type clientProxy struct {
@@ -78,7 +84,7 @@ type controllerProxy struct {
 
 var _ cluster.Proxy = &controllerProxy{}
 
-func (k *controllerProxy) CurrentNamespace() (string, error)                { return "default", nil }
+func (k *controllerProxy) CurrentNamespace() (string, error)                { return defaultNamespace, nil }
 func (k *controllerProxy) ValidateKubernetesVersion() error                 { return nil }
 func (k *controllerProxy) GetConfig() (*rest.Config, error)                 { return k.ctrlConfig, nil }
 func (k *controllerProxy) NewClient(context.Context) (client.Client, error) { return k.ctrlClient, nil }
@@ -113,14 +119,14 @@ func (k *controllerProxy) ListResources(ctx context.Context, labels map[string]s
 			GroupVersion: "v1",
 			APIResources: []metav1.APIResource{
 				{Kind: "Secret", Namespaced: true},
-				{Kind: "ConfigMap", Namespaced: true},
+				{Kind: configMapKind, Namespaced: true},
 				{Kind: "Service", Namespaced: true},
 				{Kind: "ServiceAccount", Namespaced: true},
 				{Kind: "Namespace"},
 			},
 		},
 		{
-			GroupVersion: "apps/v1",
+			GroupVersion: appsV1GroupVersion,
 			APIResources: []metav1.APIResource{
 				{Kind: "DaemonSet", Namespaced: true},
 				{Kind: "Deployment", Namespaced: true},
