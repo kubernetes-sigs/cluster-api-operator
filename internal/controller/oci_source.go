@@ -18,9 +18,14 @@ package controller
 
 import (
 	"context"
+	"crypto/sha256"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"io"
+	"net/http"
 	"strings"
+	"sync"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"oras.land/oras-go/v2"
@@ -38,6 +43,8 @@ const (
 	OCIPasswordKey     = "OCI_PASSWORD"
 	OCIAccessTokenKey  = "OCI_ACCESS_TOKEN"
 	OCIRefreshTokenKey = "OCI_REFRESH_TOKEN" // #nosec G101
+
+	OCICACert = "ca.crt"
 
 	metadataFile     = "metadata.yaml"
 	fullMetadataFile = "%s-%s-%s-metadata.yaml"
@@ -195,6 +202,9 @@ func (m mapStore) Tag(ctx context.Context, desc ocispec.Descriptor, reference st
 }
 
 var _ oras.Target = &mapStore{}
+var transportPoolCache = &transportPool{
+	cache: map[string]*http.Transport{},
+}
 
 // parseOCISource accepts an OCI URL and the provider version. It returns the image name,
 // the image version (if not set on the OCI URL, the provider version is used) and whether
@@ -213,8 +223,57 @@ func parseOCISource(url string, version string) (string, string, bool) {
 	return url, version, plainHTTP
 }
 
+// newRetryClient creates a new HTTP client with retry policy, optionally wrapping a custom transport.
+func newRetryClient(base http.RoundTripper) *http.Client {
+	return &http.Client{
+		Transport: retry.NewTransport(base),
+	}
+}
+
+type transportPool struct {
+	cache map[string]*http.Transport
+	lock  sync.Mutex
+}
+
+func (t *transportPool) GetTransportForCACert(caCert []byte) (*http.Transport, error) {
+	t.lock.Lock()
+	defer t.lock.Unlock()
+	if t.cache == nil {
+		t.cache = map[string]*http.Transport{}
+	}
+	sum := fmt.Sprintf("%x", sha256.Sum256(caCert))
+	if transport, ok := t.cache[sum]; ok {
+		return transport, nil
+	}
+	transport, err := t.createNewTransport(caCert)
+	if err != nil {
+		return nil, err
+	}
+	t.cache[sum] = transport
+	return transport, nil
+}
+
+func (t *transportPool) createNewTransport(caCert []byte) (*http.Transport, error) {
+	pool, err := x509.SystemCertPool()
+	if err != nil {
+		pool = x509.NewCertPool()
+	}
+
+	if !pool.AppendCertsFromPEM(caCert) {
+		return nil, fmt.Errorf("failed to append custom CA certificate")
+	}
+
+	transport := http.DefaultTransport.(*http.Transport)
+	transport = transport.Clone()
+	transport.TLSClientConfig = &tls.Config{
+		RootCAs:    pool,
+		MinVersion: tls.VersionTLS12,
+	}
+	return transport, nil
+}
+
 // CopyOCIStore collects artifacts from the provider OCI url and creates a map of file contents.
-func CopyOCIStore(ctx context.Context, url string, version string, store *mapStore, credential *auth.Credential) error {
+func CopyOCIStore(ctx context.Context, url string, version string, store *mapStore, credential *auth.Credential, caCert []byte) error {
 	url, version, plainHTTP := parseOCISource(url, version)
 
 	repo, err := remote.NewRepository(url)
@@ -222,9 +281,21 @@ func CopyOCIStore(ctx context.Context, url string, version string, store *mapSto
 		return fmt.Errorf("invalid registry URL specified: %w", err)
 	}
 
+	baseClient := retry.DefaultClient
+
+	if len(caCert) > 0 {
+		transport, transportErr := transportPoolCache.GetTransportForCACert(caCert)
+		if transportErr != nil {
+			return fmt.Errorf("failed to create HTTP client with custom CA: %w", transportErr)
+		}
+		baseClient = newRetryClient(transport)
+	}
+
+	repo.Client = baseClient
+
 	if credential != nil {
 		repo.Client = &auth.Client{
-			Client:     retry.DefaultClient,
+			Client:     baseClient,
 			Cache:      auth.NewCache(),
 			Credential: auth.StaticCredential(repo.Reference.Registry, *credential),
 		}
@@ -267,7 +338,7 @@ func OCIAuthentication(c configclient.VariablesClient) *auth.Credential {
 }
 
 // FetchOCI copies the content of OCI.
-func FetchOCI(ctx context.Context, provider operatorv1.GenericProvider, cred *auth.Credential) (*mapStore, error) {
+func FetchOCI(ctx context.Context, provider operatorv1.GenericProvider, cred *auth.Credential, caCert []byte) (*mapStore, error) {
 	log := log.FromContext(ctx)
 
 	log.V(2).Info("Custom fetch configuration OCI url was provided")
@@ -275,7 +346,7 @@ func FetchOCI(ctx context.Context, provider operatorv1.GenericProvider, cred *au
 	// Prepare components store for the provider type.
 	store := NewMapStore(provider)
 
-	err := CopyOCIStore(ctx, provider.GetSpec().FetchConfig.OCI, provider.GetSpec().Version, &store, cred)
+	err := CopyOCIStore(ctx, provider.GetSpec().FetchConfig.OCI, provider.GetSpec().Version, &store, cred, caCert)
 	if err != nil {
 		return nil, fmt.Errorf("unable to copy OCI content: %w", err)
 	}
