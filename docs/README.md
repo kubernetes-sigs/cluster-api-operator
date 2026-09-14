@@ -155,7 +155,6 @@ spec:
       containers:
       - name: manager
         args:
-        - --metrics-bind-addr=:8080
         - --leader-elect
         - --leader-elect-retry-period=5s
         - "--diagnostics-address=${CAPI_OPERATOR_DIAGNOSTICS_ADDRESS:=:8443}"
