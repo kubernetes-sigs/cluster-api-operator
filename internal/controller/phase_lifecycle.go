@@ -22,8 +22,6 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
-	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
-	"sigs.k8s.io/cluster-api-operator/util"
 	clusterctlv1 "sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3"
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/cluster"
 	configclient "sigs.k8s.io/cluster-api/cmd/clusterctl/client/config"
@@ -31,6 +29,9 @@ import (
 	"sigs.k8s.io/cluster-api/util/conditions"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
+	"sigs.k8s.io/cluster-api-operator/util"
 )
 
 // Upgrade ensure all the clusterctl CRDs are available before installing the provider,
@@ -73,6 +74,16 @@ func (p *PhaseReconciler) Upgrade(ctx context.Context) (*Result, error) {
 		Reason:  "ProviderUpgraded",
 		Message: "Provider upgraded successfully",
 	})
+
+	if installedCondition := conditions.Get(p.provider, operatorv1.ProviderInstalledCondition); installedCondition == nil || installedCondition.Status != metav1.ConditionTrue {
+		// ProviderInstalled can be set to False by earlier phases when manifests cannot be fetched during an upgrade and needs to be set back to true once the upgrade succeeds
+		conditions.Set(p.provider, metav1.Condition{
+			Type:    operatorv1.ProviderInstalledCondition,
+			Status:  metav1.ConditionTrue,
+			Reason:  "ProviderInstalled",
+			Message: "Provider installed successfully",
+		})
+	}
 
 	return &Result{}, nil
 }
