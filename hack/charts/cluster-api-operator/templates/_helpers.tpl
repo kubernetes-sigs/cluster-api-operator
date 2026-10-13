@@ -27,8 +27,8 @@ We truncate at 63 chars because some Kubernetes name fields are limited to this 
 {{- $ := .ROOT -}}
 {{- $arg := .ARGUMENT -}}
 configSecret:
-  name: {{ default (($arg).configSecret).name (($.Values).configSecret).name }}
-  {{- if (default (($arg).configSecret).namespace (($.Values).configSecret).namespace) }}
-  namespace: {{ default (($arg).configSecret).namespace (($.Values).configSecret).namespace }}
+  name: {{ default (($.Values).configSecret).name (($arg).configSecret).name }}
+  {{- if (default (($.Values).configSecret).namespace (($arg).configSecret).namespace) }}
+  namespace: {{ default (($.Values).configSecret).namespace (($arg).configSecret).namespace }}
   {{- end }}
 {{- end -}}
