@@ -146,6 +146,28 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 		Expect(manifests).To(Equal(string(fullChartInstall)))
 	})
 
+	It("should take container ports from bind addresses that carry a host", func() {
+		templateRun := &HelmChart{
+			BinaryPath:      helmChart.BinaryPath,
+			Commands:        Commands(Template),
+			Path:            helmChart.Path,
+			Name:            helmChart.Name,
+			Kubeconfig:      helmChart.Kubeconfig,
+			Output:          Full,
+			AdditionalFlags: Flags("--show-only", "templates/deployment.yaml"),
+		}
+		manifests, err := templateRun.Run(map[string]string{
+			"healthAddr":         "127.0.0.1:9440",
+			"diagnosticsAddress": "0.0.0.0:8443",
+			"profilerAddress":    "127.0.0.1:6060",
+		})
+		Expect(err).ToNot(HaveOccurred())
+
+		expectedManifests, err := os.ReadFile(filepath.Join(customManifestsFolder, "deployment-bind-addresses-with-host.yaml"))
+		Expect(err).ToNot(HaveOccurred())
+		Expect(manifests).To(Equal(string(expectedManifests)))
+	})
+
 	It("should not deploy providers when none specified", func() {
 		manifests, err := helmChart.Run(nil)
 		Expect(err).ToNot(HaveOccurred())

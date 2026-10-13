@@ -89,7 +89,7 @@ spec:
         - --leader-elect-retry-period={{ .retryPeriod }}
         {{- end }}
         {{- if $.Values.profilerAddress }}
-        - --profiler-address=localhost{{ $.Values.profilerAddress }}
+        - --profiler-address={{ if hasPrefix ":" ($.Values.profilerAddress | toString) }}localhost{{ end }}{{ $.Values.profilerAddress }}
         {{- end }}
         {{- if $.Values.contentionProfiling }}
         - --contention-profiling={{ $.Values.contentionProfiling }}
@@ -104,7 +104,7 @@ spec:
         name: manager
         ports:
         {{- if $.Values.profilerAddress }}
-        {{- $profilerPort := $.Values.profilerAddress | toString | trimPrefix ":" | int }}
+        {{- $profilerPort := $.Values.profilerAddress | toString | splitList ":" | last | int }}
         - containerPort: {{ $profilerPort }}
           name: profiler
           protocol: TCP
@@ -113,7 +113,7 @@ spec:
           name: webhook-server
           protocol: TCP
         {{- if .Values.diagnosticsAddress }}
-        {{- $diagnosticsPort := .Values.diagnosticsAddress | toString | trimPrefix ":" | int }}
+        {{- $diagnosticsPort := .Values.diagnosticsAddress | toString | splitList ":" | last | int }}
         - containerPort: {{ $diagnosticsPort }}
           name: diagnostics
           protocol: TCP
@@ -137,7 +137,7 @@ spec:
         terminationMessagePolicy: FallbackToLogsOnError
         {{- $healthPort := 9440 }}
         {{- if .Values.healthAddr }}
-        {{- $healthPort = .Values.healthAddr | toString | trimPrefix ":" | int }}
+        {{- $healthPort = .Values.healthAddr | toString | splitList ":" | last | int }}
         {{- end }}
         livenessProbe:
           failureThreshold: 3
