@@ -11,6 +11,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@0c366fd6a839edf440554fa01a7085ccba70ac98 # tag=v4.2.2
+        with:
+          fetch-depth: 2 # HEAD^1 of the PR merge commit is the base branch.
       - name: Calculate go version
         id: vars
         run: echo "go_version=$(make go-version)" >> $GITHUB_OUTPUT
@@ -21,4 +23,24 @@ jobs:
       - name: Install govulncheck
         run: go install golang.org/x/vuln/cmd/govulncheck@latest
       - name: Run govulncheck
+        if: github.event_name != 'pull_request'
         run: govulncheck ./...
+      # Fail only on vulnerabilities this PR adds to the base branch.
+      - name: Run govulncheck for new vulnerabilities
+        if: github.event_name == 'pull_request'
+        run: |
+          set -o pipefail
+          called='select(.finding.trace[0].function) | .finding.osv'
+          govulncheck -format json ./... | jq -r "$called" | sort -u > "$RUNNER_TEMP/head.txt"
+          git checkout -q HEAD^1
+          govulncheck -format json ./... | jq -r "$called" | sort -u > "$RUNNER_TEMP/base.txt"
+          if [ -s "$RUNNER_TEMP/base.txt" ]; then
+            echo "::warning::The base branch is affected by $(paste -sd ' ' "$RUNNER_TEMP/base.txt")"
+          fi
+          new=$(comm -13 "$RUNNER_TEMP/base.txt" "$RUNNER_TEMP/head.txt")
+          if [ -n "$new" ]; then
+            for id in $new; do
+              echo "::error::This PR introduces $id: https://pkg.go.dev/vuln/$id"
+            done
+            exit 1
+          fi
