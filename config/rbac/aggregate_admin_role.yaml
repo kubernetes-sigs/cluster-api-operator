@@ -1,0 +1,25 @@
+# aggregates write access to the operator provider CRs into the builtin `admin` ClusterRole only (not `edit`):
+# provider CRs make the operator install cluster-wide manifests.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: aggregate-admin-role
+  labels:
+    rbac.authorization.k8s.io/aggregate-to-admin: "true"
+rules:
+- apiGroups:
+  - operator.cluster.x-k8s.io
+  resources:
+  - addonproviders
+  - bootstrapproviders
+  - controlplaneproviders
+  - coreproviders
+  - infrastructureproviders
+  - ipamproviders
+  - runtimeextensionproviders
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - patch
+  - update
