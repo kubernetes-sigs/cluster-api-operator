@@ -251,6 +251,22 @@ var _ = Describe("Create a proper set of manifests when using helm charts", func
 		Expect(manifests).To(Equal(string(expectedManifests)))
 	})
 
+	It("should prefer the provider configSecret over the global one", func() {
+		manifests, err := helmChart.Run(map[string]string{
+			"configSecret.name":                       "test-secret-name",
+			"configSecret.namespace":                  "test-secret-namespace",
+			"core.cluster-api.configSecret.name":      "core-secret-name",
+			"core.cluster-api.configSecret.namespace": "core-secret-namespace",
+			"infrastructure.docker.enabled":           "true",
+		})
+		Expect(err).ToNot(HaveOccurred())
+		Expect(manifests).ToNot(BeEmpty())
+
+		expectedManifests, err := os.ReadFile(filepath.Join(customManifestsFolder, "per-provider-config-secret.yaml"))
+		Expect(err).ToNot(HaveOccurred())
+		Expect(manifests).To(Equal(string(expectedManifests)))
+	})
+
 	It("should deploy core when only bootstrap is specified", func() {
 		manifests, err := helmChart.Run(map[string]string{
 			"configSecret.name":         "test-secret-name",
