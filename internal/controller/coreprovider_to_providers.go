@@ -52,6 +52,9 @@ func newCoreProviderToProviderFuncMapForProviderList(k8sClient client.Client, pr
 
 		var requests []reconcile.Request
 
+		// providerList is shared with the reconciler and other event handlers, so list into a copy.
+		providerList := providerList.DeepCopyObject().(genericprovider.GenericProviderList) //nolint:forcetypeassert
+
 		if err := k8sClient.List(ctx, providerList); err != nil {
 			log.Error(err, "failed to list providers")
 			return nil

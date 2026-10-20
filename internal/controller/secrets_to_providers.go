@@ -45,6 +45,9 @@ func newSecretToProviderFuncMapForProviderList(k8sClient client.Client, provider
 
 		var requests []reconcile.Request
 
+		// providerList is shared with the reconciler and other event handlers, so list into a copy.
+		providerList := providerList.DeepCopyObject().(genericprovider.GenericProviderList) //nolint:forcetypeassert
+
 		configSecretMatcher := client.MatchingFields{configSecretNameField: secret.GetName(), configSecretNamespaceField: secret.GetNamespace()}
 		if err := k8sClient.List(ctx, providerList, configSecretMatcher); err != nil {
 			log.Error(err, "failed to list providers")

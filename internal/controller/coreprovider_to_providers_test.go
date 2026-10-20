@@ -134,9 +134,11 @@ func TestCoreProviderToProvidersMapper(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			requests := newCoreProviderToProviderFuncMapForProviderList(k8sClient, &operatorv1.InfrastructureProviderList{})(ctx, tc.coreProvider)
+			providerList := &operatorv1.InfrastructureProviderList{}
+			requests := newCoreProviderToProviderFuncMapForProviderList(k8sClient, providerList)(ctx, tc.coreProvider)
 			g.Expect(requests).To(HaveLen(len(tc.expected)))
 			g.Expect(requests).To(ContainElements(tc.expected))
+			g.Expect(providerList.Items).To(BeEmpty())
 		})
 	}
 }

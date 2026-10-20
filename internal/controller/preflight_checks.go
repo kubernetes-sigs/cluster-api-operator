@@ -116,6 +116,9 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 		}
 	}
 
+	// providerList is shared with the controller's event handlers, so list into a copy.
+	providerList = providerList.DeepCopyObject().(genericprovider.GenericProviderList) //nolint:forcetypeassert
+
 	if err := c.List(ctx, providerList); err != nil {
 		return fmt.Errorf("failed to list providers: %w", err)
 	}

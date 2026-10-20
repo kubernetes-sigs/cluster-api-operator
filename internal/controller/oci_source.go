@@ -237,7 +237,9 @@ func CopyOCIStore(ctx context.Context, url string, version string, store *mapSto
 
 	_, err = oras.Copy(ctx, repo, version, store, version, oras.CopyOptions{
 		CopyGraphOptions: oras.CopyGraphOptions{
-			PreCopy: store.selector,
+			// mapStore is not safe for concurrent use.
+			Concurrency: 1,
+			PreCopy:     store.selector,
 		},
 	})
 	if err != nil {

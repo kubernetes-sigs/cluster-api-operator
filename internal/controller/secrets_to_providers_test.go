@@ -107,7 +107,8 @@ func TestProviderSecretMapper(t *testing.T) {
 		).
 		Build()
 
-	requests := newSecretToProviderFuncMapForProviderList(k8sClient, &operatorv1.InfrastructureProviderList{})(ctx, &corev1.Secret{
+	providerList := &operatorv1.InfrastructureProviderList{}
+	requests := newSecretToProviderFuncMapForProviderList(k8sClient, providerList)(ctx, &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      configSecretName,
 			Namespace: testNamespaceName,
@@ -120,4 +121,5 @@ func TestProviderSecretMapper(t *testing.T) {
 		ctrl.Request{NamespacedName: types.NamespacedName{Namespace: otherInfraProviderNamespace, Name: "infra-provider-using-secret-from-other-namespace"}},
 		ctrl.Request{NamespacedName: types.NamespacedName{Namespace: otherInfraProviderNamespace, Name: "other-infra-provider-using-secret-from-other-namespace"}},
 	))
+	g.Expect(providerList.Items).To(BeEmpty())
 }
