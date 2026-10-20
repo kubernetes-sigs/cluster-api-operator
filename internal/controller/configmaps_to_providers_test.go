@@ -17,6 +17,8 @@ limitations under the License.
 package controller
 
 import (
+	"fmt"
+	"sync"
 	"testing"
 
 	. "github.com/onsi/gomega"
@@ -25,6 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
@@ -232,4 +235,69 @@ func TestProviderConfigMapMapperNoMatches(t *testing.T) {
 	})
 
 	g.Expect(requests).To(BeEmpty())
+}
+
+func TestProviderConfigMapMapperConcurrentCalls(t *testing.T) {
+	g := NewWithT(t)
+
+	const (
+		namespaces = 10
+		calls      = 50
+	)
+
+	objs := make([]client.Object, 0, namespaces)
+	for i := range namespaces {
+		objs = append(objs, &operatorv1.InfrastructureProvider{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      fmt.Sprintf("provider-%d", i),
+				Namespace: fmt.Sprintf("namespace-%d", i),
+			},
+			Spec: operatorv1.InfrastructureProviderSpec{
+				ProviderSpec: operatorv1.ProviderSpec{
+					Version: "v0.1.19",
+					FetchConfig: &operatorv1.FetchConfiguration{
+						Selector: &metav1.LabelSelector{
+							MatchLabels: map[string]string{"provider-components": "edge"},
+						},
+					},
+				},
+			},
+		})
+	}
+
+	k8sClient := fake.NewClientBuilder().WithScheme(setupScheme()).WithObjects(objs...).Build()
+	providerList := &operatorv1.InfrastructureProviderList{}
+	mapFunc := newConfigMapToProviderFuncMapForProviderList(k8sClient, providerList)
+
+	results := make([][][]ctrl.Request, namespaces)
+
+	var wg sync.WaitGroup
+
+	for i := range namespaces {
+		wg.Go(func() {
+			configMap := &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "v0.1.19",
+					Namespace: fmt.Sprintf("namespace-%d", i),
+					Labels:    map[string]string{"provider-components": "edge"},
+				},
+			}
+
+			for range calls {
+				results[i] = append(results[i], mapFunc(ctx, configMap))
+			}
+		})
+	}
+
+	wg.Wait()
+
+	g.Expect(providerList.Items).To(BeEmpty())
+
+	for i, namespaceResults := range results {
+		want := ctrl.Request{NamespacedName: types.NamespacedName{Namespace: fmt.Sprintf("namespace-%d", i), Name: fmt.Sprintf("provider-%d", i)}}
+
+		for _, requests := range namespaceResults {
+			g.Expect(requests).To(ConsistOf(want))
+		}
+	}
 }

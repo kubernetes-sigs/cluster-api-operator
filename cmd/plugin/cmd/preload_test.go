@@ -18,10 +18,12 @@ package cmd
 
 import (
 	"cmp"
+	"net/http/httptest"
 	"os"
 	"path"
 	"testing"
 
+	"github.com/google/go-containerregistry/pkg/registry"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -47,6 +49,11 @@ type publishOptions struct {
 }
 
 func TestPreloadCommand(t *testing.T) {
+	srv := httptest.NewServer(registry.New())
+	defer srv.Close()
+
+	registryURL := "http://" + srv.Listener.Addr().String()
+
 	tests := []struct {
 		name               string
 		customURL          string
@@ -62,7 +69,7 @@ func TestPreloadCommand(t *testing.T) {
 		{
 			name: "builtin core provider with OCI override",
 			publishOpts: &publishOptions{
-				artifactURL: "ttl.sh/cluster-api-operator-manifests:1m",
+				artifactURL: registryURL + "/cluster-api-operator-manifests:1m",
 				providers: []publishProvider{{
 					configMapName:  "core-cluster-api-v1.14.0",
 					provider:       generateGenericProvider(clusterctlv1.CoreProviderType, "cluster-api", "default", "v1.14.0", "", ""),
@@ -77,7 +84,7 @@ func TestPreloadCommand(t *testing.T) {
 		{
 			name: "multiple providers with OCI override",
 			publishOpts: &publishOptions{
-				artifactURL: "ttl.sh/cluster-api-operator-manifests:1m",
+				artifactURL: registryURL + "/cluster-api-operator-manifests:1m",
 				providers: []publishProvider{{
 					configMapName:  "core-cluster-api-v1.14.0",
 					provider:       generateGenericProvider(clusterctlv1.CoreProviderType, "cluster-api", "default", "v1.14.0", "", ""),
@@ -123,7 +130,7 @@ func TestPreloadCommand(t *testing.T) {
 		{
 			name: "OCI override with incorrect metadata key",
 			publishOpts: &publishOptions{
-				artifactURL: "ttl.sh/cluster-api-operator-manifests:1m",
+				artifactURL: registryURL + "/cluster-api-operator-manifests:1m",
 				providers: []publishProvider{{
 					configMapName:  "core-cluster-api-v1.14.0",
 					provider:       generateGenericProvider(clusterctlv1.InfrastructureProviderType, "metadata-missing", "default", "v1.14.0", "", ""),
@@ -138,7 +145,7 @@ func TestPreloadCommand(t *testing.T) {
 		{
 			name: "OCI override with incorrect components key",
 			publishOpts: &publishOptions{
-				artifactURL: "ttl.sh/cluster-api-operator-manifests:1m",
+				artifactURL: registryURL + "/cluster-api-operator-manifests:1m",
 				providers: []publishProvider{{
 					configMapName:  "core-cluster-api-v1.14.0",
 					provider:       generateGenericProvider(clusterctlv1.InfrastructureProviderType, "components-missing", "default", "v1.14.0", "", ""),
@@ -158,7 +165,7 @@ func TestPreloadCommand(t *testing.T) {
 					spec := p.GetSpec()
 					spec.FetchConfig = &operatorv1.FetchConfiguration{
 						OCIConfiguration: operatorv1.OCIConfiguration{
-							OCI: "ttl.sh/cluster-api-operator-manifests-missing:1m",
+							OCI: registryURL + "/cluster-api-operator-manifests-missing:1m",
 						},
 					}
 					p.SetSpec(spec)

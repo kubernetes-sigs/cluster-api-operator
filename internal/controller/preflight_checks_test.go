@@ -807,6 +807,7 @@ func TestPreflightChecks(t *testing.T) {
 			gs.Expect(tc.providers[0].GetStatus().Conditions[0].Type).To(Equal(tc.expectedCondition.Type))
 			gs.Expect(tc.providers[0].GetStatus().Conditions[0].Status).To(Equal(tc.expectedCondition.Status))
 			gs.Expect(tc.providers[0].GetStatus().Conditions[0].Message).To(Equal(tc.expectedCondition.Message))
+			gs.Expect(tc.providerList.GetItems()).To(BeEmpty())
 		})
 	}
 }
