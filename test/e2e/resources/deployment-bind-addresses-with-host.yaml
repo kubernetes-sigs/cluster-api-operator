@@ -1,0 +1,115 @@
+---
+# Source: cluster-api-operator/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: capi-operator-cluster-api-operator
+  namespace: 'default'
+  labels:
+    app: cluster-api-operator
+    app.kubernetes.io/name: cluster-api-operator
+    app.kubernetes.io/instance: capi-operator
+    app.kubernetes.io/component: "controller"
+    control-plane: controller-manager
+    clusterctl.cluster.x-k8s.io/core: capi-operator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: cluster-api-operator
+      app.kubernetes.io/instance: capi-operator
+      app.kubernetes.io/component: "controller"
+      control-plane: controller-manager
+      clusterctl.cluster.x-k8s.io/core: capi-operator
+  template:
+    metadata:
+      labels:
+        app: cluster-api-operator
+        app.kubernetes.io/name: cluster-api-operator
+        app.kubernetes.io/instance: capi-operator
+        app.kubernetes.io/component: "controller"
+        control-plane: controller-manager
+        clusterctl.cluster.x-k8s.io/core: capi-operator
+    spec:
+      serviceAccountName: capi-operator-manager
+      automountServiceAccountToken: true
+      containers:
+      - args:
+        - --v=2
+        - --health-addr=127.0.0.1:9440
+        - --diagnostics-address=0.0.0.0:8443
+        - --leader-elect=true
+        - --profiler-address=127.0.0.1:6060
+        command:
+        - /manager
+        image: "gcr.io/k8s-staging-capi-operator/cluster-api-operator:dev"
+        imagePullPolicy: IfNotPresent
+        name: manager
+        ports:
+        - containerPort: 6060
+          name: profiler
+          protocol: TCP
+        - containerPort: 9443
+          name: webhook-server
+          protocol: TCP
+        - containerPort: 8443
+          name: diagnostics
+          protocol: TCP
+        resources:
+            limits:
+              cpu: 100m
+              memory: 300Mi
+            requests:
+              cpu: 100m
+              memory: 100Mi
+        volumeMounts:
+            - mountPath: /tmp/k8s-webhook-server/serving-certs
+              name: cert
+              readOnly: true
+        terminationMessagePolicy: FallbackToLogsOnError
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /healthz
+            port: 9440
+            scheme: HTTP
+          initialDelaySeconds: 15
+          periodSeconds: 20
+          successThreshold: 1
+          timeoutSeconds: 1
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /readyz
+            port: 9440
+            scheme: HTTP
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+      terminationGracePeriodSeconds: 10
+      volumes:
+        - name: cert
+          secret:
+            defaultMode: 420
+            secretName: capi-operator-webhook-service-cert
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: kubernetes.io/arch
+                operator: In
+                values:
+                - amd64
+                - arm64
+                - ppc64le
+              - key: kubernetes.io/os
+                operator: In
+                values:
+                - linux
+      tolerations:
+        - effect: NoSchedule
+          key: node-role.kubernetes.io/master
+        - effect: NoSchedule
+          key: node-role.kubernetes.io/control-plane
