@@ -120,7 +120,7 @@ YQ_VER := v4.47.2
 YQ_BIN := yq
 YQ := $(TOOLS_BIN_DIR)/$(YQ_BIN)-$(YQ_VER)
 
-KPROMO_VER := v4.0.5
+KPROMO_VER := v4.7.1
 KPROMO_BIN := kpromo
 KPROMO :=  $(TOOLS_BIN_DIR)/$(KPROMO_BIN)-$(KPROMO_VER)
 
@@ -511,7 +511,7 @@ update-helm-plugin-repo:
 
 .PHONY: promote-images
 promote-images: $(KPROMO)
-	$(KPROMO) pr --project capi-operator --tag $(RELEASE_TAG) --reviewers "$(IMAGE_REVIEWERS)" --fork $(USER_FORK) --image cluster-api-operator --use-ssh=false
+	$(KPROMO) pr --project capi-operator --tag $(RELEASE_TAG) --reviewers "$(IMAGE_REVIEWERS)" --fork $(USER_FORK) --image cluster-api-operator --use-ssh=true
 
 ## --------------------------------------
 ## Cleanup / Verification
