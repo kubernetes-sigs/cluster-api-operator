@@ -1,0 +1,49 @@
+name: Renovate
+
+# Opens Go module update pull requests. make modules and make generate run in this
+# job because pull requests created with GITHUB_TOKEN do not start other workflows.
+# GITHUB_TOKEN can open pull requests only while "Allow GitHub Actions to create and
+# approve pull requests" is enabled in the repository settings.
+on:
+  workflow_dispatch:
+  schedule:
+    # Off the hour, because GitHub delays and sometimes drops scheduled runs at the
+    # top of the hour. Several runs a day, so one missed run does not skip the
+    # monthly Go module updates.
+    - cron: "17 */6 * * *"
+
+permissions: {}
+
+jobs:
+  renovate:
+    name: Renovate
+    if: github.repository == 'kubernetes-sigs/cluster-api-operator'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write # Dependency dashboard and pull request labels.
+      pull-requests: write
+      statuses: write # Renovate aborts the run if it cannot mark a branch whose artifact update failed.
+      vulnerability-alerts: read # Dependabot alerts used for security fix pull requests.
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - name: Set up Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          # Renovate 44.172.0 requires Node >= 24.11.
+          node-version: 24
+      - name: Install Renovate
+        # --before ignores dependency versions published after this Renovate release,
+        # so later npm releases cannot change the install. Update both values together.
+        run: npm install -g renovate@44.172.0 --before=2026-10-20T15:38:00Z
+      - name: Run Renovate
+        env:
+          LOG_LEVEL: info
+          RENOVATE_CONFIG_FILE: .github/renovate-config.js
+          RENOVATE_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: renovate
