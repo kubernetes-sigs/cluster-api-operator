@@ -282,7 +282,7 @@ func fetchProviders(ctx context.Context, cl client.Client, providerList genericP
 
 	for _, provider := range providerList.GetItems() {
 		if provider.GetSpec().FetchConfig != nil && provider.GetSpec().FetchConfig.OCI != "" {
-			cm, err := providercontroller.OCIConfigMap(ctx, provider, ociAuthentication())
+			cm, err := providercontroller.OCIConfigMap(ctx, provider, ociAuthentication(), []byte(""))
 			if err != nil {
 				return configMaps, err
 			}
@@ -337,7 +337,7 @@ func templateConfigMap(ctx context.Context, providerType clusterctlv1.ProviderTy
 	provider.SetSpec(spec)
 
 	if spec.Version != "" {
-		return providercontroller.OCIConfigMap(ctx, provider, ociAuthentication())
+		return providercontroller.OCIConfigMap(ctx, provider, ociAuthentication(), []byte(""))
 	}
 
 	// User didn't set the version, try to get repository default.
@@ -362,7 +362,7 @@ func templateConfigMap(ctx context.Context, providerType clusterctlv1.ProviderTy
 
 	provider.SetSpec(spec)
 
-	return providercontroller.OCIConfigMap(ctx, provider, ociAuthentication())
+	return providercontroller.OCIConfigMap(ctx, provider, ociAuthentication(), []byte(""))
 }
 
 func providerConfigMap(ctx context.Context, provider operatorv1.GenericProvider) (*corev1.ConfigMap, error) {
