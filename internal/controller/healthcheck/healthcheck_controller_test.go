@@ -25,6 +25,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
+	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
@@ -197,4 +198,95 @@ func TestReconcilerReadyConditions(t *testing.T) {
 			g.Expect(env.CleanupAndWait(ctx, objs...)).To(Succeed())
 		})
 	}
+}
+
+func TestReconcilerReadyConditionObservedGeneration(t *testing.T) {
+	g := NewWithT(t)
+
+	ns, err := env.CreateNamespace(ctx, "ready-observed-generation")
+	g.Expect(err).ToNot(HaveOccurred())
+
+	provider := &operatorv1.InfrastructureProvider{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "docker",
+			Namespace: ns.Name,
+		},
+		Spec: operatorv1.InfrastructureProviderSpec{
+			ProviderSpec: operatorv1.ProviderSpec{
+				Version: testCurrentVersion,
+			},
+		},
+	}
+	g.Expect(env.CreateAndWait(ctx, provider)).To(Succeed())
+
+	conditions.Set(provider, metav1.Condition{
+		Type:   operatorv1.ProviderInstalledCondition,
+		Status: metav1.ConditionTrue,
+		Reason: "ProviderInstalled",
+	})
+	g.Expect(env.Status().Update(ctx, provider)).To(Succeed())
+	g.Eventually(func(g Gomega) {
+		g.Expect(env.Get(ctx, client.ObjectKeyFromObject(provider), provider)).To(Succeed())
+		g.Expect(conditions.IsTrue(provider, operatorv1.ProviderInstalledCondition)).To(BeTrue())
+	}, timeout).Should(Succeed())
+
+	deployment := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "capd-controller-manager",
+			Namespace: ns.Name,
+			Labels:    map[string]string{providerLabelKey: "infrastructure-docker"},
+			OwnerReferences: []metav1.OwnerReference{{
+				APIVersion: operatorv1.GroupVersion.String(),
+				Kind:       "InfrastructureProvider",
+				Name:       provider.Name,
+				UID:        provider.UID,
+			}},
+		},
+		Spec: appsv1.DeploymentSpec{
+			Selector: &metav1.LabelSelector{MatchLabels: map[string]string{"app": "capd"}},
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{"app": "capd"}},
+				Spec:       corev1.PodSpec{Containers: []corev1.Container{{Name: "manager", Image: "capd:test"}}},
+			},
+		},
+	}
+	g.Expect(env.CreateAndWait(ctx, deployment)).To(Succeed())
+
+	deployment.Status.Conditions = []appsv1.DeploymentCondition{{Type: appsv1.DeploymentAvailable, Status: corev1.ConditionTrue}}
+	g.Expect(env.Status().Update(ctx, deployment)).To(Succeed())
+
+	g.Eventually(func(g Gomega) {
+		g.Expect(env.Get(ctx, client.ObjectKeyFromObject(provider), provider)).To(Succeed())
+		g.Expect(conditions.IsTrue(provider, clusterv1.ReadyCondition)).To(BeTrue())
+	}, timeout).Should(Succeed())
+
+	// Change the provider spec while its Deployment stays available.
+	patch := client.MergeFrom(provider.DeepCopy())
+	provider.Spec.Version = "v1.14.1"
+	g.Expect(env.Patch(ctx, provider, patch)).To(Succeed())
+
+	generation := provider.GetGeneration()
+
+	g.Eventually(func(g Gomega) {
+		g.Expect(env.Get(ctx, client.ObjectKeyFromObject(provider), provider)).To(Succeed())
+		g.Expect(provider.GetGeneration()).To(Equal(generation))
+	}, timeout).Should(Succeed())
+
+	deployment.Status.Conditions = append(deployment.Status.Conditions, appsv1.DeploymentCondition{
+		Type:   appsv1.DeploymentProgressing,
+		Status: corev1.ConditionTrue,
+		Reason: "NewReplicaSetAvailable",
+	})
+	g.Expect(env.Status().Update(ctx, deployment)).To(Succeed())
+
+	g.Eventually(func(g Gomega) {
+		g.Expect(env.Get(ctx, client.ObjectKeyFromObject(provider), provider)).To(Succeed())
+
+		ready := conditions.Get(provider, clusterv1.ReadyCondition)
+		g.Expect(ready).ToNot(BeNil())
+		g.Expect(ready.Status).To(Equal(metav1.ConditionTrue))
+		g.Expect(ready.ObservedGeneration).To(Equal(generation))
+	}, timeout).Should(Succeed())
+
+	g.Expect(env.CleanupAndWait(ctx, deployment, provider)).To(Succeed())
 }
