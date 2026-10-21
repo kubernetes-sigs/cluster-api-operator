@@ -113,7 +113,7 @@ func (r *GenericProviderHealthCheckReconciler) SetupWithManager(mgr ctrl.Manager
 
 	return ctrl.NewControllerManagedBy(mgr).
 		Named(name).
-		For(&appsv1.Deployment{}, builder.WithPredicates(predicate.NewPredicateFuncs(r.isProviderDeployment))).
+		For(&appsv1.Deployment{}, builder.WithPredicates(deploymentPredicate, predicate.NewPredicateFuncs(r.isProviderDeployment))).
 		Watches(r.Provider, handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, provider client.Object) []reconcile.Request {
 			deploymentList := &appsv1.DeploymentList{}
 			if err := r.List(ctx, deploymentList, client.InNamespace(provider.GetNamespace()), client.HasLabels{providerLabelKey}); err != nil {
@@ -133,7 +133,6 @@ func (r *GenericProviderHealthCheckReconciler) SetupWithManager(mgr ctrl.Manager
 
 			return requests
 		})).
-		WithEventFilter(deploymentPredicate).
 		WithOptions(options).
 		Complete(reconcile.AsReconciler(mgr.GetClient(), r))
 }
