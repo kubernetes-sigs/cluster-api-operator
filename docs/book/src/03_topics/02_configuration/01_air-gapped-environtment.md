@@ -114,6 +114,25 @@ spec:
     oci: "http://my-oci-registry.example.com/my-provider:v1.9.3"
 ```
 
+If the provider is installed under a custom name, the derived file names may not match the ones stored in the artifact. For example, an `InfrastructureProvider` named `supplemental-openstack` looks for `infrastructure-supplemental-openstack-v0.15.0-components.yaml` by default. Use the `fetchConfig.ociManifestName` field to point the operator to the exact files stored in the artifact:
+
+```yaml
+apiVersion: operator.cluster.x-k8s.io/v1alpha2
+kind: InfrastructureProvider
+metadata:
+  name: supplemental-openstack
+  namespace: capi-system
+spec:
+  version: v0.15.0
+  fetchConfig:
+    oci: "my-oci-registry.example.com/my-provider:v0.15.0"
+    ociManifestName:
+      metadata: "infrastructure-openstack-v0.15.0-metadata.yaml"
+      components: "infrastructure-openstack-v0.15.0-components.yaml"
+```
+
+Both `metadata` and `components` are optional; when omitted, the default naming conventions above apply.
+
 ## OCI Authentication
 
 To securely authenticate with an OCI registry, environment variables are used for user credentials. The following environment variables are involved:
