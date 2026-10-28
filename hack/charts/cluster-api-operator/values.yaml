@@ -20,6 +20,7 @@ core: {}
 #     metrics:
 #       insecureDiagnostics: true
 #       diagnosticsAddress: localhost:8080
+#     verbosity: 1
 bootstrap: {}
 # kubeadm: {}             # Name, required
 #   namespace: ""         # Optional
@@ -40,6 +41,7 @@ bootstrap: {}
 #     metrics:
 #       insecureDiagnostics: true
 #       diagnosticsAddress: localhost:8080
+#     verbosity: 1
 controlPlane: {}
 # kubeadm: {}             # Name, required
 #   namespace: ""         # Optional
@@ -59,6 +61,7 @@ controlPlane: {}
 #     metrics:
 #       insecureDiagnostics: true
 #       diagnosticsAddress: localhost:8080
+#     verbosity: 1
 infrastructure: {}
 # docker: {}              # Name, required
 #   namespace: ""         # Optional
@@ -78,6 +81,7 @@ infrastructure: {}
 #     metrics:
 #       insecureDiagnostics: true
 #       diagnosticsAddress: localhost:8080
+#     verbosity: 1
 addon: {}
 # helm: {}                # Name, required
 #   namespace: ""         # Optional
@@ -95,6 +99,7 @@ addon: {}
 #     metrics:
 #       insecureDiagnostics: true
 #       diagnosticsAddress: localhost:8080
+#     verbosity: 1
 ipam: {}
 # in-cluster: {}          # Name, required
 #   namespace: ""         # Optional
@@ -114,6 +119,7 @@ ipam: {}
 #     metrics:
 #       insecureDiagnostics: true
 #       diagnosticsAddress: localhost:8080
+#     verbosity: 1
 fetchConfig: {}
 # ---
 # Common configuration secret options
