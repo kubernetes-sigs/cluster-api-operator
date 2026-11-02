@@ -29,10 +29,14 @@ GitHub Presubmit Workflows:
   * Runs golangci-lint. Can be run locally via `make lint`.
 * PR verify: title verifier
   * Verifies the PR titles have a valid format, i.e. contains one of the valid icons.
-* PR dependabot (run on dependabot PRs)
-  * Regenerates Go modules and code.
-  
+* PR Renovate (runs on pushes to Renovate branches)
+  * Regenerates Go modules and code, and commits the changes to the branch.
+
 Other Github workflows
+* Renovate (Mend Renovate GitHub App, configured in `.github/renovate.json5`)
+  * Opens pull requests for Go module updates on the first day of each month. Major updates open only after approval on the Dependency Dashboard issue.
+  * Opens one pull request for GitHub Actions updates every Monday. Major updates and golangci-lint versions get separate pull requests.
+  * Opens security fix pull requests from Dependabot alerts, including indirect modules and `hack/tools` / `hack/chart-update`.
 * release (runs when tags are pushed)
   * Creates a GitHub release with release notes for the tag.
 * book publishing

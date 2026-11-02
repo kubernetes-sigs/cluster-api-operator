@@ -1,0 +1,105 @@
+{
+  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+  extends: [
+    "config:best-practices",
+    // Open fix PRs from GitHub Dependabot alerts. Indirect Go modules are
+    // updated only when one of those alerts applies.
+    "security:gomodIndirectSecurityUpdates",
+    ":gitSignOff",
+    ":prHourlyLimitNone",
+  ],
+  // PR titles must start with a Kubernetes icon. :seedling: is the infra/other prefix.
+  commitMessagePrefix: ":seedling: ",
+  labels: ["ok-to-test"],
+  enabledManagers: ["gomod", "github-actions"],
+  // Keeps the triage robot from closing the dashboard, where major updates are approved.
+  dependencyDashboardLabels: ["lifecycle/frozen"],
+  // .github/workflows/pr-renovate.yaml commits generated code with this author.
+  // Renovate stops updating a branch once anyone not listed here commits to it.
+  gitIgnoredAuthors: ["41898282+github-actions[bot]@users.noreply.github.com"],
+  // config:best-practices ignores **/test/**, and ignorePaths replaces that list.
+  // hack/tools and hack/chart-update are not listed here: ignored paths are never
+  // scanned, so they could not receive vulnerability fixes. A package rule below
+  // keeps their normal updates disabled.
+  ignorePaths: [
+    "**/node_modules/**",
+    "**/bower_components/**",
+    "**/vendor/**",
+    "**/examples/**",
+    "**/__tests__/**",
+    "**/tests/**",
+    "**/__fixtures__/**",
+  ],
+  // The Renovate app cannot run make. .github/workflows/pr-renovate.yaml runs
+  // make modules and make generate on Renovate branches.
+  postUpdateOptions: ["gomodTidy", "gomodUpdateImportPaths"],
+  packageRules: [
+    {
+      description: "Group GitHub Actions updates into one pull request on Mondays (UTC).",
+      matchManagers: ["github-actions"],
+      groupName: "GitHub Actions",
+      schedule: ["* * * * 1"],
+    },
+    {
+      description: "New golangci-lint versions can need code fixes, so they get their own pull request.",
+      matchManagers: ["github-actions"],
+      matchPackageNames: ["golangci/golangci-lint"],
+      groupName: "golangci-lint",
+    },
+    {
+      description: "Open Go module updates on the first day of the month (UTC).",
+      matchManagers: ["gomod"],
+      schedule: ["* * 1 * *"],
+    },
+    {
+      description: "Group Kubernetes patch updates.",
+      matchManagers: ["gomod"],
+      matchPackageNames: ["k8s.io/**"],
+      matchUpdateTypes: ["patch"],
+      groupName: "k8s.io",
+    },
+    {
+      description: "Group Cluster API modules, which are released together.",
+      matchManagers: ["gomod"],
+      matchPackageNames: ["sigs.k8s.io/cluster-api", "sigs.k8s.io/cluster-api/**"],
+      groupName: "cluster-api",
+    },
+    {
+      description: "Group ginkgo and gomega.",
+      matchManagers: ["gomod"],
+      matchPackageNames: ["github.com/onsi/**"],
+      groupName: "ginkgo",
+    },
+    {
+      description: "Major updates usually change the import path and need code changes, so they open only after approval on the Dependency Dashboard.",
+      matchManagers: ["gomod"],
+      matchUpdateTypes: ["major"],
+      dependencyDashboardApproval: true,
+    },
+    {
+      description: "Ordinary updates of tool modules stay manual. Vulnerability fixes still open, because those alerts override enabled: false.",
+      matchManagers: ["gomod"],
+      matchFileNames: ["hack/tools/go.mod", "hack/chart-update/go.mod"],
+      enabled: false,
+    },
+    {
+      description: "Major, minor and pseudo-version (digest) updates are applied manually together with Cluster API and controller-runtime.",
+      matchManagers: ["gomod"],
+      matchPackageNames: [
+        "k8s.io/**",
+        "sigs.k8s.io/cluster-api",
+        "sigs.k8s.io/cluster-api/**",
+        "sigs.k8s.io/controller-runtime",
+        "go.etcd.io/**",
+        "google.golang.org/grpc",
+      ],
+      matchUpdateTypes: ["major", "minor", "digest"],
+      enabled: false,
+    },
+  ],
+  // Vulnerability fixes keep the labels above and also get area/security.
+  vulnerabilityAlerts: {
+    enabled: true,
+    addLabels: ["area/security"],
+  },
+}
