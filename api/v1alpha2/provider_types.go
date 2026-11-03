@@ -295,6 +295,32 @@ type OCIConfiguration struct {
 	// If the providerSpec.Version is missing, latest provider version from clusterctl defaults is used.
 	// +optional
 	OCI string `json:"oci,omitempty"`
+
+	// OCIManifestName allows to override the names of the metadata and components files
+	// the operator looks up inside the OCI artifact.
+	// By default the file names are derived from the provider name, type and version,
+	// which makes it impossible to host manifests for a provider installed under a custom
+	// provider name in the same artifact. Set this field to point the operator to the
+	// exact files stored in the artifact.
+	// Only relevant when `oci` is set.
+	// +optional
+	OCIManifestName *OCIManifestName `json:"ociManifestName,omitempty"`
+}
+
+// OCIManifestName defines explicit file names for the provider manifests stored inside an OCI artifact.
+// Both fields are optional; when omitted, the default file name lookup order applies.
+type OCIManifestName struct {
+	// Metadata overrides the expected metadata file name inside the OCI artifact.
+	// When empty, the operator falls back to the default lookup order:
+	// <type>-<name>-<version>-metadata.yaml, then metadata.yaml.
+	// +optional
+	Metadata string `json:"metadata,omitempty"`
+
+	// Components overrides the expected components file name inside the OCI artifact.
+	// When empty, the operator falls back to the default lookup order:
+	// <type>-<name>-<version>-components.yaml, then <type>-components.yaml, then components.yaml.
+	// +optional
+	Components string `json:"components,omitempty"`
 }
 
 // ProviderStatus defines the observed state of the Provider.
