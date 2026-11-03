@@ -34,6 +34,8 @@ import (
 	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
 	"sigs.k8s.io/cluster-api-operator/internal/controller/genericprovider"
@@ -1121,4 +1123,69 @@ func TestNormalizeExistingConditions(t *testing.T) {
 			}
 		})
 	}
+}
+
+// staleReadClient keeps returning the provider it read first, like a cache that has not seen the reconciler's own patches yet.
+type staleReadClient struct {
+	client.Client
+
+	provider *operatorv1.CoreProvider
+}
+
+func (c *staleReadClient) Get(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+	provider, ok := obj.(*operatorv1.CoreProvider)
+	if !ok {
+		return c.Client.Get(ctx, key, obj, opts...)
+	}
+
+	if c.provider == nil {
+		if err := c.Client.Get(ctx, key, provider, opts...); err != nil {
+			return err
+		}
+
+		c.provider = provider.DeepCopy()
+
+		return nil
+	}
+
+	c.provider.DeepCopyInto(provider)
+
+	return nil
+}
+
+func TestReconcile_ReadsProviderFromAPIReader(t *testing.T) {
+	g := NewWithT(t)
+
+	apiServer := fake.NewClientBuilder().WithScheme(setupScheme()).WithObjects(&operatorv1.CoreProvider{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:       "cluster-api",
+			Namespace:  "test-ns",
+			Finalizers: []string{operatorv1.ProviderFinalizer},
+		},
+	}).Build()
+
+	r := &GenericProviderReconciler{
+		Provider:  &operatorv1.CoreProvider{},
+		Client:    &staleReadClient{Client: apiServer},
+		APIReader: apiServer,
+	}
+
+	seen := []string{}
+	r.ReconcilePhases = []PhaseFn{
+		func(context.Context) (*Result, error) {
+			seen = append(seen, r.Provider.GetAnnotations()[appliedSpecHashAnnotation])
+			r.Provider.SetAnnotations(map[string]string{appliedSpecHashAnnotation: "hash"})
+
+			return &Result{}, nil
+		},
+	}
+
+	req := reconcile.Request{NamespacedName: client.ObjectKey{Namespace: "test-ns", Name: "cluster-api"}}
+
+	for range 2 {
+		_, err := r.Reconcile(context.Background(), req)
+		g.Expect(err).ToNot(HaveOccurred())
+	}
+
+	g.Expect(seen).To(Equal([]string{"", "hash"}))
 }
