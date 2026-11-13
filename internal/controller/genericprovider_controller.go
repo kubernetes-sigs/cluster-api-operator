@@ -40,6 +40,7 @@ import (
 	"sigs.k8s.io/cluster-api/util/patch"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -51,6 +52,7 @@ type GenericProviderReconciler struct {
 	Provider                 genericprovider.GenericProvider
 	ProviderList             genericprovider.GenericProviderList
 	Client                   client.Client
+	APIReader                client.Reader
 	Config                   *rest.Config
 	WatchConfigSecretChanges bool
 	WatchConfigMapChanges    bool
@@ -66,6 +68,10 @@ const (
 )
 
 func (r *GenericProviderReconciler) BuildWithManager(ctx context.Context, mgr ctrl.Manager) (*ctrl.Builder, error) {
+	if r.APIReader == nil {
+		r.APIReader = mgr.GetAPIReader()
+	}
+
 	builder := ctrl.NewControllerManagedBy(mgr).
 		For(r.Provider)
 
@@ -136,7 +142,8 @@ func (r *GenericProviderReconciler) Reconcile(ctx context.Context, req reconcile
 
 	log.Info("Reconciling provider")
 
-	if err := r.Client.Get(ctx, req.NamespacedName, r.Provider); err != nil {
+	// The cache can still hold the provider from before the previous reconcile's patch, and would repeat its upgrade.
+	if err := r.APIReader.Get(ctx, req.NamespacedName, r.Provider); err != nil {
 		if apierrors.IsNotFound(err) {
 			// Object not found, return. Created objects are automatically garbage collected.
 			// For additional cleanup logic use finalizers.
@@ -147,6 +154,14 @@ func (r *GenericProviderReconciler) Reconcile(ctx context.Context, req reconcile
 		// Error reading the object - requeue the request.
 		return ctrl.Result{}, err
 	}
+
+	// A read that bypasses the cache leaves TypeMeta empty, and owner references are built from it.
+	gvk, err := apiutil.GVKForObject(r.Provider, r.Client.Scheme())
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	r.Provider.GetObjectKind().SetGroupVersionKind(gvk)
 
 	// Initialize the patch helper
 	patchHelper, err := patch.NewHelper(r.Provider, r.Client)
