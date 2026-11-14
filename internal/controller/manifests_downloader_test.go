@@ -205,6 +205,26 @@ func TestProviderCacheName(t *testing.T) {
 			expected: "core-cluster-api-v1.5.0-cache",
 		},
 		{
+			name: "core provider with build metadata in the version",
+			provider: &operatorv1.CoreProvider{
+				ObjectMeta: metav1.ObjectMeta{Name: "cluster-api"},
+				Spec: operatorv1.CoreProviderSpec{
+					ProviderSpec: operatorv1.ProviderSpec{Version: "v1.5.0+build.1"},
+				},
+			},
+			expected: "core-cluster-api-v1.5.0-build.1-f5d411d5-cache",
+		},
+		{
+			name: "core provider with pre-release version",
+			provider: &operatorv1.CoreProvider{
+				ObjectMeta: metav1.ObjectMeta{Name: "cluster-api"},
+				Spec: operatorv1.CoreProviderSpec{
+					ProviderSpec: operatorv1.ProviderSpec{Version: "v1.5.0-build.1"},
+				},
+			},
+			expected: "core-cluster-api-v1.5.0-build.1-cache",
+		},
+		{
 			name: "infrastructure provider",
 			provider: &operatorv1.InfrastructureProvider{
 				ObjectMeta: metav1.ObjectMeta{Name: "aws"},
