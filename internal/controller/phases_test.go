@@ -312,6 +312,30 @@ metadata:
 			wantDefaultVersion: "v1.2.3",
 		},
 		{
+			name: "one correct configmap with build metadata in the label version",
+			configMaps: []corev1.ConfigMap{
+				{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "ConfigMap",
+						APIVersion: "v1",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-provider",
+						Namespace: "ns1",
+						Labels: map[string]string{
+							"provider-components":               "aws",
+							"provider.cluster.x-k8s.io/version": "v1.2.3_build.1",
+						},
+					},
+					Data: map[string]string{
+						"metadata":   metadata,
+						"components": components,
+					},
+				},
+			},
+			wantDefaultVersion: "v1.2.3+build.1",
+		},
+		{
 			name: "three correct configmaps",
 			configMaps: []corev1.ConfigMap{
 				{
