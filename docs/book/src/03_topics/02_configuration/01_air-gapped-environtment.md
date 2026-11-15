@@ -13,6 +13,8 @@ Please note that the operator generates a list of metadata versions from the Con
 - Value in the `provider.cluster.x-k8s.io/version` label
 - Its name (see usage example below)
 
+Kubernetes doesn't allow `+` in label values, so versions with build metadata (e.g. `v1.2.3+build.1`) must use `_` instead in the `provider.cluster.x-k8s.io/version` label (e.g. `v1.2.3_build.1`). These versions can't be set through the ConfigMap name.
+
 **Example Usage:**
 
 As an admin, I need to fetch the Azure provider components from within the cluster because I am working in an air-gapped environment.
