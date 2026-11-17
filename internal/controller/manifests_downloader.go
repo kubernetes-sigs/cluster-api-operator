@@ -20,8 +20,10 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	"crypto/sha256"
 	"fmt"
 	"io"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -166,7 +168,8 @@ func (p *PhaseReconciler) prepareConfigMapLabels() map[string]string {
 
 // TemplateManifestsConfigMap prepares a config map with downloaded manifests.
 func TemplateManifestsConfigMap(provider operatorv1.GenericProvider, labels map[string]string, metadata, components []byte, compress bool) (*corev1.ConfigMap, error) {
-	configMapName := fmt.Sprintf("%s-%s-%s", provider.GetType(), provider.GetName(), provider.GetSpec().Version)
+	providerVersion := versionForResourceName(provider.GetSpec().Version)
+	configMapName := fmt.Sprintf("%s-%s-%s", provider.GetType(), provider.GetName(), providerVersion)
 
 	kinds, _, err := clientgoscheme.Scheme.ObjectKinds(&corev1.ConfigMap{})
 	if err != nil || len(kinds) == 0 {
@@ -342,7 +345,7 @@ func providerLabelSelector(provider operatorv1.GenericProvider) *metav1.LabelSel
 // ProviderLabels returns default set of labels that identify a config map with downloaded manifests.
 func ProviderLabels(provider operatorv1.GenericProvider) map[string]string {
 	labels := map[string]string{
-		operatorv1.ConfigMapVersionLabelName: provider.GetSpec().Version,
+		operatorv1.ConfigMapVersionLabelName: strings.ReplaceAll(provider.GetSpec().Version, "+", "_"),
 		operatorv1.ConfigMapTypeLabel:        provider.GetType(),
 		operatorv1.ConfigMapNameLabel:        provider.GetName(),
 		operatorManagedLabel:                 operatorv1.TrueValue,
@@ -358,7 +361,9 @@ func ProviderLabels(provider operatorv1.GenericProvider) map[string]string {
 // ProviderCacheName generates a cache name for a given provider.
 
 func ProviderCacheName(provider operatorv1.GenericProvider) string {
-	return fmt.Sprintf("%s-%s-%s-cache", provider.GetType(), provider.GetName(), provider.GetSpec().Version)
+	providerVersion := versionForResourceName(provider.GetSpec().Version)
+
+	return fmt.Sprintf("%s-%s-%s-cache", provider.GetType(), provider.GetName(), providerVersion)
 }
 
 // needToCompress checks whether the input data exceeds the maximum configmap
@@ -371,4 +376,18 @@ func needToCompress(bs ...[]byte) bool {
 	}
 
 	return totalBytes > maxConfigMapSize
+}
+
+// versionForResourceName returns a version that can be used in a resource name.
+// It replaces "+" with "-" and uses a hash to prevent name collisions between versions with build metadata and pre-releases.
+// e.g. v1.5.0+build.1 becomes v1.5.0-build.1-f5d411d5.
+// Versions without build metadata remain unchanged, e.g. v1.5.0 remains v1.5.0.
+func versionForResourceName(version string) string {
+	if !strings.Contains(version, "+") {
+		return version
+	}
+
+	hash := sha256.Sum256([]byte(version))
+
+	return fmt.Sprintf("%s-%x", strings.ReplaceAll(version, "+", "-"), hash[:4])
 }
