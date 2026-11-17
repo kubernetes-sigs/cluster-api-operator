@@ -215,6 +215,28 @@ func TestCustomizeDeployment(t *testing.T) {
 			},
 		},
 		{
+			name: "only rollingUpdate modified",
+			inputDeploymentSpec: &operatorv1.DeploymentSpec{
+				RollingUpdate: &appsv1.RollingUpdateDeployment{
+					MaxSurge:       ptr.To(intstr.FromInt32(0)),
+					MaxUnavailable: ptr.To(intstr.FromString("50%")),
+				},
+			},
+			expectedDeploymentSpec: func(inputDS *appsv1.DeploymentSpec) (*appsv1.DeploymentSpec, bool) {
+				expectedDS := &appsv1.DeploymentSpec{
+					Strategy: appsv1.DeploymentStrategy{
+						Type: appsv1.RollingUpdateDeploymentStrategyType,
+						RollingUpdate: &appsv1.RollingUpdateDeployment{
+							MaxSurge:       ptr.To(intstr.FromInt32(0)),
+							MaxUnavailable: ptr.To(intstr.FromString("50%")),
+						},
+					},
+				}
+
+				return expectedDS, reflect.DeepEqual(inputDS.Strategy, expectedDS.Strategy)
+			},
+		},
+		{
 			name: "only serviceAccountName modified",
 			inputDeploymentSpec: &operatorv1.DeploymentSpec{
 				ServiceAccountName: "foo-service-account",

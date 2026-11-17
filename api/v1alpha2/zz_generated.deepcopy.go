@@ -21,6 +21,7 @@ limitations under the License.
 package v1alpha2
 
 import (
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -625,6 +626,11 @@ func (in *DeploymentSpec) DeepCopyInto(out *DeploymentSpec) {
 	if in.Affinity != nil {
 		in, out := &in.Affinity, &out.Affinity
 		*out = new(corev1.Affinity)
+		(*in).DeepCopyInto(*out)
+	}
+	if in.RollingUpdate != nil {
+		in, out := &in.RollingUpdate, &out.RollingUpdate
+		*out = new(appsv1.RollingUpdateDeployment)
 		(*in).DeepCopyInto(*out)
 	}
 	if in.Containers != nil {

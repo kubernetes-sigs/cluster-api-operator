@@ -366,6 +366,7 @@ The following sections provide details about `ProviderSpec` and `ProviderStatus`
    - NodeSelector (optional map[string]string): node label selector
    - Tolerations (optional []corev1.Toleration): pod tolerations
    - Affinity (optional corev1.Affinity): pod scheduling constraints
+   - RollingUpdate (optional appsv1.RollingUpdateDeployment): rolling update parameters of the Deployment, for example maxSurge and maxUnavailable
    - Containers (optional []ContainerSpec): list of deployment containers
    - ServiceAccountName (optional string): pod service account
    - ImagePullSecrets (optional []corev1.LocalObjectReference): list of image pull secrets specified in the Deployment
@@ -391,6 +392,9 @@ The following sections provide details about `ProviderSpec` and `ProviderStatus`
                  operator: "In"
                  values:
                  - "true"
+       rollingUpdate:
+         maxSurge: 0
+         maxUnavailable: 1
        containers:
          - name: "containerA"
            imageUrl: "example.com/repo/image-name:v1.0.0"

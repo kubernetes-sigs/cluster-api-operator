@@ -154,6 +154,11 @@ func customizeDeploymentSpec(dSpec operatorv1.DeploymentSpec, d *appsv1.Deployme
 		d.Spec.Template.Spec.Affinity = dSpec.Affinity
 	}
 
+	if dSpec.RollingUpdate != nil {
+		d.Spec.Strategy.Type = appsv1.RollingUpdateDeploymentStrategyType
+		d.Spec.Strategy.RollingUpdate = dSpec.RollingUpdate
+	}
+
 	if dSpec.NodeSelector != nil {
 		d.Spec.Template.Spec.NodeSelector = dSpec.NodeSelector
 	}

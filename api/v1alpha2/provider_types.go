@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha2
 
 import (
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -221,6 +222,11 @@ type DeploymentSpec struct {
 	// If specified, the pod's scheduling constraints
 	// +optional
 	Affinity *corev1.Affinity `json:"affinity,omitempty"`
+
+	// If specified, the rolling update parameters of the Deployment.
+	// Setting it also sets the Deployment strategy type to RollingUpdate.
+	// +optional
+	RollingUpdate *appsv1.RollingUpdateDeployment `json:"rollingUpdate,omitempty"`
 
 	// List of containers specified in the Deployment
 	// +optional
