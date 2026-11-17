@@ -55,20 +55,49 @@ type mapStore struct {
 
 // NewMapStore initializes mapStore for the provider resource.
 func NewMapStore(p operatorv1.GenericProvider) mapStore {
-	return mapStore{
-		data: map[string][]byte{
-			metadataFile:   nil,
-			componentsFile: nil,
-			fmt.Sprintf(typedComponentsFile, p.GetType()):                                       nil,
-			fmt.Sprintf(fullMetadataFile, p.GetType(), p.ProviderName(), p.GetSpec().Version):   nil,
-			fmt.Sprintf(fullComponentsFile, p.GetType(), p.ProviderName(), p.GetSpec().Version): nil,
-		},
+	data := map[string][]byte{
+		metadataFile:   nil,
+		componentsFile: nil,
+		fmt.Sprintf(typedComponentsFile, p.GetType()):                                       nil,
+		fmt.Sprintf(fullMetadataFile, p.GetType(), p.ProviderName(), p.GetSpec().Version):   nil,
+		fmt.Sprintf(fullComponentsFile, p.GetType(), p.ProviderName(), p.GetSpec().Version): nil,
 	}
+
+	// Register explicit file names when the provider overrides the manifest names.
+	if manifestName := ociManifestName(p); manifestName != nil {
+		if manifestName.Metadata != "" {
+			data[manifestName.Metadata] = nil
+		}
+		if manifestName.Components != "" {
+			data[manifestName.Components] = nil
+		}
+	}
+
+	return mapStore{data: data}
+}
+
+// ociManifestName returns the optional explicit manifest file names configured
+// for the provider OCI source, nil when not set.
+func ociManifestName(p operatorv1.GenericProvider) *operatorv1.OCIManifestName {
+	if p.GetSpec().FetchConfig == nil {
+		return nil
+	}
+
+	return p.GetSpec().FetchConfig.OCIManifestName
 }
 
 // GetMetadata returns metadata file for the provider.
 func (m mapStore) GetMetadata(p operatorv1.GenericProvider) ([]byte, error) {
 	fullMetadataKey := fmt.Sprintf(fullMetadataFile, p.GetType(), p.ProviderName(), p.GetSpec().Version)
+
+	if manifestName := ociManifestName(p); manifestName != nil && manifestName.Metadata != "" {
+		data := m.data[manifestName.Metadata]
+		if len(data) != 0 {
+			return data, nil
+		}
+
+		return nil, fmt.Errorf("collected artifact needs to provide metadata as %s file", manifestName.Metadata)
+	}
 
 	data := m.data[fullMetadataKey]
 	if len(data) != 0 {
@@ -86,6 +115,15 @@ func (m mapStore) GetMetadata(p operatorv1.GenericProvider) ([]byte, error) {
 // GetComponents returns componenents file for the provider.
 func (m mapStore) GetComponents(p operatorv1.GenericProvider) ([]byte, error) {
 	fullComponentsKey := fmt.Sprintf(fullComponentsFile, p.GetType(), p.ProviderName(), p.GetSpec().Version)
+
+	if manifestName := ociManifestName(p); manifestName != nil && manifestName.Components != "" {
+		data := m.data[manifestName.Components]
+		if len(data) != 0 {
+			return data, nil
+		}
+
+		return nil, fmt.Errorf("collected artifact needs to provide components as %s file", manifestName.Components)
+	}
 
 	data := m.data[fullComponentsKey]
 	if len(data) != 0 {
