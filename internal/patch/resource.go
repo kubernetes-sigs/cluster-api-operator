@@ -55,7 +55,7 @@ func (r resource) matches(o matchInfo) bool {
 	}
 
 	// if api version not specified in patch we ignore it
-	if o.APIVersion == "" && m.APIVersion != o.APIVersion {
+	if o.APIVersion != "" && m.APIVersion != o.APIVersion {
 		return false
 	}
 

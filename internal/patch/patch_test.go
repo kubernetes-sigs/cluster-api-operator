@@ -322,3 +322,62 @@ const rfc6902PatchChangePortOnSecondService = `---
   path: /spec/ports/0/targetPort
   value: webhook-server
 `
+
+func TestApplyPatchesAPIVersionMatching(t *testing.T) {
+	const serviceToPatch = `apiVersion: v1
+kind: Service
+metadata:
+  name: service-name
+  namespace: namespace-name
+spec:
+  ports:
+  - port: 443
+    targetPort: webhook-server`
+
+	testCases := []struct {
+		name        string
+		patch       string
+		expectLabel bool
+	}{
+		{
+			// ApplyPatches documents that "if the patch does not set apiVersion it
+			// will be ignored", so a patch that only sets kind must still match by kind.
+			name: "patch without apiVersion matches by kind",
+			patch: `kind: Service
+metadata:
+  labels:
+    test-label: test-value`,
+			expectLabel: true,
+		},
+		{
+			// When the patch sets an apiVersion that differs from the document it
+			// must not match, even if the kind is the same.
+			name: "patch with different apiVersion does not match",
+			patch: `apiVersion: apps/v1
+kind: Service
+metadata:
+  labels:
+    test-label: test-value`,
+			expectLabel: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			g := NewWithT(t)
+
+			objects, err := utilyaml.ToUnstructured([]byte(serviceToPatch))
+			g.Expect(err).NotTo(HaveOccurred())
+
+			result, err := ApplyPatches(objects, []string{tc.patch})
+			g.Expect(err).NotTo(HaveOccurred())
+			g.Expect(result).To(HaveLen(1))
+
+			if tc.expectLabel {
+				g.Expect(result[0].GetLabels()).To(HaveKeyWithValue("test-label", "test-value"))
+			} else {
+				g.Expect(result[0].GetLabels()).NotTo(HaveKey("test-label"))
+			}
+		})
+	}
+}
