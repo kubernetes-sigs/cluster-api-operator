@@ -19,6 +19,7 @@ package controller
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -142,7 +143,7 @@ func (p *PhaseReconciler) configmapRepository(ctx context.Context, labelSelector
 		if cm.Labels != nil {
 			ver, ok := cm.Labels[operatorv1.ConfigMapVersionLabelName]
 			if ok {
-				version = ver
+				version = strings.ReplaceAll(ver, "_", "+")
 				errMsg = "from the Label " + operatorv1.ConfigMapVersionLabelName
 			}
 		}
