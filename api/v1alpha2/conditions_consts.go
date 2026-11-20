@@ -48,6 +48,9 @@ const (
 	// ComponentsCustomizationErrorReason documents that an error occurred customizing the components.
 	ComponentsCustomizationErrorReason = "ComponentsCustomizationError"
 
+	// ApplyConflictReason documents that a server-side apply conflict occurred.
+	ApplyConflictReason = "ApplyConflict"
+
 	// ComponentsPatchErrorReason documents that an error occurred patching the components.
 	ComponentsPatchErrorReason = "ComponentsPatchError"
 

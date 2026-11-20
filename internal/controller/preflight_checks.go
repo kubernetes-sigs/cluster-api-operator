@@ -20,7 +20,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 
 	"github.com/google/go-github/v90/github"
 	"golang.org/x/oauth2"
@@ -91,7 +90,7 @@ func preflightChecks(ctx context.Context, c client.Client, provider genericprovi
 	}
 
 	// Check that if a predefined provider is being installed, and if it's not - ensure that FetchConfig is specified.
-	isPredefinedProvider, err := isPredefinedProvider(ctx, provider.ProviderName(), mapper(provider))
+	isPredefinedProvider, err := isPredefinedProvider(provider.ProviderName(), mapper(provider))
 	if err != nil {
 		return fmt.Errorf("failed to generate a list of predefined providers: %w", err)
 	}
@@ -261,16 +260,8 @@ func ignoreCoreProviderWaitError(err error) error {
 // isPredefinedProvider checks if a given provider is known for Cluster API.
 // The list of known providers can be found here:
 // https://github.com/kubernetes-sigs/cluster-api/blob/main/cmd/clusterctl/client/config/providers_client.go
-func isPredefinedProvider(ctx context.Context, providerName string, providerType clusterctlv1.ProviderType) (bool, error) {
-	path := configPath
-	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		path = ""
-	} else if err != nil {
-		return false, err
-	}
-
-	// Initialize a client that contains predefined providers only.
-	configClient, err := configclient.New(ctx, path)
+func isPredefinedProvider(providerName string, providerType clusterctlv1.ProviderType) (bool, error) {
+	configClient, err := sharedStaticConfigClient()
 	if err != nil {
 		return false, err
 	}

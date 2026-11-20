@@ -67,20 +67,15 @@ func (p *PhaseReconciler) InitializePhaseReconciler(ctx context.Context) (*Resul
 
 	log.Info("Initializing phase reconciler")
 
-	path := configPath
-	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		path = ""
-	} else if err != nil {
-		return &Result{}, err
-	}
+	if _, err := os.Stat(configPath); err == nil {
+		initConfig, err := sharedStaticConfigClient()
+		if err != nil {
+			return nil, err
+		}
 
-	// Initialize a client for interacting with the clusterctl configuration.
-	initConfig, err := configclient.New(ctx, path)
-	if err != nil {
-		return &Result{}, err
-	} else if path != "" {
-		// Set the image and providers override client
 		p.overridesClient = initConfig
+	} else if !os.IsNotExist(err) {
+		return &Result{}, err
 	}
 
 	overrideProviders := []configclient.Provider{}

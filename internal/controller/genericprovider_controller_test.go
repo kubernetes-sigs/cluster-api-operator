@@ -1005,23 +1005,25 @@ func TestReconcile_PhasesExecuteSequentially(t *testing.T) {
 
 	r := &GenericProviderReconciler{
 		Provider: provider,
-		ReconcilePhases: []PhaseFn{
-			func(ctx context.Context) (*Result, error) {
-				executionOrder = append(executionOrder, "phase1")
-				return &Result{}, nil
-			},
-			func(ctx context.Context) (*Result, error) {
-				executionOrder = append(executionOrder, "phase2")
-				return &Result{}, nil
-			},
-			func(ctx context.Context) (*Result, error) {
-				executionOrder = append(executionOrder, "phase3")
-				return &Result{}, nil
-			},
+		ReconcilePhases: func(*PhaseReconciler) []PhaseFn {
+			return []PhaseFn{
+				func(context.Context) (*Result, error) {
+					executionOrder = append(executionOrder, "phase1")
+					return &Result{}, nil
+				},
+				func(context.Context) (*Result, error) {
+					executionOrder = append(executionOrder, "phase2")
+					return &Result{}, nil
+				},
+				func(context.Context) (*Result, error) {
+					executionOrder = append(executionOrder, "phase3")
+					return &Result{}, nil
+				},
+			}
 		},
 	}
 
-	result, err := r.reconcile(context.Background())
+	result, err := r.reconcile(context.Background(), provider)
 	g.Expect(err).ToNot(HaveOccurred())
 	g.Expect(result.IsZero()).To(BeTrue())
 	g.Expect(executionOrder).To(Equal([]string{"phase1", "phase2", "phase3"}))
@@ -1045,21 +1047,23 @@ func TestReconcile_ErrorStopsExecution(t *testing.T) {
 
 	r := &GenericProviderReconciler{
 		Provider: provider,
-		ReconcilePhases: []PhaseFn{
-			func(ctx context.Context) (*Result, error) {
-				return &Result{}, nil
-			},
-			func(ctx context.Context) (*Result, error) {
-				return &Result{}, fmt.Errorf("phase2 failed")
-			},
-			func(ctx context.Context) (*Result, error) {
-				thirdPhaseCalled = true
-				return &Result{}, nil
-			},
+		ReconcilePhases: func(*PhaseReconciler) []PhaseFn {
+			return []PhaseFn{
+				func(context.Context) (*Result, error) {
+					return &Result{}, nil
+				},
+				func(context.Context) (*Result, error) {
+					return &Result{}, fmt.Errorf("phase2 failed")
+				},
+				func(context.Context) (*Result, error) {
+					thirdPhaseCalled = true
+					return &Result{}, nil
+				},
+			}
 		},
 	}
 
-	_, err := r.reconcile(context.Background())
+	_, err := r.reconcile(context.Background(), provider)
 	g.Expect(err).To(HaveOccurred())
 	g.Expect(err.Error()).To(ContainSubstring("phase2 failed"))
 	g.Expect(thirdPhaseCalled).To(BeFalse())

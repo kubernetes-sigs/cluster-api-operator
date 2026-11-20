@@ -37,6 +37,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -57,6 +58,21 @@ func init() {
 const providerLabelKey = "cluster.x-k8s.io/provider"
 
 var deploymentPredicate predicate.Predicate
+
+var installedChangePredicate = predicate.Funcs{
+	UpdateFunc: installedConditionChanged,
+	CreateFunc: func(event.CreateEvent) bool { return false },
+	DeleteFunc: func(event.DeleteEvent) bool { return false },
+}
+
+func installedConditionChanged(e event.UpdateEvent) bool {
+	oldProvider, ok1 := e.ObjectOld.(conditions.Getter)
+	newProvider, ok2 := e.ObjectNew.(conditions.Getter)
+
+	return ok1 && ok2 &&
+		conditions.IsTrue(oldProvider, operatorv1.ProviderInstalledCondition) !=
+			conditions.IsTrue(newProvider, operatorv1.ProviderInstalledCondition)
+}
 
 type ProviderHealthCheckReconciler struct{}
 
@@ -113,7 +129,7 @@ func (r *GenericProviderHealthCheckReconciler) SetupWithManager(mgr ctrl.Manager
 
 	return ctrl.NewControllerManagedBy(mgr).
 		Named(name).
-		For(&appsv1.Deployment{}, builder.WithPredicates(predicate.NewPredicateFuncs(r.isProviderDeployment))).
+		For(&appsv1.Deployment{}, builder.WithPredicates(deploymentPredicate, predicate.NewPredicateFuncs(r.isProviderDeployment))).
 		Watches(r.Provider, handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, provider client.Object) []reconcile.Request {
 			deploymentList := &appsv1.DeploymentList{}
 			if err := r.List(ctx, deploymentList, client.InNamespace(provider.GetNamespace()), client.HasLabels{providerLabelKey}); err != nil {
@@ -132,8 +148,7 @@ func (r *GenericProviderHealthCheckReconciler) SetupWithManager(mgr ctrl.Manager
 			}
 
 			return requests
-		})).
-		WithEventFilter(deploymentPredicate).
+		}), builder.WithPredicates(installedChangePredicate)).
 		WithOptions(options).
 		Complete(reconcile.AsReconciler(mgr.GetClient(), r))
 }
@@ -157,14 +172,14 @@ func (r *GenericProviderHealthCheckReconciler) Reconcile(ctx context.Context, de
 		return result, err
 	}
 
-	deploymentAvailableCondition := getDeploymentCondition(deployment.Status, appsv1.DeploymentAvailable)
-
 	// Stop earlier if this provider is not fully installed yet.
 	if !conditions.IsTrue(typedProvider, operatorv1.ProviderInstalledCondition) {
-		log.V(2).Info("Provider not fully installed yet, requeueing")
+		log.V(2).Info("Provider not fully installed yet")
 
 		return result, nil
 	}
+
+	deploymentAvailableCondition := getDeploymentCondition(deployment.Status, appsv1.DeploymentAvailable)
 
 	log.Info("Checking provider health")
 

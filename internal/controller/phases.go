@@ -113,6 +113,9 @@ func WithCustomAlterComponentsFuncs(fns []repository.ComponentsAlterFn) PhaseRec
 // PhaseFn is a function that represent a phase of the reconciliation.
 type PhaseFn func(context.Context) (*Result, error)
 
+// PhaseFnBuilder builds the phases for the supplied per-reconcile PhaseReconciler.
+type PhaseFnBuilder func(*PhaseReconciler) []PhaseFn
+
 // Result holds the result and error from a reconciliation phase.
 type Result struct {
 	// Requeue tells the Controller to requeue the reconcile key.  Defaults to false.

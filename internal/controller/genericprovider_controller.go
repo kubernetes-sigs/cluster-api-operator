@@ -56,8 +56,8 @@ type GenericProviderReconciler struct {
 	WatchConfigMapChanges    bool
 	WatchCoreProviderChanges bool
 
-	DeletePhases    []PhaseFn
-	ReconcilePhases []PhaseFn
+	ReconcilePhases func(*PhaseReconciler) []PhaseFn
+	DeletePhases    func(*PhaseReconciler) []PhaseFn
 }
 
 const (
@@ -99,24 +99,24 @@ func (r *GenericProviderReconciler) BuildWithManager(ctx context.Context, mgr ct
 		)
 	}
 
-	reconciler := NewPhaseReconciler(*r, r.Provider, r.ProviderList)
-
-	r.ReconcilePhases = []PhaseFn{
-		reconciler.ApplyFromCache,
-		reconciler.PreflightChecks,
-		reconciler.InitializePhaseReconciler,
-		reconciler.DownloadManifests,
-		reconciler.Load,
-		reconciler.Fetch,
-		reconciler.Store,
-		reconciler.Upgrade,
-		reconciler.Install,
-		reconciler.ReportStatus,
-		reconciler.Finalize,
+	r.ReconcilePhases = func(p *PhaseReconciler) []PhaseFn {
+		return []PhaseFn{
+			p.ApplyFromCache,
+			p.PreflightChecks,
+			p.InitializePhaseReconciler,
+			p.DownloadManifests,
+			p.Load,
+			p.Fetch,
+			p.Store,
+			p.Upgrade,
+			p.Install,
+			p.ReportStatus,
+			p.Finalize,
+		}
 	}
 
-	r.DeletePhases = []PhaseFn{
-		reconciler.Delete,
+	r.DeletePhases = func(p *PhaseReconciler) []PhaseFn {
+		return []PhaseFn{p.Delete}
 	}
 
 	return builder, nil
@@ -136,7 +136,12 @@ func (r *GenericProviderReconciler) Reconcile(ctx context.Context, req reconcile
 
 	log.Info("Reconciling provider")
 
-	if err := r.Client.Get(ctx, req.NamespacedName, r.Provider); err != nil {
+	provider, ok := r.Provider.DeepCopyObject().(genericprovider.GenericProvider)
+	if !ok {
+		return ctrl.Result{}, fmt.Errorf("unexpected provider type %T, expected genericprovider.GenericProvider", r.Provider)
+	}
+
+	if err := r.Client.Get(ctx, req.NamespacedName, provider); err != nil {
 		if apierrors.IsNotFound(err) {
 			// Object not found, return. Created objects are automatically garbage collected.
 			// For additional cleanup logic use finalizers.
@@ -149,7 +154,7 @@ func (r *GenericProviderReconciler) Reconcile(ctx context.Context, req reconcile
 	}
 
 	// Initialize the patch helper
-	patchHelper, err := patch.NewHelper(r.Provider, r.Client)
+	patchHelper, err := patch.NewHelper(provider, r.Client)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -162,24 +167,24 @@ func (r *GenericProviderReconciler) Reconcile(ctx context.Context, req reconcile
 			patchOpts = append(patchOpts, patch.WithStatusObservedGeneration{})
 		}
 
-		if err := patchProvider(ctx, r.Provider, patchHelper, patchOpts...); err != nil {
+		if err := patchProvider(ctx, provider, patchHelper, patchOpts...); err != nil {
 			reterr = kerrors.NewAggregate([]error{reterr, err})
 		}
 	}()
 
 	// Add finalizer first if not exist to avoid the race condition between init and delete
-	if !controllerutil.ContainsFinalizer(r.Provider, operatorv1.ProviderFinalizer) {
+	if !controllerutil.ContainsFinalizer(provider, operatorv1.ProviderFinalizer) {
 		log.Info("Adding finalizer, requeueing")
-		controllerutil.AddFinalizer(r.Provider, operatorv1.ProviderFinalizer)
+		controllerutil.AddFinalizer(provider, operatorv1.ProviderFinalizer)
 
 		return ctrl.Result{}, nil
 	}
 
 	// Handle deletion reconciliation loop.
-	if !r.Provider.GetDeletionTimestamp().IsZero() {
+	if !provider.GetDeletionTimestamp().IsZero() {
 		log.Info("Provider marked for deletion, entering delete reconciliation")
 
-		res, err := r.reconcileDelete(ctx, r.Provider)
+		res, err := r.reconcileDelete(ctx, provider)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
@@ -190,7 +195,7 @@ func (r *GenericProviderReconciler) Reconcile(ctx context.Context, req reconcile
 		}, nil
 	}
 
-	res, err := r.reconcile(ctx)
+	res, err := r.reconcile(ctx, provider)
 
 	return ctrl.Result{
 		Requeue:      res.Requeue,
@@ -232,15 +237,17 @@ func normalizeExistingConditions(provider operatorv1.GenericProvider) {
 	}
 }
 
-func (r *GenericProviderReconciler) reconcile(ctx context.Context) (*Result, error) {
+func (r *GenericProviderReconciler) reconcile(ctx context.Context, provider genericprovider.GenericProvider) (*Result, error) {
 	var res Result
 
-	for _, phase := range r.ReconcilePhases {
+	rec := NewPhaseReconciler(*r, provider, r.ProviderList)
+
+	for _, phase := range r.ReconcilePhases(rec) {
 		res, err := phase(ctx)
 		if err != nil {
 			var pe *PhaseError
 			if errors.As(err, &pe) {
-				conditions.Set(r.Provider, metav1.Condition{
+				conditions.Set(provider, metav1.Condition{
 					Type:    pe.Type,
 					Status:  metav1.ConditionFalse,
 					Reason:  pe.Reason,
@@ -263,14 +270,17 @@ func (r *GenericProviderReconciler) reconcile(ctx context.Context) (*Result, err
 	return &res, nil
 }
 
-func (r *GenericProviderReconciler) reconcileDelete(ctx context.Context, provider operatorv1.GenericProvider) (*Result, error) {
+func (r *GenericProviderReconciler) reconcileDelete(ctx context.Context, provider genericprovider.GenericProvider) (*Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 
 	log.Info("Deleting provider resources")
 
 	var res Result
 
-	for _, phase := range r.DeletePhases {
+	// Per-reconcile phase context, see reconcile().
+	rec := NewPhaseReconciler(*r, provider, r.ProviderList)
+
+	for _, phase := range r.DeletePhases(rec) {
 		res, err := phase(ctx)
 		if err != nil {
 			var pe *PhaseError
@@ -406,7 +416,13 @@ func providerHash(ctx context.Context, client client.Client, hash hash.Hash, pro
 // listProviders lists all providers in the cluster and applies the given operations to them.
 func (r *GenericProviderReconciler) listProviders(ctx context.Context, list *clusterctlv1.ProviderList, ops ...ProviderOperation) error {
 	for _, group := range operatorv1.ProviderLists {
-		g, ok := group.(client.ObjectList)
+		obj, ok := group.(client.ObjectList)
+		if !ok {
+			continue
+		}
+
+		// List into a per-call copy: the ProviderLists entries are shared, and List() writes into them.
+		g, ok := obj.DeepCopyObject().(genericprovider.GenericProviderList)
 		if !ok {
 			continue
 		}
@@ -415,7 +431,7 @@ func (r *GenericProviderReconciler) listProviders(ctx context.Context, list *clu
 			return err
 		}
 
-		for _, p := range group.GetItems() {
+		for _, p := range g.GetItems() {
 			for _, op := range ops {
 				if err := op(p); err != nil {
 					return err
@@ -468,12 +484,12 @@ func (p *PhaseReconciler) ApplyFromCache(ctx context.Context) (*Result, error) {
 
 	cacheHash := fmt.Sprintf("%x", hash.Sum(nil))
 	if secret.GetAnnotations()[appliedSpecHashAnnotation] != cacheHash || p.provider.GetAnnotations()[appliedSpecHashAnnotation] != cacheHash {
-		log.Info("Provider or cache state has changed", "cacheHash", cacheHash, "providerHash", secret.GetAnnotations()[appliedSpecHashAnnotation])
+		log.Info("Provider spec or cache content changed; deferring to manifest download")
 
 		return &Result{}, nil
 	}
 
-	log.Info("Applying provider configuration from cache")
+	log.Info("Provider and cache unchanged; checking per-object drift")
 
 	mr := configclient.NewMemoryReader()
 
@@ -488,23 +504,24 @@ func (p *PhaseReconciler) ApplyFromCache(ctx context.Context) (*Result, error) {
 
 	compressed := secret.GetAnnotations()[operatorv1.CompressedAnnotation] == operatorv1.TrueValue
 
-	if err := p.applyManifestsFromData(ctx, secret.Data, compressed); err != nil {
+	res, err := p.applyManifestsFromData(ctx, secret.Data, compressed)
+	if err != nil {
 		return &Result{}, err
 	}
 
-	log.Info("Applied all objects from cache")
+	log.V(1).Info("Drift check complete", "inSync", countOutcomes(res, outcomeSkipped), "reapplied", countOutcomes(res, outcomeApplied), "restored", countOutcomes(res, outcomeRestored))
 
 	return &Result{Completed: true}, nil
 }
 
 // applyManifestsFromData unmarshals and applies manifests via server-side apply.
 // If compressed is true, each data value is decompressed before processing.
-func (p *PhaseReconciler) applyManifestsFromData(ctx context.Context, data map[string][]byte, compressed bool) error {
+func (p *PhaseReconciler) applyManifestsFromData(ctx context.Context, data map[string][]byte, compressed bool) (*applyResult, error) {
 	log := log.FromContext(ctx)
 
 	log.V(2).Info("Applying manifests from cache", "entries", len(data), "compressed", compressed)
 
-	var errs []error
+	res := &applyResult{outcomes: make(map[string]applyOutcome)}
 
 	for _, raw := range data {
 		manifest := raw
@@ -514,26 +531,88 @@ func (p *PhaseReconciler) applyManifestsFromData(ctx context.Context, data map[s
 
 			manifest, err = decompressData(raw)
 			if err != nil {
-				return fmt.Errorf("failed to decompress yaml: %w", err)
+				return nil, fmt.Errorf("failed to decompress yaml: %w", err)
 			}
 		}
 
-		var manifests []unstructured.Unstructured
-
+		var manifests []*unstructured.Unstructured
 		if err := json.Unmarshal(manifest, &manifests); err != nil {
-			return fmt.Errorf("failed to convert yaml to unstructured: %w", err)
+			return nil, fmt.Errorf("failed to convert yaml to unstructured: %w", err)
 		}
 
-		for i := range manifests {
-			applyConfig := client.ApplyConfigurationFromUnstructured(&manifests[i])
+		for _, desired := range manifests {
+			name := fmt.Sprintf("%s/%s/%s", desired.GetKind(), desired.GetNamespace(), desired.GetName())
+			applyConfig := client.ApplyConfigurationFromUnstructured(desired)
 
-			if err := p.ctrlClient.Apply(ctx, applyConfig, client.ForceOwnership, client.FieldOwner(cacheOwner)); err != nil {
-				errs = append(errs, err)
+			existing := desired.DeepCopy()
+			if err := p.ctrlClient.Get(ctx, client.ObjectKeyFromObject(desired), existing); err != nil {
+				if apierrors.IsNotFound(err) {
+					if err := p.ctrlClient.Apply(ctx, applyConfig, client.FieldOwner(cacheOwner)); err != nil {
+						return nil, err
+					}
+
+					log.V(1).Info("Restored deleted object", "name", name)
+					res.outcomes[name] = outcomeRestored
+
+					continue
+				}
+
+				return nil, err
 			}
+			// Dry-run apply: desired is mutated with the server's merged result (generation set).
+			if err := p.ctrlClient.Apply(ctx, applyConfig, client.DryRunAll, client.FieldOwner(cacheOwner)); err != nil {
+				return nil, err
+			}
+			// desired carries the would-be generation from the dry-run.
+			if !objectDrifted(desired, existing) {
+				res.outcomes[name] = outcomeSkipped
+				continue
+			}
+
+			if err := p.ctrlClient.Apply(ctx, applyConfig, client.FieldOwner(cacheOwner)); err != nil {
+				if apierrors.IsConflict(err) {
+					return nil, wrapPhaseError(err, operatorv1.ApplyConflictReason, operatorv1.ProviderInstalledCondition)
+				}
+
+				return nil, err
+			}
+
+			log.V(1).Info("Re-applied drifted object", "name", name)
+			res.outcomes[name] = outcomeApplied
 		}
 	}
 
-	return kerrors.NewAggregate(errs)
+	return res, nil
+}
+
+// applyOutcome describes what happened for a single cached object.
+type applyOutcome string
+
+const (
+	// outcomeSkipped means the object was in sync and no apply was needed.
+	outcomeSkipped applyOutcome = "skipped"
+	// outcomeApplied means the object drifted and was re-applied.
+	outcomeApplied applyOutcome = "applied"
+	// outcomeRestored means the object was deleted out-of-band and re-created.
+	outcomeRestored applyOutcome = "restored"
+)
+
+// applyResult carries per-object outcomes from applyManifestsFromData.
+type applyResult struct {
+	outcomes map[string]applyOutcome
+}
+
+// countOutcomes returns the number of objects with the given outcome.
+func countOutcomes(r *applyResult, o applyOutcome) int {
+	n := 0
+
+	for _, outcome := range r.outcomes {
+		if outcome == o {
+			n++
+		}
+	}
+
+	return n
 }
 
 // setCacheHash calculates current provider and secret hash, and updates it on the secret.
@@ -573,7 +652,7 @@ func setCacheHash(ctx context.Context, cl client.Client, provider genericprovide
 
 	cacheHash := fmt.Sprintf("%x", hash.Sum(nil))
 
-	log.V(2).Info("Setting cache hash", "hash", cacheHash, "provider", provider.GetName())
+	log.V(2).Info("Setting cache hash", "provider", provider.GetName())
 
 	annotations := secret.GetAnnotations()
 	if annotations == nil {

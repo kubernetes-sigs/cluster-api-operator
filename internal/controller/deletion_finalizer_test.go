@@ -49,7 +49,7 @@ func TestReconcileDelete_RemovesFinalizer(t *testing.T) {
 	// No delete phases means reconcileDelete should just remove the finalizer
 	r := &GenericProviderReconciler{
 		Provider:     provider,
-		DeletePhases: []PhaseFn{},
+		DeletePhases: func(*PhaseReconciler) []PhaseFn { return nil },
 	}
 
 	result, err := r.reconcileDelete(context.Background(), provider)
@@ -79,10 +79,12 @@ func TestReconcileDelete_WithFailingDeletePhase(t *testing.T) {
 
 	r := &GenericProviderReconciler{
 		Provider: provider,
-		DeletePhases: []PhaseFn{
-			func(ctx context.Context) (*Result, error) {
-				return &Result{}, expectedErr
-			},
+		DeletePhases: func(*PhaseReconciler) []PhaseFn {
+			return []PhaseFn{
+				func(context.Context) (*Result, error) {
+					return &Result{}, expectedErr
+				},
+			}
 		},
 	}
 
@@ -112,14 +114,16 @@ func TestReconcileDelete_WithPhaseError(t *testing.T) {
 	// Return a PhaseError which should set a condition on the provider
 	r := &GenericProviderReconciler{
 		Provider: provider,
-		DeletePhases: []PhaseFn{
-			func(ctx context.Context) (*Result, error) {
-				return &Result{}, &PhaseError{
-					Err:    fmt.Errorf("component deletion failed"),
-					Reason: "DeletionFailed",
-					Type:   operatorv1.ProviderInstalledCondition,
-				}
-			},
+		DeletePhases: func(*PhaseReconciler) []PhaseFn {
+			return []PhaseFn{
+				func(context.Context) (*Result, error) {
+					return &Result{}, &PhaseError{
+						Err:    fmt.Errorf("component deletion failed"),
+						Reason: "DeletionFailed",
+						Type:   operatorv1.ProviderInstalledCondition,
+					}
+				},
+			}
 		},
 	}
 
@@ -163,14 +167,16 @@ func TestReconcileDelete_CompletedPhaseStopsReconciliation(t *testing.T) {
 
 	r := &GenericProviderReconciler{
 		Provider: provider,
-		DeletePhases: []PhaseFn{
-			func(ctx context.Context) (*Result, error) {
-				return &Result{Completed: true}, nil
-			},
-			func(ctx context.Context) (*Result, error) {
-				secondPhaseCalled = true
-				return &Result{}, nil
-			},
+		DeletePhases: func(*PhaseReconciler) []PhaseFn {
+			return []PhaseFn{
+				func(context.Context) (*Result, error) {
+					return &Result{Completed: true}, nil
+				},
+				func(context.Context) (*Result, error) {
+					secondPhaseCalled = true
+					return &Result{}, nil
+				},
+			}
 		},
 	}
 

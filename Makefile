@@ -282,6 +282,10 @@ test-junit: $(SETUP_ENVTEST) $(GOTESTSUM) ## Run tests with verbose setting and 
 	$(GOTESTSUM) --junitfile $(ARTIFACTS)/junit.xml --raw-command cat $(ARTIFACTS)/junit.stdout
 	exit $$(cat $(ARTIFACTS)/junit.exitcode)
 
+.PHONY: test-race
+test-race: ## Run tests with the race detector and generate a junit report.
+	TEST_ARGS="$(TEST_ARGS) -race" $(MAKE) test-junit
+
 ## --------------------------------------
 ## Binaries
 ## --------------------------------------
