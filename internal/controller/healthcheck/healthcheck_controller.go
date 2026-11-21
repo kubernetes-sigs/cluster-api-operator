@@ -168,9 +168,12 @@ func (r *GenericProviderHealthCheckReconciler) Reconcile(ctx context.Context, de
 
 	log.Info("Checking provider health")
 
-	// Compare provider's Ready condition with the deployment's Available condition and stop if they already match.
+	// Compare provider's Ready condition with the deployment's Available condition and stop if they already match
+	// for the current provider generation.
 	currentReadyCondition := conditions.Get(typedProvider, clusterv1.ReadyCondition)
-	if currentReadyCondition != nil && deploymentAvailableCondition != nil && currentReadyCondition.Status == metav1.ConditionStatus(deploymentAvailableCondition.Status) {
+	if currentReadyCondition != nil && deploymentAvailableCondition != nil &&
+		currentReadyCondition.Status == metav1.ConditionStatus(deploymentAvailableCondition.Status) &&
+		currentReadyCondition.ObservedGeneration == typedProvider.GetGeneration() {
 		log.V(5).Info("Health check conditions already in sync, skipping")
 
 		return result, nil
