@@ -12,12 +12,12 @@ jobs:
         working-directory:
           - ""
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # tag=v6.0.2
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
       - name: Calculate go version
         id: vars
         run: echo "go_version=$(make go-version)" >> $GITHUB_OUTPUT
       - name: Set up Go
-        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # tag=v7.0.0
+        uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
         with:
           go-version: ${{ steps.vars.outputs.go_version }}
       - name: golangci-lint
