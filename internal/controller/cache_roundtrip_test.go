@@ -23,13 +23,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"testing"
+	"time"
 
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/utils/ptr"
 	clusterctlv1 "sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -46,6 +49,28 @@ func cacheTestScheme() *runtime.Scheme {
 	utilruntime.Must(clusterctlv1.AddToScheme(s))
 
 	return s
+}
+
+// waitForCachedObject retries the Get until the object shows up in the
+// informer cache. The cache lags behind writes to the API server, so a Get
+// issued right after a write can transiently report the object as missing
+// (same pattern as Environment.CreateAndWait).
+func waitForCachedObject(t *testing.T, g *WithT, key client.ObjectKey, obj client.Object) {
+	t.Helper()
+
+	err := wait.PollUntilContextTimeout(ctx, 50*time.Millisecond, timeout, true, func(ctx context.Context) (bool, error) {
+		if err := env.Get(ctx, key, obj); err != nil {
+			if apierrors.IsNotFound(err) {
+				return false, nil
+			}
+
+			return false, err
+		}
+
+		return true, nil
+	})
+
+	g.Expect(err).ToNot(HaveOccurred())
 }
 
 func TestApplyFromCache_NoCacheSecret(t *testing.T) {
@@ -197,12 +222,12 @@ func TestApplyManifestsFromData_Uncompressed(t *testing.T) {
 		provider:   provider,
 	}
 
-	err = p.applyManifestsFromData(ctx, map[string][]byte{"cache": data}, false)
+	_, err = p.applyManifestsFromData(ctx, map[string][]byte{"cache": data}, false)
 	g.Expect(err).ToNot(HaveOccurred())
 
 	// Verify the ConfigMap was created via server-side apply
 	cm := &corev1.ConfigMap{}
-	g.Expect(env.Get(ctx, client.ObjectKey{Name: "test-cm", Namespace: ns.Name}, cm)).To(Succeed())
+	waitForCachedObject(t, g, client.ObjectKey{Name: "test-cm", Namespace: ns.Name}, cm)
 	g.Expect(cm.Name).To(Equal("test-cm"))
 }
 
@@ -252,12 +277,12 @@ func TestApplyManifestsFromData_Compressed(t *testing.T) {
 		provider:   provider,
 	}
 
-	err = p.applyManifestsFromData(ctx, map[string][]byte{"cache": buf.Bytes()}, true)
+	_, err = p.applyManifestsFromData(ctx, map[string][]byte{"cache": buf.Bytes()}, true)
 	g.Expect(err).ToNot(HaveOccurred())
 
 	// Verify the ConfigMap was created via server-side apply
 	cm := &corev1.ConfigMap{}
-	g.Expect(env.Get(ctx, client.ObjectKey{Name: "test-cm-compressed", Namespace: ns.Name}, cm)).To(Succeed())
+	waitForCachedObject(t, g, client.ObjectKey{Name: "test-cm-compressed", Namespace: ns.Name}, cm)
 	g.Expect(cm.Name).To(Equal("test-cm-compressed"))
 }
 
@@ -278,7 +303,7 @@ func TestApplyManifestsFromData_InvalidJSON(t *testing.T) {
 		provider:   provider,
 	}
 
-	err := p.applyManifestsFromData(context.Background(), map[string][]byte{"cache": []byte("not valid json")}, false)
+	_, err := p.applyManifestsFromData(context.Background(), map[string][]byte{"cache": []byte("not valid json")}, false)
 	g.Expect(err).To(HaveOccurred())
 }
 
@@ -299,7 +324,7 @@ func TestApplyManifestsFromData_InvalidCompressedData(t *testing.T) {
 		provider:   provider,
 	}
 
-	err := p.applyManifestsFromData(context.Background(), map[string][]byte{"cache": []byte("not gzip data")}, true)
+	_, err := p.applyManifestsFromData(context.Background(), map[string][]byte{"cache": []byte("not gzip data")}, true)
 	g.Expect(err).To(HaveOccurred())
 }
 
@@ -321,7 +346,7 @@ func TestApplyManifestsFromData_EmptyData(t *testing.T) {
 	}
 
 	// Empty map should succeed with no errors
-	err := p.applyManifestsFromData(context.Background(), map[string][]byte{}, false)
+	_, err := p.applyManifestsFromData(context.Background(), map[string][]byte{}, false)
 	g.Expect(err).ToNot(HaveOccurred())
 }
 

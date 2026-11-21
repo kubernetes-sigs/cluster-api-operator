@@ -25,4 +25,4 @@ cd "${REPO_ROOT}" || exit 1
 source "${REPO_ROOT}/hack/ensure-go.sh"
 
 echo "*** Testing Cluster API Operator ***"
-make test-junit
+make test-race
